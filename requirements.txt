@@ -1,0 +1,6 @@
+# It is recommended to install Miniconda3 for Python 3.6.1 and Pandas
+pandas>=0.20.2
+matplotlib>= 2.0.2
+beautifultable>=0.3.0
+enum34; python_version <= '2.7'
+pathlib2; python_version <= '2.7'
