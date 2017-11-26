@@ -65,13 +65,7 @@ class FillEvent(Event):
 
         super().__init__(EventType.FILL, date)
         self.order = order
-        self.mark = order.mark
-        self.ticket = order.ticket
-        self.action = order.action
-        self.quantity = order.quantity
-        self.cost = order.total_cost
-        self.margin = order.margin
-        self.commission = order.commissions
+        self.date = date
         print(self)
 
     def __str__(self):

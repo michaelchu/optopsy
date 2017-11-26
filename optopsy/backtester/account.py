@@ -9,23 +9,37 @@ class Account(object):
         self.cash_balance = init_bal
         self.option_buying_power = self.cash_balance
         self.net_liquidity = self.cash_balance
+
+        self.hold = 0
         self.positions = list()
 
     def set_balance(self, amount):
         self.cash_balance = amount
 
-    def update(self, quote):
+    def process_transaction(self, order):
         """
-        Update the prices of positions held in the account and recalculate
-        open P/L amounts, net liquidation values
-        :param quote:
-        :return:
+        Processes the order and convert it into a position held in this account.
+        :param order:
+        :return: None
         """
-        pass
-
-    def process_order(self, order):
         self.cash_balance -= order.cost_of_trade()
         print("Cash Balance: %s, Option Buying Power: %s" % (self.cash_balance, self.option_buying_power))
 
         # create a new position object and store it in the positions list
         self.positions.append(Position(order))
+
+    def get_positions(self):
+        """
+        Returns a list of positions that are currently held in this account
+        :return: list of positions
+        """
+        return self.positions
+
+    def update_positions(self, quote):
+        """
+        Update the prices of positions held in the account and recalculate
+        open P/L amounts, net liquidation values
+        :param quote:
+        :return: None
+        """
+        pass

@@ -39,18 +39,15 @@ class Order(object):
 
         # broker specific properties
         self.commissions = 0  # TODO: implement commission model
-        self.total_cost = self.cost_of_trade()
+        self.cost_of_trade = (self.price * self.quantity * self.action.value[0] * 100) + self.commissions
+        self.margin_rules = margin_rules(self.action, self.strikes, self.exp_label)
 
-        self.margin_rules = margin_rules(self.action, self.strikes, self.exp_label, self.total_cost)
+        self.margin = self.get_margin(self.cost_of_trade)
+
+    def get_margin(self, cost_of_trade):
 
         # calculate the margin of this order
-        margin_func = getattr(self.margin_rules, self.name)
-        self.margin = margin_func()
-
-    def cost_of_trade(self):
-        """ Calculate the cost of this order including commissions """
-        cost_of_trade = (self.price * self.quantity * self.action.value[0] * 100) + self.commissions
-        return cost_of_trade
+        return getattr(self.margin_rules, self.name)(cost_of_trade)
 
     @staticmethod
     def generate_ticket():
@@ -78,7 +75,7 @@ class Order(object):
             order_specs = f"{self.quantity} {order_price} {self.order_type.name} {self.tif.name}"
 
         elif self.status == OrderStatus.FILLED:
-            order_price = "%s@%s" % (self.action.value[2], '{0:.2f}'.format(self.price))
+            order_price = "%s@%s" % (self.action.value[2], '{0:.2f}'.format(self.executed_price))
             order_specs = f"{self.quantity} {order_price}"
 
         return order_specs + " " + order_label

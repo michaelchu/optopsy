@@ -14,24 +14,20 @@ class Strategy(object):
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, queue, **params):
+    def __init__(self, broker, account_handler, queue, **params):
 
+        self.queue = queue
         self.broker = broker
-        self.sizer = DefaultSizer(self.broker, self.broker.account)
-        self.margin_rules = self.broker.margin_rules
+        self.account_handler = account_handler
+
+        # strategy specific variables
+        self.start_date = None
+        self.end_date = None
+        self.name = "Custom Strategy"
 
         self.current_date = None
         self.current_quotes = None
-
-        self.queue = queue
         self.order_list = list()
-
-        self.start_date = None
-        self.end_date = None
-
-        self.tradable = True
-        self.name = "Custom Strategy"
-
         self.__dict__.update(params)
         self.on_init(**params)
 
@@ -53,14 +49,14 @@ class Strategy(object):
         """
         self.name = name
 
-    def set_balance(self, amt):
+    def set_balance(self, amount):
         """
         Set the cash balance of brokerage account
 
-        :param amt: The cash amount to set for the trading account
+        :param amount: The cash amount to set for the trading account
         :return:
         """
-        self.broker.set_account_balance(amt)
+        self.account_handler.set_account_balance(amount)
 
     def set_sizer(self, sizer):
         """

@@ -1,18 +1,18 @@
 import collections
-from optopsy.backtester.account import Account
+
+from optopsy.backtester.event import FillEvent, RejectedEvent
 from optopsy.backtester.iterator import OptionChainIterator
 from optopsy.core.options.option_strategies import OptionStrategies
 from optopsy.globals import OrderStatus, OrderType, OrderAction
-from optopsy.backtester.event import FillEvent, RejectedEvent
-from optopsy.core.options.option_margin import DefaultOptionMargin
 
 
 class BaseBroker(object):
-    def __init__(self, queue, datafeed, margin_rules=None):
+    def __init__(self, queue, datafeed, account_handler, margin_rules):
 
+        self.queue = queue
         self.datafeed = datafeed
-        self.account = Account()
-        self.margin_rules = DefaultOptionMargin if margin_rules is None else margin_rules
+        self.account_handler = account_handler
+        self.margin_rules = margin_rules
 
         # raw options chain data dict
         self.data = {}
@@ -20,14 +20,11 @@ class BaseBroker(object):
         self.data_stream = None
         self.order_list = collections.OrderedDict()
 
-        # events queue to send order events to
-        self.queue = queue
-
         self.continue_backtest = True
         self.current_date = None
 
     def set_balance(self, balance):
-        self.account.set_balance(balance)
+        self.account_handler.set_balance(balance)
 
     def source(self, symbol, strategy, start=None, end=None, **params):
         """
@@ -81,13 +78,19 @@ class BaseBroker(object):
         :param order:
         :return:
         """
+
+        if order.order_type == OrderType.MKT:
+            order.executed_price = order.nat_price
+        else:
+            # TODO: implement slippage logic here
+            order.executed_price = order.mid_price
+
         order.status = OrderStatus.FILLED
-        order.executed_price = order.mark
+        event = FillEvent(self.current_date, order)
 
         # update account positions
-        self.account.process_order(order)
+        self.account.process_transaction(order)
 
-        event = FillEvent(self.current_date, order)
         self.queue.put(event)
 
     def _executable(self, order):
@@ -107,7 +110,7 @@ class BaseBroker(object):
 
         if self._executable(event.order):
             # reduce buying power as the order is accepted
-            self.account.option_buying_power -= event.order.margin
+            self.account.hold += event.order.margin
             self.execute_order(event.order)
 
             # add the order to the order list to keep track
@@ -119,8 +122,7 @@ class BaseBroker(object):
 
     def execute_order(self, order):
         """
-        Execute the order event without any additional logic as
-        this is a basic implementation.
+        Execute the order event based on the order type
         :param order: The order created by strategy to execute
         :return: None
         """
@@ -132,17 +134,15 @@ class BaseBroker(object):
             self._execute(order)
         elif order.order_type == OrderType.LMT:
             # this is a limit order, check the limits and execute if able
-            # if ((order.action == OrderAction.BUY and order.limit_price >= order.mark) or
-            #         (order.action == OrderAction.SELL and order.limit_price <= order.mark)):
             if ((order.action in [OrderAction.BTO, OrderAction.BTC] and order.price >= order.mark) or
                (order.action in [OrderAction.STO, OrderAction.STC] and order.price <= order.mark)):
                 # if market conditions meet limit requirements execute it
                 self._execute(order)
 
-    def update_data(self, quotes):
+    def update_orders(self, quotes):
         """
         Using fresh quotes from data source, update current values
-        for pending orders and positions held in accounts.
+        for pending orders held in the broker
         :param quotes: fresh quotes in DataFrame format
         """
         # self.quotes = quotes.fetch()
@@ -157,3 +157,11 @@ class BaseBroker(object):
         # update the account's position values
         # self.account.update(self.quotes)
         pass
+
+    def reset(self):
+        """
+        Reset this broker's working orders and order history.
+        :return: None
+        """
+        self.broker.continue_backtest = True
+
