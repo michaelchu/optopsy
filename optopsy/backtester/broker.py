@@ -7,11 +7,11 @@ from optopsy.globals import OrderStatus, OrderType, OrderAction
 
 
 class BaseBroker(object):
-    def __init__(self, queue, datafeed, account_handler, margin_rules):
+    def __init__(self, queue, datafeed, margin_rules):
 
         self.queue = queue
         self.datafeed = datafeed
-        self.account_handler = account_handler
+        self.account = None
         self.margin_rules = margin_rules
 
         # raw options chain data dict
@@ -24,7 +24,10 @@ class BaseBroker(object):
         self.current_date = None
 
     def set_balance(self, balance):
-        self.account_handler.set_balance(balance)
+        self.account.set_balance(balance)
+
+    def set_account(self, account):
+        self.account = account
 
     def source(self, symbol, strategy, start=None, end=None, **params):
         """
@@ -67,7 +70,7 @@ class BaseBroker(object):
 
         # update the current state for the broker and it's orders
         self.current_date = data_event.date
-        self.update_data(data_event.quotes)
+        self.update_orders(data_event.quotes)
 
         # Send event to queue
         self.queue.put(data_event)
@@ -100,24 +103,27 @@ class BaseBroker(object):
         :param order: The order to test the executable conditions for
         :return: Boolean
         """
-        return ((self.account.cash_balance - order.total_cost > 0) and
+        return ((self.account.cash_balance - order.cost_of_trade > 0) and
                 (self.account.option_buying_power - order.margin) > 0)
 
     def process_order(self, event):
         """
         Process a new order received from an order event.
         """
+        order = event.order
+        order.margin = getattr(self.margin_rules, order.name)(order.cost_of_trade, order.action,
+                                                              order.strikes, order.exp_label)
 
         if self._executable(event.order):
             # reduce buying power as the order is accepted
-            self.account.hold += event.order.margin
-            self.execute_order(event.order)
+            self.account.hold += order.margin
+            self.execute_order(order)
 
             # add the order to the order list to keep track
-            self.order_list[event.order.ticket] = event.order
+            self.order_list[event.order.ticket] = order
         else:
             event.order.status = OrderStatus.REJECTED
-            evt = RejectedEvent(self.current_date, event.order)
+            evt = RejectedEvent(self.current_date, order)
             self.queue.put(evt)
 
     def execute_order(self, order):
@@ -163,5 +169,5 @@ class BaseBroker(object):
         Reset this broker's working orders and order history.
         :return: None
         """
-        self.broker.continue_backtest = True
+        self.continue_backtest = True
 

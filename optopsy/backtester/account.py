@@ -12,6 +12,7 @@ class Account(object):
 
         self.hold = 0
         self.positions = list()
+        self.transactions = list()
 
     def set_balance(self, amount):
         self.cash_balance = amount
@@ -22,7 +23,7 @@ class Account(object):
         :param order:
         :return: None
         """
-        self.cash_balance -= order.cost_of_trade()
+        self.cash_balance -= order.cost_of_trade
         print("Cash Balance: %s, Option Buying Power: %s" % (self.cash_balance, self.option_buying_power))
 
         # create a new position object and store it in the positions list

@@ -2,7 +2,6 @@ import datetime
 
 from optopsy.backtester.event import OrderEvent
 from optopsy.backtester.order import Order
-from optopsy.backtester.sizer import DefaultSizer
 from optopsy.core.options.option_query import OptionQuery
 from optopsy.globals import OrderAction, OrderType, OrderTIF
 
@@ -14,11 +13,12 @@ class Strategy(object):
     based on option greeks and prices.
     """
 
-    def __init__(self, broker, account_handler, queue, **params):
+    def __init__(self, broker, account, sizer, queue, **params):
 
         self.queue = queue
         self.broker = broker
-        self.account_handler = account_handler
+        self.account = account
+        self.sizer = sizer
 
         # strategy specific variables
         self.start_date = None
@@ -56,7 +56,7 @@ class Strategy(object):
         :param amount: The cash amount to set for the trading account
         :return:
         """
-        self.account_handler.set_account_balance(amount)
+        self.account.set_balance(amount)
 
     def set_sizer(self, sizer):
         """
@@ -141,7 +141,7 @@ class Strategy(object):
 
             # create an order object for tracking this order
             order = Order(self.current_date, strategy, action, quantity,
-                          order_type, tif, price, self.margin_rules)
+                          order_type, tif, price)
 
             # create an new order event and place it in the queue
             event = OrderEvent(self.current_date, order)

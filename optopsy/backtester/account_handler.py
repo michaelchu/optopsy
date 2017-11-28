@@ -10,7 +10,15 @@ class AccountHandler(object):
         will form the basis for creating the result set for the backtest.
         """
         self.account_list = list()
-        self.account = Account()
+
+    def create_account(self):
+        """
+        Create a new account instance and add it to the account_list
+        :return: Account object
+        """
+        account = Account()
+        self.account_list.append(account)
+        return account
 
     def set_account_balance(self, amount):
         """

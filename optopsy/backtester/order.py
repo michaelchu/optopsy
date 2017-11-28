@@ -4,7 +4,7 @@ from optopsy.globals import OrderStatus, OrderAction, OrderType
 
 class Order(object):
     def __init__(self, date, strategy, action,
-                 quantity, order_type, tif, limit_price, margin_rules
+                 quantity, order_type, tif, limit_price
                  ):
 
         # Strategy specific properties
@@ -40,14 +40,6 @@ class Order(object):
         # broker specific properties
         self.commissions = 0  # TODO: implement commission model
         self.cost_of_trade = (self.price * self.quantity * self.action.value[0] * 100) + self.commissions
-        self.margin_rules = margin_rules(self.action, self.strikes, self.exp_label)
-
-        self.margin = self.get_margin(self.cost_of_trade)
-
-    def get_margin(self, cost_of_trade):
-
-        # calculate the margin of this order
-        return getattr(self.margin_rules, self.name)(cost_of_trade)
 
     @staticmethod
     def generate_ticket():

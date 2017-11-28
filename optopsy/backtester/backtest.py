@@ -6,7 +6,7 @@ import time
 from optopsy.backtester.account_handler import AccountHandler
 from optopsy.backtester.broker import BaseBroker
 from optopsy.backtester.event import EventType
-from optopsy.backtester.margin.option_margin import TOSOptionMargin
+from optopsy.backtester.margin.tos_margin import TOSOptionMargin
 from optopsy.backtester.sizer.fixed import FixedPositionSizer
 from optopsy.datafeeds.sqlite_adapter import SqliteAdapter
 
@@ -20,10 +20,10 @@ class Backtest(object):
         self.account_handler = AccountHandler()
         self.datafeed = datafeed
         self.path = path
-
-        # initialize strategy components
         self.margin_rules = margin_rules
         self.sizer = sizer
+
+        # initialize strategy components
         self.strategy = strategy
         self.params = params
         self.strategies = list()
@@ -79,11 +79,12 @@ class Backtest(object):
         # program timer
         program_starts = time.time()
 
-        for scenario in self.strats:
+        for scenario in self.strategies:
             # initialize a new instance strategy from the strategy list
             # initialize an account instance for each scenario to keep track of results
             account = self.account_handler.create_account()
-            strategy = scenario[0](self.broker, self.queue, **scenario[1])
+            self.broker.set_account(account)
+            strategy = scenario[0](self.broker, account, self.sizer, self.queue, **scenario[1])
 
             while self.broker.continue_backtest:
                 # run backtesting loop
