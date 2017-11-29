@@ -28,7 +28,8 @@ class DataEvent(Event):
         and account positions. It is also fed to the strategy to be used to generate trading
         actions.
         :param date: The date of the quotes
-        :param quotes: A DataFrame containing option chains for all subscribed symbols
+        :param quotes: A dict of DataFrame containing option chains for all subscribed symbols.
+                       Dictionary key is the symbol, value is the dataframe of option chains for that symbol
         """
 
         super().__init__(EventType.DATA, date)

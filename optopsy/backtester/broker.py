@@ -18,7 +18,7 @@ class BaseBroker(object):
         self.data = {}
         self.dates = list()
         self.data_stream = None
-        self.order_list = collections.OrderedDict()
+        self.order_list = list()
 
         self.continue_backtest = True
         self.current_date = None
@@ -70,7 +70,7 @@ class BaseBroker(object):
 
         # update the current state for the broker and it's orders
         self.current_date = data_event.date
-        self.update_orders(data_event.quotes)
+        self.update_orders(data_event)
 
         # Send event to queue
         self.queue.put(data_event)
@@ -82,10 +82,12 @@ class BaseBroker(object):
         :return:
         """
 
+        # execute market order at market price (natural price)
         if order.order_type == OrderType.MKT:
             order.executed_price = order.nat_price
         else:
             # TODO: implement slippage logic here
+            # execute the limit order at limit price or better
             order.executed_price = order.mid_price
 
         order.status = OrderStatus.FILLED
@@ -120,7 +122,7 @@ class BaseBroker(object):
             self.execute_order(order)
 
             # add the order to the order list to keep track
-            self.order_list[event.order.ticket] = order
+            self.order_list.append(order)
         else:
             event.order.status = OrderStatus.REJECTED
             evt = RejectedEvent(self.current_date, order)
@@ -140,29 +142,25 @@ class BaseBroker(object):
             self._execute(order)
         elif order.order_type == OrderType.LMT:
             # this is a limit order, check the limits and execute if able
-            if ((order.action in [OrderAction.BTO, OrderAction.BTC] and order.price >= order.mark) or
-               (order.action in [OrderAction.STO, OrderAction.STC] and order.price <= order.mark)):
+            if ((order.action in [OrderAction.BTO, OrderAction.BTC] and order.price >= order.nat_price) or
+               (order.action in [OrderAction.STO, OrderAction.STC] and order.price <= order.nat_price)):
                 # if market conditions meet limit requirements execute it
                 self._execute(order)
 
-    def update_orders(self, quotes):
+    def update_orders(self, event):
         """
         Using fresh quotes from data source, update current values
         for pending orders held in the broker
-        :param quotes: fresh quotes in DataFrame format
+        :param event: new data event object, containing a dict of dataframe of option chains
         """
-        # self.quotes = quotes.fetch()
-
+        quotes = event.quotes
         # update the broker's working orders' option prices
-        # for order_item in self.order_list:
-        #     order = self.order_list[order_item]
-        #     if order.status == OrderStatus.WORKING:
-        #         order.update(self.quotes)
-        #         self.execute_order(order)
-
-        # update the account's position values
-        # self.account.update(self.quotes)
-        pass
+        for sym in quotes:
+            for order in self.order_list:
+                if order.underlying_symbol == sym and order.status == OrderStatus.WORKING:
+                    order.update(quotes[sym])
+                    if self._executable(order):
+                        self.execute_order(order)
 
     def reset(self):
         """

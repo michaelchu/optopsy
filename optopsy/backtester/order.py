@@ -10,6 +10,7 @@ class Order(object):
         # Strategy specific properties
         self.date = date
         self.ticket = self.generate_ticket()
+        self.symbol = strategy.get_one('symbol')
         self.underlying_symbol = strategy.get_one('underlying_symbol')
         self.underlying_price = strategy.get_one('underlying_price')
         self.name = strategy.get_one('name')
@@ -22,21 +23,17 @@ class Order(object):
         self.quantity = quantity
         self.action = action
         self.order_type = order_type
-        self.mark = strategy.get_one('mark')
+
         self.tif = tif
 
         # Pricing specific properties
-        self.price = limit_price
         self.executed_price = None
+        self.nat_price = None
+        self.mid_price = None
 
-        # current market prices, used when order is submitted but not executed
-        if self.action == OrderAction.BTO or self.action == OrderAction.BTC:
-            self.nat_price = strategy.get_one('order_ask')
-            self.mid_price = self.mark
-        elif self.action == OrderAction.STO or self.action == OrderAction.STC:
-            self.nat_price = strategy.get('order_bid')
-            self.mid_price = self.mark
+        self.set_prices(strategy)
 
+        self.price = self.nat_price if limit_price is None else limit_price
         # broker specific properties
         self.commissions = 0  # TODO: implement commission model
         self.cost_of_trade = (self.price * self.quantity * self.action.value[0] * 100) + self.commissions
@@ -45,13 +42,28 @@ class Order(object):
     def generate_ticket():
         return random.randint(100000, 999999)
 
+    def set_prices(self, chains):
+        """
+
+        :param chains:
+        :return:
+        """
+        # current market prices, used when order is submitted but not executed
+        if self.action == OrderAction.BTO or self.action == OrderAction.BTC:
+            self.nat_price = chains.get_one('order_ask')
+            self.mid_price = chains.get_one('mark')
+        elif self.action == OrderAction.STO or self.action == OrderAction.STC:
+            self.nat_price = chains.get('order_bid')
+            self.mid_price = chains.get_one('mark')
+
     def update(self, quotes):
         """
         Update the order's symbols with current market values
-        :params quotes: DataFrame of updated option symbols from broker
+        :params quotes: OptionQuery object of updated option symbols from broker
         """
         # update the mark value of the order
-        pass
+        updated_quotes = quotes.symbol(self.symbol)
+        self.set_prices(updated_quotes)
 
     def __str__(self):
 
