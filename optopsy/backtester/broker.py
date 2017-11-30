@@ -54,7 +54,11 @@ class BaseBroker(object):
                 raise
 
     def set_data_stream(self):
-
+        """
+        Assigns the data_stream variable a new instance of the option chain iterator.
+        Used to create a new data iterator for each scenario during a backtest.
+        :return: None
+        """
         self.data_stream = OptionChainIterator(self.dates, self.data)
 
     def stream_next(self):
