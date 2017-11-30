@@ -86,7 +86,7 @@ class Backtest(object):
             self.broker.set_account(account)
 
             # create a new data stream (iterator) for each scenario
-            self.broker.new_data_stream()
+            self.broker.set_data_stream()
 
             # initialize a new instance strategy from the strategy list
             strategy = scenario[0](self.broker, account, self.sizer, self.queue, **scenario[1])

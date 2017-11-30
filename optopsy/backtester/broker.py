@@ -50,12 +50,10 @@ class BaseBroker(object):
                 self.dates = sorted(list(set(self.dates) | set(new_quote_dates)))
                 # append this new option strategy to the data dictionary
                 self.data[symbol] = opt_strategy
-                # now that we added a new symbol, create a new iterator and use it to stream data
-                # self.data_stream = OptionChainIterator(self.dates, self.data)
             except IOError:
                 raise
 
-    def new_data_stream(self):
+    def set_data_stream(self):
 
         self.data_stream = OptionChainIterator(self.dates, self.data)
 
