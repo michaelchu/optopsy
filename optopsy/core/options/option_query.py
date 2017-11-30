@@ -72,6 +72,18 @@ class OptionQuery(object):
         chain = chain[chain.symbol == symbol]
         return OptionQuery(chain)
 
+    def underlying_price(self):
+        """
+        Gets the underlying price info from the option chain if available
+        :return: The average of all underlying prices that may have been
+                 recorded in the option chain for a given day.
+        """
+        if 'underlying_price' in self.option_chain.columns:
+            dates = self.option_chain['underlying_price'].unique()
+            return dates.mean()
+        else:
+            return OptionQuery(self.option_chain)
+
     def nearest(self, column, val, tie='roundup'):
         """
         Returns a dataframe row containing the column item nearest to the
@@ -230,17 +242,20 @@ class OptionQuery(object):
         """
         return self._offset(offset_from, offset, mode)
 
-    def underlying_price(self):
+    def head(self, n=5):
         """
-        Gets the underlying price info from the option chain if available
-        :return: The average of all underlying prices that may have been
-                 recorded in the option chain for a given day.
+        Return the first n rows of this option chain
+        :param n: Number of rows, default 5
+        :return: Dataframe of first 5 items on option chain
         """
-        if 'underlying_price' in self.option_chain.columns:
-            dates = self.option_chain['underlying_price'].unique()
-            return dates.mean()
-        else:
-            return OptionQuery(self.option_chain)
+        return self.option_chain.head(n)
+
+    def is_empty(self):
+        """
+        Returns true if there is at least 1 row in option chain, else false
+        :return:
+        """
+        return True if self.option_chain.shape[0] == 0 else False
 
     # PRIVATE METHODS ===============================================================================
 

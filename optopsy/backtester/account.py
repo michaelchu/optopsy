@@ -39,7 +39,7 @@ class Account(object):
     def update_positions(self, quote):
         """
         Update the prices of positions held in the account and recalculate
-        open P/L amounts, net liquidation values
+        open P/L amounts, net liquidation values. Also remove expired orders
         :param quote:
         :return: None
         """

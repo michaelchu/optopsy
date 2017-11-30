@@ -1,5 +1,3 @@
-import collections
-
 from optopsy.backtester.event import FillEvent, RejectedEvent
 from optopsy.backtester.iterator import OptionChainIterator
 from optopsy.core.options.option_strategies import OptionStrategies
@@ -53,9 +51,13 @@ class BaseBroker(object):
                 # append this new option strategy to the data dictionary
                 self.data[symbol] = opt_strategy
                 # now that we added a new symbol, create a new iterator and use it to stream data
-                self.data_stream = OptionChainIterator(self.dates, self.data)
+                # self.data_stream = OptionChainIterator(self.dates, self.data)
             except IOError:
                 raise
+
+    def new_data_stream(self):
+
+        self.data_stream = OptionChainIterator(self.dates, self.data)
 
     def stream_next(self):
         """
@@ -155,12 +157,14 @@ class BaseBroker(object):
         """
         quotes = event.quotes
         # update the broker's working orders' option prices
-        for sym in quotes:
-            for order in self.order_list:
-                if order.underlying_symbol == sym and order.status == OrderStatus.WORKING:
-                    order.update(quotes[sym])
-                    if self._executable(order):
-                        self.execute_order(order)
+        for order in self.order_list:
+            order.update_expiration(self.current_date)
+            if order.status == OrderStatus.WORKING and \
+               order.underlying_symbol in quotes:
+                quote = quotes[order.underlying_symbol]
+                order.update_quotes(quote)
+                if self._executable(order):
+                    self.execute_order(order)
 
     def reset(self):
         """
@@ -168,4 +172,5 @@ class BaseBroker(object):
         :return: None
         """
         self.continue_backtest = True
+        self.order_list.clear()
 

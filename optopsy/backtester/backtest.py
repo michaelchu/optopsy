@@ -80,10 +80,15 @@ class Backtest(object):
         program_starts = time.time()
 
         for scenario in self.strategies:
-            # initialize a new instance strategy from the strategy list
+
             # initialize an account instance for each scenario to keep track of results
             account = self.account_handler.create_account()
             self.broker.set_account(account)
+
+            # create a new data stream (iterator) for each scenario
+            self.broker.new_data_stream()
+
+            # initialize a new instance strategy from the strategy list
             strategy = scenario[0](self.broker, account, self.sizer, self.queue, **scenario[1])
 
             while self.broker.continue_backtest:

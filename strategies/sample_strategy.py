@@ -31,13 +31,7 @@ class SampleStrategy(op.Strategy):
         # option chains contains multiple expiration dates, choose the options
         # with the farthest expiration date.
         strategy = data['VXX'].nearest('mark', 1).max('dte')
-        self.buy_to_open(strategy, 10, order_type=op.OrderType.LMT, price=1.5)
-
-    def on_fill(self, event):
-        pass
-
-    def on_expired(self, event):
-        pass
+        self.buy_to_open(strategy, 10, order_type=op.OrderType.LMT, price=0.75)
 
 
 if __name__ == '__main__':
