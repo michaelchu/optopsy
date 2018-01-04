@@ -33,17 +33,21 @@ class Order(object):
         self.executed_price = None
         self.nat_price = None
         self.mid_price = None
-
-        self.set_prices(strategy)
-
         self.price = self.nat_price if limit_price is None else limit_price
-        # broker specific properties
         self.commissions = 0  # TODO: implement commission model
-        self.cost_of_trade = (self.price * self.quantity * self.action.value[0] * 100) + self.commissions
+        self.cost_of_trade = self.total_cost_of_trade(self.price)
+        self.set_prices(strategy)
 
     @staticmethod
     def generate_ticket():
         return random.randint(100000, 999999)
+
+    def total_cost_of_trade(self, price):
+        """
+        Calculate the and set the cost of this order based on a price given by the broker
+        :return: None
+        """
+        return (price * self.quantity * self.action.value[0] * 100) + self.commissions
 
     def set_prices(self, chains):
         """

@@ -62,6 +62,16 @@ class OptionStrategy(Enum):
     CONDOR = "condor"
 
 
+class DayOfWeek(Enum):
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
+
+
 OrderType = Enum("OrderType", "MKT, LMT, STPLMT")
 SecType = Enum("SecType", "STK, OPT")
 OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED, EXPIRED")

@@ -2,10 +2,6 @@
 
 This library allows you to backtest options strategies with your own historical options data. Use the built-in functions to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit / adjustment criteria.
 
-## Goals
-This project was developed because I was learning to trade options and had a need for a simple and flexible trading library that will allow me to backtest my option trading strategies.
-At the time of its development, it was difficult to find options backtesting software/libraries that allows the flexibility of testing options spreads with complex entry, exit or adjustment criteria. I wrote this library to meet that need and I hope it will help you too!
-
 ## Features
 * Uses Pandas library under the hood to generate options spreads efficiently.
 * Option spreads can be generated with adjustable parameters such as strike width and expiration dates. This allows you to create more advance strategies such as broken-wing butterflies/iron condors
@@ -29,8 +25,6 @@ At the time of its development, it was difficult to find options backtesting sof
     * Custom Spreads
     * Strangles
     * Straddles
-* Transaction Costs - Commissions are currently supported using TD's thinkorswim standard fees for North American options. 
-Slippage and market impact are planned, but are not currently supported.
 
 ## Installation
 
@@ -48,4 +42,8 @@ Install all dependencies:
 
 ### Notes
 
-It is recommended to use the Anaconda distribution to install the projects dependencies. 
+It is recommended to use the Anaconda distribution to install the projects dependencies.
+
+### Usage
+
+Coming Soon.

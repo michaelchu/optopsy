@@ -11,6 +11,9 @@ class SampleStrategy(op.Strategy):
         self.set_start_date(2016, 2, 19)
         self.set_end_date(2016, 2, 26)
 
+        # define time events
+        self.scheduler.on(self.date_rule.every(op.DayOfWeek.THURSDAY), self.filter_options)
+
         # add vertical put spreads for this strategy
         self.add_option_strategy(
             "VXX",
@@ -22,7 +25,8 @@ class SampleStrategy(op.Strategy):
 
     def on_data(self, data):
         """
-        Implement trading logic in this method.
+        Implement trading logic in this method. This is the primary entry point for your
+        algorithm. Each new data point will be passed into this method.
         :param data: A dictionary of OptionQuery objects for each symbol
                      added to the strategy from the on_init function.
         :return: None
@@ -30,6 +34,12 @@ class SampleStrategy(op.Strategy):
         # Filter for the option spread that costs nearest to $1 and if filtered
         # option chains contains multiple expiration dates, choose the options
         # with the farthest expiration date.
+        pass
+
+    def on_fill(self, event):
+        pass
+
+    def filter_options(self, data):
         strategy = data['VXX'].nearest('mark', 1).max('dte')
         self.buy_to_open(strategy, 10, order_type=op.OrderType.LMT, price=0.75)
 

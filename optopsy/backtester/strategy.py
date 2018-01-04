@@ -88,6 +88,9 @@ class Strategy(object):
         """
         self.end_date = datetime.date(year=year, month=month, day=day).strftime("%Y-%m-%d")
 
+    def is_invested(self):
+        return len(self.positions) != 0
+
     def on_init(self, **params):
         raise NotImplementedError
 

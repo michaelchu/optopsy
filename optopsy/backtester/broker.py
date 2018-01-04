@@ -43,13 +43,17 @@ class BaseBroker(object):
             try:
                 # we don't have raw option prices for this symbol yet, get it from data source
                 option_chains = self.datafeed.get(symbol, start, end)
+
                 # construct the specified option strategy with the option chain data
                 opt_strategy = getattr(OptionStrategies, strategy.value)(option_chains, **params)
+
                 # merge all quote dates from this option chain to the current list of quote dates
                 new_quote_dates = opt_strategy.get_quote_dates()
                 self.dates = sorted(list(set(self.dates) | set(new_quote_dates)))
+
                 # append this new option strategy to the data dictionary
                 self.data[symbol] = opt_strategy
+
             except IOError:
                 raise
 
@@ -63,8 +67,10 @@ class BaseBroker(object):
 
     def stream_next(self):
         """
-        Return the next quote date's data event from all subscribed symbol
-        :return: A bar event object containing the bar data for all subscribed symbols
+        Create an event object containing the most recent date's option chain quotes.
+        Send the updated quotes the to broker to update pending orders before placing the
+        event on the queue.
+        :return: None
         """
         try:
             data_event = next(self.data_stream)
@@ -94,6 +100,16 @@ class BaseBroker(object):
             # execute the limit order at limit price or better
             order.executed_price = order.mid_price
 
+        # calculate the order's margin again with the actual executed price
+        new_cost_of_trade = order.total_cost_of_trade(order.executed_price)
+        new_margin_amt = getattr(self.margin_rules, order.name)(new_cost_of_trade, order.action,
+                                                                order.strikes, order.exp_label)
+
+        # adjust the option buying power amount with the new actual margin amount
+        self.account.option_buying_power += order.margin
+        order.margin = new_margin_amt
+        self.account.option_buying_power -= order.margin
+
         order.status = OrderStatus.FILLED
         event = FillEvent(self.current_date, order)
 
@@ -122,7 +138,7 @@ class BaseBroker(object):
 
         if self._executable(event.order):
             # reduce buying power as the order is accepted
-            self.account.hold += order.margin
+            self.account.option_buying_power -= order.margin
             self.execute_order(order)
 
             # add the order to the order list to keep track
@@ -131,6 +147,9 @@ class BaseBroker(object):
             event.order.status = OrderStatus.REJECTED
             evt = RejectedEvent(self.current_date, order)
             self.queue.put(evt)
+
+        print(f"Account Balances: {self.account.cash_balance}, "
+              f"Option Buying Power: {self.account.option_buying_power}")
 
     def execute_order(self, order):
         """

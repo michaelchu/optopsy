@@ -6,6 +6,6 @@ from optopsy.backtester.strategy import Strategy
 from optopsy.backtester.backtest import Backtest
 
 from optopsy.datafeeds.sqlite_adapter import SqliteAdapter
-from optopsy.globals import OptionType, Period, OptionStrategy, OrderType
+from optopsy.globals import OptionType, Period, OptionStrategy, OrderType, DayOfWeek
 
 
