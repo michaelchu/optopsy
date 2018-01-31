@@ -31,21 +31,3 @@ At the time of its development, it was difficult to find options backtesting sof
     * Straddles
 * Transaction Costs - Commissions are currently supported using TD's thinkorswim standard fees for North American options. 
 Slippage and market impact are planned, but are not currently supported.
-
-## Installation
-
-### Quick start
-
-To set up a development environment quickly, first install Python 3. It
-comes with virtualenv built-in. So create a virtual env by:
-
-    1. `$ python3 -m venv optopsy`
-    2. `$ . optopsy/bin/activate`
-
-Install all dependencies:
-
-    pip install -r requirements.txt
-
-### Notes
-
-It is recommended to use the Anaconda distribution to install the projects dependencies. 
