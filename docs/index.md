@@ -1,5 +1,3 @@
-# Optopsy
-
 This library allows you to backtest options strategies with your own historical options data. Use the built-in functions to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit / adjustment criteria.
 
 ## Goals
