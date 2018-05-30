@@ -1,11 +1,3 @@
-from optopsy.core.options.option_strategies import OptionStrategies
-from optopsy.core.options.option_query import OptionQuery
-from optopsy.core.options.option_series import OptionSeries
+from .feeds import *
 
-from optopsy.backtester.strategy import Strategy
-from optopsy.backtester.backtest import Backtest
-
-from optopsy.datafeeds.sqlite_adapter import SqliteAdapter
-from optopsy.globals import OptionType, Period, OptionStrategy, OrderType, DayOfWeek
-
-
+from . import feeds as feeds

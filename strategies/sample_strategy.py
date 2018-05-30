@@ -1,3 +1,7 @@
+import datetime
+import os.path
+import sys
+# import the backtest library
 import optopsy as op
 
 
@@ -6,13 +10,6 @@ class SampleStrategy(op.Strategy):
     def on_init(self, **params):
 
         self.set_strategy_name("Sample Strategy")
-
-        # set the backtesting params for this instance of backtest
-        self.set_start_date(2016, 2, 19)
-        self.set_end_date(2016, 2, 26)
-
-        # define time events
-        self.scheduler.on(self.date_rule.every(op.DayOfWeek.THURSDAY), self.filter_options)
 
         # add vertical put spreads for this strategy
         self.add_option_strategy(
@@ -24,16 +21,6 @@ class SampleStrategy(op.Strategy):
         )
 
     def on_data(self, data):
-        """
-        Implement trading logic in this method. This is the primary entry point for your
-        algorithm. Each new data point will be passed into this method.
-        :param data: A dictionary of OptionQuery objects for each symbol
-                     added to the strategy from the on_init function.
-        :return: None
-        """
-        # Filter for the option spread that costs nearest to $1 and if filtered
-        # option chains contains multiple expiration dates, choose the options
-        # with the farthest expiration date.
         pass
 
     def on_fill(self, event):
@@ -45,10 +32,41 @@ class SampleStrategy(op.Strategy):
 
 
 if __name__ == '__main__':
-    # Initiate and run a backtest of this strategy with optimization parameters
-    results = op.Backtest(
-        SampleStrategy,
-        dte=(op.Period.SEVEN_WEEKS,),
-        width=(2, 3, 4),
-        roi=(1,)
-    ).run()
+
+    # Create an instance of Optopsy
+    optopsy = op.Backtest()
+
+    # Add a strategy/optimize strategy
+    optopsy.addStrategy(SampleStrategy)
+
+    # Add optimization
+    # optopsy.addOptStrategy(SampleStrategy, width=(2, 3, 4))
+
+    # Data are in a sub-folder of the strategies folder. Find where this script is run,
+    # and look for the sub-folder. This script can reside anywhere.
+    currpath = os.path.dirname(os.path.abspath(sys.argv[0]))
+    datapath = os.path.join(currpath, 'data/vix.csv')
+
+    # Create a Data Feed
+    data = op.feeds.CboeCSVFeed(
+        dataname=datapath,
+        # Do not pass values before this date
+        fromdate=datetime.datetime(2000, 1, 1),
+        # Do not pass values after this date
+        todate=datetime.datetime(2000, 12, 31)
+    )
+
+    # Add the Data Feed to Optopsy
+    optopsy.addData(data)
+
+    # Set our desired cash start
+    optopsy.broker.setcash(100000.0)
+
+    # Print out the starting conditions
+    print('Starting Portfolio Value: %.2f' % optopsy.broker.getvalue())
+
+    # Run over everything
+    optopsy.run()
+
+    # Print out the final result
+    print('Final Portfolio Value: %.2f' % optopsy.broker.getvalue())

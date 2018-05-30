@@ -1,8 +1,8 @@
 from datetime import timedelta, datetime
 import pandas as pd
 
-from optopsy.core.options.option_query import OptionQuery
-from optopsy.core.options.option_series import OptionSeries
+from optopsy.options.option_query import OptionQuery
+from optopsy.options import OptionSeries
 from optopsy.globals import OptionType, Period, OptionStrategy
 
 pd.set_option('display.max_columns', None)
