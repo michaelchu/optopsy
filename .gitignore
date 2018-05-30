@@ -34,3 +34,5 @@ MANIFEST
 # custom options database
 /data
 
+/tests/.pytest_cache
+
