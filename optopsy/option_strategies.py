@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 import pandas as pd
 
-from optopsy.options.option_query import OptionQuery
+from optopsy.option_query import OptionQuery
 from optopsy.options import OptionSeries
 from optopsy.globals import OptionType, Period, OptionStrategy
 

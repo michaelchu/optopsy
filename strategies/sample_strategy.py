@@ -4,43 +4,23 @@ import sys
 # import the backtest library
 import optopsy as op
 
-
-class SampleStrategy(op.Strategy):
-
-    def on_init(self, **params):
-
-        self.set_strategy_name("Sample Strategy")
-
-        # add vertical put spreads for this strategy
-        self.add_option_strategy(
-            "VXX",
-            op.OptionStrategy.VERTICAL,
-            option_type=op.OptionType.PUT,
-            width=self.width,
-            dte=self.dte
-        )
-
-    def on_data(self, data):
-        pass
-
-    def on_fill(self, event):
-        pass
-
-    def filter_options(self, data):
-        strategy = data['VXX'].nearest('mark', 1).max('dte')
-        self.buy_to_open(strategy, 10, order_type=op.OrderType.LMT, price=0.75)
-
-
 if __name__ == '__main__':
-
     # Create an instance of Optopsy
-    optopsy = op.Backtest()
+    optopsy = op.Optopsy()
 
-    # Add a strategy/optimize strategy
-    optopsy.addStrategy(SampleStrategy)
+    # Add a strategy
+    params = (
+        {'strategy': 'long_call_spread'},
+        {'entry': 'date_range', 'start': datetime.datetime(2016, 1, 1), 'end': datetime.datetime(2016, 12, 1)},
+        {'entry': 'abs_delta', 'ideal': (0.4, 0.5, 0.6,), 'min_delta': 0.05, 'max_delta': 0.05},
+        {'entry': 'spread_price', 'ideal': (0.75, 1, 1.25,), 'min_delta': 0.05, 'max_delta': 0.05},
+        {'entry': 'days_to_expiration', 'ideal': 40, 'min_delta': 10, 'max_delta': 20},
+        {'entry': 'day_of_week', 'ideal': 4},
+        {'exit': 'exit_hold_days', 'ideal': (5, 6, 7,)}
+    )
 
     # Add optimization
-    # optopsy.addOptStrategy(SampleStrategy, width=(2, 3, 4))
+    optopsy.add_strategy(params)
 
     # Data are in a sub-folder of the strategies folder. Find where this script is run,
     # and look for the sub-folder. This script can reside anywhere.
@@ -48,16 +28,10 @@ if __name__ == '__main__':
     datapath = os.path.join(currpath, 'data/vix.csv')
 
     # Create a Data Feed
-    data = op.feeds.CboeCSVFeed(
-        dataname=datapath,
-        # Do not pass values before this date
-        fromdate=datetime.datetime(2000, 1, 1),
-        # Do not pass values after this date
-        todate=datetime.datetime(2000, 12, 31)
-    )
+    data = op.feeds.CboeCSVFeed(dataname=datapath)
 
     # Add the Data Feed to Optopsy
-    optopsy.addData(data)
+    optopsy.add_data(data)
 
     # Set our desired cash start
     optopsy.broker.setcash(100000.0)

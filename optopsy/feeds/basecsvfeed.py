@@ -29,10 +29,8 @@ class BaseCSVFeed(object):
         ('underlying_price', 14),
     )
 
-    def __init__(self, dataname=None, fromdate=None, todate=None):
+    def __init__(self, dataname=None):
         self.dataname = dataname
-        self.fromdate = fromdate
-        self.todate = todate
 
     def _start(self, ticker):
         """
