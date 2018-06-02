@@ -1,7 +1,7 @@
-from .basecsvfeed import BaseCSVFeed
+from .base_csv_feed import BaseCSVFeed
 
 
-class CboeCSVFeed(BaseCSVFeed):
+class CboeCSVFeedL1(BaseCSVFeed):
 
         params = (
             ('symbol', 0),
@@ -29,3 +29,6 @@ class CboeCSVFeed(BaseCSVFeed):
             ('rho', 22),
             ('open_interest', -1)
         )
+
+        def __init__(self, file_path):
+            super().__init__(file_path)
