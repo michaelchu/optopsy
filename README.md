@@ -9,10 +9,10 @@ settings can now be defined using existing filters.
 Filters will include (but not limited to):
 
 **Entry rules:**
-* Days to expiration,
+* Days to expiration
 * Entry Days (Stagger trades)
 * Absolute Delta
-* Percentage out-of-the-money.
+* Percentage out-of-the-money
 * Contract size
 
 **Exit rules:**
