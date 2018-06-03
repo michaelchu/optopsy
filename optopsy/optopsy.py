@@ -3,8 +3,7 @@ from .broker import Broker
 
 class Optopsy(object):
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
         self.broker = Broker()
         self.feed = None
         self.strategy = None
@@ -13,7 +12,7 @@ class Optopsy(object):
         self.strategy = filters
 
     def add_data(self, feed):
-        pass
+        self.feed = feed
 
     def run(self):
         """
@@ -21,5 +20,8 @@ class Optopsy(object):
         parameters given in filters.
         :return:
         """
-        pass
+
+        # first we set our data feed
+        self.feed.start()
+        print(self.feed.data.head())
 

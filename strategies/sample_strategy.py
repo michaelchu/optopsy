@@ -1,19 +1,40 @@
 import datetime
-import os.path
-import settings
+import pandas as pd
+
 # import the backtest library
 import optopsy as op
+import optopsy.feeds as opfeeds
 
-if __name__ == '__main__':
+pd.options.display.width = None
 
-    config = settings.from_file(
-        settings.DEFAULT_CONFIG_FILENAME, testing=True
+
+class CboePandasFeed(opfeeds.PandasFeed):
+    # define the structure of the datafeed, sourced from 'https://www.discountoptiondata.com/'
+    params = (
+        ('symbol', 0),
+        ('underlying_price', 1),
+        ('option_symbol', 3),
+        ('option_type', 4),
+        ('expiration', 5),
+        ('quote_date', 6),
+        ('strike', 7),
+        ('bid', 9),
+        ('ask', 10),
+        ('volume', 11),
+        ('oi', 12),
+        ('iv', 14),
+        ('delta', 17),
+        ('gamma', 18),
+        ('theta', 19),
+        ('vega', 20)
     )
 
-    # Create an instance of Optopsy
-    optopsy = op.Optopsy(config)
 
-    # Add a strategy
+def run_strat():
+    # Create an instance of Optopsy with config settings
+    optopsy = op.Optopsy()
+
+    # Create a strategy
     strategy = (
         {'strategy': 'long_call_spread'},
         {'entry': 'date_range', 'start': datetime.datetime(2016, 1, 1), 'end': datetime.datetime(2016, 12, 1)},
@@ -24,22 +45,14 @@ if __name__ == '__main__':
         {'exit': 'exit_hold_days', 'ideal': (5, 6, 7,)}
     )
 
-    # Add optimization
+    # Add the strategy for Optopsy to run
     optopsy.add_strategy(strategy)
 
-    # Data are in a sub-folder of the strategies folder. Find where this script is run,
-    # and look for the sub-folder. This script can reside anywhere.
-    # current_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    # file_path = os.path.join(settings.ROOT_DIR, 'tests', 'data', 'VIX.csv')
-
-    # Create a Data Feed
-    data = op.feeds.CboeCSVFeed()
-
-    # Add the Data Feed to Optopsy
-    optopsy.add_data(data)
+    # Tell which data feed config for Optopsy to use
+    optopsy.add_data(CboePandasFeed(file_path='../data/A.csv'))
 
     # Set our desired cash start
-    optopsy.broker.set_cash(100000.0)
+    optopsy.broker.set_cash(100000)
 
     # Print out the starting conditions
     print('Starting Portfolio Value: %.2f' % optopsy.broker.get_value())
@@ -49,3 +62,7 @@ if __name__ == '__main__':
 
     # Print out the final result
     print('Final Portfolio Value: %.2f' % optopsy.broker.get_value())
+
+
+if __name__ == '__main__':
+    run_strat()
