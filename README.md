@@ -1,22 +1,43 @@
+# Development Update (June 1, 2018)
+
+This library is currently being redeveloped to be better optimized for options backtesting. 
+
+The new version will provide predefined filters to act as building blocks for your option trading strategies.
+No need to extend classes to implement custom trade configurations such as position sizing and commissions. These
+settings can now be defined using existing filters.
+
+Filters will include (but not limited to):
+
+**Entry rules:**
+* Days to expiration,
+* Entry Days (Stagger trades)
+* Absolute Delta
+* Percentage out-of-the-money.
+* Contract size
+
+**Exit rules:**
+* Days to expiration
+* Hold days
+* Profit/Stop loss percent
+* Spread delta
+* Spread price
+
+Development changes will be made on the `development` branch
+
 # Optopsy
 
-This library allows you to backtest options strategies with your own historical options data. Use the built-in functions to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit / adjustment criteria.
+This library allows you to backtest options strategies with your own historical options data. 
+Use the built-in filters to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit criterion.
 
 ## Features
-* Uses Pandas library under the hood to generate options spreads efficiently.
-* Option spreads can be generated with adjustable parameters such as strike width and expiration dates. This allows you to create more advance strategies such as broken-wing butterflies/iron condors
-* Generates historical option spread prices for all possible strike combinations from the option chain.
-* Use your own options data source by using the built-in data adapters or write your own. (Currently supports sqlite)
-* Integrated brokerage simulation with market and limit orders
-* Interchangeable and extensible position sizers, slippage and commissions modules (WIP)
-* Optimization support: define a range for your strategy parameters and the system will execute the strategy for each value of the range
-* The following options strategies are currently supported:
-    * Single Calls/Puts
-    * Vertical Spreads
+* **Open source** - Feel free to make requests or contribute to the code base! Help out a fellow trader!
+* **BYOD** - "Bring your own Data" source by using the built-in data adapters or write your own. (Currently supports csv files)
+* **Optimization support** - Define ranges for your strategy parameters and the system will execute the strategy for each value of the range
 
 ### Planned Features
-* CSV file support
 * Option strategy support:
+    * Single Calls/Puts
+    * Vertical Spreads
     * Iron Condors (Iron Butterflies)
     * Covered Stock
     * Combos (Synthetics/Collars)
@@ -25,24 +46,8 @@ This library allows you to backtest options strategies with your own historical 
     * Custom Spreads
     * Strangles
     * Straddles
-
-## Installation
-
-### Quick start
-
-To set up a development environment quickly, first install Python 3. It
-comes with virtualenv built-in. So create a virtual env by:
-
-    1. `$ python3 -m venv optopsy`
-    2. `$ . optopsy/bin/activate`
-
-Install all dependencies:
-
-    pip install -r requirements.txt
-
-### Notes
-
-It is recommended to use the Anaconda distribution to install the projects dependencies.
+ * Stock Price Distribution Generator - Analyze historical stock price movements patterns to discover potential trade ideas.
+ * Trade Scanner - Used to recommend trades based on stock price distributions
 
 ### Usage
 
