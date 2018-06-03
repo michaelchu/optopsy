@@ -22,17 +22,24 @@ Filters will include (but not limited to):
 * Spread delta
 * Spread price
 
-Development changes will be made on the `development` branch
+Development changes will be made on the `development` branch. The backtester branch will be retained for historical
+purposes and will be removed at a later time.
 
 # Optopsy
 
-This library allows you to backtest options strategies with your own historical options data. 
-Use the built-in filters to generate options spreads with adjustable parameters and backtest them with your own custom entry / exit criterion.
+Optopsy is a flexible backtesting framework used to test complex options trading strategies written in Python. 
+Backtesting is the process of testing a strategy over a given data set. This framework allows you to easily create 
+strategies that mix and match different filters to create an 'Algo', these 'Algos" can in turn be combined to model various
+trading techniques such as hedging or pairs trading. 
+The modular nature of this framework aims to foster the creation of easily testable, re-usable and flexible blocks of strategy logic to facilitate 
+the rapid development of complex options trading strategies.
 
 ## Features
 * **Open source** - Feel free to make requests or contribute to the code base! Help out a fellow trader!
 * **BYOD** - "Bring your own Data" source by using the built-in data adapters or write your own. (Currently supports csv files)
-* **Optimization support** - Define ranges for your strategy parameters and the system will execute the strategy for each value of the range
+* **JSON-like Strategy Definitions** - Define your strategy in a JSON like format, no need to code complex algorithms, let the library handle it.
+* **Optimization support** - Define ranges for your strategy parameters and the system will optimize the strategy
+* **Flexable Strategy Components**
 
 ### Planned Features
 * Option strategy support:

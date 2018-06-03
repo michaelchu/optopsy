@@ -1,12 +1,34 @@
-class Strategy(object):
+from abc import ABC, abstractmethod
 
-    def __init__(self, filters):
 
-        # Here we filter out params labeled 'entry' to be assigned to internal
-        # entry filters
-        self.strategy = [f for f in filters if 'strategy' in f]
-        self.entry_filters = [f for f in filters if 'entry' in f]
-        self.exit_filters = [f for f in filters if 'entry' in f]
+class AbstractStrategy(ABC):
+
+    @abstractmethod
+    def start(self):
+        pass
+
+    @abstractmethod
+    def next(self):
+        pass
+
+    @abstractmethod
+    def stop(self):
+        pass
+
+
+class Strategy(AbstractStrategy):
+
+    def __init__(self, name, algos, children=None):
+        pass
+
+    def start(self):
+        pass
+
+    def next(self):
+        pass
+
+    def stop(self):
+        pass
 
 
 
