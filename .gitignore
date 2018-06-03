@@ -31,6 +31,3 @@ MANIFEST
 .idea
 .vscode
 
-# custom options database
-/data
-
