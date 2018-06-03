@@ -37,9 +37,8 @@ the rapid development of complex options trading strategies.
 ## Features
 * **Open source** - Feel free to make requests or contribute to the code base! Help out a fellow trader!
 * **BYOD** - "Bring your own Data" source by using the built-in data adapters or write your own. (Currently supports csv files)
-* **JSON-like Strategy Definitions** - Define your strategy in a JSON like format, no need to code complex algorithms, let the library handle it.
+* **Modular Design** - Facilitates the construction and composition of complex algorithmic trading strategies that are modular and re-usable.
 * **Optimization support** - Define ranges for your strategy parameters and the system will optimize the strategy
-* **Flexable Strategy Components**
 
 ### Planned Features
 * Option strategy support:

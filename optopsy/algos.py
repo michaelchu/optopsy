@@ -1,5 +1,4 @@
 class Algo(object):
-
     """
     Algos are used to modularize strategy logic so that strategy logic becomes
     modular, composable, more testable and less error prone. Basically, the
@@ -30,33 +29,42 @@ class Algo(object):
         raise NotImplementedError("%s not implemented!" % self.name)
 
 
-class DataFeed(Algo):
+class AlgoStack(Algo):
+    """
+    An AlgoStack derives from Algo runs multiple Algos until a
+    failure is encountered.
+
+    The purpose of an AlgoStack is to group a logic set of Algos together. Each
+    Algo in the stack is run. Execution stops if one Algo returns False.
+
+    Args:
+        * algos (list): List of algos.
 
     """
-    Sets the date range for data passed to the strategy
-    """
 
-    def __init__(self, file_path, data_struct):
-        super(DataFeed, self).__init__()
-        self.file_path = file_path
-        self.data_struct = data_struct
+    def __init__(self, *algos):
+        super(AlgoStack, self).__init__()
+        self.algos = algos
+        self.check_run_always = any(hasattr(x, 'run_always')
+                                    for x in self.algos)
 
     def __call__(self, target):
-        return True
-
-
-class DateRange(Algo):
-
-    """
-    Sets the date range for data passed to the strategy
-    """
-
-    def __init__(self, start_date, end_date):
-        super(DateRange, self).__init__()
-        self.start_date = start_date
-        self.end_date = end_date
-
-    def __call__(self, target):
-        if self.start_date < self.end_date:
-            return False
-        return True
+        # normal running mode
+        if not self.check_run_always:
+            for algo in self.algos:
+                if not algo(target):
+                    return False
+            return True
+        # run mode when at least one algo has a run_always attribute
+        else:
+            # store result in res
+            # allows continuation to check for and run
+            # algos that have run_always set to True
+            res = True
+            for algo in self.algos:
+                if res:
+                    res = algo(target)
+                elif hasattr(algo, 'run_always'):
+                    if algo.run_always:
+                        algo(target)
+            return res

@@ -4,14 +4,11 @@ from .strategy import Strategy
 
 class Optopsy(object):
 
-    def __init__(self, strategy):
+    def __init__(self, *strategies):
         self.broker = Broker()
         self.feed = list()
-        self.strategy = strategy
+        self.strategies = strategies
         self.run_configs = list()
-
-    def add_data(self, feed):
-        self.feed.append(feed)
 
     def run(self):
         """
