@@ -1,6 +1,4 @@
-import datetime
 import pandas as pd
-
 # import the backtest library
 import optopsy as op
 
@@ -27,23 +25,22 @@ data_struct = (
 )
 
 # fetch the data
-data = op.get('../data/A.csv', start='1/1/2016', end='12/31/2016')
+data = op.get('../data/A.csv', start='1/1/2016', end='12/31/2016', struct=data_struct)
 
 strategy_1 = op.Strategy('Weekly Bull Put Spread', [
-    op.algos.OptionStrategy('long_put_spread', width=2),
-    op.algos.EntryAbsDelta(ideal=(0.4, 0.5, 0.6,), dev=0.05),
+    op.algos.EntryAbsDelta(ideal=0.5, min=0.4, max=0.6),
     op.algos.EntrySpreadPrice(ideal=1.0),
-    op.algos.EntryDaysToExpiration(ideal=47, min_delta=7),
+    op.algos.EntryDaysToExpiration(ideal=47, min=40, max=52),
     op.algos.EntryDayOfWeek(ideal=4)
-], data)
+], op.options.LongPutSpread(data, width=2))
 
 # Here we create another 'Strategy', one that is designed to hedge the strategy above
 strategy_2 = op.Strategy('Weekly Bull Put Spread Strategy', [
-    op.algos.OptionStrategy('long_put'),
-    op.algos.EntryAbsDelta(ideal=0.2, dev=0.05),
-    op.algos.EntryDaysToExpiration(ideal=47, min_delta=7),
+    op.algos.EntryAbsDelta(ideal=0.2, min=0.4, max=0.6),
+    op.algos.EntryDaysToExpiration(ideal=47, min=40, max=52),
     op.algos.EntryDayOfWeek(ideal=4)
-], data)
+], op.options.LongPut(data))
+
 
 def run_strat():
     # Create an instance of Optopsy with strategy settings

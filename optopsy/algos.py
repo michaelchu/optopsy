@@ -68,3 +68,51 @@ class AlgoStack(Algo):
                     if algo.run_always:
                         algo(target)
             return res
+
+
+class EntryAbsDelta(Algo):
+
+    def __init__(self, ideal, min, max):
+        super(EntryAbsDelta).__init__()
+        self.ideal = ideal
+        self.min = min
+        self.max = max
+
+    def __call__(self, target):
+        pass
+
+
+class EntrySpreadPrice(Algo):
+
+    def __init__(self, ideal, min, max):
+        super(EntrySpreadPrice).__init__()
+        self.ideal = ideal
+        self.min = min
+        self.max = max
+
+    def __call__(self, target):
+        pass
+
+
+class EntryDaysToExpiration(Algo):
+
+    def __init__(self, ideal, min, max):
+        super(EntryDaysToExpiration).__init__()
+        self.ideal = ideal
+        self.min = min
+        self.max = max
+
+    def __call__(self, target):
+        pass
+
+
+class EntryDayOfWeek(Algo):
+
+    def __init__(self, ideal, min, max):
+        super(EntryDayOfWeek).__init__()
+        self.ideal = ideal
+        self.min = min
+        self.max = max
+
+    def __call__(self, target):
+        pass
