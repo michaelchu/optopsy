@@ -2,8 +2,8 @@ import datetime
 
 # import the backtest library
 import optopsy as op
+import optopsy.data as feeds
 import optopsy.strategy as strategies
-import optopsy.data_feed as feeds
 
 # List of test data sets to use
 test_file_paths = ['../data/A.csv']
