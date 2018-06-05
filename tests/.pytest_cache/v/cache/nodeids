@@ -1,4 +1,5 @@
 [
-  "test_option_strategies.py::test_symbol",
-  "test_option_strategies.py::test_option_type"
+  "test_data.py::test_invalid_fields",
+  "test_data.py::test_valid_fields",
+  "test_data.py::test_data_import"
 ]
