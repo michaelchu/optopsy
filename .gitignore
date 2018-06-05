@@ -33,4 +33,5 @@ MANIFEST
 
 /data/A.csv
 /data/SPX.csv
+/tests/.pytest_cache/
 
