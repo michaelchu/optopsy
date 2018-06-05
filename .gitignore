@@ -31,3 +31,6 @@ MANIFEST
 .idea
 .vscode
 
+/data/A.csv
+/data/SPX.csv
+
