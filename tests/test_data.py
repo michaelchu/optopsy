@@ -5,39 +5,109 @@ import pytest
 
 import optopsy as op
 
+fields = (
+    ('symbol', True),
+    ('quote_date', True),
+    ('expiration', True),
+    ('strike', True),
+    ('option_type', True),
+    ('bid', True),
+    ('ask', True)
+)
+
 
 def test_invalid_fields():
-    invalid = (
+    invalid_fields = (
         ('symbol', -1),
         ('invalid', -1)
     )
 
     with pytest.raises(ValueError):
-        data = op.get('../data/A.csv',
+        data = op.get('../data/tests/test_dod_a.csv',
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
-                      struct=invalid
+                      struct=invalid_fields
                       )
 
 
 def test_valid_fields():
-    valid = (
+    valid_fields = (
         ('symbol', 0),
-        ('quote_date', 1)
+        ('underlying_price', 1),
+        ('option_type', 4),
+        ('expiration', 5),
+        ('quote_date', 6),
+        ('strike', 7),
+        ('bid', 9),
+        ('ask', 10),
+        ('volume', 11),
+        ('oi', 12),
+        ('iv', 14),
+        ('delta', 17),
+        ('gamma', 18),
+        ('theta', 19),
+        ('vega', 20)
     )
 
     try:
         data = op.get('../data/tests/test_dod_a.csv',
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
-                      struct=valid
+                      struct=valid_fields
                       )
     except ValueError:
         pytest.fail('ValueError raised')
 
 
-def test_data_import():
-    # struct for CBOE data
+def test_invalid_idx():
+    invalid_idx = (
+        ('symbol', -1),
+        ('quote_date', -2)
+    )
+
+    with pytest.raises(ValueError):
+        data = op.get('../data/tests/test_dod_a.csv',
+                      start=date(2016, 1, 1),
+                      end=date(2016, 12, 31),
+                      struct=invalid_idx
+                      )
+
+
+def test_invalid_start_end():
+    valid_fields = (
+        ('symbol', 0),
+        ('quote_date', 1)
+    )
+
+    start = date(2016, 1, 1)
+    end = date(2015, 1, 1)
+
+    with pytest.raises(ValueError):
+        data = op.get('../data/tests/test_dod_a.csv',
+                      start=start,
+                      end=end,
+                      struct=valid_fields
+                      )
+
+
+def test_invalid_start_end_fields():
+    start = date(2016, 1, 1)
+    end = date(2015, 1, 1)
+
+    invalid_fields = (
+        ('symbol', -1),
+        ('invalid', -1)
+    )
+
+    with pytest.raises(ValueError):
+        data = op.get('../data/tests/test_dod_a.csv',
+                      start=start,
+                      end=end,
+                      struct=invalid_fields
+                      )
+
+
+def test_data_cboe_import():
     struct = (
         ('symbol', 0),
         ('quote_date', 1),
@@ -45,44 +115,54 @@ def test_data_import():
         ('expiration', 3),
         ('strike', 4),
         ('option_type', 5),
-        ('volume', 10),
         ('bid', 12),
-        ('ask', 14),
-        ('underlying_price', 17),
-        ('iv', 18),
-        ('delta', 19),
-        ('gamma', 20),
-        ('theta', 21),
-        ('vega', 22),
-        ('rho', 23),
-        ('oi', 24)
+        ('ask', 14)
     )
 
-    names = (
-        'symbol',
-        'quote_date',
-        'root',
-        'expiration',
-        'strike',
-        'option_type',
-        'volume',
-        'bid',
-        'ask',
-        'underlying_price',
-        'iv',
-        'delta',
-        'gamma',
-        'theta',
-        'vega',
-        'rho',
-        'oi'
-    )
+    test_data = [
+        {'symbol': '^SPX',
+         'option_type': 'c',
+         'root': 'SPXW',
+         'expiration': '1/8/2016 0:00:00',
+         'quote_date': '1/4/2016 0:00:00',
+         'strike': 700.00,
+         'bid': 1299.60,
+         'ask': 1305.30
+         },
+        {'symbol': '^SPX',
+         'option_type': 'p',
+         'root': 'SPXW',
+         'expiration': '1/8/2016 0:00:00',
+         'quote_date': '1/4/2016 0:00:00',
+         'strike': 700.00,
+         'bid': 0.00,
+         'ask': 0.05
+         },
+        {'symbol': '^SPX',
+         'option_type': 'c',
+         'root': 'SPXW',
+         'expiration': '1/8/2016 0:00:00',
+         'quote_date': '1/5/2016 0:00:00',
+         'strike': 700.00,
+         'bid': 1313.60,
+         'ask': 1319.40
+         },
+        {'symbol': '^SPX',
+         'option_type': 'p',
+         'root': 'SPXW',
+         'expiration': '1/8/2016 0:00:00',
+         'quote_date': '1/5/2016 0:00:00',
+         'strike': 700.00,
+         'bid': 0.00,
+         'ask': 0.05
+         }
+    ]
 
-    idx = (0, 1, 2, 3, 4, 5, 10, 12, 14, 17, 18, 19, 20, 21, 22, 23, 24)
-
-    # We import the data with our defined columns and indexes to check against the one returned by the get function.
-    raw_import = pd.read_csv('../data/tests/test_cboe_spx.csv', parse_dates=True, names=names, usecols=idx,
-                             skiprows=1)
+    cols = list(zip(*struct))[0]
+    test_df = pd.DataFrame(test_data, columns=cols)
+    test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True, format='%Y-%m-%d')
+    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
+    test_df.set_index('quote_date', inplace=True)
 
     data = op.get('../data/tests/test_cboe_spx.csv',
                   start=date(2016, 1, 1),
@@ -90,4 +170,107 @@ def test_data_import():
                   struct=struct
                   )
 
-    assert raw_import.equals(data)
+    assert test_df.equals(data)
+
+
+def test_data_dod_import():
+    struct = (
+        ('symbol', 0),
+        ('option_type', 4),
+        ('expiration', 5),
+        ('quote_date', 6),
+        ('strike', 7),
+        ('bid', 9),
+        ('ask', 10)
+    )
+
+    test_data = [
+        {'symbol': 'A',
+         'option_type': 'c',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-05',
+         'strike': 20.00,
+         'bid': 20.30,
+         'ask': 21.35
+         },
+        {'symbol': 'A',
+         'option_type': 'p',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-05',
+         'strike': 20.00,
+         'bid': 0.00,
+         'ask': 0.35
+         },
+        {'symbol': 'A',
+         'option_type': 'c',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-06',
+         'strike': 20.00,
+         'bid': 20.30,
+         'ask': 21.35
+         },
+        {'symbol': 'A',
+         'option_type': 'p',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-06',
+         'strike': 20.00,
+         'bid': 0.00,
+         'ask': 0.35
+         },
+        {'symbol': 'A',
+         'option_type': 'c',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-07',
+         'strike': 20.00,
+         'bid': 20.30,
+         'ask': 21.35
+         },
+        {'symbol': 'A',
+         'option_type': 'p',
+         'expiration': '2016-01-15',
+         'quote_date': '2016-01-07',
+         'strike': 20.00,
+         'bid': 0.00,
+         'ask': 0.35
+         }
+    ]
+
+    cols = list(zip(*struct))[0]
+    test_df = pd.DataFrame(test_data, columns=cols)
+    test_df['expiration'] = pd.to_datetime(test_df.expiration, format='%Y-%m-%d')
+    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
+    test_df.set_index(['quote_date'], inplace=True)
+
+    data = op.get('../data/tests/test_dod_a.csv',
+                  start=date(2016, 1, 1),
+                  end=date(2016, 12, 31),
+                  struct=struct
+                  )
+
+    assert test_df.equals(data)
+
+
+def test_data_dod_import_date_range():
+    struct = (
+        ('symbol', 0),
+        ('underlying_price', 1),
+        ('option_type', 4),
+        ('expiration', 5),
+        ('quote_date', 6),
+        ('strike', 7),
+        ('bid', 9),
+        ('ask', 10),
+        ('volume', 11),
+        ('oi', 12),
+        ('iv', 14),
+        ('delta', 17),
+        ('gamma', 18),
+        ('theta', 19),
+        ('vega', 20)
+    )
+
+    data = op.get('../data/tests/test_dod_a.csv',
+                  start=date(2016, 1, 5),
+                  end=date(2016, 1, 6),
+                  struct=struct
+                  )
