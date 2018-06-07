@@ -1,3 +1,4 @@
+import os
 from datetime import date
 
 import pandas as pd
@@ -152,7 +153,7 @@ def test_invalid_fields():
     )
 
     with pytest.raises(ValueError):
-        data = op.get('../data/tests/test_dod_a.csv',
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
                       struct=invalid_fields
@@ -179,7 +180,7 @@ def test_valid_fields():
     )
 
     try:
-        data = op.get('../data/tests/test_dod_a.csv',
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
                       struct=valid_fields
@@ -195,7 +196,7 @@ def test_invalid_idx():
     )
 
     with pytest.raises(ValueError):
-        data = op.get('../data/tests/test_dod_a.csv',
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
                       struct=invalid_idx
@@ -212,7 +213,7 @@ def test_invalid_start_end():
     end = date(2015, 1, 1)
 
     with pytest.raises(ValueError):
-        data = op.get('../data/tests/test_dod_a.csv',
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=start,
                       end=end,
                       struct=valid_fields
@@ -229,7 +230,7 @@ def test_invalid_start_end_fields():
     )
 
     with pytest.raises(ValueError):
-        data = op.get('../data/tests/test_dod_a.csv',
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=start,
                       end=end,
                       struct=invalid_fields
@@ -243,7 +244,7 @@ def test_data_cboe_import():
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
     test_df.set_index('quote_date', inplace=True)
 
-    data = op.get('../data/tests/test_cboe_spx.csv',
+    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_spx.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
                   struct=cboe_struct
@@ -259,7 +260,7 @@ def test_data_dod_import():
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
     test_df.set_index(['quote_date'], inplace=True)
 
-    data = op.get('../data/tests/test_dod_a.csv',
+    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
                   struct=dod_struct
@@ -275,7 +276,7 @@ def test_data_cboe_import_bulk():
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
     test_df.set_index(['quote_date'], inplace=True)
 
-    data = op.gets('../data/tests/daily',
+    data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 4),
                    end=date(2016, 1, 6),
                    struct=cboe_struct
@@ -291,7 +292,7 @@ def test_data_cboe_date_range():
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
     test_df.set_index(['quote_date'], inplace=True)
 
-    data = op.gets('../data/tests/daily',
+    data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 5),
                    end=date(2016, 1, 6),
                    struct=cboe_struct
