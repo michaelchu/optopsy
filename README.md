@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
-
 # Development Update (June 1, 2018)
+
+[![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
 
 This library is currently being redeveloped to be better optimized for options backtesting. 
 
