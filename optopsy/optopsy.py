@@ -1,29 +1,40 @@
-from .broker import Broker
-from .strategy import Strategy
+import pyprind
 
 
 class Optopsy(object):
 
-    def __init__(self, *strategies):
-        self.broker = Broker()
-        self.feed = list()
-        self.strategies = strategies
-        self.run_configs = list()
+    def __init__(self, strategy, data, name=None,
+                 init_capital=10000, progress_bar=True):
+        self.strategy = strategy
+        self.data = data
+        self.dates = data.index.unique()
+        self.capital = init_capital
+        self.name = name if not None else self.strategy.name
 
-    def run(self):
+    def run(self, progress_bar=True):
         """
         Here we will generate a list of strategies to execute based on any optimization
         parameters given in filters.
         :return:
         """
 
-        # Generate all run configurations based on any optimization parameters
-        # configurations will be stored like so: ((Strategy,
-        for config in self.run_configs:
-            # initialize a strategy instance with the current combination of parameters
-            strategy = Strategy(config[0], config[1])
+        # First we set the strategy's available capital
+        self.strategy.adjust(self.capital)
+        # loop through dates
+        # init progress bar
+        if progress_bar:
+            bar = pyprind.ProgBar(len(self.dates), title=self.name, stream=1, bar_char='█')
 
-            # For each run configuration we set our data feed to match the data requested
-            self.feed.start(config[0].opt_strategy)
+        for dt in self.dates:
 
+            # update progress bar
+            if progress_bar:
+                bar.update()
 
+            if not self.strategy.bankrupt:
+                self.strategy.update(dt)
+            else:
+                if progress_bar:
+                    bar.stop()
+
+        print('\nDone!')

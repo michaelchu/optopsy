@@ -1,5 +1,7 @@
 import glob
 import os
+import sys
+from distutils.util import strtobool
 
 import pandas as pd
 
@@ -7,8 +9,10 @@ import pandas as pd
 # the second item of each tuple in the fields list, True means this field is required
 fields = (
     ('symbol', True),
+    ('option_symbol', False),
     ('quote_date', True),
     ('root', False),
+    ('style', False),
     ('expiration', True),
     ('strike', True),
     ('option_type', True),
@@ -26,7 +30,7 @@ fields = (
 )
 
 
-def get(file_path, start, end, struct, skiprows=1):
+def get(file_path, start, end, struct, skiprows=1, prompt=True):
     """
     This method will read in the data file using pandas and assign the
     normalized dataframe to the class's data variable.
@@ -51,10 +55,17 @@ def get(file_path, start, end, struct, skiprows=1):
                          skiprows=skiprows
                          )
 
-        return _format(df, start, end)
+        print(df.head())
+
+        if prompt and user_prompt("Does this look correct?"):
+            return _format(df).loc[start:end]
+        elif not prompt:
+            return _format(df).loc[start:end]
+        else:
+            sys.exit()
 
 
-def gets(dir_path, start, end, struct, skiprows=1):
+def gets(dir_path, start, end, struct, skiprows=1, prompt=True):
     """
     This method will read in a directory containing data files to be imported
     into a dataframe
@@ -81,31 +92,35 @@ def gets(dir_path, start, end, struct, skiprows=1):
                                    ) for f in all_files
                        )
 
-        return _format(df, start, end)
+        print(df.head())
+
+        if prompt and user_prompt("Does this look correct?"):
+            return _format(df).loc[start:end]
+        elif not prompt:
+            return _format(df).loc[start:end]
+        else:
+            sys.exit()
 
 
-def _format(df, start, end):
+def _format(dataframe):
     """
     Format the data frame to a standard format
-    :param df: dataframe to format
-    :param start: start date to begin data slice
-    :param end: end date to end data slice
+    :param dataframe: dataframe to format
     :return: formatted dataframe
     """
-    df['expiration'] = pd.to_datetime(df['expiration'], infer_datetime_format=True, format='%Y-%m-%d')
-    df['quote_date'] = pd.to_datetime(df['quote_date'], infer_datetime_format=True, format='%Y-%m-%d')
+    dataframe['expiration'] = pd.to_datetime(dataframe['expiration'], infer_datetime_format=True, format='%Y-%m-%d')
+    dataframe['quote_date'] = pd.to_datetime(dataframe['quote_date'], infer_datetime_format=True, format='%Y-%m-%d')
 
     # convert option types to standard format 'c' or 'p'
-    df['option_type'] = df['option_type'].str.lower().str[:1]
+    dataframe['option_type'] = dataframe['option_type'].str.lower().str[:1]
 
     # use quote date as index
-    df.set_index('quote_date', inplace=True)
+    dataframe.set_index('quote_date', inplace=True)
 
-    # select data by quote date between specified start and end dates
-    df = df.loc[start:end]
-    df = df.round(2)
+    # rounds numbers to two decimals
+    dataframe = dataframe.round(2)
 
-    return df
+    return dataframe
 
 
 def _check_structs(struct, start, end):
@@ -129,8 +144,27 @@ def _check_structs(struct, start, end):
 
     cols = list(zip(*struct))
 
+    # check if we have any duplicate indices, which would be invalid
+    if len(list(set(cols[1]))) != len(cols[1]):
+        raise ValueError("Duplicate indices found!")
+
     # Check if the struct provided contains all the required fields
     if not all(f in cols[0] for f in req_fields):
         raise ValueError("Required field names not defined!")
 
     return cols
+
+
+def user_prompt(question):
+    """
+    Prompts a Yes/No questions.
+    :param question: The question to ask the user
+    """
+    while True:
+        sys.stdout.write(question + " [y/n]: ")
+        user_input = input().lower()
+        try:
+            result = strtobool(user_input)
+            return result
+        except ValueError:
+            sys.stdout.write("Please use y/n or yes/no.\n")

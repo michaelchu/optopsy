@@ -30,9 +30,8 @@ purposes and will be removed at a later time.
 # Optopsy
 
 Optopsy is a flexible backtesting framework used to test complex options trading strategies written in Python. 
-Backtesting is the process of testing a strategy over a given data set. This framework allows you to easily create 
-strategies that mix and match different filters to create an 'Algo', these 'Algos" can in turn be combined to model various
-trading techniques such as hedging or pairs trading. 
+Backtesting is the process of testing a strategy over a given data set. This framework allows you to mix and match 
+different 'filters' to create a 'Strategy', and allow multiple strategies to form an overall more complex trading algorithms. 
 The modular nature of this framework aims to foster the creation of easily testable, re-usable and flexible blocks of strategy logic to facilitate 
 the rapid development of complex options trading strategies.
 
@@ -43,6 +42,8 @@ the rapid development of complex options trading strategies.
 * **Optimization support** - Define ranges for your strategy parameters and the system will optimize the strategy
 
 ### Planned Features
+* Indicator Support - Create entry and exit rules based on indicators
+* Optimizer - Allows users to run multiple backtests with different combinations of parameters
 * Option strategy support:
     * Single Calls/Puts
     * Vertical Spreads

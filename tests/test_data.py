@@ -183,7 +183,8 @@ def test_valid_fields():
         data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
-                      struct=valid_fields
+                      struct=valid_fields,
+                      prompt=False
                       )
     except ValueError:
         pytest.fail('ValueError raised')
@@ -199,7 +200,8 @@ def test_invalid_idx():
         data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=date(2016, 1, 1),
                       end=date(2016, 12, 31),
-                      struct=invalid_idx
+                      struct=invalid_idx,
+                      prompt=False
                       )
 
 
@@ -216,7 +218,8 @@ def test_invalid_start_end():
         data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=start,
                       end=end,
-                      struct=valid_fields
+                      struct=valid_fields,
+                      prompt=False
                       )
 
 
@@ -233,7 +236,8 @@ def test_invalid_start_end_fields():
         data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                       start=start,
                       end=end,
-                      struct=invalid_fields
+                      struct=invalid_fields,
+                      prompt=False
                       )
 
 
@@ -247,7 +251,8 @@ def test_data_cboe_import():
     data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_spx.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
-                  struct=cboe_struct
+                  struct=cboe_struct,
+                  prompt=False
                   )
 
     assert test_df.equals(data)
@@ -263,7 +268,8 @@ def test_data_dod_import():
     data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
-                  struct=dod_struct
+                  struct=dod_struct,
+                  prompt=False
                   )
 
     assert test_df.equals(data)
@@ -279,7 +285,8 @@ def test_data_cboe_import_bulk():
     data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 4),
                    end=date(2016, 1, 6),
-                   struct=cboe_struct
+                   struct=cboe_struct,
+                   prompt=False
                    )
 
     assert test_df.equals(data)
@@ -295,7 +302,28 @@ def test_data_cboe_date_range():
     data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 5),
                    end=date(2016, 1, 6),
-                   struct=cboe_struct
+                   struct=cboe_struct,
+                   prompt=False
                    )
 
     assert test_df.equals(data)
+
+
+def test_duplicate_idx_in_struct():
+    invalid_struct = (
+        ('symbol', 0),
+        ('option_type', 4),
+        ('expiration', 5),
+        ('quote_date', 5),
+        ('strike', 7),
+        ('bid', 9),
+        ('ask', 10)
+    )
+
+    with pytest.raises(ValueError):
+        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
+                      start=date(2016, 1, 5),
+                      end=date(2016, 1, 6),
+                      struct=invalid_struct,
+                      prompt=False
+                      )
