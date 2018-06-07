@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 # All data feeds should have certain fields present, as defined by
-# the second item of each tuple in the fields list
+# the second item of each tuple in the fields list, True means this field is required
 fields = (
     ('symbol', True),
     ('quote_date', True),
@@ -44,12 +44,14 @@ def get(file_path, start, end, struct, skiprows=1):
         raise ValueError("Invalid path, please provide a valid path to a file")
     else:
         cols = _check_structs(struct, start, end)
-        return pd.read_csv(file_path,
-                           parse_dates=True,
-                           names=cols[0],
-                           usecols=cols[1],
-                           skiprows=skiprows
-                           )
+        df = pd.read_csv(file_path,
+                         parse_dates=True,
+                         names=cols[0],
+                         usecols=cols[1],
+                         skiprows=skiprows
+                         )
+
+        return _format(df, start, end)
 
 
 def gets(dir_path, start, end, struct, skiprows=1):
@@ -70,6 +72,7 @@ def gets(dir_path, start, end, struct, skiprows=1):
 
         # for each file in path
         all_files = glob.glob(os.path.join(dir_path, "*.csv"))
+        all_files.sort()
         df = pd.concat(pd.read_csv(f,
                                    parse_dates=True,
                                    names=cols[0],
