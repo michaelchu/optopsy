@@ -1,3 +1,6 @@
+from .option_query import *
+
+
 class Option(object):
 
     def __init__(self, name=None):
@@ -12,7 +15,8 @@ class Single(Option):
 
     def __call__(self, data, target):
         # here we generate the spread and assign the results to the target
-        pass
+        query = OptionQuery(data).calls()
+        print(query.option_chain.head())
 
 
 class ShortCall(Option):

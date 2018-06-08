@@ -55,8 +55,6 @@ def get(file_path, start, end, struct, skiprows=1, prompt=True):
                          skiprows=skiprows
                          )
 
-        print(df.head())
-
         if prompt and user_prompt("Does this look correct?"):
             return _format(df).loc[start:end]
         elif not prompt:
@@ -92,8 +90,6 @@ def gets(dir_path, start, end, struct, skiprows=1, prompt=True):
                                    ) for f in all_files
                        )
 
-        print(df.head())
-
         if prompt and user_prompt("Does this look correct?"):
             return _format(df).loc[start:end]
         elif not prompt:
@@ -115,7 +111,7 @@ def _format(dataframe):
     dataframe['option_type'] = dataframe['option_type'].str.lower().str[:1]
 
     # use quote date as index
-    dataframe.set_index('quote_date', inplace=True)
+    dataframe.set_index('quote_date', inplace=True, drop=False)
 
     # rounds numbers to two decimals
     dataframe = dataframe.round(2)

@@ -11,7 +11,7 @@ class Strategy(object):
     def setup(self, data):
         # call the option object to construct the spread
         self.opt_strat(data, self)
-    
+        print(self.spread_data)
 
     def update(self, date):
         print(date)

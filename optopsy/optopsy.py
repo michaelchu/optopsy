@@ -8,7 +8,7 @@ class Optopsy(object):
                  init_capital=10000, progress_bar=True):
         self.strategy = strategy
         self.data = data
-        self.dates = data.index.unique()
+        self.dates = data.quote_date.unique()
         self.capital = init_capital
         self.name = name if not None else self.strategy.name
 
