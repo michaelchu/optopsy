@@ -21,7 +21,10 @@ class Optopsy(object):
 
         # First we set the strategy's available capital
         self.strategy.adjust(self.capital)
-        # loop through dates
+        
+        # Pass the data to the strategy, to setup the option spread
+        self.strategy.setup(self.data)
+        
         # init progress bar
         if progress_bar:
             bar = pyprind.ProgBar(len(self.dates), title=self.name, stream=1, bar_char='█')

@@ -6,6 +6,12 @@ class Strategy(object):
         self.filters = filters
         self.opt_strat = opt_strat
         self.bankrupt = False
+        self.spread_data = None
+        
+    def setup(self, data):
+        # call the option object to construct the spread
+        self.opt_strat(data, self)
+    
 
     def update(self, date):
         print(date)
