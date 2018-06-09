@@ -11,12 +11,17 @@ class Strategy(object):
         
     def setup(self, data):
         # call the option object to construct the spread
-        self.opt_strat(data, self)
-        print(self.spread_data.head())
+        self.spread_data = self.opt_strat(data, self)
 
     def update(self, date):
-        # current quote dat
+        # current quote date
         self.now = date
+
+        # we will slice our spread_data by today's date
+
+        # run entry filters against our current quote prices
+
+        # if we have positions, run exit filters against our current positions
 
     def adjust(self, amount):
         pass

@@ -2,6 +2,7 @@ import os
 from datetime import date
 
 import pandas as pd
+import pandas.util.testing as pt
 import pytest
 
 import optopsy as op
@@ -255,7 +256,7 @@ def test_data_cboe_import():
                   prompt=False
                   )
 
-    assert test_df.equals(data)
+    pt.assert_frame_equal(test_df, data)
 
 
 def test_data_dod_import():
@@ -272,7 +273,7 @@ def test_data_dod_import():
                   prompt=False
                   )
 
-    assert test_df.equals(data)
+    pt.assert_frame_equal(test_df, data)
 
 
 def test_data_cboe_import_bulk():
@@ -289,7 +290,7 @@ def test_data_cboe_import_bulk():
                    prompt=False
                    )
 
-    assert test_df.equals(data)
+    pt.assert_frame_equal(test_df, data)
 
 
 def test_data_cboe_date_range():
@@ -306,7 +307,7 @@ def test_data_cboe_date_range():
                    prompt=False
                    )
 
-    assert test_df.equals(data)
+    pt.assert_frame_equal(test_df, data)
 
 
 def test_duplicate_idx_in_struct():

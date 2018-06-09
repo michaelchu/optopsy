@@ -15,9 +15,9 @@ class Single(Option):
         super(Single, self).__init__('Single')
         self.option_type = option_type
 
-    def __call__(self, data, target):
+    def __call__(self, data):
         # here we generate a single option strategy based on input and assign the results to the target
-        target.spread_data = OptionQuery(data).option_type(self.option_type).fetch()
+        return OptionQuery(data).option_type(self.option_type).fetch()
 
 
 class Vertical(Option):
@@ -27,7 +27,7 @@ class Vertical(Option):
         self.option_type = option_type
         self.width = width
 
-    def __call__(self, data, target):
+    def __call__(self, data):
         # here we get all the option chains based on option type
         chains = OptionQuery(data).option_type(self.option_type).fetch()
 
