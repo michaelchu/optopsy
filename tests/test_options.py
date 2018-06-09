@@ -1,3 +1,4 @@
+import os
 from datetime import date
 
 import pandas as pd
@@ -17,7 +18,7 @@ dod_struct = (
 
 
 def test_single_call():
-    data = op.get('../data/A.csv',
+    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a_daily.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
                   struct=dod_struct,
@@ -44,7 +45,7 @@ def test_single_call():
 
 
 def test_single_put():
-    data = op.get('../data/A.csv',
+    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a_daily.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
                   struct=dod_struct,
