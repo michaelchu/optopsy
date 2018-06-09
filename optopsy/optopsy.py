@@ -4,8 +4,7 @@ import pyprind
 
 class Optopsy(object):
 
-    def __init__(self, strategy, data, name=None,
-                 init_capital=10000, progress_bar=True):
+    def __init__(self, strategy, data, name=None, init_capital=10000):
         self.strategy = strategy
         self.data = data
         self.dates = data.quote_date.unique()

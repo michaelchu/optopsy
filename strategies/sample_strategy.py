@@ -2,7 +2,6 @@ from datetime import date
 
 import pandas as pd
 
-# import the backtest library
 import optopsy as op
 
 pd.options.display.width = None
@@ -47,7 +46,7 @@ def run_strat():
                )
 
     strategy = op.Strategy('Weekly Long Calls',
-                           op.options.Single(option_type='c'), [
+                           op.options.Single(option_type=op.OptionType.PUT), [
                                op.filters.EntryAbsDelta(ideal=(0.5,), min=0.4, max=0.6),
                                op.filters.EntrySpreadPrice(ideal=(1.0,), min=0.9, max=1.10),
                                op.filters.EntryDaysToExpiration(ideal=(47,), min=40, max=52),
