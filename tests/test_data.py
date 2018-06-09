@@ -246,7 +246,7 @@ def test_data_cboe_import():
     test_df = pd.DataFrame(cboe_test_data, columns=cols)
     test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True, format='%Y-%m-%d')
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
-    test_df.set_index('quote_date', inplace=True)
+    test_df.set_index('quote_date', inplace=True, drop=False)
 
     data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_spx.csv'),
                   start=date(2016, 1, 1),
@@ -263,7 +263,7 @@ def test_data_dod_import():
     test_df = pd.DataFrame(dod_test_data, columns=cols)
     test_df['expiration'] = pd.to_datetime(test_df.expiration, format='%Y-%m-%d')
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True)
+    test_df.set_index(['quote_date'], inplace=True, drop=False)
 
     data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                   start=date(2016, 1, 1),
@@ -280,7 +280,7 @@ def test_data_cboe_import_bulk():
     test_df = pd.DataFrame(cboe_test_data, columns=cols)
     test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True, format='%Y-%m-%d')
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True)
+    test_df.set_index(['quote_date'], inplace=True, drop=False)
 
     data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 4),
@@ -297,7 +297,7 @@ def test_data_cboe_date_range():
     test_df = pd.DataFrame(cboe_test_data[2:], columns=cols)
     test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True, format='%Y-%m-%d')
     test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True, format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True)
+    test_df.set_index(['quote_date'], inplace=True, drop=False)
 
     data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
                    start=date(2016, 1, 5),
