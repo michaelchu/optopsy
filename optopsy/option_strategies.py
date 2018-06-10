@@ -1,9 +1,10 @@
 from datetime import timedelta, datetime
+
 import pandas as pd
 
+from optopsy.enums import OptionType, Period, OptionStrategy
 from optopsy.option_query import OptionQuery
 from optopsy.options import OptionSeries
-from optopsy.globals import OptionType, Period, OptionStrategy
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)

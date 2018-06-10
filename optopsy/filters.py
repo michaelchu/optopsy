@@ -1,7 +1,11 @@
+from optopsy.enums import FilterType
+
+
 class Filter(object):
 
     def __init__(self, name=None):
         self._name = name
+        self.type = None
 
     @property
     def name(self):
@@ -39,8 +43,8 @@ class FilterStack(Filter):
     def __call__(self, target):
         # normal running mode
         if not self.check_run_always:
-            for filter in self.filters:
-                if not filter(target):
+            for f in self.filters:
+                if not f(target):
                     return False
             return True
         # run mode when at least one filter has a run_always attribute
@@ -65,6 +69,7 @@ class EntryAbsDelta(Filter):
         self.ideal = ideal
         self.min = min
         self.max = max
+        self.type = FilterType.ENTRY
 
     def __call__(self, target):
         pass

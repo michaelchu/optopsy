@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Period(Enum):
     DAY = 1
     TWO_DAYS = 2
@@ -53,6 +54,7 @@ class DayOfWeek(Enum):
     SUNDAY = 6
 
 
+FilterType = Enum("FilterType", "ENTRY, EXIT")
 OrderType = Enum("OrderType", "MKT, LMT, STPLMT")
 SecType = Enum("SecType", "STK, OPT")
 OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED, EXPIRED")

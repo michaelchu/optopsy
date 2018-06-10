@@ -5,6 +5,8 @@ from distutils.util import strtobool
 
 import pandas as pd
 
+from .helpers import generate_symbol
+
 # All data feeds should have certain fields present, as defined by
 # the second item of each tuple in the fields list, True means this field is required
 fields = (
@@ -98,25 +100,35 @@ def gets(dir_path, start, end, struct, skiprows=1, prompt=True):
             sys.exit()
 
 
-def _format(dataframe):
+def _format(df):
     """
     Format the data frame to a standard format
     :param dataframe: dataframe to format
     :return: formatted dataframe
     """
-    dataframe['expiration'] = pd.to_datetime(dataframe['expiration'], infer_datetime_format=True, format='%Y-%m-%d')
-    dataframe['quote_date'] = pd.to_datetime(dataframe['quote_date'], infer_datetime_format=True, format='%Y-%m-%d')
+    df['expiration'] = pd.to_datetime(df['expiration'], infer_datetime_format=True, format='%Y-%m-%d')
+    df['quote_date'] = pd.to_datetime(df['quote_date'], infer_datetime_format=True, format='%Y-%m-%d')
 
     # convert option types to standard format 'c' or 'p'
-    dataframe['option_type'] = dataframe['option_type'].str.lower().str[:1]
+    df['option_type'] = df['option_type'].str.lower().str[:1]
 
     # use quote date as index
-    dataframe.set_index('quote_date', inplace=True, drop=False)
+    df.set_index('quote_date', inplace=True, drop=False)
 
     # rounds numbers to two decimals
-    dataframe = dataframe.round(2)
+    df = df.round(2)
 
-    return dataframe
+    # if the data source did not include a option_symbol field, we will generate it
+    if 'option_symbol' in df.columns:
+        df = df.drop('symbol', axis=1)
+        df = df.rename(columns={'option_symbol': 'symbol'})
+        df['symbol'] = '.' + df['symbol']
+    else:
+        df['symbol'] = '.' + df.apply(
+            lambda r: generate_symbol(r['symbol'], r['expiration'], r['strike'], r['option_type']), axis=1
+        )
+
+    return df
 
 
 def _check_structs(struct, start, end):

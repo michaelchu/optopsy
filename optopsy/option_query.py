@@ -4,9 +4,10 @@ returns a subset based on convenience methods provided
 by this class to filter for specific option legs.
 """
 import operator
+
 import pandas as pd
 
-from optopsy.globals import Period, OptionType
+from optopsy.enums import Period, OptionType
 
 
 class OptionQuery(object):
