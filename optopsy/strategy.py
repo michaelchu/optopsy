@@ -11,11 +11,12 @@ class Strategy(object):
         
     def setup(self, data):
         # call the option object to construct the spread
-        self.spread_data = self.opt_strat(data, self)
+        self.spread_data = self.opt_strat(data)
 
     def update(self, date):
         # current quote date
         self.now = date
+        print(self.now)
 
         # we will slice our spread_data by today's date
 
