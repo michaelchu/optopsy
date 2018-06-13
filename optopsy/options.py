@@ -35,6 +35,7 @@ class Single(Option):
         # get spread params from user or set default if not given
         chains = OptionQuery(data).option_type(self.option_type).fetch()
         chains['mark'] = (chains['bid'] + chains['ask']) / 2
+        chains = chains.set_index('quote_date', drop=False)
 
         return chains.loc[:, chains.columns.isin(self.cols)]
 
@@ -61,22 +62,32 @@ class Vertical(Option):
         # here we get all the option chains based on option type
         chains = OptionQuery(data).option_type(self.option_type).fetch()
 
+        chains['strike_key'] = chains['strike'] + (self.width * self.option_type.value[1])
+
         # shift only the strikes since this is a vertical spread,
         # we create a join key (strike_key) to join on
         chains['strike_key'] = chains['strike'] + (self.width * self.option_type.value[1])
-        left_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike_key']
-        right_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike']
+        left_keys = ['quote_date', 'expiration', 'option_type', 'strike_key']
+        right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
 
         # here we do a self join to the table itself joining by strike key, essentially we are
         # shifting the strikes to create the vertical spread
         chains = chains.merge(chains, left_on=left_keys, right_on=right_keys,
                               suffixes=('', '_shifted'))
 
-        chains['symbol'] = '.' + chains['symbol'] + '-.' + chains['symbol_shifted']
+        # create the strategy symbol that represents this spread
+        chains['symbol'] = chains['symbol'] + '-' + chains['symbol_shifted']
+
+        # Calculate the spread's bid and ask prices and
         chains['bid'] = chains['bid'] - chains['ask_shifted']
         chains['ask'] = chains['ask'] - chains['bid_shifted']
         chains['mark'] = round((chains['bid'] + chains['ask']) / 2, 2)
 
+        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
+            if greek in chains.columns:
+                chains[greek] = chains[greek] - chains[greek + "_shifted"]
+
+        chains = chains.set_index('quote_date', drop=False)
         return chains.loc[:, chains.columns.isin(self.cols)]
 
 
@@ -97,59 +108,6 @@ class IronCondor(Option):
 
         if self.width <= 0 or self.c_width <= 0 or self.p_width <= 0:
             raise ValueError("Widths cannot be less than or equal 0")
-
-        chains = OptionQuery(data)
-
-        # chains = chain.lte('expiration', dte)
-        call_chains = chains.calls().fetch()
-        put_chains = chains.puts().fetch()
-
-        # shift only the strikes since this is a vertical spread
-        call_chains['strike_key'] = call_chains['strike'] + (
-                self.c_width * OptionType.CALL.value[1])
-        put_chains['strike_key'] = put_chains['strike'] + (self.p_width * OptionType.PUT.value[1])
-
-        left_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike_key']
-        right_keys = ['quote_date', 'expiration', 'root', 'option_type', 'strike']
-
-        # CALL SIDE ================================================================================
-        call_side = call_chains.merge(call_chains, left_on=left_keys, right_on=right_keys,
-                                      suffixes=('', '_shifted'))
-
-        call_side['symbol'] = '.' + call_side['symbol'] + '-.' + call_side['symbol_shifted']
-        call_side['mark'] = ((call_side['bid'] - call_side['ask_shifted']) +
-                             (call_side['ask'] - call_side['bid_shifted'])) / 2
-        call_side['volume'] = call_side['trade_volume'] + call_side['trade_volume_shifted']
-
-        # PUT SIDE =================================================================================
-        put_side = put_chains.merge(put_chains, left_on=left_keys, right_on=right_keys,
-                                    suffixes=('', '_shifted'))
-
-        put_side['symbol'] = '.' + put_side['symbol'] + '-.' + put_side['symbol_shifted']
-        put_side['mark'] = ((put_side['bid'] - put_side['ask_shifted']) +
-                            (put_side['ask'] - put_side['bid_shifted'])) / 2
-        put_side['volume'] = put_side['trade_volume'] + put_side['trade_volume_shifted']
-        put_side['strike_key'] = put_side['strike'] + self.width
-
-        # MERGED ===================================================================================
-        call_side_keys = ['quote_date', 'underlying_symbol', 'expiration', 'root', 'strike']
-        put_side_keys = ['quote_date', 'underlying_symbol', 'expiration', 'root', 'strike_key']
-
-        chains = call_side.merge(put_side, left_on=call_side_keys, right_on=put_side_keys,
-                                 suffixes=('_c', '_p'))
-        chains['symbol'] = chains['symbol_c'] + '+' + chains['symbol_p']
-        chains['mark'] = chains['mark_c'] + chains['mark_p']
-        chains['exp_label'] = chains['expiration'].dt.strftime('%d %b %y')
-
-        new_col = ['symbol', 'name', 'underlying_symbol', 'quote_date', 'expiration', 'exp_label',
-                   'volume', 'mark']
-
-        for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
-            if greek in chains.columns:
-                chains[greek] = chains[greek] - chains[greek + "c_shifted"]
-                new_col.append(greek)
-
-        return chains[new_col]
 
 
 class CoveredStock(Option):

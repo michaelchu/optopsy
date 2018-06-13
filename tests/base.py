@@ -67,17 +67,6 @@ dod_struct = (
     ('ask', 10)
 )
 
-dod_struct_sym = (
-    ('symbol', 0),
-    ('option_symbol', 3),
-    ('option_type', 4),
-    ('expiration', 5),
-    ('quote_date', 6),
-    ('strike', 7),
-    ('bid', 9),
-    ('ask', 10)
-)
-
 dod_struct_with_opt_sym = (
     ('symbol', 0),
     ('option_symbol', 3),
@@ -102,6 +91,42 @@ dod_struct_with_opt_sym_greeks = (
     ('gamma', 18),
     ('theta', 19),
     ('vega', 20)
+)
+
+hod_struct = (
+    ('symbol', 0),
+    ('option_type', 5),
+    ('expiration', 6),
+    ('quote_date', 7),
+    ('strike', 8),
+    ('bid', 10),
+    ('ask', 11),
+)
+
+hod_struct_with_sym = (
+    ('symbol', 0),
+    ('option_symbol', 3),
+    ('option_type', 5),
+    ('expiration', 6),
+    ('quote_date', 7),
+    ('strike', 8),
+    ('bid', 10),
+    ('ask', 11),
+)
+
+hod_struct_with_sym_greeks = (
+    ('symbol', 0),
+    ('option_symbol', 3),
+    ('option_type', 5),
+    ('expiration', 6),
+    ('quote_date', 7),
+    ('strike', 8),
+    ('bid', 10),
+    ('ask', 11),
+    ('delta', 15),
+    ('gamma', 16),
+    ('theta', 17),
+    ('vega', 18)
 )
 
 cboe_test_data = [
