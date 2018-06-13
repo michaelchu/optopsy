@@ -121,7 +121,7 @@ def test_data_dod_with_sym_import():
     data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                   start=date(2016, 1, 1),
                   end=date(2016, 12, 31),
-                  struct=dod_struct_sym,
+                  struct=dod_struct_with_opt_sym,
                   prompt=False
                   )
 

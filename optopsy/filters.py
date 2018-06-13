@@ -18,7 +18,7 @@ class Filter(object):
 
     def __call__(self, target):
         raise NotImplementedError("%s not implemented!" % self.name)
-    
+
 
 class FilterStack(Filter):
 
@@ -53,23 +53,23 @@ class FilterStack(Filter):
             # allows continuation to check for and run
             # filters that have run_always set to True
             res = True
-            for filter in self.filters:
+            for f in self.filters:
                 if res:
-                    res = filter(target)
-                elif hasattr(filter, 'run_always'):
-                    if filter.run_always:
-                        filter(target)
+                    res = f(target)
+                elif hasattr(f, 'run_always'):
+                    if f.run_always:
+                        f(target)
             return res
 
 
 class EntryAbsDelta(Filter):
 
-    def __init__(self, ideal, min, max):
+    def __init__(self, ideal, l_limit, u_limit):
         super(EntryAbsDelta).__init__()
+        self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.min = min
-        self.max = max
-        self.type = FilterType.ENTRY
+        self.l_limit = l_limit
+        self.u_limit = u_limit
 
     def __call__(self, target):
         pass
@@ -77,11 +77,12 @@ class EntryAbsDelta(Filter):
 
 class EntrySpreadPrice(Filter):
 
-    def __init__(self, ideal, min, max):
+    def __init__(self, ideal, l_limit, u_limit):
         super(EntrySpreadPrice).__init__()
+        self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.min = min
-        self.max = max
+        self.l_limit = l_limit
+        self.u_limit = u_limit
 
     def __call__(self, target):
         pass
@@ -89,11 +90,12 @@ class EntrySpreadPrice(Filter):
 
 class EntryDaysToExpiration(Filter):
 
-    def __init__(self, ideal, min, max):
+    def __init__(self, ideal, l_limit, u_limit):
         super(EntryDaysToExpiration).__init__()
+        self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.min = min
-        self.max = max
+        self.l_limit = l_limit
+        self.u_limit = u_limit
 
     def __call__(self, target):
         pass
@@ -103,9 +105,20 @@ class EntryDayOfWeek(Filter):
 
     def __init__(self, ideal):
         super(EntryDayOfWeek).__init__()
+        self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.min = min
-        self.max = max
 
     def __call__(self, target):
         pass
+
+
+class ExitDaysToExpiration(Filter):
+
+    def __init__(self, ideal):
+        super(ExitDaysToExpiration).__init__()
+        self.__setattr__('type', FilterType.EXIT)
+        self.ideal = ideal
+
+    def __call__(self, target):
+        pass
+

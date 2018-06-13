@@ -32,7 +32,7 @@ fields = (
 )
 
 
-def get(file_path, start, end, struct, skiprows=1, prompt=True):
+def _import(path, start, end, struct, skiprows, prompt, bulk):
     """
     This method will read in the data file using pandas and assign the
     normalized dataframe to the class's data variable.
@@ -46,68 +46,54 @@ def get(file_path, start, end, struct, skiprows=1, prompt=True):
     :struct: a list of dictionaries to describe the column index to read in the option chain data
     """
 
-    if os.path.isdir(file_path):
+    if not bulk and os.path.isdir(path):
         raise ValueError("Invalid path, please provide a valid path to a file")
-    else:
-        cols = _check_structs(struct, start, end)
-        df = pd.read_csv(file_path,
-                         parse_dates=True,
-                         names=cols[0],
-                         usecols=cols[1],
-                         skiprows=skiprows
-                         )
-
-        if prompt and user_prompt("Does this look correct?"):
-            return _format(df).loc[start:end]
-        elif not prompt:
-            return _format(df).loc[start:end]
-        else:
-            sys.exit()
-
-
-def gets(dir_path, start, end, struct, skiprows=1, prompt=True):
-    """
-    This method will read in a directory containing data files to be imported
-    into a dataframe
-
-    :file_path: the path of the directory containing the import files
-    :start: date object representing the start date to include in the backtest
-    :end: date object representing the end date to include in the backtest
-    :struct: a list of dictionaries to describe the column index to read in the option chain data
-    """
-
-    if not os.path.isdir(dir_path):
+    elif bulk and not os.path.isdir(path):
         raise ValueError("Invalid path, please provide a valid directory path")
     else:
         cols = _check_structs(struct, start, end)
 
-        # for each file in path
-        all_files = glob.glob(os.path.join(dir_path, "*.csv"))
-        all_files.sort()
-        df = pd.concat(pd.read_csv(f,
-                                   parse_dates=True,
-                                   names=cols[0],
-                                   usecols=cols[1],
-                                   skiprows=skiprows
-                                   ) for f in all_files
-                       )
+        if bulk:
+            # for each file in path
+            all_files = glob.glob(os.path.join(path, "*.csv"))
+            all_files.sort()
+            df = pd.concat(
+                pd.read_csv(f, parse_dates=True, names=cols[0], usecols=cols[1], skiprows=skiprows)
+                for f in all_files)
+        else:
+            df = pd.read_csv(path, parse_dates=True, names=cols[0], usecols=cols[1],
+                             skiprows=skiprows)
 
-        if prompt and user_prompt("Does this look correct?"):
-            return _format(df).loc[start:end]
+        # TODO: We need to ensure that only one symbol of the underlying asset is returned
+
+        if prompt:
+            print(df.head())
+            if user_prompt("Does this look correct?"):
+                return _format(df).loc[start:end]
         elif not prompt:
             return _format(df).loc[start:end]
         else:
             sys.exit()
+
+
+def get(file_path, start, end, struct, skiprows=1, prompt=True):
+    return _import(file_path, start, end, struct, skiprows, prompt, bulk=False)
+
+
+def gets(dir_path, start, end, struct, skiprows=1, prompt=True):
+    return _import(dir_path, start, end, struct, skiprows, prompt, bulk=True)
 
 
 def _format(df):
     """
     Format the data frame to a standard format
-    :param dataframe: dataframe to format
+    :param df: dataframe to format
     :return: formatted dataframe
     """
-    df['expiration'] = pd.to_datetime(df['expiration'], infer_datetime_format=True, format='%Y-%m-%d')
-    df['quote_date'] = pd.to_datetime(df['quote_date'], infer_datetime_format=True, format='%Y-%m-%d')
+    df['expiration'] = pd.to_datetime(df['expiration'], infer_datetime_format=True,
+                                      format='%Y-%m-%d')
+    df['quote_date'] = pd.to_datetime(df['quote_date'], infer_datetime_format=True,
+                                      format='%Y-%m-%d')
 
     # convert option types to standard format 'c' or 'p'
     df['option_type'] = df['option_type'].str.lower().str[:1]
@@ -125,7 +111,8 @@ def _format(df):
         df['symbol'] = '.' + df['symbol']
     else:
         df['symbol'] = '.' + df.apply(
-            lambda r: generate_symbol(r['symbol'], r['expiration'], r['strike'], r['option_type']), axis=1
+            lambda r: generate_symbol(r['symbol'], r['expiration'], r['strike'], r['option_type']),
+            axis=1
         )
 
     return df
@@ -137,8 +124,8 @@ def _check_structs(struct, start, end):
     provided fields and indices are valid
     :param start: the start date to import data
     :param end: the end date of all imported data
-    :param struct: a list containing tuples that contain the column name and the index referring to the column
-    number to import from
+    :param struct: a list containing tuples that contain the column name and the index referring to
+    the column number to import from
     :return:True or False
     """
 
