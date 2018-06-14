@@ -1,4 +1,3 @@
-from . import enums as globals
 from . import filters as filters
 from . import helpers as helpers
 from . import option_query as option_query

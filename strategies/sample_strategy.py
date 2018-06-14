@@ -51,7 +51,7 @@ def run_strat():
     backtest = op.Optopsy(strategy, d)
 
     # Run over everything once
-    results = backtest.run(progress_bar=False)
+    backtest.run(progress_bar=False)
 
 
 if __name__ == '__main__':
