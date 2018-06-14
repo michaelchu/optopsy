@@ -1,7 +1,6 @@
 import os
 from datetime import date
 
-import pandas as pd
 import pandas.util.testing as pt
 import pytest
 
@@ -37,11 +36,7 @@ def test_vertical_call():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Vertical(option_type=op.OptionType.CALL, width=2)(data).head()
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
@@ -69,12 +64,7 @@ def test_vertical_put():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
@@ -115,11 +105,6 @@ def test_single_with_symbol():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 

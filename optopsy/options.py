@@ -62,8 +62,6 @@ class Vertical(Option):
         # here we get all the option chains based on option type
         chains = OptionQuery(data).option_type(self.option_type).fetch()
 
-        chains['strike_key'] = chains['strike'] + (self.width * self.option_type.value[1])
-
         # shift only the strikes since this is a vertical spread,
         # we create a join key (strike_key) to join on
         chains['strike_key'] = chains['strike'] + (self.width * self.option_type.value[1])
@@ -129,40 +127,16 @@ class Calender(Option):
         pass
 
 
-class ShortCallSpread(Option):
+class Butterfly(Option):
 
     def __init__(self, data, width):
-        super(ShortCallSpread, self).__init__(data)
+        super(Butterfly, self).__init__(data)
         self.width = width
 
 
-class LongPutSpread(Option):
+class Diagonal(Option):
 
     def __init__(self, data, width):
-        super(LongPutSpread, self).__init__(data)
+        super(Diagonal, self).__init__(data)
         self.width = width
 
-
-class ShortPutSpread(Option):
-
-    def __init__(self, data, width):
-        super(ShortPutSpread, self).__init__(data)
-        self.width = width
-
-
-class LongIronCondor(Option):
-
-    def __init__(self, data, width, width_c, width_p):
-        super(LongIronCondor, self).__init__(data)
-        self.width = width
-        self.width_c = width_c
-        self.width_p = width_p
-
-
-class ShortIronCondor(Option):
-
-    def __init__(self, data, width, width_c, width_p):
-        super(ShortIronCondor, self).__init__(data)
-        self.width = width
-        self.width_c = width_c
-        self.width_p = width_p

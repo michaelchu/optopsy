@@ -64,15 +64,6 @@ class OptionQuery(object):
         else:
             raise ValueError("option_type must be of type OptionType")
 
-    def symbol(self, symbol):
-        """
-        Filters the option chain for options with the specified spread symbol
-        :return: OptionQuery object with option chain data for specified spread symbol
-        """
-        chain = self.option_chain
-        chain = chain[chain.symbol == symbol]
-        return OptionQuery(chain)
-
     def underlying_price(self):
         """
         Gets the underlying price info from the option chain if available

@@ -33,12 +33,7 @@ def test_single_call():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Single(option_type=op.OptionType.CALL)(data).head()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
@@ -64,12 +59,7 @@ def test_single_put():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data).head()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
@@ -95,12 +85,7 @@ def test_single_with_symbol():
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
     actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data).head()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
@@ -131,10 +116,5 @@ def test_single_with_greeks():
            'vega', 'mark']
 
     actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data).head()
-
-    expected_spread = pd.DataFrame(test_data, columns=col)
-    expected_spread['expiration'] = pd.to_datetime(expected_spread['expiration'])
-    expected_spread['quote_date'] = pd.to_datetime(expected_spread['quote_date'])
-    expected_spread = expected_spread.set_index('quote_date', drop=False)
-
+    expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)

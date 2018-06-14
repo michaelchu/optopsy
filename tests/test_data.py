@@ -168,9 +168,9 @@ def test_data_cboe_date_range():
 
 def test_duplicate_idx_in_struct():
     with pytest.raises(ValueError):
-        data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
-                      start=date(2016, 1, 5),
-                      end=date(2016, 1, 6),
-                      struct=invalid_struct,
-                      prompt=False
-                      )
+        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
+               start=date(2016, 1, 5),
+               end=date(2016, 1, 6),
+               struct=invalid_struct,
+               prompt=False
+               )
