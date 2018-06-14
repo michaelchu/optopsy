@@ -1,3 +1,5 @@
+from datetime import date
+
 import pandas.util.testing as pt
 
 from .base import *
