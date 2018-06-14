@@ -1,3 +1,5 @@
+import pandas as pd
+
 fields = (
     ('symbol', True),
     ('quote_date', True),
@@ -236,3 +238,10 @@ dod_test_data = [
      'ask': 0.35
      }
 ]
+
+
+def format_test_data(dataframe):
+    dataframe['expiration'] = pd.to_datetime(dataframe['expiration'])
+    dataframe['quote_date'] = pd.to_datetime(dataframe['quote_date'])
+    dataframe = dataframe.set_index('quote_date', drop=False)
+    return dataframe
