@@ -21,26 +21,30 @@ class OptionQuery(object):
     def __init__(self, option_chain, inplace=False):
         # Create a copy of the option chain dataframe to prevent modifying
         # the original dataframe and to able to reuse it for other queries
-        self.option_chain = option_chain.copy() if not inplace else option_chain
-        self.option_chain.reset_index(drop=True, inplace=True)
+
+        if not isinstance(option_chain, pd.DataFrame):
+            raise ValueError("Invalid dataframe used to initialize OptionQuery")
+
+        self.oc = option_chain.copy() if not inplace else option_chain
+        self.oc.reset_index(drop=True, inplace=True)
 
         # create dte column if not present
-        if 'dte' not in self.option_chain.columns:
+        if 'dte' not in self.oc.columns:
             # convert date columns to pandas datetime
-            self.option_chain.loc[:, 'quote_date'] = pd.to_datetime(self.option_chain['quote_date'])
-            self.option_chain.loc[:, 'expiration'] = pd.to_datetime(self.option_chain['expiration'])
+            self.oc.loc[:, 'quote_date'] = pd.to_datetime(self.oc['quote_date'])
+            self.oc.loc[:, 'expiration'] = pd.to_datetime(self.oc['expiration'])
 
             # calculate the difference between expiration date and quote date
-            dte = self.option_chain['expiration'] - self.option_chain['quote_date']
-            self.option_chain['dte'] = dte.dt.days
+            dte = self.oc['expiration'] - self.oc['quote_date']
+            self.oc['dte'] = dte.dt.days
 
-    # QUERY METHODS =================================================================================
+    # QUERY METHODS ================================================================================
 
     def puts(self):
         """
         Filter the class' copy of the option chain for put options
         """
-        chain = self.option_chain
+        chain = self.oc
         chain = chain[chain.option_type.str.contains('p', case=False)]
         return OptionQuery(chain)
 
@@ -48,7 +52,7 @@ class OptionQuery(object):
         """
         Filter the class' copy of the option chain for call options
         """
-        chain = self.option_chain
+        chain = self.oc
         chain = chain[chain.option_type.str.contains('c', case=False)]
         return OptionQuery(chain)
 
@@ -58,7 +62,7 @@ class OptionQuery(object):
         """
 
         if isinstance(option_type, OptionType):
-            chain = self.option_chain
+            chain = self.oc
             chain = chain[chain.option_type.str.contains(option_type.value[0], case=False)]
             return OptionQuery(chain)
         else:
@@ -71,8 +75,8 @@ class OptionQuery(object):
                  recorded in the option chain for a given day. If no underlying
                  price column is defined, throw and error
         """
-        if 'underlying_price' in self.option_chain.columns:
-            dates = self.option_chain['underlying_price'].unique()
+        if 'underlying_price' in self.oc.columns:
+            dates = self.oc['underlying_price'].unique()
             return dates.mean()
         else:
             raise ValueError("Underlying Price column undefined!")
@@ -84,36 +88,27 @@ class OptionQuery(object):
 
         :param column: column to look up value
         :param val: return values nearest to this param
+        :param tie: round up or down when nearest to value is at the midpoint of a range
         :return: A new OptionQuery object with filtered dataframe
 
         """
 
-        if self.option_chain[column].dtype == object:
-            raise ValueError("Cannot find nearest value of object type column!")
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
 
-        keyval = self._convert(column, val)
+            self.oc['abs_dist'] = abs(self.oc[kv[0]] - kv[1])
+            min_abs_dist = self.oc['abs_dist'].min()
 
-        self.option_chain['abs_dist'] = abs(self.option_chain[keyval[0]] - keyval[1])
-        min_abs_dist = self.option_chain['abs_dist'].min()
+            f_df = self._compare('abs_dist', operator.eq, min_abs_dist)
+            f_df = f_df.drop(['abs_dist'], axis=1)
 
-        filtered_df = self._compare('abs_dist', operator.eq, min_abs_dist)
-        filtered_df = filtered_df.drop(['abs_dist'], axis=1)
+            if len(f_df) != 1:
+                if tie == 'roundup':
+                    f_df = f_df[f_df[column] == f_df[column].max()]
+                elif tie == 'rounddown':
+                    f_df = f_df[f_df[column] == f_df[column].min()]
 
-        if len(filtered_df) != 1:
-            if tie == 'roundup':
-                filtered_df = filtered_df[filtered_df[column] == filtered_df[column].max()]
-            elif tie == 'rounddown':
-                filtered_df = filtered_df[filtered_df[column] == filtered_df[column].min()]
-
-        return OptionQuery(filtered_df)
-
-    def offset(self, column, offset_from, offset, mode='pct'):
-        """
-        Returns the dataframe rows where the column value are at an offset
-        to the value provided to this function
-        """
-        offset = self._offset(offset_from, offset, mode)
-        return self.nearest(column, offset)
+            return OptionQuery(f_df)
 
     def lte(self, column, val):
         """
@@ -124,8 +119,9 @@ class OptionQuery(object):
         :param val: return values less than or equals to this param
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.le, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.le, kv[1]))
 
     def gte(self, column, val):
         """
@@ -136,8 +132,9 @@ class OptionQuery(object):
         :param val: return values greater than or equals to this param
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.ge, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.ge, kv[1]))
 
     def eq(self, column, val):
         """
@@ -148,8 +145,9 @@ class OptionQuery(object):
         :param val: return values equals to this param amount
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.eq, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.eq, kv[1]))
 
     def lt(self, column, val):
         """
@@ -160,8 +158,9 @@ class OptionQuery(object):
         :param val: return values less than this param amount
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.lt, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.lt, kv[1]))
 
     def gt(self, column, val):
         """
@@ -172,8 +171,9 @@ class OptionQuery(object):
         :param val: return values greater than this param amount
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.gt, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.gt, kv[1]))
 
     def ne(self, column, val):
         """
@@ -184,8 +184,9 @@ class OptionQuery(object):
         :param val: return values not equal to this param amount
         :return: A new OptionQuery object with filtered dataframe
         """
-        keyval = self._convert(column, val)
-        return OptionQuery(self._compare(keyval[0], operator.ne, keyval[1]))
+        if self._check_inputs(column, val):
+            kv = self._convert(column, val)
+            return OptionQuery(self._compare(kv[0], operator.ne, kv[1]))
 
     def min(self, column):
         """
@@ -195,8 +196,8 @@ class OptionQuery(object):
         """
 
         # TODO: check this works on a date field
-        idx_min = self.option_chain[column].idxmin()
-        return OptionQuery(self.option_chain.iloc[[idx_min]])
+        idx_min = self.oc[column].idxmin()
+        return OptionQuery(self.oc.iloc[[idx_min]])
 
     def max(self, column):
         """
@@ -206,16 +207,16 @@ class OptionQuery(object):
         """
 
         # TODO: check this works on a date field
-        idx_max = self.option_chain[column].idxmax()
-        return OptionQuery(self.option_chain.iloc[[idx_max]])
+        idx_max = self.oc[column].idxmax()
+        return OptionQuery(self.oc.iloc[[idx_max]])
 
-    # GET METHODS ===================================================================================
+    # GET METHODS ==================================================================================
 
     def get(self, column):
         """
         Returns the specified column's unique values in an array
         """
-        return self.option_chain[column].unique()
+        return self.oc[column].unique()
 
     def get_one(self, column):
         """
@@ -223,38 +224,40 @@ class OptionQuery(object):
         one row.
         :param column: the column to look up row value from
         """
-        if self.option_chain.shape[0] == 1:
-            return self.option_chain[column][0]
+        if self.oc.shape[0] == 1:
+            return self.oc[column][0]
         else:
             raise ValueError("Cannot get value of dataframe column with more than one row.")
-
-    def get_offset(self, offset_from, offset, mode='pct'):
-        """
-        Get the offset value based on the params
-        :param offset_from: the value to calculate offset from
-        :param offset: the offset amount based on mode selected
-        :param mode: the method to calculate the offset amount.
-                     modes: pct (percent), step (strike steps), val (value amount)
-        :return: amount resulting from the offset
-        """
-        return self._offset(offset_from, offset, mode)
-
-    def head(self, n=5):
-        """
-        Return the first n rows of this option chain
-        :param n: Number of rows, default 5
-        :return: Dataframe of first 5 items on option chain
-        """
-        return self.option_chain.head(n)
 
     def is_empty(self):
         """
         Returns true if there is at least 1 row in option chain, else false
         :return:
         """
-        return True if self.option_chain.shape[0] == 0 else False
+        return True if self.oc.shape[0] == 0 else False
 
-    # PRIVATE METHODS ===============================================================================
+    # PRIVATE METHODS ==============================================================================
+    def _check_inputs(self, column, val):
+        """
+        This method will validate the column name and values given into a function.
+        Values types will be checked agains the specified column to make sure the types match.
+
+        :param column:
+        :param val:
+        :return:
+        """
+
+        # check if supplied column name exists
+        if not column in self.oc.columns:
+            raise ValueError("Column: %s does not exist in option chain!" % column)
+
+        # We do not allow comparisons on non date/numeric columns
+        if self.oc[column].dtype == object:
+            raise ValueError("Invalid column type used for comparison!")
+
+        # TODO: Check if type of value matches the column's type
+
+        return True
 
     def _convert(self, column, val):
         """
@@ -268,19 +271,19 @@ class OptionQuery(object):
         """
         lookup_col = column
 
-        if self.option_chain[column].dtype == 'datetime64[ns]' and isinstance(val, Period):
-            val = val.value
+        if self.oc[column].dtype == 'datetime64[ns]':
+            value = val.value if isinstance(val, Period) else val
             lookup_col = 'dte'
         else:
-            val = float(val)
+            value = float(val)
 
-        return lookup_col, val
+        return lookup_col, value
 
     def _strip(self):
         """
         Remove unnecessary columns, used for final output of fetch functions
         """
-        return self.option_chain.drop(['dte'], axis=1)
+        return self.oc.drop(['dte'], axis=1)
 
     def _compare(self, column, op, val):
         """
@@ -291,29 +294,9 @@ class OptionQuery(object):
         :param val: value to compare with
         :return: The filtered option chain that matches the comparison criteria
         """
-        return self.option_chain[op(self.option_chain[column], val)]
+        return self.oc[op(self.oc[column], val)]
 
-    def _offset(self, offset_from, offset, mode):
-        """
-        Returns the offset value based on the option chain
-
-        :param offset_from: The value to apply offset from
-        :param offset: The amount to offset from the offset_from value
-        :param mode: Defaults to a percentage offset. If 'step' offset value
-                     represents the number of strikes to offset.
-        :return: Value as a result of the specified offset
-        """
-
-        if mode == 'pct':
-            offset = offset_from + (offset_from * offset)
-        elif mode == 'step':  # TODO: implement
-            pass
-        elif mode == 'val':
-            offset = offset_from + offset
-
-        return offset
-
-    # OUTPUT METHODS =================================================================================
+    # OUTPUT METHODS ===============================================================================
 
     def fetch(self):
         """
