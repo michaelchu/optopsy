@@ -1,23 +1,21 @@
 from .enums import FilterType
 from .filters import FilterStack
-
+import optopsy as op
 
 class Strategy(object):
 
-    def __init__(self, name, opt_strat, entries, exits):
+    def __init__(self, name, opt_strat, filters):
+
+        if not isinstance(opt_strat, op.OptionStrategy):
+            raise ValueError("opt_strat parameter must be of OptionStrategy type!")
+
+        if not isinstance(filters, list):
+            raise ValueError("filters must of list type")
+
         self.name = name
 
-        if all(f.type == FilterType.ENTRY for f in entries):
-            self.entry_filters = entries
-        else:
-            raise ValueError("Entry Filters contains invalid filters, "
-                             "please only use entry filters!")
-
-        if all(f.type == FilterType.EXIT for f in exits):
-            self.exit_filters = exits
-        else:
-            raise ValueError("Exit Filters contains invalid filters, "
-                             "please only use exit filters!")
+        self.entry_filters = [f for f in filters if f.type == op.FilterType.ENTRY]
+        self.exit_filters = [f for f in filters if f.type == op.FilterType.EXIT]
 
         self.opt_strat = opt_strat
 
@@ -40,7 +38,7 @@ class Strategy(object):
         self.now = date
 
         # we will slice our spread_data by today's date
-        self.latest_quote = self.spread_data.loc[self.now]
+        self.latest_quote = op.OptionQuery(self.spread_data.loc[self.now])
 
         # run entry filters against our current quote prices
         self.entry_stack(self)

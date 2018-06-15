@@ -35,7 +35,7 @@ def test_vertical_call():
 
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
-    actual_spread = op.options.Vertical(option_type=op.OptionType.CALL, width=2)(data).head()
+    actual_spread = op.option_strategy.Vertical(option_type=op.OptionType.CALL, width=2)(data).head()
     expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
@@ -63,7 +63,7 @@ def test_vertical_put():
 
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
-    actual_spread = op.options.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
+    actual_spread = op.option_strategy.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
     expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
@@ -78,7 +78,7 @@ def test_invalid_width(width):
                   )
 
     with pytest.raises(ValueError):
-        op.options.Vertical(option_type=op.OptionType.CALL, width=width)(data)
+        op.option_strategy.Vertical(option_type=op.OptionType.CALL, width=width)(data)
 
 
 def test_single_with_symbol():
@@ -104,7 +104,7 @@ def test_single_with_symbol():
 
     col = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'mark']
 
-    actual_spread = op.options.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
+    actual_spread = op.option_strategy.Vertical(option_type=op.OptionType.PUT, width=2)(data).tail()
     expected_spread = format_test_data(pd.DataFrame(test_data, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
