@@ -25,24 +25,24 @@ col_greeks = ['symbol', 'expiration', 'quote_date', 'bid', 'ask', 'delta', 'gamm
 
 
 def test_single_call():
-    actual_spread = op.options.Single(option_type=op.OptionType.CALL)(data).head()
+    actual_spread = op.option_strategy.Single(option_type=op.OptionType.CALL)(data).head()
     expected_spread = format_test_data(pd.DataFrame(test_data_call, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
 def test_single_put():
-    actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data).head()
+    actual_spread = op.option_strategy.Single(option_type=op.OptionType.PUT)(data).head()
     expected_spread = format_test_data(pd.DataFrame(test_data_put, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
 def test_single_with_symbol():
-    actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data).head()
+    actual_spread = op.option_strategy.Single(option_type=op.OptionType.PUT)(data).head()
     expected_spread = format_test_data(pd.DataFrame(test_data_put, columns=col))
     pt.assert_frame_equal(actual_spread, expected_spread)
 
 
 def test_single_with_greeks():
-    actual_spread = op.options.Single(option_type=op.OptionType.PUT)(data_greeks).head()
+    actual_spread = op.option_strategy.Single(option_type=op.OptionType.PUT)(data_greeks).head()
     expected_spread = format_test_data(pd.DataFrame(test_data_put_greek, columns=col_greeks))
     pt.assert_frame_equal(actual_spread, expected_spread)

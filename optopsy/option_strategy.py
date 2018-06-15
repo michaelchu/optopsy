@@ -1,7 +1,7 @@
 from .option_query import *
+from abc import ABC
 
-
-class Option(object):
+class OptionStrategy(ABC):
     """
     This class represents a option spread object
     """
@@ -22,7 +22,7 @@ class Option(object):
                      ]
 
 
-class Single(Option):
+class Single(OptionStrategy):
     """
     This class simulates a single option position. Either a call or put of an underlying asset
     """
@@ -40,7 +40,7 @@ class Single(Option):
         return chains.loc[:, chains.columns.isin(self.cols)]
 
 
-class Vertical(Option):
+class Vertical(OptionStrategy):
     """
     The vertical spread is an option spread strategy whereby the
     option trader purchases a certain number of options and simultaneously
@@ -89,7 +89,7 @@ class Vertical(Option):
         return chains.loc[:, chains.columns.isin(self.cols)]
 
 
-class IronCondor(Option):
+class IronCondor(OptionStrategy):
     """
     The iron condor is an option trading strategy utilizing two vertical spreads
     a put spread and a call spread with the same expiration and four different strikes.
@@ -108,7 +108,7 @@ class IronCondor(Option):
             raise ValueError("Widths cannot be less than or equal 0")
 
 
-class CoveredStock(Option):
+class CoveredStock(OptionStrategy):
 
     def __init__(self, data):
         super(CoveredStock, self).__init__(data)
@@ -117,7 +117,7 @@ class CoveredStock(Option):
         pass
 
 
-class Calender(Option):
+class Calender(OptionStrategy):
 
     def __init__(self, data, width):
         super(Calender, self).__init__(data)
@@ -127,14 +127,14 @@ class Calender(Option):
         pass
 
 
-class Butterfly(Option):
+class Butterfly(OptionStrategy):
 
     def __init__(self, data, width):
         super(Butterfly, self).__init__(data)
         self.width = width
 
 
-class Diagonal(Option):
+class Diagonal(OptionStrategy):
 
     def __init__(self, data, width):
         super(Diagonal, self).__init__(data)

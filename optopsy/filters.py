@@ -64,12 +64,12 @@ class FilterStack(Filter):
 
 class EntryAbsDelta(Filter):
 
-    def __init__(self, ideal, l_limit, u_limit):
+    def __init__(self, ideal, lower, upper):
         super(EntryAbsDelta).__init__()
         self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.l_limit = l_limit
-        self.u_limit = u_limit
+        self.lower = lower
+        self.upper = upper
 
     def __call__(self, target):
         pass
@@ -77,25 +77,26 @@ class EntryAbsDelta(Filter):
 
 class EntrySpreadPrice(Filter):
 
-    def __init__(self, ideal, l_limit, u_limit):
+    def __init__(self, ideal, lower, upper):
         super(EntrySpreadPrice).__init__()
         self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.l_limit = l_limit
-        self.u_limit = u_limit
+        self.lower = lower
+        self.upper = upper
 
     def __call__(self, target):
+
         pass
 
 
 class EntryDaysToExpiration(Filter):
 
-    def __init__(self, ideal, l_limit, u_limit):
+    def __init__(self, ideal, lower, upper):
         super(EntryDaysToExpiration).__init__()
         self.__setattr__('type', FilterType.ENTRY)
         self.ideal = ideal
-        self.l_limit = l_limit
-        self.u_limit = u_limit
+        self.lower = lower
+        self.upper = upper
 
     def __call__(self, target):
         pass

@@ -12,7 +12,7 @@ data = data_factory('test_dod_a_daily.csv', dod_struct_with_opt_sym_greeks, date
 
 def test_option_query_init():
     with pytest.raises(ValueError):
-        op.OptionQuery(op.Option())
+        op.OptionQuery(op.OptionStrategy())
 
 
 def test_calls():

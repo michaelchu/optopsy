@@ -1,46 +1,27 @@
 import pytest
-
 import optopsy as op
 
 
+def test_invalid_opt_strategy():
+    with pytest.raises(ValueError):
+        op.Strategy('test', op.Filter(), 'list of filters')
+
+
 def test_init_strategy_with_filters():
-    entry_filters = [
-        op.filters.EntrySpreadPrice(ideal=1.0, l_limit=0.9, u_limit=1.10)
-    ]
-
-    exit_filters = [
+    filters = [
+        op.filters.EntrySpreadPrice(ideal=1.0, lower=0.9, upper=1.10),
         op.filters.ExitDaysToExpiration(ideal=1)
     ]
 
-    dummy_strategy = op.Option(name="Dummy Strategy")
-    op.Strategy('Weekly Verticals', dummy_strategy, entry_filters, exit_filters)
+    dummy_strategy = op.OptionStrategy(name="Dummy Strategy")
+    op.Strategy('Weekly Verticals', dummy_strategy, filters)
 
 
-def test_strategy_with_invalid_entry_filters():
-    entry_filters = [
-        op.filters.ExitDaysToExpiration(ideal=4)
-    ]
+def test_strategy_with_invalid_filters():
+    filters = (
+        op.filters.EntryDaysToExpiration(ideal=47, lower=40, upper=52)
+    )
 
-    exit_filters = [
-        op.filters.ExitDaysToExpiration(ideal=1)
-    ]
-
-    dummy_strategy = op.Option(name="Dummy Strategy")
-
+    dummy_strategy = op.OptionStrategy(name="Dummy Strategy")
     with pytest.raises(ValueError):
-        op.Strategy('Weekly Verticals', dummy_strategy, entry_filters, exit_filters)
-
-
-def test_strategy_with_invalid_exit_filters():
-    entry_filters = [
-        op.filters.EntryDaysToExpiration(ideal=47, l_limit=40, u_limit=52)
-    ]
-
-    exit_filters = [
-        op.filters.EntrySpreadPrice(ideal=1.0, l_limit=0.9, u_limit=1.10)
-    ]
-
-    dummy_strategy = op.Option(name="Dummy Strategy")
-
-    with pytest.raises(ValueError):
-        op.Strategy('Weekly Verticals', dummy_strategy, entry_filters, exit_filters)
+        op.Strategy('Weekly Verticals', dummy_strategy, filters)
