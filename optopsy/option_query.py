@@ -68,13 +68,14 @@ class OptionQuery(object):
         """
         Gets the underlying price info from the option chain if available
         :return: The average of all underlying prices that may have been
-                 recorded in the option chain for a given day.
+                 recorded in the option chain for a given day. If no underlying
+                 price column is defined, throw and error
         """
         if 'underlying_price' in self.option_chain.columns:
             dates = self.option_chain['underlying_price'].unique()
             return dates.mean()
         else:
-            return OptionQuery(self.option_chain)
+            raise ValueError("Underlying Price column undefined!")
 
     def nearest(self, column, val, tie='roundup'):
         """
@@ -86,6 +87,10 @@ class OptionQuery(object):
         :return: A new OptionQuery object with filtered dataframe
 
         """
+
+        if self.option_chain[column].dtype == object:
+            raise ValueError("Cannot find nearest value of object type column!")
+
         keyval = self._convert(column, val)
 
         self.option_chain['abs_dist'] = abs(self.option_chain[keyval[0]] - keyval[1])

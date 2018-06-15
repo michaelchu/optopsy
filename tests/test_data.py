@@ -1,20 +1,12 @@
-import os
 from datetime import date
 
-import pandas as pd
 import pandas.util.testing as pt
 import pytest
 
-import optopsy as op
 from .base import *
 
 
 def test_invalid_fields():
-    invalid_fields = (
-        ('symbol', -1),
-        ('invalid', -1)
-    )
-
     with pytest.raises(ValueError):
         op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
                start=date(2016, 1, 1),
