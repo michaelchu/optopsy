@@ -1,13 +1,7 @@
-from datetime import date
-
 import pytest
 
 import optopsy as op
 from optopsy.enums import Period
-from .base import data_factory, dod_struct, dod_struct_underlying, dod_struct_with_opt_sym_greeks
-
-data = data_factory('test_dod_a_daily.csv', dod_struct_with_opt_sym_greeks, date(2016, 1, 1),
-                    date(2016, 1, 5))
 
 
 def test_option_query_init():
@@ -15,41 +9,39 @@ def test_option_query_init():
         op.OptionQuery(op.OptionStrategy())
 
 
-def test_calls():
-    calls = op.OptionQuery(data).calls().fetch().option_type.unique()
+def test_calls(data_dod_greeks):
+    calls = op.OptionQuery(data_dod_greeks).calls().fetch().option_type.unique()
     assert len(calls) == 1
     assert calls[0] == 'c'
 
 
-def test_puts():
-    puts = op.OptionQuery(data).puts().fetch().option_type.unique()
+def test_puts(data_dod_greeks):
+    puts = op.OptionQuery(data_dod_greeks).puts().fetch().option_type.unique()
     assert len(puts) == 1
     assert puts[0] == 'p'
 
 
 @pytest.mark.parametrize('option_type', [2, 'x', 'invalid', (3, 4)])
-def test_invalid_option_type(option_type):
+def test_invalid_option_type(data_dod_greeks, option_type):
     with pytest.raises(ValueError):
-        op.OptionQuery(data).option_type(option_type)
+        op.OptionQuery(data_dod_greeks).option_type(option_type)
 
 
 @pytest.mark.parametrize("option_type", [op.OptionType.CALL, op.OptionType.PUT])
-def test_option_type(option_type):
-    chain = op.OptionQuery(data).option_type(option_type).fetch().option_type.unique()
+def test_option_type(data_dod_greeks, option_type):
+    chain = op.OptionQuery(data_dod_greeks).option_type(option_type).fetch().option_type.unique()
     assert len(chain) == 1
     assert chain[0] == option_type.value[0]
 
 
-def test_underlying_price():
-    u_data = data_factory('test_dod_a_daily.csv', dod_struct_underlying, date(2016, 1, 1),
-                          date(2016, 1, 5))
-    chain = op.OptionQuery(u_data).underlying_price()
+def test_underlying_price(data_dod_underlying):
+    chain = op.OptionQuery(data_dod_underlying).underlying_price()
     assert chain == 40.55
 
 
-def test_without_underlying_price():
+def test_without_underlying_price(data_dod_greeks):
     with pytest.raises(ValueError):
-        op.OptionQuery(data).underlying_price()
+        op.OptionQuery(data_dod_greeks).underlying_price()
 
 
 @pytest.mark.parametrize("value", [('strike', 30, 30),
@@ -60,9 +52,9 @@ def test_without_underlying_price():
                                    ('delta', 1, 0.99),
                                    ('delta', -1, -1),
                                    ('delta', 0.50, 0.49)])
-def test_nearest_column_round_up(value):
+def test_nearest_column_round_up(data_dod_greeks, value):
     # here we test for mid-point, values returned should round up.
-    chain = op.OptionQuery(data).nearest(value[0], value[1]).fetch()
+    chain = op.OptionQuery(data_dod_greeks).nearest(value[0], value[1]).fetch()
     values = chain[value[0]].unique()
 
     assert len(values) == 1
@@ -77,9 +69,9 @@ def test_nearest_column_round_up(value):
                                    ('delta', 1, 0.99),
                                    ('delta', -1, -1),
                                    ('delta', 0.50, 0.49)])
-def test_nearest_column_round_down(value):
+def test_nearest_column_round_down(data_dod_greeks, value):
     # here we test for mid-point, values returned should round down.
-    chain = op.OptionQuery(data).nearest(value[0], value[1], 'rounddown').fetch()
+    chain = op.OptionQuery(data_dod_greeks).nearest(value[0], value[1], 'rounddown').fetch()
     values = chain[value[0]].unique()
 
     assert len(values) == 1
@@ -87,9 +79,9 @@ def test_nearest_column_round_down(value):
 
 
 @pytest.mark.parametrize("value", [('test', 1), (1234, 1), ('option_symbol', 'test')])
-def test_invalid_column_values(value):
+def test_invalid_column_values(data_dod_greeks, value):
     with pytest.raises(ValueError):
-        op.OptionQuery(data)._check_inputs(value[0], value[1])
+        op.OptionQuery(data_dod_greeks)._check_inputs(value[0], value[1])
 
 
 @pytest.mark.parametrize("value", [('strike', 30),
@@ -101,8 +93,8 @@ def test_invalid_column_values(value):
                                    ('dte', Period.DAY.value),
                                    ('dte', Period.TWO_WEEKS.value),
                                    ('dte', Period.SEVEN_WEEKS.value)])
-def test_lte(value):
-    chain = op.OptionQuery(data).lte(value[0], value[1])
+def test_lte(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).lte(value[0], value[1])
     values = chain.oc[value[0]].unique()
     assert all(v <= value[1] for v in values)
 
@@ -116,8 +108,8 @@ def test_lte(value):
                                    ('dte', Period.DAY.value),
                                    ('dte', Period.TWO_WEEKS.value),
                                    ('dte', Period.SEVEN_WEEKS.value)])
-def test_gte(value):
-    chain = op.OptionQuery(data).gte(value[0], value[1])
+def test_gte(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).gte(value[0], value[1])
     values = chain.oc[value[0]].unique()
     assert all(v >= value[1] for v in values)
 
@@ -131,8 +123,8 @@ def test_gte(value):
                                    ('dte', Period.DAY.value),
                                    ('dte', Period.TWO_WEEKS.value),
                                    ('dte', Period.SEVEN_WEEKS.value)])
-def test_eq(value):
-    chain = op.OptionQuery(data).eq(value[0], value[1])
+def test_eq(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).eq(value[0], value[1])
     values = chain.oc[value[0]].unique()
     assert all(v == value[1] for v in values)
 
@@ -146,8 +138,8 @@ def test_eq(value):
                                    ('dte', Period.DAY.value),
                                    ('dte', Period.TWO_WEEKS.value),
                                    ('dte', Period.SEVEN_WEEKS.value)])
-def test_lt(value):
-    chain = op.OptionQuery(data).lt(value[0], value[1])
+def test_lt(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).lt(value[0], value[1])
     values = chain.oc[value[0]].unique()
     assert all(v < value[1] for v in values)
 
@@ -161,7 +153,22 @@ def test_lt(value):
                                    ('dte', Period.DAY.value),
                                    ('dte', Period.TWO_WEEKS.value),
                                    ('dte', Period.SEVEN_WEEKS.value)])
-def test_ne(value):
-    chain = op.OptionQuery(data).ne(value[0], value[1])
+def test_ne(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).ne(value[0], value[1])
     values = chain.oc[value[0]].unique()
     assert all(v != value[1] for v in values)
+
+
+@pytest.mark.parametrize("value", [('strike', 30, 35),
+                                   ('strike', 0, 20),
+                                   ('strike', 55, 70),
+                                   ('delta', 0.4, 0.6),
+                                   ('delta', 0, 0.10),
+                                   ('delta', 1, 1.10),
+                                   ('dte', Period.DAY.value, Period.ONE_WEEK.value),
+                                   ('dte', Period.TWO_WEEKS.value, Period.THREE_WEEKS.value)
+                                   ])
+def test_between(data_dod_greeks, value):
+    chain = op.OptionQuery(data_dod_greeks).between(value[0], value[1], value[2])
+    values = chain.oc[value[0]].unique()
+    assert all(value[1] <= v <= value[2] for v in values)

@@ -83,7 +83,7 @@ class OptionQuery(object):
 
     def nearest(self, column, val, tie='roundup'):
         """
-        Returns a dataframe row containing the column item nearest to the
+        Returns dataframe rows containing the column item nearest to the
         given value.
 
         :param column: column to look up value
@@ -187,6 +187,17 @@ class OptionQuery(object):
         if self._check_inputs(column, val):
             kv = self._convert(column, val)
             return OptionQuery(self._compare(kv[0], operator.ne, kv[1]))
+
+    def between(self, column, start, end, inclusive=True):
+        """
+        Returns a dataframe with rows where column values are
+        equal to this param.
+
+        :param column: column to look up value
+        :param val: return values not equal to this param amount
+        :return: A new OptionQuery object with filtered dataframe
+        """
+        return OptionQuery(self.oc[self.oc[column].between(start, end, inclusive=inclusive)])
 
     def min(self, column):
         """
