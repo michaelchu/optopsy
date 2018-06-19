@@ -1,5 +1,6 @@
 import pandas.util.testing as pt
 
+import optopsy as op
 from .base import *
 
 pd.set_option('display.max_columns', None)

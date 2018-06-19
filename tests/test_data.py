@@ -1,8 +1,10 @@
+import os
 from datetime import date
 
 import pandas.util.testing as pt
 import pytest
 
+import optopsy as op
 from .base import *
 
 
