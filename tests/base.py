@@ -1,8 +1,4 @@
-import os
-
 import pandas as pd
-
-import optopsy as op
 
 fields = (
     ('symbol', True),
@@ -332,11 +328,3 @@ def format_test_data(dataframe):
     dataframe = dataframe.set_index('quote_date', drop=False)
     return dataframe
 
-
-def data_factory(path, struct, start, end):
-    return op.get(os.path.join(os.path.dirname(__file__), 'test_data', path),
-                  start=start,
-                  end=end,
-                  struct=struct,
-                  prompt=False
-                  )
