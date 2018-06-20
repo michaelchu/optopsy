@@ -1,8 +1,8 @@
 # Development Update (June 1, 2018)
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2de8f5b3fa2742de93fb60b3a1ae5683)](https://app.codacy.com/app/michaelchu/optopsy?utm_source=github.com&utm_medium=referral&utm_content=michaelchu/optopsy&utm_campaign=badger)
-[![Codacy Badge](https://api.codacy.com/project/badge/Coverage/0dd135b62e6a48ecb012f91aa10ad98a)](https://www.codacy.com/app/michaelchu/optopsy?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=michaelchu/optopsy&amp;utm_campaign=Badge_Coverage)
 [![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
+[![Coverage Status](https://coveralls.io/repos/github/michaelchu/optopsy/badge.svg?branch=master)](https://coveralls.io/github/michaelchu/optopsy?branch=master)
 
 This library is currently being redeveloped to be better optimized for options backtesting. 
 
