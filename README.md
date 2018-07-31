@@ -60,6 +60,16 @@ the rapid development of complex options trading strategies.
  * Stock Price Distribution Generator - Analyze historical stock price movements patterns to discover potential trade ideas.
  * Trade Scanner - Used to recommend trades based on stock price distributions
 
-### Usage
+### Dependencies
+You will need Python 3.6.1. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
 
-Coming Soon.
+### Installation
+```
+python setup.py bdist_wheel
+pip install dist/optopsy-1.0.0-py3-none-any.whl
+```
+
+### Usage
+```
+python strategies/sample_strategy.py
+```
