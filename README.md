@@ -61,15 +61,18 @@ the rapid development of complex options trading strategies.
  * Trade Scanner - Used to recommend trades based on stock price distributions
 
 ### Dependencies
-You will need Python 3.6.1. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
+You will need Python 3.6.x. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
 
 ### Installation
 ```
-python setup.py bdist_wheel
-pip install dist/optopsy-1.0.0-py3-none-any.whl
+pip install optopsy
 ```
 
 ### Usage
 ```
 python strategies/sample_strategy.py
 ```
+The sample strategy can be used with [Level 3 Historical CSV Data Sample](https://www.historicaloptiondata.com/content/sample-files-0?gclid=CjwKCAjwtIXbBRBhEiwAWV-5ngKHMIxUw_rCK1DnkQpS4BUs_XQmLG09hm4SWpE9FoMJc3hb6qMPqhoCGgIQAvD_BwE) from historicaloptiondata.com. 
+
+In order to use it, you will need to define the struct variable to map the column names to the numerical index as per the file format.
+
