@@ -9,23 +9,23 @@ pd.options.display.width = None
 vxx_struct = (
     ('symbol', 0),
     ('underlying_price', 1),
-    ('option_symbol', 2),
-    ('option_type', 3),
-    ('expiration', 4),
-    ('quote_date', 5),
-    ('strike', 6),
-    ('bid', 8),
-    ('ask', 9),
-    ('delta', 13),
-    ('gamma', 14),
-    ('theta', 15),
-    ('vega', 16)
+    ('option_symbol', 3),
+    ('option_type', 4),
+    ('expiration', 5),
+    ('quote_date', 6),
+    ('strike', 7),
+    ('bid', 9),
+    ('ask', 10),
+    ('delta', 17),
+    ('gamma', 18),
+    ('theta', 19),
+    ('vega', 20)
 )
 
 
 def run_strat():
     # fetch the option chains from our data source
-    d = op.get('../data/VXX.csv',
+    d = op.get('data/VXX.csv',
                start=date(2016, 12, 1),
                end=date(2016, 12, 31),
                struct=vxx_struct,
