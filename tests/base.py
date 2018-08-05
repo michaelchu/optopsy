@@ -1,4 +1,9 @@
 import pandas as pd
+import os
+
+test_dod_file = os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv')
+test_cboe_file = os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_spx.csv')
+test_file_dir = os.path.join(os.path.dirname(__file__), 'test_data', 'daily')
 
 fields = (
     ('symbol', True),
@@ -148,128 +153,128 @@ hod_struct_with_sym_greeks = (
 
 cboe_test_data = [
     {'symbol': '.SPX160108C00700000',
-     'option_type': 'c',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/4/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 1299.60,
-     'ask': 1305.30
-     },
+        'option_type': 'c',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/4/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 1299.60,
+        'ask': 1305.30
+    },
     {'symbol': '.SPX160108P00700000',
-     'option_type': 'p',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/4/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 0.00,
-     'ask': 0.05
-     },
+        'option_type': 'p',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/4/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 0.00,
+        'ask': 0.05
+    },
     {'symbol': '.SPX160108C00700000',
-     'option_type': 'c',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/5/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 1313.60,
-     'ask': 1319.40
-     },
+        'option_type': 'c',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/5/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 1313.60,
+        'ask': 1319.40
+    },
     {'symbol': '.SPX160108P00700000',
-     'option_type': 'p',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/5/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 0.00,
-     'ask': 0.05
-     },
+        'option_type': 'p',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/5/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 0.00,
+        'ask': 0.05
+    },
     {'symbol': '.SPX160108C00700000',
-     'option_type': 'c',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/6/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 1299.60,
-     'ask': 1305.30
-     },
+        'option_type': 'c',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/6/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 1299.60,
+        'ask': 1305.30
+    },
     {'symbol': '.SPX160108P00700000',
-     'option_type': 'p',
-     'root': 'SPXW',
-     'expiration': '1/8/2016 0:00:00',
-     'quote_date': '1/6/2016 0:00:00',
-     'strike': 700.00,
-     'bid': 0.00,
-     'ask': 0.05
-     }
+        'option_type': 'p',
+        'root': 'SPXW',
+        'expiration': '1/8/2016 0:00:00',
+        'quote_date': '1/6/2016 0:00:00',
+        'strike': 700.00,
+        'bid': 0.00,
+        'ask': 0.05
+    }
 ]
 
 dod_test_data = [
     {'symbol': '.A160115C00020000',
-     'option_type': 'c',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-05',
-     'strike': 20,
-     'bid': 20.3,
-     'ask': 21.35
-     },
+        'option_type': 'c',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-05',
+        'strike': 20,
+        'bid': 20.3,
+        'ask': 21.35
+    },
     {'symbol': '.A160115P00020000',
-     'option_type': 'p',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-05',
-     'strike': 20,
-     'bid': 0.0,
-     'ask': 0.35
-     },
+        'option_type': 'p',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-05',
+        'strike': 20,
+        'bid': 0.0,
+        'ask': 0.35
+    },
     {'symbol': '.A160115C00020000',
-     'option_type': 'c',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-06',
-     'strike': 20,
-     'bid': 20.3,
-     'ask': 21.35
-     },
+        'option_type': 'c',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-06',
+        'strike': 20,
+        'bid': 20.3,
+        'ask': 21.35
+    },
     {'symbol': '.A160115P00020000',
-     'option_type': 'p',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-06',
-     'strike': 20,
-     'bid': 0.0,
-     'ask': 0.35
-     },
+        'option_type': 'p',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-06',
+        'strike': 20,
+        'bid': 0.0,
+        'ask': 0.35
+    },
     {'symbol': '.A160115C00020000',
-     'option_type': 'c',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-07',
-     'strike': 20,
-     'bid': 20.3,
-     'ask': 21.35
-     },
+        'option_type': 'c',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-07',
+        'strike': 20,
+        'bid': 20.3,
+        'ask': 21.35
+    },
     {'symbol': '.A160115P00020000',
-     'option_type': 'p',
-     'expiration': '2016-01-15',
-     'quote_date': '2016-01-07',
-     'strike': 20,
-     'bid': 0.0,
-     'ask': 0.35
-     }
+        'option_type': 'p',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-07',
+        'strike': 20,
+        'bid': 0.0,
+        'ask': 0.35
+    }
 ]
 
 test_data_call = {
     'symbol': ['.A160115C00020000',
-               '.A160115C00022500',
-               '.A160115C00025000',
-               '.A160115C00027500',
-               '.A160115C00030000'],
+        '.A160115C00022500',
+        '.A160115C00025000',
+        '.A160115C00027500',
+        '.A160115C00030000'],
     'expiration': ['2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15'],
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15'],
     'quote_date': ['2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05'],
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05'],
     'bid': [20.3, 17.8, 15.3, 12.8, 10.3],
     'ask': [21.35, 18.60, 16.10, 13.60, 11.10],
     'mark': [20.825, 18.2, 15.7, 13.2, 10.7]
@@ -277,20 +282,20 @@ test_data_call = {
 
 test_data_put = {
     'symbol': ['.A160115P00020000',
-               '.A160115P00022500',
-               '.A160115P00025000',
-               '.A160115P00027500',
-               '.A160115P00030000'],
+        '.A160115P00022500',
+        '.A160115P00025000',
+        '.A160115P00027500',
+        '.A160115P00030000'],
     'expiration': ['2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15'],
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15'],
     'quote_date': ['2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05'],
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05'],
     'bid': [0.0, 0.0, 0.0, 0.0, 0.0],
     'ask': [0.35, 0.35, 0.1, 0.35, 0.35],
     'mark': [0.175, 0.175, 0.05, 0.175, 0.175]
@@ -298,20 +303,20 @@ test_data_put = {
 
 test_data_put_greek = {
     'symbol': ['.A160115P00020000',
-               '.A160115P00022500',
-               '.A160115P00025000',
-               '.A160115P00027500',
-               '.A160115P00030000'],
+        '.A160115P00022500',
+        '.A160115P00025000',
+        '.A160115P00027500',
+        '.A160115P00030000'],
     'expiration': ['2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15',
-                   '2016-01-15'],
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15',
+        '2016-01-15'],
     'quote_date': ['2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05',
-                   '2016-01-05'],
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05',
+        '2016-01-05'],
     'bid': [0.0, 0.0, 0.0, 0.0, 0.0],
     'ask': [0.35, 0.35, 0.1, 0.35, 0.35],
     'delta': [-0.02, -0.02, -0.02, -0.03, -0.04],
@@ -328,3 +333,18 @@ def format_test_data(dataframe):
     dataframe = dataframe.set_index('quote_date', drop=False)
     return dataframe
 
+
+def test_dod_dataframe():
+    cols = list(zip(*dod_struct))[0]
+    return (
+        pd.DataFrame(dod_test_data, columns=cols)
+            .assign(expiration=lambda x: pd.to_datetime(x['expiration'], format='%Y-%m-%d'),
+                    quote_date=lambda x: pd.to_datetime(x['quote_date'], format='%Y-%m-%d'))
+            .set_index(['quote_date'], inplace=False, drop=False)
+    )
+
+# test_df = pd.DataFrame(dod_test_data, columns=cols)
+# test_df['expiration'] = pd.to_datetime(test_df.expiration, format='%Y-%m-%d')
+# test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
+# test_df.set_index(['quote_date'], inplace=True, drop=False)
+# return test_df
