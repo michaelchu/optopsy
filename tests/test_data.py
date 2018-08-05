@@ -1,37 +1,51 @@
 import os
 from datetime import date
+from .data_fixtures import invalid_fields, invalid_idx, invalid_struct, valid_fields, cboe_struct
 
-import pandas.util.testing as pt
 import pytest
 
 import optopsy as op
-from .base import *
 
 
-def test_invalid_fields():
+@pytest.fixture
+def mock_daily_dir():
+    return os.path.join(os.path.dirname(__file__), 'test_data')
+
+
+@pytest.fixture
+def mock_daily_file():
+    return os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_20160104.csv')
+
+
+@pytest.fixture
+def mock_file_dir():
+    return os.path.abspath(__file__)
+
+
+def test_invalid_fields(mock_file_dir, invalid_fields):
     with pytest.raises(ValueError):
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
+        op.get(mock_file_dir,
                start=date(2016, 1, 1),
                end=date(2016, 12, 31),
                struct=invalid_fields
                )
 
 
-def test_valid_fields():
+def test_valid_fields(mock_daily_file, cboe_struct):
     try:
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
-               start=date(2016, 1, 1),
-               end=date(2016, 12, 31),
-               struct=valid_fields,
+        op.get(mock_daily_file,
+               start=date(2016, 1, 4),
+               end=date(2016, 1, 5),
+               struct=cboe_struct,
                prompt=False
                )
     except ValueError:
         pytest.fail('ValueError raised')
 
 
-def test_invalid_idx():
+def test_invalid_idx(mock_file_dir, invalid_idx):
     with pytest.raises(ValueError):
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
+        op.get(mock_file_dir,
                start=date(2016, 1, 1),
                end=date(2016, 12, 31),
                struct=invalid_idx,
@@ -39,12 +53,12 @@ def test_invalid_idx():
                )
 
 
-def test_invalid_start_end():
+def test_invalid_start_end(mock_file_dir, valid_fields):
     start = date(2016, 1, 1)
     end = date(2015, 1, 1)
 
     with pytest.raises(ValueError):
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
+        op.get(mock_file_dir,
                start=start,
                end=end,
                struct=valid_fields,
@@ -52,12 +66,22 @@ def test_invalid_start_end():
                )
 
 
-def test_invalid_start_end_fields():
+def test_duplicate_idx_in_struct(mock_file_dir, invalid_struct):
+    with pytest.raises(ValueError):
+        op.get(mock_file_dir,
+               start=date(2016, 1, 5),
+               end=date(2016, 1, 6),
+               struct=invalid_struct,
+               prompt=False
+               )
+
+
+def test_invalid_start_end_fields(mock_file_dir, invalid_fields):
     start = date(2016, 1, 1)
     end = date(2015, 1, 1)
 
     with pytest.raises(ValueError):
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
+        op.get(mock_file_dir,
                start=start,
                end=end,
                struct=invalid_fields,
@@ -65,106 +89,19 @@ def test_invalid_start_end_fields():
                )
 
 
-def test_data_cboe_import():
-    cols = list(zip(*cboe_struct))[0]
-    test_df = pd.DataFrame(cboe_test_data, columns=cols)
-    test_df['expiration'] = pd.to_datetime(test_df.expiration,
-                                           infer_datetime_format=True,
-                                           format='%Y-%m-%d'
-                                           )
-    test_df['quote_date'] = pd.to_datetime(test_df.quote_date,
-                                           infer_datetime_format=True,
-                                           format='%Y-%m-%d'
-                                           )
-    test_df.set_index('quote_date', inplace=True, drop=False)
-
-    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_spx.csv'),
-                  start=date(2016, 1, 1),
-                  end=date(2016, 12, 31),
-                  struct=cboe_struct,
-                  prompt=False
-                  )
-
-    pt.assert_frame_equal(test_df, data)
-
-
-def test_data_dod_import():
-    cols = list(zip(*dod_struct))[0]
-    test_df = pd.DataFrame(dod_test_data, columns=cols)
-    test_df['expiration'] = pd.to_datetime(test_df.expiration, format='%Y-%m-%d')
-    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True, drop=False)
-
-    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
-                  start=date(2016, 1, 1),
-                  end=date(2016, 12, 31),
-                  struct=dod_struct,
-                  prompt=False
-                  )
-
-    pt.assert_frame_equal(test_df, data)
-
-
-def test_data_dod_with_sym_import():
-    cols = list(zip(*dod_struct))[0]
-    test_df = pd.DataFrame(dod_test_data, columns=cols)
-    test_df['expiration'] = pd.to_datetime(test_df.expiration, format='%Y-%m-%d')
-    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True, drop=False)
-
-    data = op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'test_dod_a.csv'),
-                  start=date(2016, 1, 1),
-                  end=date(2016, 12, 31),
-                  struct=dod_struct_with_opt_sym,
-                  prompt=False
-                  )
-
-    pt.assert_frame_equal(test_df, data)
-
-
-def test_data_cboe_import_bulk():
-    cols = list(zip(*cboe_struct))[0]
-    test_df = pd.DataFrame(cboe_test_data, columns=cols)
-    test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True,
-                                           format='%Y-%m-%d')
-    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True,
-                                           format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True, drop=False)
-
-    data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
+def test_data_import_bulk(mock_daily_dir, cboe_struct):
+    data = op.gets(mock_daily_dir,
                    start=date(2016, 1, 4),
                    end=date(2016, 1, 6),
                    struct=cboe_struct,
                    prompt=False
                    )
 
-    pt.assert_frame_equal(test_df, data)
 
-
-def test_data_cboe_date_range():
-    cols = list(zip(*cboe_struct))[0]
-    test_df = pd.DataFrame(cboe_test_data[2:], columns=cols)
-    test_df['expiration'] = pd.to_datetime(test_df.expiration, infer_datetime_format=True,
-                                           format='%Y-%m-%d')
-    test_df['quote_date'] = pd.to_datetime(test_df.quote_date, infer_datetime_format=True,
-                                           format='%Y-%m-%d')
-    test_df.set_index(['quote_date'], inplace=True, drop=False)
-
-    data = op.gets(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
+def test_data_import_date_range(mock_daily_dir, cboe_struct):
+    data = op.gets(mock_daily_dir,
                    start=date(2016, 1, 5),
                    end=date(2016, 1, 6),
                    struct=cboe_struct,
                    prompt=False
                    )
-
-    pt.assert_frame_equal(test_df, data)
-
-
-def test_duplicate_idx_in_struct():
-    with pytest.raises(ValueError):
-        op.get(os.path.join(os.path.dirname(__file__), 'test_data', 'daily'),
-               start=date(2016, 1, 5),
-               end=date(2016, 1, 6),
-               struct=invalid_struct,
-               prompt=False
-               )

@@ -57,5 +57,7 @@ class DayOfWeek(Enum):
 FilterType = Enum("FilterType", "ENTRY, EXIT")
 OrderType = Enum("OrderType", "MKT, LMT, STPLMT")
 SecType = Enum("SecType", "STK, OPT")
-OrderStatus = Enum("OrderStatus", "WORKING, REJECTED, FILLED, DELETED, EXPIRED")
+OrderStatus = Enum(
+    "OrderStatus",
+    "WORKING, REJECTED, FILLED, DELETED, EXPIRED")
 OrderTIF = Enum("OrderTIF", "GTC, DAY")
