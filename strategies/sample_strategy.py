@@ -44,7 +44,8 @@ def run_strat():
     # construct our strategy with our defined filter rules
     strategy = op.Strategy('Weekly Verticals', os, filters)
 
-    # Create an instance of Optopsy with strategy settings, with default initial capital of $10000
+    # Create an instance of Optopsy with strategy settings, with default
+    # initial capital of $10000
     backtest = op.Optopsy(strategy, d)
 
     # Run over everything once
