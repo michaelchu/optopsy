@@ -1,56 +1,26 @@
-from datetime import date
-
-import pandas as pd
-
 import optopsy as op
 
-pd.options.display.width = None
 
-vxx_struct = (
-    ('symbol', 0),
-    ('underlying_price', 1),
-    ('option_symbol', 3),
-    ('option_type', 4),
-    ('expiration', 5),
-    ('quote_date', 6),
-    ('strike', 7),
-    ('bid', 9),
-    ('ask', 10),
-    ('delta', 17),
-    ('gamma', 18),
-    ('theta', 19),
-    ('vega', 20)
-)
-
-
-def run_strat():
+def run_strategy():
     # fetch the option chains from our data source
-    d = op.get('data/VXX.csv',
-               start=date(2016, 12, 1),
-               end=date(2016, 12, 31),
-               struct=vxx_struct,
-               prompt=False
-               )
+    data = op.get(
+        'data/SPX.csv',
+        struct=op.Struct.CBOE,
+        prompt=False
+    )
+    
+    entry_filters = {'dte': op.Period.SEVEN_WEEKS, 'price': 1.0}
+    exit_filters = {}
 
-    os = op.option_strategy.Vertical(option_type=op.OptionType.CALL, width=2)
-
-    filters = [
-        op.filters.EntrySpreadPrice(ideal=1.0, lower=0.9, upper=1.10),
-        op.filters.EntryDaysToExpiration(ideal=47, lower=40, upper=52),
-        op.filters.EntryDayOfWeek(ideal=4),
-        op.filters.ExitDaysToExpiration(ideal=1)
-    ]
-
-    # construct our strategy with our defined filter rules
-    strategy = op.Strategy('Weekly Verticals', os, filters)
-
-    # Create an instance of Optopsy with strategy settings, with default
-    # initial capital of $10000
-    backtest = op.Optopsy(strategy, d)
-
-    # Run over everything once
-    backtest.run(progress_bar=False)
+    # test our strategy with our defined filter rules,
+    # simulate function will return a dict with three dataframe items: summary, returns
+    # and trades
+    backtest = op.simulate('Weekly Verticals', 
+						   "long_call_spread",
+						   entry_filters=entry_filters,
+						   exit_filters=exit_filters
+					      )
 
 
 if __name__ == '__main__':
-    run_strat()
+    run_strategy()
