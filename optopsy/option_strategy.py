@@ -1,142 +1,103 @@
 from .option_query import *
-from abc import ABC
-
-class OptionStrategy(ABC):
-    """
-    This class represents a option spread object
-    """
-
-    def __init__(self, name=None):
-        self.name = name
-        self.cols = ['symbol',
-                     'expiration',
-                     'quote_date',
-                     'bid',
-                     'ask',
-                     'mark',
-                     'delta',
-                     'gamma',
-                     'theta',
-                     'vega',
-                     'rho'
-                     ]
 
 
-class Single(OptionStrategy):
-    """
-    This class simulates a single option position. Either a call or put of an underlying asset
-    """
+class OptionStrategy:
 
-    def __init__(self, **params):
-        super(Single, self).__init__('Single')
-        self.option_type = params.pop('option_type', 'c')
+    cols = ['symbol',
+            'expiration',
+            'quote_date',
+            'strike_1',
+            'strike_2',
+            'strike_3',
+            'strike_4',
+            'bid',
+            'ask',
+            'mark',
+            'delta',
+            'gamma',
+            'theta',
+            'vega',
+            'rho',
+            'dte'
+            ]
 
-    def __call__(self, data):
-        # get spread params from user or set default if not given
-        chains = OptionQuery(data).option_type(self.option_type).fetch()
-        chains['mark'] = (chains['bid'] + chains['ask']) / 2
-        chains = chains.set_index('quote_date', drop=False)
+    @staticmethod
+    def single(data, option_type):
+        """
+        This class simulates a single option position. Either a call or put of an underlying asset
+        """
+        chains = (
+            OptionQuery.opt_type(data, option_type)
+            .assign(mark=lambda r: r[['bid', 'ask']].mean(axis=1),
+                    dte=lambda r: (r['expiration'] - r['quote_date']).dt.days,
+                    strike_1=lambda r: r['strike'])
+            .set_index('quote_date', drop=False, inplace=False)
+        )
 
-        return chains.loc[:, chains.columns.isin(self.cols)]
+        chains = chains.loc[:, chains.columns.isin(OptionStrategy.cols)]
+        chains = chains.reindex_axis(sorted(chains.columns), axis=1)
 
+        return chains
 
-class Vertical(OptionStrategy):
-    """
-    The vertical spread is an option spread strategy whereby the
-    option trader purchases a certain number of options and simultaneously
-    sell an equal number of options of the same class, same underlying security,
-    same expiration date, but at a different strike price.
-    """
+    @staticmethod
+    def vertical(data, option_type, width):
+        """
+        The vertical spread is an option spread strategy whereby the
+        option trader purchases a certain number of options and simultaneously
+        sell an equal number of options of the same class, same underlying security,
+        same expiration date, but at a different strike price.
+        """
 
-    def __init__(self, **params):
-        super(Vertical, self).__init__('Vertical')
+        if width <= 0:
+            return {False, "Width cannot be less than or equal 0"}
 
-        # get spread params from user or set default if not given
-        self.option_type = params.pop('option_type', 'c')
-        self.width = params.pop('width', 2)
-
-        if not self.width > 0:
-            raise ValueError("Width cannot be less than 0")
-
-    def __call__(self, data):
-        # here we get all the option chains based on option type
-        chains = OptionQuery(data).option_type(self.option_type).fetch()
-
-        # shift only the strikes since this is a vertical spread,
         # we create a join key (strike_key) to join on
-        chains['strike_key'] = chains['strike'] + (self.width * self.option_type.value[1])
         left_keys = ['quote_date', 'expiration', 'option_type', 'strike_key']
         right_keys = ['quote_date', 'expiration', 'option_type', 'strike']
 
-        # here we do a self join to the table itself joining by strike key, essentially we are
-        # shifting the strikes to create the vertical spread
-        chains = chains.merge(chains, left_on=left_keys, right_on=right_keys,
-                              suffixes=('', '_shifted'))
-
-        # create the strategy symbol that represents this spread
-        chains['symbol'] = chains['symbol'] + '-' + chains['symbol_shifted']
-
-        # Calculate the spread's bid and ask prices and
-        chains['bid'] = chains['bid'] - chains['ask_shifted']
-        chains['ask'] = chains['ask'] - chains['bid_shifted']
-        chains['mark'] = round((chains['bid'] + chains['ask']) / 2, 2)
+        # here we get all the option chains based on option type
+        chains = (
+            data
+            .pipe(OptionQuery.opt_type, option_type)
+            .assign(strike_key=lambda r: r['strike'] + (width * option_type.value[1]))
+            .merge(data, left_on=left_keys, right_on=right_keys,suffixes=('', '_shifted'))
+            .assign(symbol=lambda r: r['symbol'] + '-' + r['symbol_shifted'],
+                    bid=lambda r: r['bid'] - r['ask_shifted'],
+                    ask=lambda r: r['ask'] - r['bid_shifted'],
+                    mark=lambda r: round((r['bid'] + r['ask']) / 2, 2),
+                    dte=lambda r: (r['expiration'] - r['quote_date']).dt.days
+                    )
+            .set_index('quote_date', inplace=False, drop=False)
+        )
 
         for greek in ['delta', 'theta', 'gamma', 'vega', 'rho']:
             if greek in chains.columns:
                 chains[greek] = chains[greek] - chains[greek + "_shifted"]
 
-        chains = chains.set_index('quote_date', drop=False)
-        return chains.loc[:, chains.columns.isin(self.cols)]
+        return chains.loc[:, chains.columns.isin(OptionStrategy.cols)]
 
+    @staticmethod
+    def iron_condor(data, width, c_width, p_width):
+        """
+        The iron condor is an option trading strategy utilizing two vertical spreads
+        a put spread and a call spread with the same expiration and four different strikes.
+        """
 
-class IronCondor(OptionStrategy):
-    """
-    The iron condor is an option trading strategy utilizing two vertical spreads
-    a put spread and a call spread with the same expiration and four different strikes.
-    """
-
-    def __init__(self, option_type, width, c_width, p_width):
-        super(IronCondor, self).__init__('Iron Condor')
-        self.option_type = option_type
-        self.width = width
-        self.c_width = c_width
-        self.p_width = p_width
-
-    def __call__(self, data):
-
-        if self.width <= 0 or self.c_width <= 0 or self.p_width <= 0:
+        if width <= 0 or c_width <= 0 or p_width <= 0:
             raise ValueError("Widths cannot be less than or equal 0")
 
-
-class CoveredStock(OptionStrategy):
-
-    def __init__(self, data):
-        super(CoveredStock, self).__init__(data)
-
-    def __call__(self, data):
+    @staticmethod
+    def covered_stock(data):
         pass
 
-
-class Calender(OptionStrategy):
-
-    def __init__(self, data, width):
-        super(Calender, self).__init__(data)
-        self.width = width
-
-    def __call__(self, data):
+    @staticmethod
+    def calender(data):
         pass
 
+    @staticmethod
+    def butterfly(data):
+        pass
 
-class Butterfly(OptionStrategy):
-
-    def __init__(self, data, width):
-        super(Butterfly, self).__init__(data)
-        self.width = width
-
-
-class Diagonal(OptionStrategy):
-
-    def __init__(self, data, width):
-        super(Diagonal, self).__init__(data)
-        self.width = width
-
+    @staticmethod
+    def diagonal(data):
+        pass
