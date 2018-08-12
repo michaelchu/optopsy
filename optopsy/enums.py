@@ -15,6 +15,23 @@ class Period(Enum):
     FIVE_WEEKS = 35
     SIX_WEEKS = 42
     SEVEN_WEEKS = 49
+    
+class Struct(Enum):
+	CBOE = (
+    	('symbol', 0),
+    	('quote_date', 1),
+    	('root', 2),
+    	('expiration', 3),
+    	('strike', 4),
+    	('option_type', 5),
+    	('bid', 12),
+    	('ask', 14),
+    	('underlying_price', 17),
+    	('delta', 19),
+    	('gamma', 20),
+    	('theta', 21),
+    	('vega', 22)
+	)
 
 
 class OptionType(Enum):
@@ -29,21 +46,6 @@ class OrderAction(Enum):
     STC = (-1, 'SELL', 'SLD')
 
 
-class OptionStrategy(Enum):
-    SINGLE = "single"
-    VERTICAL = "vertical"
-    IRON_CONDOR = "iron_condor"
-    COVERED_STOCK = "covered_stock"
-    DIAGONAL = "diagonal"
-    DOUBLE_DIAGONAL = "double_diagonal"
-    CALENDAR = "calendar"
-    STRADDLE = "straddle"
-    COMBO = "combo"
-    BACK_RATIO = "back_ratio"
-    BUTTERFLY = "butterfly"
-    CONDOR = "condor"
-
-
 class DayOfWeek(Enum):
     MONDAY = 0
     TUESDAY = 1
@@ -53,11 +55,3 @@ class DayOfWeek(Enum):
     SATURDAY = 5
     SUNDAY = 6
 
-
-FilterType = Enum("FilterType", "ENTRY, EXIT")
-OrderType = Enum("OrderType", "MKT, LMT, STPLMT")
-SecType = Enum("SecType", "STK, OPT")
-OrderStatus = Enum(
-    "OrderStatus",
-    "WORKING, REJECTED, FILLED, DELETED, EXPIRED")
-OrderTIF = Enum("OrderTIF", "GTC, DAY")
