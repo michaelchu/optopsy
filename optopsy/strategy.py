@@ -7,7 +7,8 @@ class Strategy(object):
     def __init__(self, name, option_strategy, filters=None):
 
         if not isinstance(option_strategy, op.OptionStrategy):
-            raise ValueError("option_strategy parameter must be of OptionStrategy type!")
+            raise ValueError(
+                "option_strategy parameter must be of OptionStrategy type!")
 
         if not isinstance(filters, list):
             raise ValueError("filters must of list type")
@@ -41,7 +42,8 @@ class Strategy(object):
         if self.filters is not None:
             self.filter_stack(self, latest_quote)
         else:
-            # if no filters provided, use the logic in the overridden on_update function
+            # if no filters provided, use the logic in the overridden on_update
+            # function
             self.on_update(latest_quote)
 
     def on_setup(self):

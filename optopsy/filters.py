@@ -41,8 +41,11 @@ class FilterStack(object):
         # check if our data source has columns needed for certain filters
         for f in self.filters:
             if hasattr(f, 'required_fields'):
-                if not all(fld in target.spread_data.columns for fld in f.required_fields):
-                    raise ValueError("Required fields not in data source: ".join(f.required_fields))
+                if not all(
+                        fld in target.spread_data.columns for fld in f.required_fields):
+                    raise ValueError(
+                        "Required fields not in data source: ".join(
+                            f.required_fields))
 
     def __call__(self, target, quotes):
         # normal running mode
@@ -77,7 +80,12 @@ class EntryAbsDelta(Filter):
         self.upper = upper
 
     def __call__(self, quotes):
-        return quotes.nearest('delta', self.ideal).between('delta', self.lower, self.upper)
+        return quotes.nearest(
+            'delta',
+            self.ideal).between(
+            'delta',
+            self.lower,
+            self.upper)
 
 
 class EntrySpreadPrice(Filter):
@@ -90,7 +98,12 @@ class EntrySpreadPrice(Filter):
         self.upper = upper
 
     def __call__(self, quotes):
-        return quotes.nearest('mark', self.ideal).between('mark', self.lower, self.upper)
+        return quotes.nearest(
+            'mark',
+            self.ideal).between(
+            'mark',
+            self.lower,
+            self.upper)
 
 
 class EntryDaysToExpiration(Filter):
