@@ -1,48 +1,127 @@
-from optopsy.option_legs import *
+from .option_query import *
 from .enums import OptionType, OrderAction
 from functools import reduce
+import optopsy.filter as f
+import pandas as pd
 
 
-def _create_spread(data, legs, **kwargs):
-    """
+leg_filters = {
+    'leg_1_abs_delta': (0.1, 0.2, 0.3),
+    'leg_2_abs_delta': (0.3, 0.4, 0.5),
+    'leg_3_abs_delta': (0.5, 0.6, 0.7),
+    'leg_4_abs_delta': (0.7, 0.8, 0.9),
+    'leg_1_dte': (
+        Period.FOUR_WEEKS.value - 3,
+        Period.FOUR_WEEKS.value,
+        Period.FOUR_WEEKS.value + 3
+    ),
+    'leg_2_dte': (
+        Period.FOUR_WEEKS.value - 3,
+        Period.FOUR_WEEKS.value,
+        Period.FOUR_WEEKS.value + 3
+    ),
+    'leg_3_dte': (
+        Period.FOUR_WEEKS.value - 3,
+        Period.FOUR_WEEKS.value,
+        Period.FOUR_WEEKS.value + 3
+    ),
+    'leg_4_dte': (
+        Period.FOUR_WEEKS.value - 3,
+        Period.FOUR_WEEKS.value,
+        Period.FOUR_WEEKS.value + 3
+    )
+}
 
-    Args:
-        data: A dataframe object containing all the option chain data to be used
-        legs: A list of tuples with two values, representing the option type and ratio relative to the spread
-        leg_abs_deltas: A list of n tuples, containing the min, mid and max delta values to place each leg,
-                        where n is the length of legs parameter
-        leg_dte: A list of n tuples, containing the min, mid and, max dte values for each leg,
-                 where n is the length of the legs parameter
+spread_filters = {
+    'spread_price': None,
+    'spread_dte': (
+        Period.FOUR_WEEKS.value - 3,
+        Period.FOUR_WEEKS.value,
+        Period.FOUR_WEEKS.value + 3
+    ),
+    'spread_abs_delta': (0.4, 0.5, 0.6),
+    'leg_1_leg_2_dist': None,
+    'leg_2_leg_3_dist': None,
+    'leg_3_leg_4_dist': None,
+    'quantity': 1,
+    'day_of_week': 1
+}
 
-    Returns:
+leg_cols = [
+    'strike',
+    'bid',
+    'ask',
+    'delta',
+    'gamma',
+    'theta',
+    'vega',
+    'dte'
+]
 
-    """
-
-    # join legs based on quote date
-    return reduce(lambda l, r: pd.merge(l, r, on=['quote_date'], how='inner'), legs)
-
-
-def long_call(data, leg_abs_deltas=None, leg_dte=None):
-    legs = [(OptionType.CALL, 1)]
-
-    if leg_abs_deltas is None:
-        leg_abs_deltas = [(
-            Period.FOUR_WEEKS.value - 3,
-            Period.FOUR_WEEKS.value,
-            Period.FOUR_WEEKS.value + 3
-        )]
-
-    if leg_dte is None:
-        leg_dte = [(0.5, 0.6, 0.7)]
-
-    if len(leg_abs_deltas) == len(leg_dte) == 1:
-        spread = _create_spread(data, legs, leg_abs_deltas=leg_abs_deltas, leg_dte=leg_dte)
-        return OrderAction.BTO, spread
-    else:
-        raise ValueError
+common_cols = [
+    'symbol',
+    'expiration',
+    'quote_date',
+    'underlying_price'
+]
 
 
-def short_call(data, leg_abs_deltas=None, leg_dte=None):
+def _format_leg(data, suffix):
+    return (
+        data
+        .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
+        .rename(columns={v: suffix + v for v in common_cols+leg_cols})
+    )
+
+
+def _apply_ratio(data, ratio):
+    return pd.concat([data.loc[:, common_cols + leg_cols[:1]], data.loc[:, leg_cols[1:]] * ratio], axis=1)
+
+
+def create_legs(data, legs):
+    def _create_leg(n, leg):
+        return (data
+                .pipe(opt_type, option_type=leg[0])
+                .pipe(_apply_ratio, ratio=leg[1])
+                .pipe(_format_leg, suffix=f"leg_{n+1}_")
+                ).reset_index(drop=True)
+
+    return [_create_leg(l, legs[l]) for l in range(0, len(legs))]
+
+
+def _create_spread(legs, valid_filters, **kwargs):
+    # apply filters to each leg
+    l_filters = _process_filters(leg_filters, valid_filters, **kwargs)
+    filtered_legs = [_apply_filters(l, l_filters) for l in legs]
+
+    # join the legs together to form a spread, if possible
+    spread = reduce(lambda l, r: pd.merge(l, r, on=['quote_date'], how='inner'), filtered_legs)
+
+    # apply spread level filters and return thr result
+    s_filters = _process_filters(spread_filters, valid_filters, **kwargs)
+    return _apply_filters(spread, s_filters)
+
+
+def _process_filters(base, filters, **kwargs):
+    return {k: kwargs[k] for k in kwargs if k in filters}
+
+
+def _apply_filters(leg, filters):
+    return reduce(lambda k, v: leg.pipe(_do_apply_filters, k=k, v=filters[k]), [*filters])
+
+
+# this returns a dataframe
+def _do_apply_filters(l, k, v):
+    return l if v is None else getattr(f, k)(l, v)
+
+
+def long_call(data, **kwargs):
+    valid_filters = ['spread_abs_delta', 'spread_dte', 'spread_price']
+    legs = create_legs(data, legs=[(OptionType.CALL, 1)])
+    return OrderAction.BTO, _create_spread(legs, valid_filters, **kwargs)
+
+
+def short_call(data, **kwargs):
     valid_filters = ['spread_abs_delta', 'spread_dte', 'spread_price']
     legs = create_legs(data, legs=[(OptionType.CALL, 1)])
     return OrderAction.STO, _create_spread(legs, valid_filters, **kwargs)
