@@ -1,4 +1,4 @@
-import optopsy.option_strategy as os
+import optopsy.option_strategies as os
 
 
 # this is the main function that runs the backtest engine

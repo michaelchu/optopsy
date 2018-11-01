@@ -34,19 +34,25 @@ fields = (
 
 
 def _read_file(path, names, usecols, skiprow, nrows=None):
-    return pd.read_csv(path, parse_dates=True, names=names, usecols=usecols, skiprows=skiprow,
-                       nrows=nrows)
+    return pd.read_csv(
+        path,
+        parse_dates=True,
+        names=names,
+        usecols=usecols,
+        skiprows=skiprow,
+        nrows=nrows)
 
 
 def _import_file(path, names, usecols, skiprow):
     if _check_file_exists(path):
-        return _read_file(path, names, usecols, skiprow).pipe(_format)
+        return _read_file(path, names, usecols, skiprow).pipe(format_option_df)
 
 
 def _import_dir_files(path, names, usecols, skiprow):
     if _check_file_path_exists(path):
         fls = sorted(glob.glob(os.path.join(path, "*.csv")))
-        return pd.concat(_read_file(f, names, usecols, skiprow) for f in fls).pipe(_format)
+        return pd.concat(_read_file(f, names, usecols, skiprow)
+                         for f in fls).pipe(format_option_df)
 
 
 def _check_file_exists(path):
@@ -63,7 +69,7 @@ def _check_file_path_exists(path):
 
 def _do_preview(path, names, usecols, skiprow):
     print(_read_file(path, names, usecols, skiprow, nrows=5)
-          .pipe(_format).head()
+          .pipe(format_option_df).head()
           )
     return _user_prompt("Does this look correct?")
 
@@ -92,7 +98,7 @@ def _do_import(path, struct, skiprow, prompt, bulk):
             sys.exit()
 
 
-def _format(df):
+def format_option_df(df):
     """
     Format the data frame to a standard format
     :param df: dataframe to format
@@ -110,7 +116,9 @@ def _format(df):
                 r['quote_date'],
                 infer_datetime_format=True,
                 format='%Y-%m-%d'),
-            option_type=lambda r: r['option_type'].str.lower().str[:1])
+            option_type=lambda r: r['option_type'].str.lower().str[:1],
+            dte=lambda r: (r['expiration'] - r['quote_date']).dt.days
+        )
         .round(2)
         .pipe(_assign_option_symbol)
     )
@@ -127,9 +135,15 @@ def _assign_option_symbol(df):
     else:
         # TODO: vectorize this method, avoid using df.apply()
         return (
-            df.assign(symbol=lambda r: '.' + df.apply(
-                lambda r: generate_symbol(r['root'], r['expiration'], r['strike'],
-                                          r['option_type']), axis=1)))
+            df.assign(
+                symbol=lambda r: '.' +
+                df.apply(
+                    lambda r: generate_symbol(
+                        r['root'],
+                        r['expiration'],
+                        r['strike'],
+                        r['option_type']),
+                    axis=1)))
 
 
 def _check_field_is_standard(struct):

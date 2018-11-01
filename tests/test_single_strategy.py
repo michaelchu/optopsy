@@ -1,101 +1,87 @@
 import pandas as pd
 import pandas.util.testing as pt
 import pytest
-
-from optopsy.option_strategy import long_call, short_call, long_put, short_put
-from tests.data_fixtures import one_day_data
-from tests.filter_fixtures import test_single_filters
+from optopsy.data import format_option_df
+from optopsy.option_strategies import long_call, short_call, long_put, short_put
 from optopsy.enums import OrderAction
+from .data_fixtures import one_day_data
+from .filter_fixtures import single_filters
+from optopsy.option_spreads import leg_cols, common_cols
 
 pd.set_option('display.expand_frame_repr', False)
 
 
 @pytest.fixture
 def expected_single_calls():
-    return (
-        pd.DataFrame({
-            'leg_1_symbol': ['.A160115C00020000', '.A160115C00021000'],
-            'leg_1_expiration': ['2016-01-15', '2016-01-15'],
-            'leg_1_quote_date': ['2016-01-05', '2016-01-05'],
-            'leg_1_underlying_price': [40.55, 40.55],
-            'leg_1_strike': [20, 21],
-            'leg_1_bid': [20.3, 20.3],
-            'leg_1_ask': [21.35, 21.35],
-            'leg_1_delta': [0.02, 0.02],
-            'leg_1_gamma': [0.00, 0.00],
-            'leg_1_theta': [-0.05, -0.05],
-            'leg_1_vega': [0.00, 0.00],
-            'leg_1_dte': [10, 10]
-        }
-        ).assign(
-            leg_1_expiration=lambda r: pd.to_datetime(
-                r['leg_1_expiration'],
-                infer_datetime_format=True,
-                format='%Y-%m-%d'),
-            leg_1_quote_date=lambda r: pd.to_datetime(
-                r['leg_1_quote_date'],
-                infer_datetime_format=True,
-                format='%Y-%m-%d')
-        )
-    )
+    data = {
+        'option_symbol': 'A160115C00001000',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-05',
+        'underlying_price': 1.00,
+        'option_type': 'c',
+        'strike': 1.00,
+        'bid': 0.017,
+        'ask': 0.018,
+        'delta': 0.519,
+        'gamma': 9.63,
+        'theta': -0.001,
+        'vega': 0.001,
+        'dte': 10
+    }
+    return format_option_df(pd.DataFrame([data], columns=data.keys()))
 
 
 @pytest.fixture
 def expected_single_puts():
-    return (
-        pd.DataFrame({
-            'leg_1_symbol': ['.A160115P00020000', '.A160115P00021000'],
-            'leg_1_expiration': ['2016-01-15', '2016-01-15'],
-            'leg_1_quote_date': ['2016-01-05', '2016-01-05'],
-            'leg_1_underlying_price': [40.55, 40.55],
-            'leg_1_strike': [20, 21],
-            'leg_1_bid': [0.0, 0.0],
-            'leg_1_ask': [0.35, 0.35],
-            'leg_1_delta': [-0.02, -0.03],
-            'leg_1_gamma': [0.00, 0.01],
-            'leg_1_theta': [-0.05, -0.03],
-            'leg_1_vega': [0.00, 0.00],
-            'leg_1_dte': [10, 10]
-        }).assign(
-            leg_1_expiration=lambda r: pd.to_datetime(
-                r['leg_1_expiration'],
-                infer_datetime_format=True,
-                format='%Y-%m-%d'),
-            leg_1_quote_date=lambda r: pd.to_datetime(
-                r['leg_1_quote_date'],
-                infer_datetime_format=True,
-                format='%Y-%m-%d')
-        )
-    )
+    data = {
+        'option_symbol': 'A160115P00001000',
+        'expiration': '2016-01-15',
+        'quote_date': '2016-01-05',
+        'underlying_price': 1.00,
+        'option_type': 'p',
+        'strike': 1.00,
+        'bid': 0.016,
+        'ask': 0.017,
+        'delta': -0.481,
+        'gamma': 9.63,
+        'theta': -0.001,
+        'vega': 0.001,
+        'dte': 10
+    }
+    return format_option_df(pd.DataFrame([data], columns=data.keys()))
 
 
-def test_long_call(one_day_data, test_single_filters, expected_single_calls):
-    actual_spread = long_call(one_day_data, **test_single_filters)
+@pytest.mark.usefixtures("one_day_data")
+@pytest.mark.usefixtures("single_filters")
+def test_long_call(one_day_data, single_filters, expected_single_calls):
+    actual_spread = long_call(one_day_data, single_filters)
     assert actual_spread[0] == OrderAction.BTO
-    assert isinstance(actual_spread[1], list)
-    assert len(actual_spread[1]) == 1
-    pt.assert_frame_equal(actual_spread[1][0], expected_single_calls)
+    assert isinstance(actual_spread[1], pd.DataFrame)
+    pt.assert_frame_equal(actual_spread[1], expected_single_calls)
 
 
-def test_short_call(one_day_data, test_single_filters, expected_single_calls):
-    actual_spread = short_call(one_day_data, **test_single_filters)
+@pytest.mark.usefixtures("one_day_data")
+@pytest.mark.usefixtures("single_filters")
+def test_short_call(one_day_data, single_filters, expected_single_calls):
+    actual_spread = short_call(one_day_data, single_filters)
     assert actual_spread[0] == OrderAction.STO
-    assert isinstance(actual_spread[1], list)
-    assert len(actual_spread[1]) == 1
-    pt.assert_frame_equal(actual_spread[1][0], expected_single_calls)
+    assert isinstance(actual_spread[1], pd.DataFrame)
+    pt.assert_frame_equal(actual_spread[1], expected_single_calls)
 
 
-def test_long_put(one_day_data, test_single_filters, expected_single_puts):
-    actual_spread = long_put(one_day_data, **test_single_filters)
-    assert actual_spread[0] == OrderAction.BTO
-    assert isinstance(actual_spread[1], list)
-    assert len(actual_spread[1]) == 1
-    pt.assert_frame_equal(actual_spread[1][0], expected_single_puts)
-
-
-def test_short_put(one_day_data, test_single_filters, expected_single_puts):
-    actual_spread = short_put(one_day_data, **test_single_filters)
-    assert actual_spread[0] == OrderAction.STO
-    assert isinstance(actual_spread[1], list)
-    assert len(actual_spread[1]) == 1
-    pt.assert_frame_equal(actual_spread[1][0], expected_single_puts)
+# @pytest.mark.usefixtures("one_day_data")
+# @pytest.mark.usefixtures("single_filters")
+# def test_long_put(one_day_data, single_filters, expected_single_puts):
+#     actual_spread = long_put(one_day_data, single_filters)
+#     assert actual_spread[0] == OrderAction.BTO
+#     assert isinstance(actual_spread[1], pd.DataFrame)
+#     pt.assert_frame_equal(actual_spread[1], expected_single_puts)
+#
+#
+# @pytest.mark.usefixtures("one_day_data")
+# @pytest.mark.usefixtures("single_filters")
+# def test_short_put(one_day_data, single_filters, expected_single_puts):
+#     actual_spread = short_put(one_day_data, single_filters)
+#     assert actual_spread[0] == OrderAction.STO
+#     assert isinstance(actual_spread[1], pd.DataFrame)
+#     pt.assert_frame_equal(actual_spread[1], expected_single_puts)

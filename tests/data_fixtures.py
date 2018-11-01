@@ -1,27 +1,27 @@
 import pytest
 import pandas as pd
-from optopsy.data import _format
+from optopsy.data import format_option_df
 
 
 # Data to test results with ----------------------------------------------
-@pytest.fixture
+@pytest.fixture(scope="module")
 def one_day_data():
     return (
         pd.DataFrame(
             {
-                'option_symbol': ['A160115C00020000', 'A160115P00020000',
-                                  'A160115C00021000', 'A160115P00021000'],
+                'option_symbol': ['A160115C00001000', 'A160115P00001000',
+                                  'A160115C00002000', 'A160115P00002000'],
                 'option_type': ['c', 'p', 'c', 'p'],
-                'underlying_price': [40.55, 40.55, 40.55, 40.55],
+                'underlying_price': [1.00, 1.00, 1.00, 1.00],
                 'expiration': ['2016-01-15', '2016-01-15', '2016-01-15', '2016-01-15'],
                 'quote_date': ['2016-01-05', '2016-01-05', '2016-01-05', '2016-01-05'],
-                'strike': [20, 20, 21, 21],
-                'bid': [20.3, 0.0, 20.3, 0.0],
-                'ask': [21.35, 0.35, 21.35, 0.35],
-                'delta': [0.02, -0.02, 0.02, -0.03],
-                'gamma': [0.00, 0.00, 0.00, 0.01],
-                'theta': [-0.05, -0.05, -0.05, -0.03],
-                'vega': [0.00, 0.00, 0.00, 0.00]
+                'strike': [1.0, 1.0, 2.0, 2.0],
+                'bid': [0.017, 0.016, 0.0, 0.998],
+                'ask': [0.018, 0.017, 0.0, 0.999],
+                'delta': [0.519, -0.481, 0.0, -1],
+                'gamma': [9.63, 9.63, 0.0, 0.0],
+                'theta': [-0.001, -0.001, 0.0, 0.0],
+                'vega': [0.001, 0.001, 0.00, 0.00]
             }
-        ).pipe(_format)
+        ).pipe(format_option_df)
     )

@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
-from optopsy.option_query import *
-from optopsy.option_strategy import long_call
+from optopsy.option_queries import *
+from optopsy.option_strategies import long_call
 from .data_fixtures import one_day_data
 
 
@@ -51,10 +51,10 @@ def test_option_type(one_day_data, option_type):
 
 def test_underlying_price(one_day_data):
     chain = underlying_price(one_day_data)
-    assert chain == 40.55
+    assert chain == 1
 
 
-@pytest.mark.parametrize("value", [('strike', 20.5, 21), ('delta', 0.0, 0.02)])
+@pytest.mark.parametrize("value", [('strike', 1.5, 2), ('delta', 0.0, 0.0)])
 def test_nearest_column_round_up(one_day_data, value):
     # here we test for mid-point, values returned should round up.
     chain = nearest(one_day_data, value[0], value[1])
@@ -64,7 +64,7 @@ def test_nearest_column_round_up(one_day_data, value):
     assert values[0] == value[2]
 
 
-@pytest.mark.parametrize("value", [('strike', 20.5, 20), ('delta', 0.0, -0.02)])
+@pytest.mark.parametrize("value", [('strike', 1.5, 1), ('delta', 0.0, 0.0)])
 def test_nearest_column_round_down(one_day_data, value):
     # here we test for mid-point, values returned should round down.
     chain = nearest(one_day_data, value[0], value[1], 'rounddown')
@@ -87,7 +87,7 @@ def test_invalid_column_values(one_day_data, value):
                                    ('leg_1_delta', 0),
                                    ('leg_1_delta', 0.50),
                                    ('leg_1_delta', 1),
-                                   ('leg_1_dte', Period.DAY.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value),
                                    ('leg_1_dte', Period.SEVEN_WEEKS.value)])
 def test_lte(sample_chain, value):
@@ -101,7 +101,7 @@ def test_lte(sample_chain, value):
                                    ('leg_1_delta', 0),
                                    ('leg_1_delta', 0.50),
                                    ('leg_1_delta', 1),
-                                   ('leg_1_dte', Period.DAY.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value),
                                    ('leg_1_dte', Period.SEVEN_WEEKS.value)])
 def test_gte(sample_chain, value):
@@ -115,7 +115,7 @@ def test_gte(sample_chain, value):
                                    ('leg_1_delta', 0),
                                    ('leg_1_delta', 0.54),
                                    ('leg_1_delta', 1),
-                                   ('leg_1_dte', Period.DAY.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value),
                                    ('leg_1_dte', Period.SEVEN_WEEKS.value)])
 def test_eq(sample_chain, value):
@@ -129,7 +129,7 @@ def test_eq(sample_chain, value):
                                    ('leg_1_delta', 0),
                                    ('leg_1_delta', 0.54),
                                    ('leg_1_delta', 1),
-                                   ('leg_1_dte', Period.DAY.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value),
                                    ('leg_1_dte', Period.SEVEN_WEEKS.value)])
 def test_lt(sample_chain, value):
@@ -143,7 +143,7 @@ def test_lt(sample_chain, value):
                                    ('leg_1_delta', 0),
                                    ('leg_1_delta', 0.54),
                                    ('leg_1_delta', 1),
-                                   ('leg_1_dte', Period.DAY.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value),
                                    ('leg_1_dte', Period.SEVEN_WEEKS.value)])
 def test_ne(sample_chain, value):
@@ -157,7 +157,7 @@ def test_ne(sample_chain, value):
                                    ('leg_1_delta', 0.4, 0.6),
                                    ('leg_1_delta', 0, 0.10),
                                    ('leg_1_delta', 1, 1.10),
-                                   ('leg_1_dte', Period.DAY.value, Period.ONE_WEEK.value),
+                                   ('leg_1_dte', Period.ONE_DAY.value, Period.ONE_WEEK.value),
                                    ('leg_1_dte', Period.TWO_WEEKS.value, Period.THREE_WEEKS.value)
                                    ])
 def test_between(sample_chain, value):

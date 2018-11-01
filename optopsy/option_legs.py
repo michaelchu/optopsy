@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .option_query import *
+from .option_queries import *
 
 leg_cols = [
     'strike',
