@@ -1,12 +1,9 @@
-import pandas as pd
 import pandas.util.testing as pt
-import pytest
-from optopsy.data import format_option_df
-from optopsy.option_strategies import long_call, short_call, long_put, short_put
+
 from optopsy.enums import OrderAction
-from .data_fixtures import one_day_data
-from .filter_fixtures import single_filters
-from optopsy.option_spreads import leg_cols, common_cols
+from optopsy.option_strategies import long_call, short_call
+from .support.data_fixtures import *
+from .support.filter_fixtures import *
 
 pd.set_option('display.expand_frame_repr', False)
 

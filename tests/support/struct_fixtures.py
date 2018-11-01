@@ -1,7 +1,4 @@
-import pandas as pd
 import pytest
-
-from optopsy.enums import Period
 
 
 # Struts for testing purposes --------------------------------------------

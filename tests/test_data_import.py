@@ -1,10 +1,7 @@
 import os
-from datetime import date
-from .struct_fixtures import invalid_fields, invalid_idx, invalid_struct, valid_struct, cboe_struct
-
-import pytest
 
 import optopsy as op
+from .support.struct_fixtures import *
 
 
 @pytest.fixture

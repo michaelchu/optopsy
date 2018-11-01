@@ -1,4 +1,5 @@
 import pytest
+
 from optopsy.enums import Period
 
 

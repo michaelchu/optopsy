@@ -1,5 +1,6 @@
-import pytest
 import pandas as pd
+import pytest
+
 from optopsy.data import format_option_df
 
 

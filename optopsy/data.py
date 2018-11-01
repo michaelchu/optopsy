@@ -116,9 +116,9 @@ def format_option_df(df):
                 r['quote_date'],
                 infer_datetime_format=True,
                 format='%Y-%m-%d'),
-            option_type=lambda r: r['option_type'].str.lower().str[:1],
-            dte=lambda r: (r['expiration'] - r['quote_date']).dt.days
+            option_type=lambda r: r['option_type'].str.lower().str[:1]
         )
+        .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
         .round(2)
         .pipe(_assign_option_symbol)
     )

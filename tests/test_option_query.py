@@ -1,8 +1,5 @@
-import pytest
-import pandas as pd
 from optopsy.option_queries import *
-from optopsy.option_strategies import long_call
-from .data_fixtures import one_day_data
+from .support.data_fixtures import *
 
 
 @pytest.fixture
