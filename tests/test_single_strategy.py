@@ -1,7 +1,7 @@
 import pandas.util.testing as pt
 
 from optopsy.enums import OrderAction
-from optopsy.option_strategies import long_call, short_call
+from optopsy.option_strategies import long_call, short_call, long_put, short_put
 from .support.data_fixtures import *
 from .support.filter_fixtures import *
 
@@ -66,19 +66,19 @@ def test_short_call(one_day_data, single_filters, expected_single_calls):
     pt.assert_frame_equal(actual_spread[1], expected_single_calls)
 
 
-# @pytest.mark.usefixtures("one_day_data")
-# @pytest.mark.usefixtures("single_filters")
-# def test_long_put(one_day_data, single_filters, expected_single_puts):
-#     actual_spread = long_put(one_day_data, single_filters)
-#     assert actual_spread[0] == OrderAction.BTO
-#     assert isinstance(actual_spread[1], pd.DataFrame)
-#     pt.assert_frame_equal(actual_spread[1], expected_single_puts)
-#
-#
-# @pytest.mark.usefixtures("one_day_data")
-# @pytest.mark.usefixtures("single_filters")
-# def test_short_put(one_day_data, single_filters, expected_single_puts):
-#     actual_spread = short_put(one_day_data, single_filters)
-#     assert actual_spread[0] == OrderAction.STO
-#     assert isinstance(actual_spread[1], pd.DataFrame)
-#     pt.assert_frame_equal(actual_spread[1], expected_single_puts)
+@pytest.mark.usefixtures("one_day_data")
+@pytest.mark.usefixtures("single_filters")
+def test_long_put(one_day_data, single_filters, expected_single_puts):
+    actual_spread = long_put(one_day_data, single_filters)
+    assert actual_spread[0] == OrderAction.BTO
+    assert isinstance(actual_spread[1], pd.DataFrame)
+    pt.assert_frame_equal(actual_spread[1], expected_single_puts)
+
+
+@pytest.mark.usefixtures("one_day_data")
+@pytest.mark.usefixtures("single_filters")
+def test_short_put(one_day_data, single_filters, expected_single_puts):
+    actual_spread = short_put(one_day_data, single_filters)
+    assert actual_spread[0] == OrderAction.STO
+    assert isinstance(actual_spread[1], pd.DataFrame)
+    pt.assert_frame_equal(actual_spread[1], expected_single_puts)

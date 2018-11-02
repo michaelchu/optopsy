@@ -1,35 +1,38 @@
 import glob
 import os
 import sys
+import pandas as pd
+from .helpers import generate_symbol
 from distutils.util import strtobool
 
-import pandas as pd
 
-from .helpers import generate_symbol
-
-# All data feeds should have certain fields present, as defined by
-# the second item of each tuple in the fields list, True means this field
-# is required
+"""
+All recognized fields by the library are defined in the tuples below. Structs are used
+to map headers from source data to one of the recognized fields.
+The second item of each tuple defines if that field is required or not
+The third item of each tuple defines the expected value type of the field. This
+is used internally in the library and should not be changed.
+"""
 fields = (
-    ('underlying_symbol', True),
-    ('option_symbol', False),
-    ('quote_date', True),
-    ('root', True),
-    ('style', False),
-    ('expiration', True),
-    ('strike', True),
-    ('option_type', True),
-    ('volume', False),
-    ('bid', True),
-    ('ask', True),
-    ('underlying_price', True),
-    ('open_interest', False),
-    ('implied_vol', False),
-    ('delta', True),
-    ('gamma', True),
-    ('theta', True),
-    ('vega', True),
-    ('rho', False)
+    ('underlying_symbol', True, 'text'),
+    ('option_symbol', False, 'text'),
+    ('quote_date', True, 'date'),
+    ('root', True, 'text'),
+    ('style', False, 'text'),
+    ('expiration', True, 'date'),
+    ('strike', True, 'numeric'),
+    ('option_type', True, 'text'),
+    ('volume', False, 'numeric'),
+    ('bid', True, 'numeric'),
+    ('ask', True, 'numeric'),
+    ('underlying_price', True, 'numeric'),
+    ('open_interest', False, 'numeric'),
+    ('implied_vol', False, 'numeric'),
+    ('delta', True, 'numeric'),
+    ('gamma', True, 'numeric'),
+    ('theta', True, 'numeric'),
+    ('vega', True, 'numeric'),
+    ('rho', False, 'numeric')
 )
 
 
@@ -128,10 +131,7 @@ def _assign_option_symbol(df):
     # if the data source did not include a option_symbol field, we will
     # generate it
     if 'option_symbol' in df.columns:
-        return (df
-                .rename(columns={'option_symbol': 'symbol'})
-                .assign(symbol=lambda r: '.' + r['symbol'])
-                )
+        return df.assign(option_symbol=lambda r: '.' + r['option_symbol'])
     else:
         # TODO: vectorize this method, avoid using df.apply()
         return (
