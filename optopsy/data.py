@@ -1,54 +1,60 @@
 import glob
 import os
 import sys
+import pandas as pd
+from .helpers import generate_symbol
 from distutils.util import strtobool
 
-import pandas as pd
 
-from .helpers import generate_symbol
+# All recognized fields by the library are defined in the tuples below. Structs are used
+# to map headers from source data to one of the recognized fields.
+# The second item of each tuple defines if that field is required or not
+# The third item of each tuple defines the expected value type of the field. This
+# is used internally in the library and should not be changed.
 
-# All data feeds should have certain fields present, as defined by
-# the second item of each tuple in the fields list, True means this field
-# is required
 fields = (
-    ('symbol', True),
-    ('option_symbol', False),
-    ('quote_date', True),
-    ('root', False),
-    ('style', False),
-    ('expiration', True),
-    ('strike', True),
-    ('option_type', True),
-    ('volume', False),
-    ('bid', True),
-    ('ask', True),
-    ('underlying_price', False),
-    ('oi', False),
-    ('iv', False),
-    ('delta', False),
-    ('gamma', False),
-    ('theta', False),
-    ('vega', False),
-    ('rho', False)
+    ('underlying_symbol', True, 'text'),
+    ('option_symbol', False, 'text'),
+    ('quote_date', True, 'date'),
+    ('root', True, 'text'),
+    ('style', False, 'text'),
+    ('expiration', True, 'date'),
+    ('strike', True, 'numeric'),
+    ('option_type', True, 'text'),
+    ('volume', False, 'numeric'),
+    ('bid', True, 'numeric'),
+    ('ask', True, 'numeric'),
+    ('underlying_price', True, 'numeric'),
+    ('open_interest', False, 'numeric'),
+    ('implied_vol', False, 'numeric'),
+    ('delta', True, 'numeric'),
+    ('gamma', True, 'numeric'),
+    ('theta', True, 'numeric'),
+    ('vega', True, 'numeric'),
+    ('rho', False, 'numeric')
 )
 
 
 def _read_file(path, names, usecols, skiprow, nrows=None):
-    return pd.read_csv(path, parse_dates=True, names=names, usecols=usecols, skiprows=skiprow,
-                       nrows=nrows)
+    return pd.read_csv(
+        path,
+        parse_dates=True,
+        names=names,
+        usecols=usecols,
+        skiprows=skiprow,
+        nrows=nrows)
 
 
-def _import_file(path, start, end, names, usecols, skiprow):
+def _import_file(path, names, usecols, skiprow):
     if _check_file_exists(path):
-        return _read_file(path, names, usecols, skiprow).pipe(
-            _format).loc[start:end]
+        return _read_file(path, names, usecols, skiprow).pipe(format_option_df)
 
 
-def _import_dir_files(path, start, end, names, usecols, skiprow):
+def _import_dir_files(path, names, usecols, skiprow):
     if _check_file_path_exists(path):
         fls = sorted(glob.glob(os.path.join(path, "*.csv")))
         return pd.concat(_read_file(f, names, usecols, skiprow)
-                         for f in fls).pipe(_format).loc[start:end]
+                         for f in fls).pipe(format_option_df)
 
 
 def _check_file_exists(path):
@@ -65,23 +71,20 @@ def _check_file_path_exists(path):
 
 def _do_preview(path, names, usecols, skiprow):
     print(_read_file(path, names, usecols, skiprow, nrows=5)
-          .pipe(_format).head()
+          .pipe(format_option_df).head()
           )
-    return user_prompt("Does this look correct?")
+    return _user_prompt("Does this look correct?")
 
 
-def get(file_path, start, end, struct, skiprow=1, prompt=True):
-    return _do_import(file_path, start, end, struct, skiprow, prompt, bulk=False)
+def get(file_path, struct, skiprow=1, prompt=True):
+    return _do_import(file_path, struct, skiprow, prompt, bulk=False)
 
 
-def gets(dir_path, start, end, struct, skiprow=1, prompt=True):
-    return _do_import(dir_path, start, end, struct, skiprow, prompt, bulk=True)
+def gets(dir_path, struct, skiprow=1, prompt=True):
+    return _do_import(dir_path, struct, skiprow, prompt, bulk=True)
 
 
-def _do_import(path, start, end, struct, skiprow, prompt, bulk):
-    if start > end:
-        raise ValueError("Invalid date range!")
-
+def _do_import(path, struct, skiprow, prompt, bulk):
     cols = list(zip(*struct))
 
     if _check_structs(struct, cols):
@@ -90,15 +93,14 @@ def _do_import(path, start, end, struct, skiprow, prompt, bulk):
 
         if not prompt or (prompt & _do_preview(path, names, usecols, skiprow)):
             if bulk:
-                return _import_dir_files(
-                    path, start, end, names, usecols, skiprow)
+                return _import_dir_files(path, names, usecols, skiprow)
             else:
-                return _import_file(path, start, end, names, usecols, skiprow)
+                return _import_file(path, names, usecols, skiprow)
         else:
             sys.exit()
 
 
-def _format(df):
+def format_option_df(df):
     """
     Format the data frame to a standard format
     :param df: dataframe to format
@@ -106,7 +108,8 @@ def _format(df):
     """
 
     return (
-        df.assign(
+        df
+        .assign(
             expiration=lambda r: pd.to_datetime(
                 r['expiration'],
                 infer_datetime_format=True,
@@ -115,10 +118,11 @@ def _format(df):
                 r['quote_date'],
                 infer_datetime_format=True,
                 format='%Y-%m-%d'),
-            option_type=lambda r: r['option_type'].str.lower().str[:1])
-            .set_index('quote_date', inplace=False, drop=False)
-            .round(2)
-            .pipe(_assign_option_symbol)
+            option_type=lambda r: r['option_type'].str.lower().str[:1]
+        )
+        .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
+        .round(2)
+        .pipe(_assign_option_symbol)
     )
 
 
@@ -126,17 +130,19 @@ def _assign_option_symbol(df):
     # if the data source did not include a option_symbol field, we will
     # generate it
     if 'option_symbol' in df.columns:
-        return (df
-                .drop('symbol', axis=1)
-                .rename(columns={'option_symbol': 'symbol'})
-                .assign(symbol=lambda r: '.' + r['symbol'])
-                )
+        return df.assign(option_symbol=lambda r: '.' + r['option_symbol'])
     else:
         # TODO: vectorize this method, avoid using df.apply()
         return (
-            df.assign(symbol=lambda r: '.' + df.apply(
-                lambda r: generate_symbol(r['symbol'], r['expiration'], r['strike'],
-                                          r['option_type']), axis=1)))
+            df.assign(
+                symbol=lambda r: '.' +
+                df.apply(
+                    lambda r: generate_symbol(
+                        r['root'],
+                        r['expiration'],
+                        r['strike'],
+                        r['option_type']),
+                    axis=1)))
 
 
 def _check_field_is_standard(struct):
@@ -170,7 +176,7 @@ def _check_structs(struct, cols):
             _check_fields_contains_required(cols))
 
 
-def user_prompt(question):
+def _user_prompt(question):
     """
     Prompts a Yes/No questions.
     :param question: The question to ask the user
