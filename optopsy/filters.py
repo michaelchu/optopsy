@@ -6,7 +6,6 @@ def _process_tuple_val(leg, val, col):
         return leg
 
     return (leg
-            .pipe(nearest, column=col, val=val[1])
             .pipe(between, column=col, start=val[0], end=val[2])
             )
 

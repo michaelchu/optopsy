@@ -6,13 +6,12 @@ from .helpers import generate_symbol
 from distutils.util import strtobool
 
 
-"""
-All recognized fields by the library are defined in the tuples below. Structs are used
-to map headers from source data to one of the recognized fields.
-The second item of each tuple defines if that field is required or not
-The third item of each tuple defines the expected value type of the field. This
-is used internally in the library and should not be changed.
-"""
+# All recognized fields by the library are defined in the tuples below. Structs are used
+# to map headers from source data to one of the recognized fields.
+# The second item of each tuple defines if that field is required or not
+# The third item of each tuple defines the expected value type of the field. This
+# is used internally in the library and should not be changed.
+
 fields = (
     ('underlying_symbol', True, 'text'),
     ('option_symbol', False, 'text'),

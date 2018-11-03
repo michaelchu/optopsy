@@ -6,12 +6,12 @@ from .support.struct_fixtures import *
 
 @pytest.fixture
 def mock_daily_dir():
-    return os.path.join(os.path.dirname(__file__), 'test_data')
+    return os.path.join(os.path.dirname(__file__), 'test_data_dir')
 
 
 @pytest.fixture
 def mock_daily_file():
-    return os.path.join(os.path.dirname(__file__), 'test_data', 'test_cboe_20160104.csv')
+    return os.path.join(os.path.dirname(__file__), 'test_data_dir', 'test_cboe_20160104.csv')
 
 
 @pytest.fixture
@@ -51,11 +51,11 @@ def test_invalid_path_data_import_bulk(mock_daily_file, cboe_struct):
         op.gets(mock_daily_file, struct=cboe_struct, prompt=False)
 
 
-# TODO: finish this
 def test_data_import(mock_daily_file, cboe_struct):
     data = op.get(mock_daily_file, struct=cboe_struct, prompt=False)
+    assert data.shape == (2, 15)
 
 
-# TODO: finish this
 def test_data_import_bulk(mock_daily_dir, cboe_struct):
     data = op.gets(mock_daily_dir, struct=cboe_struct, prompt=False)
+    assert data.shape == (6, 15)
