@@ -1,177 +1,163 @@
-import pytest
+from optopsy.option_queries import *
+from .support.data_fixtures import *
 
-from optopsy.enums import OptionType
-# import optopsy as op
-from optopsy.enums import Period
-from optopsy.option_query import OptionQuery
-from optopsy.option_strategy import OptionStrategy
-from.data_fixtures import one_day_data
+pd.set_option('display.expand_frame_repr', False)
 
 
-def test_calls(one_day_data):
-    calls = OptionQuery.calls(one_day_data).option_type.unique()
-    assert len(calls) == 1
-    assert calls[0] == 'c'
+def test_calls(options_data):
+    c = calls(options_data).option_type.unique()
+    assert len(c) == 1
+    assert c[0] == 'c'
 
 
-def test_puts(one_day_data):
-    puts = OptionQuery.puts(one_day_data).option_type.unique()
-    assert len(puts) == 1
-    assert puts[0] == 'p'
+def test_puts(options_data):
+    p = puts(options_data).option_type.unique()
+    assert len(p) == 1
+    assert p[0] == 'p'
 
 
 @pytest.mark.parametrize('option_type', [2, 'x', 'invalid', (3, 4)])
-def test_invalid_option_type(one_day_data, option_type):
+def test_invalid_option_type(options_data, option_type):
     with pytest.raises(ValueError):
-        OptionQuery.opt_type(one_day_data, option_type)
+        opt_type(options_data, option_type)
 
 
 @pytest.mark.parametrize("option_type", [OptionType.CALL, OptionType.PUT])
-def test_option_type(one_day_data, option_type):
-    chain = OptionQuery.opt_type(one_day_data, option_type).option_type.unique()
+def test_option_type(options_data, option_type):
+    chain = opt_type(options_data, option_type).option_type.unique()
     assert len(chain) == 1
     assert chain[0] == option_type.value[0]
 
 
-def test_underlying_price(one_day_data):
-    chain = OptionQuery().underlying_price(one_day_data)
-    assert chain == 40.55
+def test_underlying_price(options_data):
+    chain = underlying_price(options_data)
+    assert 359.225 == chain
 
 
-@pytest.mark.parametrize("value", [('strike', 20.5, 21), ('delta', 0.0, 0.02)])
-def test_nearest_column_round_up(one_day_data, value):
+@pytest.mark.parametrize(
+    "value", [
+        ('strike', 357.5, 360), ('delta', 0.50, 0.51), ('delta', 0.34, 0.35)])
+def test_nearest_column_round_up(options_data, value):
     # here we test for mid-point, values returned should round up.
-    chain = OptionQuery.nearest(one_day_data, value[0], value[1])
+    chain = nearest(options_data, value[0], value[1])
     values = chain[value[0]].unique()
 
     assert len(values) == 1
-    assert values[0] == value[2]
+    assert value[2] == values[0]
 
 
-@pytest.mark.parametrize("value", [('strike', 20.5, 20), ('delta', 0.0, -0.02)])
-def test_nearest_column_round_down(one_day_data, value):
+@pytest.mark.parametrize(
+    "value", [
+        ('strike', 357.5, 355), ('delta', 0.50, 0.51), ('delta', 0.34, 0.35)])
+def test_nearest_column_round_down(options_data, value):
     # here we test for mid-point, values returned should round down.
-    chain = OptionQuery.nearest(one_day_data, value[0], value[1], 'rounddown')
+    chain = nearest(options_data, value[0], value[1], 'rounddown')
     values = chain[value[0]].unique()
 
     assert len(values) == 1
-    assert values[0] == value[2]
+    assert value[2] == values[0]
 
 
 @pytest.mark.parametrize(
     "value", [('test', 1), (1234, 1), ('option_symbol', 'test')])
-def test_invalid_column_values(one_day_data, value):
+def test_invalid_column_values(options_data, value):
     with pytest.raises(ValueError):
-        OptionQuery._check_inputs(one_day_data, value[0], value[1])
+        nearest(options_data, value[0], value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30),
-                                   ('strike_1', 0),
-                                   ('strike_1', 55),
-                                   ('delta', 0),
+@pytest.mark.parametrize("value", [('strike', 350),
                                    ('delta', 0.50),
-                                   ('delta', 1),
-                                   ('dte', Period.DAY.value),
-                                   ('dte', Period.TWO_WEEKS.value),
-                                   ('dte', Period.SEVEN_WEEKS.value)])
-def test_lte(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single, OptionType.CALL)
-        .pipe(OptionQuery.lte, column=value[0], val=value[1])
-    )[value[0]].unique()
-
-    assert all(v <= value[1] for v in values)
+                                   ('gamma', 0.02),
+                                   ('expiration', '1990-01-21'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', Period.SEVEN_WEEKS.value),
+                                   ('dte', Period.ONE_DAY.value)])
+def test_lte(options_data, value):
+    values = lte(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values <= value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30),
-                                   ('strike_1', 0),
-                                   ('strike_1', 55),
-                                   ('delta', 0),
+@pytest.mark.parametrize("value", [('strike', 350),
                                    ('delta', 0.50),
-                                   ('delta', 1),
-                                   ('dte', Period.DAY.value),
-                                   ('dte', Period.TWO_WEEKS.value),
-                                   ('dte', Period.SEVEN_WEEKS.value)])
-def test_gte(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single, OptionType.CALL)
-        .pipe(OptionQuery.gte, column=value[0], val=value[1])
-    )[value[0]].unique()
-
-    assert all(v >= value[1] for v in values)
+                                   ('gamma', 0.02),
+                                   ('expiration', '1990-01-21'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', Period.SEVEN_WEEKS.value),
+                                   ('dte', Period.ONE_DAY.value)])
+def test_gte(options_data, value):
+    values = gte(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values >= value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30),
-                                   ('strike_1', 0),
-                                   ('strike_1', 55),
-                                   ('delta', 0),
-                                   ('delta', 0.54),
-                                   ('delta', 1),
-                                   ('dte', Period.DAY.value),
-                                   ('dte', Period.TWO_WEEKS.value),
-                                   ('dte', Period.SEVEN_WEEKS.value)])
-def test_eq(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single, OptionType.CALL)
-        .pipe(OptionQuery.eq, column=value[0], val=value[1])
-    )[value[0]].unique()
-
-    assert all(v == value[1] for v in values)
+@pytest.mark.parametrize("value", [('strike', 350),
+                                   ('delta', 0.50),
+                                   ('gamma', 0.02),
+                                   ('expiration', '1990-01-20'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', 18),
+                                   ('dte', Period.ONE_DAY.value),
+                                   ('option_symbol', '.SPX900120C00355000')])
+def test_eq(options_data, value):
+    values = eq(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values == value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30),
-                                   ('strike_1', 0),
-                                   ('strike_1', 55),
-                                   ('delta', 0),
-                                   ('delta', 0.54),
-                                   ('delta', 1),
-                                   ('dte', Period.DAY.value),
-                                   ('dte', Period.TWO_WEEKS.value),
-                                   ('dte', Period.SEVEN_WEEKS.value)])
-def test_lt(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single, OptionType.CALL)
-        .pipe(OptionQuery.lt, column=value[0], val=value[1])
-    )[value[0]].unique()
-
-    assert all(v < value[1] for v in values)
+@pytest.mark.parametrize("value", [('strike', 350),
+                                   ('delta', 0.50),
+                                   ('gamma', 0.02),
+                                   ('expiration', '1990-01-21'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', Period.SEVEN_WEEKS.value),
+                                   ('dte', Period.ONE_DAY.value)])
+def test_lt(options_data, value):
+    values = lt(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values < value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30),
-                                   ('strike_1', 0),
-                                   ('strike_1', 55),
-                                   ('delta', 0),
-                                   ('delta', 0.54),
-                                   ('delta', 1),
-                                   ('dte', Period.DAY.value),
-                                   ('dte', Period.TWO_WEEKS.value),
-                                   ('dte', Period.SEVEN_WEEKS.value)])
-def test_ne(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single, OptionType.CALL)
-        .pipe(OptionQuery.ne, column=value[0], val=value[1])
-    )[value[0]].unique()
-    assert all(v != value[1] for v in values)
+@pytest.mark.parametrize("value", [('strike', 350),
+                                   ('delta', 0.50),
+                                   ('gamma', 0.02),
+                                   ('expiration', '1990-01-21'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', Period.SEVEN_WEEKS.value),
+                                   ('dte', Period.ONE_DAY.value)])
+def test_ne(options_data, value):
+    values = ne(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values != value[1])
 
 
-@pytest.mark.parametrize("value", [('strike_1', 30, 35),
-                                   ('strike_1', 0, 20),
-                                   ('strike_1', 55, 70),
-                                   ('delta', 0.4, 0.6),
-                                   ('delta', 0, 0.10),
-                                   ('delta', 1, 1.10),
-                                   ('dte', Period.DAY.value, Period.ONE_WEEK.value),
-                                   ('dte', Period.TWO_WEEKS.value, Period.THREE_WEEKS.value)
+@pytest.mark.parametrize("value", [('strike', 350, 370),
+                                   ('delta', 0.5, -0.5),
+                                   ('gamma', 0.04, 0.01),
+                                   ('expiration', '1990-01-20', '1990-01-21'),
+                                   ('quote_date', '01-01-1990', '01-04-1990'),
+                                   ('dte', 1, 1.10),
+                                   ('dte', Period.ONE_DAY.value, Period.ONE_WEEK.value)
                                    ])
-def test_between(one_day_data, value):
-    values = (
-        one_day_data
-        .pipe(OptionStrategy.single,OptionType.CALL)
-        .pipe(OptionQuery.between, column=value[0], start=value[1], end=value[2]))[value[0]].unique()
+def test_between_inclusive(options_data, value):
+    values = between(
+        options_data,
+        column=value[0],
+        start=value[1],
+        end=value[2])[
+        value[0]]
+    assert all(values.between(value[1], value[2]))
 
-    assert all(value[1] <= v <= value[2] for v in values)
+
+@pytest.mark.parametrize("value", [('strike', 350, 370),
+                                   ('delta', 0.5, -0.5),
+                                   ('gamma', 0.04, 0.01),
+                                   ('expiration', '1990-01-20', '1990-01-21'),
+                                   ('quote_date', '01-01-1990', '01-04-1990'),
+                                   ('dte', 1, 1.10),
+                                   ('dte', Period.ONE_DAY.value, Period.ONE_WEEK.value)
+                                   ])
+def test_between(options_data, value):
+    values = between(
+        options_data,
+        column=value[0],
+        start=value[1],
+        end=value[2],
+        inclusive=False)[
+        value[0]]
+    assert all(values.between(value[1], value[2], inclusive=False))
