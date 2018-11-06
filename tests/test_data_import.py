@@ -53,9 +53,9 @@ def test_invalid_path_data_import_bulk(mock_daily_file, cboe_struct):
 
 def test_data_import(mock_daily_file, cboe_struct):
     data = op.get(mock_daily_file, struct=cboe_struct, prompt=False)
-    assert data.shape == (2, 15)
+    assert data.shape == (2, 13)
 
 
 def test_data_import_bulk(mock_daily_dir, cboe_struct):
     data = op.gets(mock_daily_dir, struct=cboe_struct, prompt=False)
-    assert data.shape == (6, 15)
+    assert data.shape == (6, 13)

@@ -64,6 +64,7 @@ def nearest(df, column, val, absolute=True):
             .groupby(group_by)['abs_dist'].min()
             .to_frame()
             .merge(data, on=on)
+            .drop('abs_dist', axis=1)
         )
 
 

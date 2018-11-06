@@ -82,8 +82,7 @@ def test_gte(options_data, value):
                                    ('expiration', '1990-01-20'),
                                    ('quote_date', '01-01-1990'),
                                    ('dte', 18),
-                                   ('dte', Period.ONE_DAY.value),
-                                   ('option_symbol', '.SPX900120C00355000')])
+                                   ('dte', Period.ONE_DAY.value)])
 def test_eq(options_data, value):
     values = eq(options_data, column=value[0], val=value[1])[value[0]]
     assert all(values == value[1])

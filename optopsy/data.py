@@ -2,7 +2,6 @@ import glob
 import os
 import sys
 import pandas as pd
-from .helpers import generate_symbol
 from distutils.util import strtobool
 
 
@@ -15,18 +14,13 @@ from distutils.util import strtobool
 
 fields = (
     ('underlying_symbol', True, 'text', 'common'),
-    ('option_symbol', False, 'text', 'common'),
     ('quote_date', True, 'date', 'common'),
-    # ('root', True, 'text', 'common'),
-    # ('style', False, 'text', 'common'),
     ('expiration', True, 'date', 'common'),
     ('strike', True, 'numeric', 'common'),
     ('option_type', True, 'text', 'common'),
-    # ('volume', False, 'numeric', 'common'),
     ('bid', True, 'numeric', 'leg'),
     ('ask', True, 'numeric', 'leg'),
     ('underlying_price', True, 'numeric', 'common'),
-    # ('open_interest', False, 'numeric', 'common'),
     ('implied_vol', False, 'numeric', 'common'),
     ('delta', True, 'numeric', 'leg'),
     ('gamma', True, 'numeric', 'leg'),
@@ -123,27 +117,7 @@ def format_option_df(df):
         )
         .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
         .round(2)
-        .pipe(_assign_option_symbol)
     )
-
-
-def _assign_option_symbol(df):
-    # if the data source did not include a option_symbol field, we will
-    # generate it
-    if 'option_symbol' in df.columns:
-        return df.assign(option_symbol=lambda r: '.' + r['option_symbol'])
-    else:
-        # TODO: vectorize this method, avoid using df.apply()
-        return (
-            df.assign(
-                symbol=lambda r: '.' +
-                df.apply(
-                    lambda r: generate_symbol(
-                        r['root'],
-                        r['expiration'],
-                        r['strike'],
-                        r['option_type']),
-                    axis=1)))
 
 
 def _check_field_is_standard(struct):

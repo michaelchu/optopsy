@@ -32,7 +32,8 @@ def test_long_put(options_data):
     results = actual_spread[1]
     assert action == OrderAction.BTO
     assert all(results['option_type'] == 'p')
-    assert -0.49 == results.iat[0, 14]
+    print(results)
+    assert all(v in [-0.49] for v in results['delta'].unique().tolist())
 
 
 @pytest.mark.usefixtures("options_data")
@@ -42,4 +43,4 @@ def test_short_put(options_data):
     results = actual_spread[1]
     assert action == OrderAction.STO
     assert all(results['option_type'] == 'p')
-    assert -0.49 == results.iat[0, 14]
+    assert all(v in [-0.49] for v in results['delta'].unique().tolist())
