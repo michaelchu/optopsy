@@ -7,11 +7,12 @@ from optopsy.data import format_option_df
 CURRENT_FILE = os.path.abspath(os.path.dirname(__file__))
 TEST_FILE_PATH = os.path.join(CURRENT_FILE,
                               '../test_data/test_options_data.csv')
+TEST_FILE_PATH_FULL = os.path.join(CURRENT_FILE,
+                                   '../test_data/test_options_data_full.csv')
 
 TEST_STRUCT = (
     ('underlying_symbol', 0),
     ('underlying_price', 1),
-    ('option_symbol', 3),
     ('option_type', 5),
     ('expiration', 6),
     ('quote_date', 7),
@@ -32,6 +33,20 @@ def options_data():
     return (
         pd.read_csv(
             TEST_FILE_PATH,
+            parse_dates=True,
+            names=cols[0],
+            usecols=cols[1],
+            skiprows=1,
+            nrows=None
+        ).pipe(format_option_df))
+
+
+@pytest.fixture(scope="module")
+def options_data_full():
+    cols = list(zip(*TEST_STRUCT))
+    return (
+        pd.read_csv(
+            TEST_FILE_PATH_FULL,
             parse_dates=True,
             names=cols[0],
             usecols=cols[1],

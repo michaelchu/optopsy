@@ -35,27 +35,14 @@ def test_underlying_price(options_data):
 
 
 @pytest.mark.parametrize(
-    "value", [
-        ('strike', 357.5, 360), ('delta', 0.50, 0.51), ('delta', 0.34, 0.35)])
-def test_nearest_column_round_up(options_data, value):
+    "value", [('strike', 357.5, [355, 360]),
+              ('delta', 0.50, [0.55, -0.46, 0.51, -0.49]),
+              ('delta', 0.34, [0.35, -0.31, 0.32, -0.33])]
+)
+def test_nearest_column(options_data, value):
     # here we test for mid-point, values returned should round up.
     chain = nearest(options_data, value[0], value[1])
-    values = chain[value[0]].unique()
-
-    assert len(values) == 1
-    assert value[2] == values[0]
-
-
-@pytest.mark.parametrize(
-    "value", [
-        ('strike', 357.5, 355), ('delta', 0.50, 0.51), ('delta', 0.34, 0.35)])
-def test_nearest_column_round_down(options_data, value):
-    # here we test for mid-point, values returned should round down.
-    chain = nearest(options_data, value[0], value[1], 'rounddown')
-    values = chain[value[0]].unique()
-
-    assert len(values) == 1
-    assert value[2] == values[0]
+    assert all(v in value[2] for v in chain[value[0]].unique().tolist())
 
 
 @pytest.mark.parametrize(
@@ -95,8 +82,7 @@ def test_gte(options_data, value):
                                    ('expiration', '1990-01-20'),
                                    ('quote_date', '01-01-1990'),
                                    ('dte', 18),
-                                   ('dte', Period.ONE_DAY.value),
-                                   ('option_symbol', '.SPX900120C00355000')])
+                                   ('dte', Period.ONE_DAY.value)])
 def test_eq(options_data, value):
     values = eq(options_data, column=value[0], val=value[1])[value[0]]
     assert all(values == value[1])
@@ -132,7 +118,8 @@ def test_ne(options_data, value):
                                    ('expiration', '1990-01-20', '1990-01-21'),
                                    ('quote_date', '01-01-1990', '01-04-1990'),
                                    ('dte', 1, 1.10),
-                                   ('dte', Period.ONE_DAY.value, Period.ONE_WEEK.value)
+                                   ('dte', Period.ONE_DAY.value,
+                                    Period.ONE_WEEK.value)
                                    ])
 def test_between_inclusive(options_data, value):
     values = between(
@@ -150,7 +137,8 @@ def test_between_inclusive(options_data, value):
                                    ('expiration', '1990-01-20', '1990-01-21'),
                                    ('quote_date', '01-01-1990', '01-04-1990'),
                                    ('dte', 1, 1.10),
-                                   ('dte', Period.ONE_DAY.value, Period.ONE_WEEK.value)
+                                   ('dte', Period.ONE_DAY.value,
+                                    Period.ONE_WEEK.value)
                                    ])
 def test_between(options_data, value):
     values = between(
