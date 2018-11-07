@@ -11,7 +11,8 @@ def mock_daily_dir():
 
 @pytest.fixture
 def mock_daily_file():
-    return os.path.join(os.path.dirname(__file__), 'test_data_dir', 'test_cboe_20160104.csv')
+    return os.path.join(os.path.dirname(__file__),
+                        'test_data_dir', 'test_cboe_20160104.csv')
 
 
 @pytest.fixture

@@ -14,5 +14,4 @@ setup(name='optopsy',
           'Programming Language :: Python :: 3'
       ],
       packages=['optopsy']
-)
-
+      )
