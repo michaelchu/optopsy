@@ -2,7 +2,6 @@ import glob
 import os
 import sys
 import pandas as pd
-from .helpers import generate_symbol
 from distutils.util import strtobool
 
 
@@ -11,27 +10,23 @@ from distutils.util import strtobool
 # The second item of each tuple defines if that field is required or not
 # The third item of each tuple defines the expected value type of the field. This
 # is used internally in the library and should not be changed.
+# The fourth item of each tuple defines if the field is affected by ratios
 
 fields = (
-    ('underlying_symbol', True, 'text'),
-    ('option_symbol', False, 'text'),
-    ('quote_date', True, 'date'),
-    ('root', True, 'text'),
-    ('style', False, 'text'),
-    ('expiration', True, 'date'),
-    ('strike', True, 'numeric'),
-    ('option_type', True, 'text'),
-    ('volume', False, 'numeric'),
-    ('bid', True, 'numeric'),
-    ('ask', True, 'numeric'),
-    ('underlying_price', True, 'numeric'),
-    ('open_interest', False, 'numeric'),
-    ('implied_vol', False, 'numeric'),
-    ('delta', True, 'numeric'),
-    ('gamma', True, 'numeric'),
-    ('theta', True, 'numeric'),
-    ('vega', True, 'numeric'),
-    ('rho', False, 'numeric')
+    ('underlying_symbol', True, 'text', 'common'),
+    ('quote_date', True, 'date', 'common'),
+    ('expiration', True, 'date', 'common'),
+    ('strike', True, 'numeric', 'common'),
+    ('option_type', True, 'text', 'common'),
+    ('bid', True, 'numeric', 'leg'),
+    ('ask', True, 'numeric', 'leg'),
+    ('underlying_price', True, 'numeric', 'common'),
+    ('implied_vol', False, 'numeric', 'common'),
+    ('delta', True, 'numeric', 'leg'),
+    ('gamma', True, 'numeric', 'leg'),
+    ('theta', True, 'numeric', 'leg'),
+    ('vega', True, 'numeric', 'leg'),
+    ('rho', False, 'numeric', 'leg')
 )
 
 
@@ -122,27 +117,7 @@ def format_option_df(df):
         )
         .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
         .round(2)
-        .pipe(_assign_option_symbol)
     )
-
-
-def _assign_option_symbol(df):
-    # if the data source did not include a option_symbol field, we will
-    # generate it
-    if 'option_symbol' in df.columns:
-        return df.assign(option_symbol=lambda r: '.' + r['option_symbol'])
-    else:
-        # TODO: vectorize this method, avoid using df.apply()
-        return (
-            df.assign(
-                symbol=lambda r: '.' +
-                df.apply(
-                    lambda r: generate_symbol(
-                        r['root'],
-                        r['expiration'],
-                        r['strike'],
-                        r['option_type']),
-                    axis=1)))
 
 
 def _check_field_is_standard(struct):

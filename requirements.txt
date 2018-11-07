@@ -1,6 +1,6 @@
 # It is recommended to install Miniconda3 for Python 3.6.1 and Pandas
-pandas>=0.20.2
+pandas>=0.23.1
 enum34; python_version <= '2.7'
 pathlib2; python_version <= '2.7'
-pytest>=3.6.1
+pytest>=3.10.0
 pyprind>=2.11.2

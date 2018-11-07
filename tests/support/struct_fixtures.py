@@ -57,7 +57,6 @@ def cboe_struct():
     return (
         ('underlying_symbol', 0),
         ('quote_date', 1),
-        ('root', 2),
         ('expiration', 3),
         ('strike', 4),
         ('option_type', 5),
