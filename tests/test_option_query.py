@@ -79,6 +79,18 @@ def test_gte(options_data, value):
 @pytest.mark.parametrize("value", [('strike', 350),
                                    ('delta', 0.50),
                                    ('gamma', 0.02),
+                                   ('expiration', '1990-01-21'),
+                                   ('quote_date', '01-01-1990'),
+                                   ('dte', Period.SEVEN_WEEKS.value),
+                                   ('dte', Period.ONE_DAY.value)])
+def test_ge(options_data, value):
+    values = gt(options_data, column=value[0], val=value[1])[value[0]]
+    assert all(values > value[1])
+
+
+@pytest.mark.parametrize("value", [('strike', 350),
+                                   ('delta', 0.50),
+                                   ('gamma', 0.02),
                                    ('expiration', '1990-01-20'),
                                    ('quote_date', '01-01-1990'),
                                    ('dte', 18),

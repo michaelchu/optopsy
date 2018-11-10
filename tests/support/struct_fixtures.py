@@ -68,4 +68,3 @@ def cboe_struct():
         ('theta', 21),
         ('vega', 22)
     )
-
