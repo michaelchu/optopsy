@@ -1,3 +1,13 @@
+"""
+This module will provide public functions to generate option spreads
+based on a list of tuples describing each leg and the filters to be
+applied on each leg during creation time.
+
+Filters that do not start with 'exit' or 'entry_spread' are applied
+first for each leg.
+"""
+
+
 from .enums import Period
 from .option_queries import opt_type
 from functools import reduce
