@@ -179,7 +179,10 @@ def exit_dte(data, value, _idx):
 
     For example, it would exit a trade with 10 days to expiration.
     """
-    pass
+    if value is None:
+    	return data[data['quote_date'] == data['expiration']]
+    else:
+    	return _process_values(data, 'dte_y', value)
 
 
 def exit_hold_days(data, value, _idx):

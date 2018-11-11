@@ -1,4 +1,4 @@
-from optopsy.backtest import simulate
+from optopsy.backtest import run
 from optopsy.option_strategies import long_call_spread
 from optopsy.data import get
 from datetime import datetime
@@ -16,13 +16,13 @@ def test_vertical_integration(hod_struct):
     filters = {
         'entry_dte': (29, 30, 31),
         'leg1_delta': 0.30,
-        'leg2_delta': 0.50
+        'leg2_delta': 0.50,
+        'exit_dte': (7, 7, 7)
     }
 
     start = datetime(2018, 1, 1)
     end = datetime(2018, 1, 31)
 
     trades = long_call_spread(data, start, end, filters)
-    backtest = simulate(data, trades, filters)
-    print(trades)
+    backtest = run(data, trades, filters)
     assert False
