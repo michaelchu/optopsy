@@ -1,7 +1,4 @@
 import pandas as pd
-import pytest
-
-from .support.data_fixtures import options_data
 from datetime import datetime
 from optopsy.enums import OrderAction
 from optopsy.option_strategies import long_call, short_call, long_put, short_put

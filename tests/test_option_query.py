@@ -1,7 +1,5 @@
 from optopsy.option_queries import *
-from .support.data_fixtures import *
-
-pd.set_option('display.expand_frame_repr', False)
+import pytest
 
 
 def test_calls(options_data):

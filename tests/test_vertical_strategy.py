@@ -1,13 +1,8 @@
-import pandas as pd
-import pytest
-
-from .support.data_fixtures import options_data
 from optopsy.enums import OrderAction
 from optopsy.option_strategies import long_call_spread, short_call_spread, long_put_spread, \
     short_put_spread
 from datetime import datetime
 
-pd.set_option('display.expand_frame_repr', False)
 
 start = datetime(1990, 1, 20)
 end = datetime(1990, 1, 20)

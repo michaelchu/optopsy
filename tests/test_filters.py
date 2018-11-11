@@ -1,12 +1,7 @@
-from .support.data_fixtures import options_data
 from pandas.util.testing import assert_frame_equal
 from optopsy.filters import *
 from datetime import datetime
-import pandas as pd
 import pytest
-
-
-pd.set_option('display.expand_frame_repr', False)
 
 
 def test_start_date(options_data):

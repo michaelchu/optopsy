@@ -1,13 +1,18 @@
 from optopsy.backtest import simulate
-from tests.support.data_fixtures import options_data_full
 from optopsy.option_strategies import long_call_spread
-import pandas as pd
+from optopsy.data import get
 from datetime import datetime
+import os
 
-pd.set_option('display.expand_frame_repr', False)
+
+CURRENT_FILE = os.path.abspath(os.path.dirname(__file__))
+TEST_FILE_PATH_FULL = os.path.join(CURRENT_FILE,
+                                   '../test_data/test_options_data_full.csv')
 
 
-def test_vertical_integration(options_data_full):
+def test_vertical_integration(hod_struct):
+    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
+
     filters = {
         'entry_dte': (29, 30, 31),
         'leg1_delta': 0.30,
@@ -17,5 +22,7 @@ def test_vertical_integration(options_data_full):
     start = datetime(2018, 1, 1)
     end = datetime(2018, 1, 31)
 
-    trades = long_call_spread(options_data_full, start, end, filters)
-    backtest = simulate(options_data_full, trades, filters)
+    trades = long_call_spread(data, start, end, filters)
+    backtest = simulate(data, trades, filters)
+    print(trades)
+    assert False
