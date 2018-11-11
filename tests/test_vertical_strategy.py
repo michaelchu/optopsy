@@ -5,9 +5,12 @@ from .support.data_fixtures import options_data
 from optopsy.enums import OrderAction
 from optopsy.option_strategies import long_call_spread, short_call_spread, long_put_spread, \
     short_put_spread
+from datetime import datetime
 
 pd.set_option('display.expand_frame_repr', False)
 
+start = datetime(1990, 1, 20)
+end = datetime(1990, 1, 20)
 
 params = {
     'leg1_delta': (0.25, 0.30, 0.45),
@@ -28,29 +31,25 @@ def _test_put_results(result):
     assert result.shape == (2, 15)
 
 
-@pytest.mark.usefixtures("options_data")
 def test_long_call_spread(options_data):
-    actual_spread = long_call_spread(options_data, params)
+    actual_spread = long_call_spread(options_data, start, end, params)
     _test_call_results(actual_spread[1])
     assert actual_spread[0] == OrderAction.BTO
 
 
-@pytest.mark.usefixtures("options_data")
 def test_short_call_spread(options_data):
-    actual_spread = short_call_spread(options_data, params)
+    actual_spread = short_call_spread(options_data, start, end, params)
     _test_call_results(actual_spread[1])
     assert actual_spread[0] == OrderAction.STO
 
 
-@pytest.mark.usefixtures("options_data")
 def test_long_put_spread(options_data):
-    actual_spread = long_put_spread(options_data, params)
+    actual_spread = long_put_spread(options_data, start, end, params)
     _test_put_results(actual_spread[1])
     assert actual_spread[0] == OrderAction.BTO
 
 
-@pytest.mark.usefixtures("options_data")
 def test_short_put_spread(options_data):
-    actual_spread = short_put_spread(options_data, params)
+    actual_spread = short_put_spread(options_data, start, end, params)
     _test_put_results(actual_spread[1])
     assert actual_spread[0] == OrderAction.STO

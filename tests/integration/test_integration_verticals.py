@@ -1,8 +1,8 @@
 from optopsy.backtest import simulate
 from tests.support.data_fixtures import options_data_full
 from optopsy.option_strategies import long_call_spread
-from optopsy.enums import Period
 import pandas as pd
+from datetime import datetime
 
 pd.set_option('display.expand_frame_repr', False)
 
@@ -14,6 +14,8 @@ def test_vertical_integration(options_data_full):
         'leg2_delta': 0.50
     }
 
-    trades = long_call_spread(options_data_full, filters)
-    print("")
-    print(trades[1])
+    start = datetime(2018, 1, 1)
+    end = datetime(2018, 1, 31)
+
+    trades = long_call_spread(options_data_full, start, end, filters)
+    backtest = simulate(options_data_full, trades, filters)

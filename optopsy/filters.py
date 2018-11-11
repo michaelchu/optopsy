@@ -1,4 +1,6 @@
 from .option_queries import between, nearest, eq
+from datetime import datetime
+import pandas as pd
 
 
 def _process_values(data, col, value, valid_types=(int, float, tuple)):
@@ -28,6 +30,20 @@ def _calc_strike_pct(data, value, n, idx):
         )
     else:
         return data
+
+
+def start_date(data, value, _idx):
+    if isinstance(value, datetime):
+        return data[data['expiration'] >= value]
+    else:
+        raise ValueError("Start Dates must of Date type")
+
+
+def end_date(data, value, _idx):
+    if isinstance(value, datetime):
+        return data[data['expiration'] <= value]
+    else:
+        raise ValueError("End Dates must of Date type")
 
 
 def std_expr(data, value, _idx):

@@ -43,9 +43,11 @@ def create_spread(data, leg_structs, filters):
     legs = [_create_legs(data, leg) for leg in leg_structs]
 
     # merge and apply leg filters to create spread
-    entry_filters = {**default_entry_filters, **filters}
-    spread = pd.concat(_apply_filters(
-        legs, entry_filters)).sort_values(sort_by)
+    filters = {**default_entry_filters, **filters}
+    entry_filters = {f: filters[f]
+                     for f in filters if (not f.startswith('entry_spread') and
+                                          not f.startswith('exit_'))}
+    spread = pd.concat(_apply_filters(legs, entry_filters)).sort_values(sort_by)
 
     # apply spread level filters to spread
     spread_filters = {f: filters[f]
