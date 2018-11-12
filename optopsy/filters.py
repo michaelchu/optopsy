@@ -21,7 +21,8 @@ def _process_values(data, col, value, valid_types=(int, float, tuple)):
 
 def _calc_strike_pct(data, value, n, idx):
     if not isinstance(value, (int, float, tuple)):
-        raise ValueError(f"Invalid value passed for leg {n+1} entry strike percentage")
+        raise ValueError(
+            f"Invalid value passed for leg {n+1} entry strike percentage")
     elif idx == n:
         return (
             data
@@ -180,9 +181,9 @@ def exit_dte(data, value, _idx):
     For example, it would exit a trade with 10 days to expiration.
     """
     if value is None:
-    	return data[data['quote_date'] == data['expiration']]
+        return data[data['quote_date'] == data['expiration']]
     else:
-    	return _process_values(data, 'dte_y', value)
+        return _process_values(data, 'dte_y', value)
 
 
 def exit_hold_days(data, value, _idx):

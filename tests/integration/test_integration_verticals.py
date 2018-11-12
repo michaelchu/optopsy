@@ -4,7 +4,6 @@ from optopsy.data import get
 from datetime import datetime
 import os
 
-
 CURRENT_FILE = os.path.abspath(os.path.dirname(__file__))
 TEST_FILE_PATH_FULL = os.path.join(CURRENT_FILE,
                                    '../test_data/test_options_data_full.csv')
@@ -25,4 +24,5 @@ def test_vertical_integration(hod_struct):
 
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
+    print(backtest)
     assert False
