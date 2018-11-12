@@ -26,28 +26,21 @@ TEST_STRUCT = (
 )
 
 
+def _parse_date_cols(columns):
+    quote_date_idx = columns[0].index('quote_date')
+    expiration_idx = columns[0].index('expiration')
+    return [quote_date_idx, expiration_idx]
+
+
 # Data to test results with ----------------------------------------------
-@pytest.fixture(scope="module")
-def options_data():
-    cols = list(zip(*TEST_STRUCT))
+@pytest.fixture
+def options_data(hod_struct):
+    cols = list(zip(*hod_struct))
+    date_cols = _parse_date_cols(cols)
     return (
         pd.read_csv(
             TEST_FILE_PATH,
-            parse_dates=True,
-            names=cols[0],
-            usecols=cols[1],
-            skiprows=1,
-            nrows=None
-        ).pipe(format_option_df))
-
-
-@pytest.fixture(scope="module")
-def options_data_full():
-    cols = list(zip(*TEST_STRUCT))
-    return (
-        pd.read_csv(
-            TEST_FILE_PATH_FULL,
-            parse_dates=True,
+            parse_dates=date_cols,
             names=cols[0],
             usecols=cols[1],
             skiprows=1,

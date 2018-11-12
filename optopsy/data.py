@@ -13,6 +13,7 @@ from distutils.util import strtobool
 # The fourth item of each tuple defines if the field is affected by ratios
 
 fields = (
+    ('option_symbol', False, 'text', 'common'),
     ('underlying_symbol', True, 'text', 'common'),
     ('quote_date', True, 'date', 'common'),
     ('expiration', True, 'date', 'common'),
@@ -30,25 +31,27 @@ fields = (
 )
 
 
-def _read_file(path, names, usecols, skiprow, nrows=None):
+def _read_file(path, names, usecols, date_cols, skiprow, nrows=None):
     return pd.read_csv(
         path,
-        parse_dates=True,
         names=names,
         usecols=usecols,
+        parse_dates=date_cols,
         skiprows=skiprow,
-        nrows=nrows)
+        nrows=nrows,
+        infer_datetime_format=True)
 
 
-def _import_file(path, names, usecols, skiprow):
+def _import_file(path, names, usecols, date_cols, skiprow):
     if _check_file_exists(path):
-        return _read_file(path, names, usecols, skiprow).pipe(format_option_df)
+        return _read_file(path, names, usecols, date_cols,
+                          skiprow).pipe(format_option_df)
 
 
-def _import_dir_files(path, names, usecols, skiprow):
+def _import_dir_files(path, names, usecols, date_cols, skiprow):
     if _check_file_path_exists(path):
         fls = sorted(glob.glob(os.path.join(path, "*.csv")))
-        return pd.concat(_read_file(f, names, usecols, skiprow)
+        return pd.concat(_read_file(f, names, usecols, date_cols, skiprow)
                          for f in fls).pipe(format_option_df)
 
 
@@ -64,8 +67,8 @@ def _check_file_path_exists(path):
     return True
 
 
-def _do_preview(path, names, usecols, skiprow):
-    print(_read_file(path, names, usecols, skiprow, nrows=5)
+def _do_preview(path, names, usecols, date_cols, skiprow):
+    print(_read_file(path, names, usecols, date_cols, skiprow, nrows=5)
           .pipe(format_option_df).head()
           )
     return _user_prompt("Does this look correct?")
@@ -81,16 +84,20 @@ def gets(dir_path, struct, skiprow=1, prompt=True):
 
 def _do_import(path, struct, skiprow, prompt, bulk):
     cols = list(zip(*struct))
+    quote_date_idx = cols[0].index('quote_date')
+    expiration_idx = cols[0].index('expiration')
+    date_cols = [quote_date_idx, expiration_idx]
 
     if _check_structs(struct, cols):
         names = cols[0]
         usecols = cols[1]
-
-        if not prompt or (prompt & _do_preview(path, names, usecols, skiprow)):
+        if not prompt or (prompt & _do_preview(
+                path, names, usecols, date_cols, skiprow)):
             if bulk:
-                return _import_dir_files(path, names, usecols, skiprow)
+                return _import_dir_files(
+                    path, names, usecols, date_cols, skiprow)
             else:
-                return _import_file(path, names, usecols, skiprow)
+                return _import_file(path, names, usecols, date_cols, skiprow)
         else:
             sys.exit()
 
@@ -107,11 +114,9 @@ def format_option_df(df):
         .assign(
             expiration=lambda r: pd.to_datetime(
                 r['expiration'],
-                infer_datetime_format=True,
                 format='%Y-%m-%d'),
             quote_date=lambda r: pd.to_datetime(
                 r['quote_date'],
-                infer_datetime_format=True,
                 format='%Y-%m-%d'),
             option_type=lambda r: r['option_type'].str.lower().str[:1]
         )

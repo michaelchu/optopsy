@@ -68,3 +68,21 @@ def cboe_struct():
         ('theta', 21),
         ('vega', 22)
     )
+
+
+@pytest.fixture
+def hod_struct():
+    return (
+        ('underlying_symbol', 0),
+        ('underlying_price', 1),
+        ('option_type', 5),
+        ('expiration', 6),
+        ('quote_date', 7),
+        ('strike', 8),
+        ('bid', 10),
+        ('ask', 11),
+        ('delta', 15),
+        ('gamma', 16),
+        ('theta', 17),
+        ('vega', 18)
+    )
