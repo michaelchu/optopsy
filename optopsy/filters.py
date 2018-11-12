@@ -1,4 +1,6 @@
 from .option_queries import between, nearest, eq
+from datetime import datetime
+import pandas as pd
 
 
 def _process_values(data, col, value, valid_types=(int, float, tuple)):
@@ -19,7 +21,8 @@ def _process_values(data, col, value, valid_types=(int, float, tuple)):
 
 def _calc_strike_pct(data, value, n, idx):
     if not isinstance(value, (int, float, tuple)):
-        raise ValueError(f"Invalid value passed for leg {n+1} entry strike percentage")
+        raise ValueError(
+            f"Invalid value passed for leg {n+1} entry strike percentage")
     elif idx == n:
         return (
             data
@@ -28,6 +31,20 @@ def _calc_strike_pct(data, value, n, idx):
         )
     else:
         return data
+
+
+def start_date(data, value, _idx):
+    if isinstance(value, datetime):
+        return data[data['expiration'] >= value]
+    else:
+        raise ValueError("Start Dates must of Date type")
+
+
+def end_date(data, value, _idx):
+    if isinstance(value, datetime):
+        return data[data['expiration'] <= value]
+    else:
+        raise ValueError("End Dates must of Date type")
 
 
 def std_expr(data, value, _idx):
@@ -163,7 +180,10 @@ def exit_dte(data, value, _idx):
 
     For example, it would exit a trade with 10 days to expiration.
     """
-    pass
+    if value is None:
+        return data[data['quote_date'] == data['expiration']]
+    else:
+        return _process_values(data, 'dte_exit', value)
 
 
 def exit_hold_days(data, value, _idx):
