@@ -46,7 +46,7 @@ def test_nearest_column(options_data, value):
 @pytest.mark.parametrize(
     "value", [('test', 1), (1234, 1), ('option_symbol', 'test')])
 def test_invalid_column_values(options_data, value):
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         nearest(options_data, value[0], value[1])
 
 

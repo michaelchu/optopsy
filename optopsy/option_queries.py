@@ -78,10 +78,7 @@ def lt(df, column, val):
 
 
 def gt(df, column, val):
-    if column in numeric_and_date_fields:
         return df[df[column] > _convert(val)]
-    else:
-        raise ValueError("Invalid column specified!")
 
 
 def ne(df, column, val):

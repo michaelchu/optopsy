@@ -28,23 +28,19 @@ def _test_put_results(result):
 
 def test_long_call_spread(options_data):
     actual_spread = long_call_spread(options_data, start, end, params)
-    _test_call_results(actual_spread[1])
-    assert actual_spread[0] == OrderAction.BTO
+    _test_call_results(actual_spread)
 
 
 def test_short_call_spread(options_data):
     actual_spread = short_call_spread(options_data, start, end, params)
-    _test_call_results(actual_spread[1])
-    assert actual_spread[0] == OrderAction.STO
+    _test_call_results(actual_spread)
 
 
 def test_long_put_spread(options_data):
     actual_spread = long_put_spread(options_data, start, end, params)
-    _test_put_results(actual_spread[1])
-    assert actual_spread[0] == OrderAction.BTO
+    _test_put_results(actual_spread)
 
 
 def test_short_put_spread(options_data):
     actual_spread = short_put_spread(options_data, start, end, params)
-    _test_put_results(actual_spread[1])
-    assert actual_spread[0] == OrderAction.STO
+    _test_put_results(actual_spread)

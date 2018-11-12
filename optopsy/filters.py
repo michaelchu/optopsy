@@ -183,7 +183,7 @@ def exit_dte(data, value, _idx):
     if value is None:
         return data[data['quote_date'] == data['expiration']]
     else:
-        return _process_values(data, 'dte_y', value)
+        return _process_values(data, 'dte_exit', value)
 
 
 def exit_hold_days(data, value, _idx):

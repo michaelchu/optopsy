@@ -24,5 +24,5 @@ def test_vertical_integration(hod_struct):
 
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
-    print(backtest)
-    assert False
+
+    assert backtest[0] == 104.50

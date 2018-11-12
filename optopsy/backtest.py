@@ -70,12 +70,35 @@ def run(data, trades, filters, mode='midpoint'):
 
     # for each option to be traded, determine the historical price action
     exit_filters = {f: filters[f] for f in filters if f.startswith('exit_')}
-    res = pd.merge(all_trades, data, on=on).pipe(_filter_data, exit_filters)
+    res = pd.merge(all_trades, data, on=on, suffixes=(
+        '_entry', '_exit')).pipe(_filter_data, exit_filters)
 
     # calculate the p/l for the trades
     if mode == 'midpoint':
-        res['cost'] = res[['bid_x', 'ask_x']].mean() * res['ratio'] * res['contracts']
+        res['entry_opt_price'] = res[['bid_entry', 'ask_entry']].mean(axis=1)
+        res['exit_opt_price'] = res[['bid_exit', 'ask_exit']].mean(axis=1)
+        res['entry_price'] = res['entry_opt_price'] * \
+            res['ratio'] * res['contracts']
+        res['exit_price'] = res['exit_opt_price'] * \
+            res['ratio'] * res['contracts']
+        res['profit'] = res['exit_price'] - res['entry_price']
     elif mode == 'market':
         pass
 
-    return results
+    res.rename(columns={
+        'quote_date_entry': 'entry_date',
+        'quote_date_exit': 'exit_date',
+        'delta_entry': 'entry_delta',
+        'underlying_price_entry': 'entry_stk_price',
+        'underlying_price_exit': 'exit_stk_price',
+        'dte_entry': 'DTE'
+    }, inplace=True)
+
+    output_format = ['entry_date', 'exit_date', 'expiration', 'DTE', 'ratio', 'contracts',
+                     'option_type', 'strike', 'entry_delta', 'entry_stk_price',
+                     'exit_stk_price', 'entry_opt_price', 'exit_opt_price', 'entry_price',
+                     'exit_price', 'profit']
+
+    total_profit = res['profit'].sum().round(2)
+
+    return total_profit, res[output_format]

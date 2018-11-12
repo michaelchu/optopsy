@@ -19,9 +19,7 @@ def test_long_call(options_data):
             'entry_dte': (18, 18, 18)
         }
     )
-    action = actual_spread[0]
-    results = actual_spread[1]
-    assert action == OrderAction.BTO
+    results = actual_spread
     assert all(results['option_type'] == 'c')
     assert all(v in [0.55, 0.51] for v in results['delta'].unique().tolist())
     assert results.shape == (1, 15)
@@ -37,9 +35,7 @@ def test_short_call(options_data):
             'entry_dte': (18, 18, 18)
         }
     )
-    action = actual_spread[0]
-    results = actual_spread[1]
-    assert action == OrderAction.STO
+    results = actual_spread
     assert all(results['option_type'] == 'c')
     assert all(v in [0.55, 0.51] for v in results['delta'].unique().tolist())
 
@@ -54,9 +50,7 @@ def test_long_put(options_data):
             'entry_dte': (17, 17, 17)
         }
     )
-    action = actual_spread[0]
-    results = actual_spread[1]
-    assert action == OrderAction.BTO
+    results = actual_spread
     assert all(results['option_type'] == 'p')
     assert all(v in [-0.49] for v in results['delta'].unique().tolist())
 
@@ -71,8 +65,6 @@ def test_short_put(options_data):
             'entry_dte': (17, 17, 17)
         }
     )
-    action = actual_spread[0]
-    results = actual_spread[1]
-    assert action == OrderAction.STO
+    results = actual_spread
     assert all(results['option_type'] == 'p')
     assert all(v in [-0.49] for v in results['delta'].unique().tolist())
