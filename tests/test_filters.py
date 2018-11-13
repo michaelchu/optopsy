@@ -97,49 +97,57 @@ def test_dte_float_value(options_data):
 def test_leg1_delta_tuple(options_data):
     df = leg1_delta(options_data, (0.45, 0.50, 0.55), 0)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg1_delta_value(options_data):
     df = leg1_delta(options_data, 0.50, 0)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg2_delta_tuple(options_data):
     df = leg2_delta(options_data, (0.45, 0.50, 0.55), 1)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg2_delta_value(options_data):
     df = leg2_delta(options_data, 0.50, 1)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg3_delta_tuple(options_data):
     df = leg3_delta(options_data, (0.45, 0.50, 0.55), 2)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg3_delta_value(options_data):
     df = leg3_delta(options_data, 0.50, 2)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg4_delta_tuple(options_data):
     df = leg4_delta(options_data, (0.45, 0.50, 0.55), 3)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_leg4_delta_value(options_data):
     df = leg4_delta(options_data, 0.50, 3)
     assert not df.empty
-    assert all(v in [0.55, 0.51, -0.46, -0.49] for v in df['delta'].unique().tolist())
+    assert all(v in [0.55, 0.51, -0.46, -0.49]
+               for v in df['delta'].unique().tolist())
 
 
 def test_invalid_leg1_delta(options_data):
@@ -234,4 +242,3 @@ def test_wrong_leg_leg2_strike_pct(options_data):
     df = leg1_strike_pct(options_data, 0.50, 2)
     assert not df.empty
     assert_frame_equal(df, options_data)
-

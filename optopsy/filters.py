@@ -3,7 +3,8 @@ from datetime import datetime
 import pandas as pd
 
 
-def _process_values(data, col, value, valid_types=(int, float, tuple)):
+def _process_values(data, col, value, groupby=None,
+                    valid_types=(int, float, tuple)):
     if not isinstance(value, valid_types):
         raise ValueError("Invalid value passed to filter")
     elif isinstance(value, tuple):
@@ -12,11 +13,11 @@ def _process_values(data, col, value, valid_types=(int, float, tuple)):
         else:
             return (
                 data
-                .pipe(nearest, col, value[1])
+                .pipe(nearest, col, value[1], groupby=groupby)
                 .pipe(between, col, value[0], value[2], absolute=True)
             )
     else:
-        return nearest(data, col, value)
+        return nearest(data, col, value, groupby=groupby)
 
 
 def _calc_strike_pct(data, value, n, idx):
@@ -76,7 +77,8 @@ def entry_dte(data, value, _idx):
     For example, it will search options that have days to expiration
     between and including 20 to 55.
     """
-    return _process_values(data, 'dte', value)
+    groupby = ['option_type', 'expiration', 'underlying_symbol']
+    return _process_values(data, 'dte', value, groupby=groupby)
 
 
 def entry_days(data, value, _idx):
@@ -183,7 +185,8 @@ def exit_dte(data, value, _idx):
     if value is None:
         return data[data['quote_date'] == data['expiration']]
     else:
-        return _process_values(data, 'dte_exit', value)
+        groupby = ['option_type', 'expiration', 'underlying_symbol']
+        return _process_values(data, 'dte_exit', value, groupby=groupby)
 
 
 def exit_hold_days(data, value, _idx):
