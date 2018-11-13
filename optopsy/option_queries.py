@@ -40,12 +40,15 @@ def underlying_price(df):
         raise ValueError("Underlying Price column undefined!")
 
 
-def nearest(df, column, val, absolute=True):
+def nearest(df, column, val, groupby=None, absolute=True, tie="roundup"):
     # we need to group by unique option columns so that we are
     # getting the min abs dist over multiple sets of option groups
     # instead of the absolute min of the entire data set.
-    group_by = ['quote_date', 'option_type', 'expiration']
-    on = group_by + ["abs_dist"]
+    if groupby is None:
+        groupby = ['quote_date', 'option_type',
+                   'expiration', 'underlying_symbol']
+
+    on = groupby + ["abs_dist"]
 
     data = df.assign(
         abs_dist=lambda r:
@@ -54,7 +57,7 @@ def nearest(df, column, val, absolute=True):
 
     return (
         data
-        .groupby(group_by)['abs_dist'].min()
+        .groupby(groupby)['abs_dist'].min()
         .to_frame()
         .merge(data, on=on)
         .drop('abs_dist', axis=1)
@@ -78,7 +81,7 @@ def lt(df, column, val):
 
 
 def gt(df, column, val):
-        return df[df[column] > _convert(val)]
+    return df[df[column] > _convert(val)]
 
 
 def ne(df, column, val):

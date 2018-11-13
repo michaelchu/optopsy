@@ -5,6 +5,7 @@ import pandas as pd
 import optopsy.filters as fil
 from .enums import Period
 from .option_queries import opt_type
+from .statistics import *
 
 pd.set_option('display.expand_frame_repr', False)
 
@@ -13,8 +14,15 @@ sort_by = [
     'quote_date',
     'option_type',
     'expiration',
-    'strike']
-on = ['underlying_symbol', 'option_type', 'expiration', 'strike']
+    'strike'
+]
+
+on = [
+    'underlying_symbol',
+    'option_type',
+    'expiration',
+    'strike'
+]
 
 default_entry_filters = {
     "std_expr": False,
@@ -22,6 +30,34 @@ default_entry_filters = {
     "entry_dte": Period.FOUR_WEEKS.value,
     "exit_dte": None
 }
+
+output_cols = {
+    'quote_date_entry': 'entry_date',
+    'quote_date_exit': 'exit_date',
+    'delta_entry': 'entry_delta',
+    'underlying_price_entry': 'entry_stk_price',
+    'underlying_price_exit': 'exit_stk_price',
+    'dte_entry': 'DTE'
+}
+
+output_format = [
+    'entry_date',
+    'exit_date',
+    'expiration',
+    'DTE',
+    'ratio',
+    'contracts',
+    'option_type',
+    'strike',
+    'entry_delta',
+    'entry_stk_price',
+    'exit_stk_price',
+    'entry_opt_price',
+    'exit_opt_price',
+    'entry_price',
+    'exit_price',
+    'profit'
+]
 
 
 def _create_legs(data, leg):
@@ -58,11 +94,12 @@ def create_spread(data, leg_structs, filters):
     # apply spread level filters to spread
     spread_filters = {f: filters[f]
                       for f in filters if f.startswith('entry_spread')}
-    return _filter_data(spread, spread_filters)
+    return _filter_data(spread, spread_filters).sort_values(
+        ['quote_date', 'expiration', 'strike'])
 
 
 # this is the main function that runs the backtest engine
-def run(data, trades, filters, mode='midpoint'):
+def run(data, trades, filters, init_balance=10000, mode='midpoint'):
     trades = trades if isinstance(trades, list) else [trades]
 
     # merge trades from multiple underlying symbols if applicable
@@ -70,35 +107,15 @@ def run(data, trades, filters, mode='midpoint'):
 
     # for each option to be traded, determine the historical price action
     exit_filters = {f: filters[f] for f in filters if f.startswith('exit_')}
-    res = pd.merge(all_trades, data, on=on, suffixes=(
-        '_entry', '_exit')).pipe(_filter_data, exit_filters)
+    res = (
+        pd
+        .merge(all_trades, data, on=on, suffixes=('_entry', '_exit'))
+        .pipe(_filter_data, exit_filters)
+        .pipe(calc_entry_px, mode)
+        .pipe(calc_exit_px, mode)
+        .pipe(calc_pnl)
+        # .pipe(calc_running_balance, init_balance)
+        .rename(columns=output_cols)
+    )
 
-    # calculate the p/l for the trades
-    if mode == 'midpoint':
-        res['entry_opt_price'] = res[['bid_entry', 'ask_entry']].mean(axis=1)
-        res['exit_opt_price'] = res[['bid_exit', 'ask_exit']].mean(axis=1)
-        res['entry_price'] = res['entry_opt_price'] * \
-            res['ratio'] * res['contracts']
-        res['exit_price'] = res['exit_opt_price'] * \
-            res['ratio'] * res['contracts']
-        res['profit'] = res['exit_price'] - res['entry_price']
-    elif mode == 'market':
-        pass
-
-    res.rename(columns={
-        'quote_date_entry': 'entry_date',
-        'quote_date_exit': 'exit_date',
-        'delta_entry': 'entry_delta',
-        'underlying_price_entry': 'entry_stk_price',
-        'underlying_price_exit': 'exit_stk_price',
-        'dte_entry': 'DTE'
-    }, inplace=True)
-
-    output_format = ['entry_date', 'exit_date', 'expiration', 'DTE', 'ratio', 'contracts',
-                     'option_type', 'strike', 'entry_delta', 'entry_stk_price',
-                     'exit_stk_price', 'entry_opt_price', 'exit_opt_price', 'entry_price',
-                     'exit_price', 'profit']
-
-    total_profit = res['profit'].sum().round(2)
-
-    return total_profit, res[output_format]
+    return calc_total_profit(res), res[output_format]
