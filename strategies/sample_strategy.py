@@ -22,6 +22,7 @@ SPX_FILE_STRUCT = (
     ('vega', 18)
 )
 
+
 def run_strategy():
     data = op.get(FILE, SPX_FILE_STRUCT, prompt=False)
 
