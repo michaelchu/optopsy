@@ -10,7 +10,7 @@ SPX_FILE_STRUCT = (
     ('underlying_symbol', 0),
     ('underlying_price', 1),
     ('option_symbol', 3),
-    ('option_type', 5),     
+    ('option_type', 5),
     ('expiration', 6),
     ('quote_date', 7),
     ('strike', 8),
@@ -21,6 +21,7 @@ SPX_FILE_STRUCT = (
     ('theta', 17),
     ('vega', 18)
 )
+
 
 def run_strategy():
     data = op.get(FILE, SPX_FILE_STRUCT, prompt=False)
@@ -36,7 +37,11 @@ def run_strategy():
     end = datetime(2016, 12, 31)
 
     trades = op.strategies.short_call_spread(data, start, end, filters)
+    trades.to_csv('./strategies/results/trades.csv')
+
     backtest = op.run(data, trades, filters)
+    backtest[1].to_csv('./strategies/results/results.csv')
+
     print("Total Profit: %s" % backtest[0])
 
 
