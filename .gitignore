@@ -33,4 +33,6 @@ MANIFEST
 
 /data/
 /tests/.pytest_cache/
+/strategies/data/
+/strategies/results/
 

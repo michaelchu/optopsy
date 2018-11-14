@@ -14,31 +14,30 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-def calc_entry_px(data, mode='midpoint'):
-    if mode == 'midpoint':
-        return data.assign(
-            entry_opt_price=data[['bid_entry', 'ask_entry']].mean(axis=1))
-    elif mode == 'market':
-        return data.assign(entry_opt_price=data['ask_entry'])
+
+def _assign_opt_px(data, mode, action):
+    if mode == "midpoint":
+        data[f"{action}_opt_price"] = data[[f"bid_{action}", f"ask_{action}"]].mean(axis=1)
+    elif mode == "market":
+        data[f"{action}_opt_price"] = data[f"ask_{action}"]
+    return data
 
 
-def calc_exit_px(data, mode='midpoint'):
-    if mode == 'midpoint':
-        return data.assign(
-            exit_opt_price=data[['bid_exit', 'ask_exit']].mean(axis=1))
-    elif mode == 'market':
-        return data.assign(exit_opt_price=data['ask_exit'])
+def calc_entry_px(data, mode="midpoint"):
+    return _assign_opt_px(data, mode,'entry')
+
+
+def calc_exit_px(data, mode="midpoint"):
+    return _assign_opt_px(data, mode, 'exit')
 
 
 def calc_pnl(data):
     # calculate the p/l for the trades
-    data['entry_price'] = data['entry_opt_price'] * \
-        data['ratio'] * data['contracts']
-    data['exit_price'] = data['exit_opt_price'] * \
-        data['ratio'] * data['contracts']
-    data['profit'] = data['exit_price'] - data['entry_price']
+    data["entry_price"] = data["entry_opt_price"] * data["ratio"] * data["contracts"]
+    data["exit_price"] = data["exit_opt_price"] * data["ratio"] * data["contracts"]
+    data["profit"] = data["exit_price"] - data["entry_price"]
     return data
 
 
 def calc_total_profit(data):
-    return data['profit'].sum().round(2)
+    return data["profit"].sum().round(2)

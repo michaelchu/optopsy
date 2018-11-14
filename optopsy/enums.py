@@ -39,32 +39,32 @@ class Period(Enum):
 
 class Struct(Enum):
     CBOE = (
-        ('symbol', 0),
-        ('quote_date', 1),
-        ('root', 2),
-        ('expiration', 3),
-        ('strike', 4),
-        ('option_type', 5),
-        ('bid', 12),
-        ('ask', 14),
-        ('underlying_price', 17),
-        ('delta', 19),
-        ('gamma', 20),
-        ('theta', 21),
-        ('vega', 22)
+        ("symbol", 0),
+        ("quote_date", 1),
+        ("root", 2),
+        ("expiration", 3),
+        ("strike", 4),
+        ("option_type", 5),
+        ("bid", 12),
+        ("ask", 14),
+        ("underlying_price", 17),
+        ("delta", 19),
+        ("gamma", 20),
+        ("theta", 21),
+        ("vega", 22),
     )
 
 
 class OptionType(Enum):
-    CALL = ('c', 1)
-    PUT = ('p', -1)
+    CALL = ("c", 1)
+    PUT = ("p", -1)
 
 
 class OrderAction(Enum):
-    BTO = (1, 'BUY', 'BOT')
-    BTC = (1, 'BUY', 'BOT')
-    STO = (-1, 'SELL', 'SLD')
-    STC = (-1, 'SELL', 'SLD')
+    BTO = (1, "BUY", "BOT")
+    BTC = (1, "BUY", "BOT")
+    STO = (-1, "SELL", "SLD")
+    STC = (-1, "SELL", "SLD")
 
 
 class DayOfWeek(Enum):

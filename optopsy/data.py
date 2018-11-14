@@ -29,21 +29,21 @@ from distutils.util import strtobool
 # The fourth item of each tuple defines if the field is affected by ratios
 
 fields = (
-    ('option_symbol', False, 'text', 'common'),
-    ('underlying_symbol', True, 'text', 'common'),
-    ('quote_date', True, 'date', 'common'),
-    ('expiration', True, 'date', 'common'),
-    ('strike', True, 'numeric', 'common'),
-    ('option_type', True, 'text', 'common'),
-    ('bid', True, 'numeric', 'leg'),
-    ('ask', True, 'numeric', 'leg'),
-    ('underlying_price', True, 'numeric', 'common'),
-    ('implied_vol', False, 'numeric', 'common'),
-    ('delta', True, 'numeric', 'leg'),
-    ('gamma', True, 'numeric', 'leg'),
-    ('theta', True, 'numeric', 'leg'),
-    ('vega', True, 'numeric', 'leg'),
-    ('rho', False, 'numeric', 'leg')
+    ("option_symbol", False, "text", "common"),
+    ("underlying_symbol", True, "text", "common"),
+    ("quote_date", True, "date", "common"),
+    ("expiration", True, "date", "common"),
+    ("strike", True, "numeric", "common"),
+    ("option_type", True, "text", "common"),
+    ("bid", True, "numeric", "leg"),
+    ("ask", True, "numeric", "leg"),
+    ("underlying_price", True, "numeric", "common"),
+    ("implied_vol", False, "numeric", "common"),
+    ("delta", True, "numeric", "leg"),
+    ("gamma", True, "numeric", "leg"),
+    ("theta", True, "numeric", "leg"),
+    ("vega", True, "numeric", "leg"),
+    ("rho", False, "numeric", "leg"),
 )
 
 
@@ -55,20 +55,23 @@ def _read_file(path, names, usecols, date_cols, skiprow, nrows=None):
         parse_dates=date_cols,
         skiprows=skiprow,
         nrows=nrows,
-        infer_datetime_format=True)
+        infer_datetime_format=True,
+    )
 
 
 def _import_file(path, names, usecols, date_cols, skiprow):
     if _check_file_exists(path):
-        return _read_file(path, names, usecols, date_cols,
-                          skiprow).pipe(format_option_df)
+        return _read_file(path, names, usecols, date_cols, skiprow).pipe(
+            format_option_df
+        )
 
 
 def _import_dir_files(path, names, usecols, date_cols, skiprow):
     if _check_file_path_exists(path):
         fls = sorted(glob.glob(os.path.join(path, "*.csv")))
-        return pd.concat(_read_file(f, names, usecols, date_cols, skiprow)
-                         for f in fls).pipe(format_option_df)
+        return pd.concat(
+            _read_file(f, names, usecols, date_cols, skiprow) for f in fls
+        ).pipe(format_option_df)
 
 
 def _check_file_exists(path):
@@ -84,9 +87,11 @@ def _check_file_path_exists(path):
 
 
 def _do_preview(path, names, usecols, date_cols, skiprow):
-    print(_read_file(path, names, usecols, date_cols, skiprow, nrows=5)
-          .pipe(format_option_df).head()
-          )
+    print(
+        _read_file(path, names, usecols, date_cols, skiprow, nrows=5)
+        .pipe(format_option_df)
+        .head()
+    )
     return _user_prompt("Does this look correct?")
 
 
@@ -100,18 +105,18 @@ def gets(dir_path, struct, skiprow=1, prompt=True):
 
 def _do_import(path, struct, skiprow, prompt, bulk):
     cols = list(zip(*struct))
-    quote_date_idx = cols[0].index('quote_date')
-    expiration_idx = cols[0].index('expiration')
+    quote_date_idx = cols[0].index("quote_date")
+    expiration_idx = cols[0].index("expiration")
     date_cols = [quote_date_idx, expiration_idx]
 
     if _check_structs(struct, cols):
         names = cols[0]
         usecols = cols[1]
-        if not prompt or (prompt & _do_preview(
-                path, names, usecols, date_cols, skiprow)):
+        if not prompt or (
+            prompt & _do_preview(path, names, usecols, date_cols, skiprow)
+        ):
             if bulk:
-                return _import_dir_files(
-                    path, names, usecols, date_cols, skiprow)
+                return _import_dir_files(path, names, usecols, date_cols, skiprow)
             else:
                 return _import_file(path, names, usecols, date_cols, skiprow)
         else:
@@ -126,17 +131,12 @@ def format_option_df(df):
     """
 
     return (
-        df
-        .assign(
-            expiration=lambda r: pd.to_datetime(
-                r['expiration'],
-                format='%Y-%m-%d'),
-            quote_date=lambda r: pd.to_datetime(
-                r['quote_date'],
-                format='%Y-%m-%d'),
-            option_type=lambda r: r['option_type'].str.lower().str[:1]
+        df.assign(
+            expiration=lambda r: pd.to_datetime(r["expiration"], format="%Y-%m-%d"),
+            quote_date=lambda r: pd.to_datetime(r["quote_date"], format="%Y-%m-%d"),
+            option_type=lambda r: r["option_type"].str.lower().str[:1],
         )
-        .assign(dte=lambda r: (r['expiration'] - r['quote_date']).dt.days)
+        .assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
         .round(2)
     )
 
@@ -167,9 +167,11 @@ def _check_fields_contains_required(cols):
 
 
 def _check_structs(struct, cols):
-    return (_check_field_is_standard(struct) and
-            _check_field_is_duplicated(cols) and
-            _check_fields_contains_required(cols))
+    return (
+        _check_field_is_standard(struct)
+        and _check_field_is_duplicated(cols)
+        and _check_fields_contains_required(cols)
+    )
 
 
 def _user_prompt(question):

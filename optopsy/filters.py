@@ -19,18 +19,15 @@ from datetime import datetime
 import pandas as pd
 
 
-def _process_values(data, col, value, groupby=None,
-                    valid_types=(int, float, tuple)):
+def _process_values(data, col, value, groupby=None, valid_types=(int, float, tuple)):
     if not isinstance(value, valid_types):
         raise ValueError("Invalid value passed to filter")
     elif isinstance(value, tuple):
         if len(set(value)) == 1:
             return eq(data, col, value[1])
         else:
-            return (
-                data
-                .pipe(nearest, col, value[1], groupby=groupby)
-                .pipe(between, col, value[0], value[2], absolute=True)
+            return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
+                between, col, value[0], value[2], absolute=True
             )
     else:
         return nearest(data, col, value, groupby=groupby)
@@ -38,28 +35,25 @@ def _process_values(data, col, value, groupby=None,
 
 def _calc_strike_pct(data, value, n, idx):
     if not isinstance(value, (int, float, tuple)):
-        raise ValueError(
-            f"Invalid value passed for leg {n+1} entry strike percentage")
+        raise ValueError(f"Invalid value passed for leg {n+1} entry strike percentage")
     elif idx == n:
-        return (
-            data
-            .assign(strike_pct=lambda r: (r['strike'] / r['underlying_price']).round(2))
-            .pipe(_process_values, 'strike_pct', value)
-        )
+        return data.assign(
+            strike_pct=lambda r: (r["strike"] / r["underlying_price"]).round(2)
+        ).pipe(_process_values, "strike_pct", value)
     else:
         return data
 
 
 def start_date(data, value, _idx):
     if isinstance(value, datetime):
-        return data[data['expiration'] >= value]
+        return data[data["expiration"] >= value]
     else:
         raise ValueError("Start Dates must of Date type")
 
 
 def end_date(data, value, _idx):
     if isinstance(value, datetime):
-        return data[data['expiration'] <= value]
+        return data[data["expiration"] <= value]
     else:
         raise ValueError("End Dates must of Date type")
 
@@ -93,8 +87,8 @@ def entry_dte(data, value, _idx):
     For example, it will search options that have days to expiration
     between and including 20 to 55.
     """
-    groupby = ['option_type', 'expiration', 'underlying_symbol']
-    return _process_values(data, 'dte', value, groupby=groupby)
+    groupby = ["option_type", "expiration", "underlying_symbol"]
+    return _process_values(data, "dte", value, groupby=groupby)
 
 
 def entry_days(data, value, _idx):
@@ -110,28 +104,28 @@ def leg1_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, 'delta', value) if idx == 0 else data
+    return _process_values(data, "delta", value) if idx == 0 else data
 
 
 def leg2_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, 'delta', value) if idx == 1 else data
+    return _process_values(data, "delta", value) if idx == 1 else data
 
 
 def leg3_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, 'delta', value) if idx == 2 else data
+    return _process_values(data, "delta", value) if idx == 2 else data
 
 
 def leg4_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, 'delta', value) if idx == 3 else data
+    return _process_values(data, "delta", value) if idx == 3 else data
 
 
 def leg1_strike_pct(data, value, idx):
@@ -199,10 +193,10 @@ def exit_dte(data, value, _idx):
     For example, it would exit a trade with 10 days to expiration.
     """
     if value is None:
-        return data[data['quote_date_exit'] == data['expiration']]
+        return data[data["quote_date_exit"] == data["expiration"]]
     else:
-        groupby = ['option_type', 'expiration', 'underlying_symbol']
-        return _process_values(data, 'dte_exit', value, groupby=groupby)
+        groupby = ["option_type", "expiration", "underlying_symbol"]
+        return _process_values(data, "dte_exit", value, groupby=groupby)
 
 
 def exit_hold_days(data, value, _idx):

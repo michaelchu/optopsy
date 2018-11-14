@@ -6,13 +6,14 @@ from .support.struct_fixtures import *
 
 @pytest.fixture
 def mock_daily_dir():
-    return os.path.join(os.path.dirname(__file__), 'test_data_dir')
+    return os.path.join(os.path.dirname(__file__), "test_data_dir")
 
 
 @pytest.fixture
 def mock_daily_file():
-    return os.path.join(os.path.dirname(__file__),
-                        'test_data_dir', 'test_cboe_20160104.csv')
+    return os.path.join(
+        os.path.dirname(__file__), "test_data_dir", "test_cboe_20160104.csv"
+    )
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def test_valid_fields(mock_daily_file, cboe_struct):
     try:
         op.get(mock_daily_file, struct=cboe_struct, prompt=False)
     except ValueError:
-        pytest.fail('ValueError raised')
+        pytest.fail("ValueError raised")
 
 
 def test_invalid_idx(mock_file_dir, invalid_idx):
