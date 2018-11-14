@@ -3,7 +3,6 @@ from functools import reduce
 import pandas as pd
 
 import optopsy.filters as fil
-from .enums import Period
 from .option_queries import opt_type
 from .statistics import *
 
@@ -27,7 +26,7 @@ on = [
 default_entry_filters = {
     "std_expr": False,
     "contract_size": 10,
-    "entry_dte": Period.FOUR_WEEKS.value,
+    "entry_dte": (27, 30, 31),
     "exit_dte": None
 }
 
@@ -94,8 +93,7 @@ def create_spread(data, leg_structs, filters):
     # apply spread level filters to spread
     spread_filters = {f: filters[f]
                       for f in filters if f.startswith('entry_spread')}
-    return _filter_data(spread, spread_filters).sort_values(
-        ['quote_date', 'expiration', 'strike'])
+    return _filter_data(spread, spread_filters).sort_values(sort_by)
 
 
 # this is the main function that runs the backtest engine
@@ -106,6 +104,7 @@ def run(data, trades, filters, init_balance=10000, mode='midpoint'):
     all_trades = pd.concat(trades).sort_values(sort_by)
 
     # for each option to be traded, determine the historical price action
+    filters = {**default_entry_filters, **filters}
     exit_filters = {f: filters[f] for f in filters if f.startswith('exit_')}
     res = (
         pd
@@ -116,6 +115,7 @@ def run(data, trades, filters, init_balance=10000, mode='midpoint'):
         .pipe(calc_pnl)
         # .pipe(calc_running_balance, init_balance)
         .rename(columns=output_cols)
+        .sort_values(['entry_date', 'expiration', 'underlying_symbol', 'strike'])
     )
 
     return calc_total_profit(res), res[output_format]
