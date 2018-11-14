@@ -1,33 +1,6 @@
-# Development Update (June 1, 2018)
-
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2de8f5b3fa2742de93fb60b3a1ae5683)](https://app.codacy.com/app/michaelchu/optopsy?utm_source=github.com&utm_medium=referral&utm_content=michaelchu/optopsy&utm_campaign=badger)
 [![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
 [![codecov](https://codecov.io/gh/michaelchu/optopsy/branch/master/graph/badge.svg)](https://codecov.io/gh/michaelchu/optopsy)
-
-This library is currently being redeveloped to be better optimized for options backtesting. 
-
-The new version will provide predefined filters to act as building blocks for your option trading strategies.
-No need to extend classes to implement custom trade configurations such as position sizing and commissions. These
-settings can now be defined using existing filters.
-
-Filters will include (but not limited to):
-
-**Entry rules:**
-* Days to expiration
-* Entry Days (Stagger trades)
-* Absolute Delta
-* Percentage out-of-the-money
-* Contract size
-
-**Exit rules:**
-* Days to expiration
-* Hold days
-* Profit/Stop loss percent
-* Spread delta
-* Spread price
-
-Development changes will be made on the `development` branch. The backtester branch will be retained for historical
-purposes and will be removed at a later time.
 
 # Optopsy
 
@@ -38,10 +11,28 @@ The modular nature of this framework aims to foster the creation of easily testa
 the rapid development of complex options trading strategies.
 
 ## Features
-* **Open source** - Feel free to make requests or contribute to the code base! Help out a fellow trader!
-* **BYOD** - "Bring your own Data" source by using the built-in data adapters or write your own. (Currently supports csv files)
-* **Modular Design** - Facilitates the construction and composition of complex algorithmic trading strategies that are modular and re-usable.
-* **Optimization support** - Define ranges for your strategy parameters and the system will optimize the strategy
+
+### Easy Backtesting
+* Easily set up a backtest in seconds by defining filters for the backtest
+
+### Use Your Data
+* Use data from any source, just define the format of your data source or use pre-existing data structs for popular sources such as CBOE and Historical Options Data.
+
+### Advanced Backtest Parameters:
+
+**Entry rules:**
+* Days to expiration
+* Entry Days (Staggered trades)
+* Absolute Delta
+* Percentage out-of-the-money
+* Contract size
+
+**Exit rules:**
+* Days to expiration
+* Hold days
+* Profit/Stop loss percent
+* Spread delta
+* Spread price
 
 ### Planned Features
 * Indicator Support - Create entry and exit rules based on indicators
@@ -57,8 +48,6 @@ the rapid development of complex options trading strategies.
     * Custom Spreads
     * Strangles
     * Straddles
- * Stock Price Distribution Generator - Analyze historical stock price movements patterns to discover potential trade ideas.
- * Trade Scanner - Used to recommend trades based on stock price distributions
 
 ### Dependencies
 You will need Python 3.6.x. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
@@ -72,7 +61,95 @@ pip install optopsy
 ```
 python strategies/sample_strategy.py
 ```
-The sample strategy can be used with [Level 3 Historical CSV Data Sample](https://www.historicaloptiondata.com/content/sample-files-0?gclid=CjwKCAjwtIXbBRBhEiwAWV-5ngKHMIxUw_rCK1DnkQpS4BUs_XQmLG09hm4SWpE9FoMJc3hb6qMPqhoCGgIQAvD_BwE) from historicaloptiondata.com. 
+The sample strategy can be used with [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com. 
 
 In order to use it, you will need to define the struct variable to map the column names to the numerical index as per the file format.
 
+First we import the library and other nessesary libaries:
+```python
+import optopsy as op
+import os
+from datetime import datetime
+```
+
+Define the data structure with a tuple of tuple format, with first element being the standard column names defined in optopsy and the index that corresponds to the column order of the input source
+```python
+SPX_FILE_STRUCT = (
+    ('underlying_symbol', 0),
+    ('underlying_price', 1),
+    ('option_symbol', 3),
+    ('option_type', 5),
+    ('expiration', 6),
+    ('quote_date', 7),
+    ('strike', 8),
+    ('bid', 10),
+    ('ask', 11),
+    ('delta', 15),
+    ('gamma', 16),
+    ('theta', 17),
+    ('vega', 18)
+)
+```
+
+An example of a simple strategy for trading short call spreads with strikes at 30 and 50 deltas with around 30 days to expiration for the SPX:
+```python
+def run_strategy():
+
+    # provide the absolute file path and data struct to be used.
+    data = op.get(FILE, SPX_FILE_STRUCT, prompt=False)
+
+    # define the entry and exit filters to use for this strategy, full list of
+    # filters is listed in the documentation (WIP).
+    filters = {
+        'entry_dte': (27, 30, 31),
+        'leg1_delta': 0.30,
+        'leg2_delta': 0.50,
+        'contract_size': 10
+    }
+
+    # set the start and end dates for the backtest, the dates are inclusive
+    start = datetime(2016, 1, 1)
+    end = datetime(2016, 12, 31)
+
+    # create the option spread that matches the entry filters
+    trades = op.strategies.short_call_spread(data, start, end, filters)
+
+    # we get a dataframe of our orders based on the entry filter rules, let's export
+    # this to csv file for reference
+    trades.to_csv('./strategies/results/trades.csv')
+
+    # call the run method with our data, option spreads and filters to run the backtest
+    backtest = op.run(data, trades, filters)
+
+    # backtest will return a tuple with the profit amount (first element) and a dataframe
+    # (second element) containing the backtest results(the return format may be subject to change)
+    backtest[1].to_csv('./strategies/results/results.csv')
+    print("Total Profit: %s" % backtest[0])
+```
+
+#### Sample Backtest Results:
+
+
+Entry Trades:
+
+```
+quote_date option_type expiration underlying_symbol  ratio  delta  underlying_price        option_symbol  strike   bid   ask  gamma   theta    vega  dte  contracts
+2016-01-06           c 2016-02-05              SPXW     -1   0.50           1987.42  SPXW160205C01990000    1990  42.1  42.8    0.0 -274.85  224.75   30         10
+2016-01-06           c 2016-02-05              SPXW      1   0.30           1987.42  SPXW160205C02040000    2040  17.4  17.8    0.0 -208.37  196.71   30         10
+2016-01-13           c 2016-02-12              SPXW     -1   0.51           1891.49  SPXW160212C01885000    1885  49.8  50.8    0.0 -202.50  213.03   30         10
+2016-01-13           c 2016-02-12              SPXW      1   0.30           1891.49  SPXW160212C01940000    1940  22.4  23.0    0.0 -187.45  185.48   30         10
+```
+
+Results:
+```
+entry_date  exit_date expiration  DTE  ratio  contracts option_type  strike  entry_delta  entry_stk_price  exit_stk_price  entry_opt_price  exit_opt_price  entry_price  exit_price  profit
+2016-01-06 2016-02-05 2016-02-05   30     -1         10           c    1990         0.50          1987.42         1874.12            42.45           0.025       -424.5       -0.25  424.25
+2016-01-06 2016-02-05 2016-02-05   30      1         10           c    2040         0.30          1987.42         1874.12            17.60           0.025        176.0        0.25 -175.75
+2016-01-13 2016-02-12 2016-02-12   30     -1         10           c    1885         0.51          1891.49         1862.40            50.30           0.025       -503.0       -0.25  502.75
+2016-01-13 2016-02-12 2016-02-12   30      1         10           c    1940         0.30          1891.49         1862.40            22.70           0.025        227.0        0.25 -226.75
+2016-01-20 2016-02-19 2016-02-19   30     -1         10           c    1860         0.51          1864.38         1917.01            47.70          59.750       -477.0     -597.50 -120.50
+
+Total Profit: -3853.25
+```
+
+**Full Documentation Coming Soon!**
