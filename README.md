@@ -4,10 +4,10 @@
 
 # Optopsy
 
-Optopsy is a flexible backtesting framework used to test complex options trading strategies written in Python. 
-Backtesting is the process of testing a strategy over a given data set. This framework allows you to mix and match 
-different 'filters' to create a 'Strategy', and allow multiple strategies to form an overall more complex trading algorithms. 
-The modular nature of this framework aims to foster the creation of easily testable, re-usable and flexible blocks of strategy logic to facilitate 
+Optopsy is a flexible backtesting framework used to test complex options trading strategies written in Python.
+Backtesting is the process of testing a strategy over a given data set. This framework allows you to mix and match
+different 'filters' to create a 'Strategy', and allow multiple strategies to form an overall more complex trading algorithms.
+The modular nature of this framework aims to foster the creation of easily testable, re-usable and flexible blocks of strategy logic to facilitate
 the rapid development of complex options trading strategies.
 
 ## Features
@@ -61,7 +61,7 @@ pip install optopsy
 ```
 python strategies/sample_strategy.py
 ```
-The sample strategy can be used with [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com. 
+The sample strategy can be used with [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
 
 In order to use it, you will need to define the struct variable to map the column names to the numerical index as per the file format.
 
