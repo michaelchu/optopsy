@@ -25,6 +25,7 @@ SPX_FILE_STRUCT = (
     ('vega', 18)
 )
 
+
 def run_strategy():
 
     # provide the absolute file path and data struct to be used.
