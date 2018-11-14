@@ -130,7 +130,7 @@ def run_strategy():
 #### Sample Backtest Results:
 
 
-Entry Trades:
+Entry Trades (First 2 trades):
 
 ```
 quote_date option_type expiration underlying_symbol  ratio  delta  underlying_price        option_symbol  strike   bid   ask  gamma   theta    vega  dte  contracts
@@ -138,18 +138,19 @@ quote_date option_type expiration underlying_symbol  ratio  delta  underlying_pr
 2016-01-06           c 2016-02-05              SPXW      1   0.30           1987.42  SPXW160205C02040000    2040  17.4  17.8    0.0 -208.37  196.71   30         10
 2016-01-13           c 2016-02-12              SPXW     -1   0.51           1891.49  SPXW160212C01885000    1885  49.8  50.8    0.0 -202.50  213.03   30         10
 2016-01-13           c 2016-02-12              SPXW      1   0.30           1891.49  SPXW160212C01940000    1940  22.4  23.0    0.0 -187.45  185.48   30         10
+...
 ```
 
-Results:
+Results (First 2 trades):
 ```
 entry_date  exit_date expiration  DTE  ratio  contracts option_type  strike  entry_delta  entry_stk_price  exit_stk_price  entry_opt_price  exit_opt_price  entry_price  exit_price  profit
 2016-01-06 2016-02-05 2016-02-05   30     -1         10           c    1990         0.50          1987.42         1874.12            42.45           0.025       -424.5       -0.25  424.25
 2016-01-06 2016-02-05 2016-02-05   30      1         10           c    2040         0.30          1987.42         1874.12            17.60           0.025        176.0        0.25 -175.75
 2016-01-13 2016-02-12 2016-02-12   30     -1         10           c    1885         0.51          1891.49         1862.40            50.30           0.025       -503.0       -0.25  502.75
 2016-01-13 2016-02-12 2016-02-12   30      1         10           c    1940         0.30          1891.49         1862.40            22.70           0.025        227.0        0.25 -226.75
-2016-01-20 2016-02-19 2016-02-19   30     -1         10           c    1860         0.51          1864.38         1917.01            47.70          59.750       -477.0     -597.50 -120.50
+...
 
-Total Profit: -3853.25
+Total Profit: 524.50
 ```
 
 **Full Documentation Coming Soon!**
