@@ -102,25 +102,18 @@ def create_spread(data, leg_structs, filters):
 
 # this is the main function that runs the backtest engine
 def run(data, trades, filters, init_balance=10000, mode="midpoint"):
-    trades = trades if isinstance(trades, list) else [trades]
-
-    # merge trades from multiple underlying symbols if applicable
-    all_trades = pd.concat(trades).sort_values(
-        ["quote_date", "expiration", "underlying_symbol", "strike"]
-    )
-
     # for each option to be traded, determine the historical price action
     filters = {**default_entry_filters, **filters}
     exit_filters = {f: filters[f] for f in filters if f.startswith("exit_")}
     res = (
-        pd.merge(all_trades, data, on=on, suffixes=("_entry", "_exit"))
+        pd.merge(trades, data, on=on, suffixes=("_entry", "_exit"))
         .pipe(_filter_data, exit_filters)
         .pipe(calc_entry_px, mode)
         .pipe(calc_exit_px, mode)
         .pipe(calc_pnl)
-        # .pipe(calc_running_balance, init_balance)
         .rename(columns=output_cols)
         .sort_values(["entry_date", "expiration", "underlying_symbol", "strike"])
+        .pipe(assign_trade_num)
     )
 
     return calc_total_profit(res), res[output_format]

@@ -23,6 +23,12 @@ def _assign_opt_px(data, mode, action):
     return data
 
 
+def assign_trade_num(data):
+    groupby = ["entry_date", "expiration", "underlying_symbol"]
+    data["trade_num"] = data.groupby(groupby).ngroup()
+    data.set_index("trade_num", inplace=True)
+    return data
+
 def calc_entry_px(data, mode="midpoint"):
     return _assign_opt_px(data, mode,'entry')
 
