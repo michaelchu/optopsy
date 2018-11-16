@@ -1,7 +1,7 @@
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2de8f5b3fa2742de93fb60b3a1ae5683)](https://app.codacy.com/app/michaelchu/optopsy?utm_source=github.com&utm_medium=referral&utm_content=michaelchu/optopsy&utm_campaign=badger)
+[![Maintainability](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/maintainability)](https://codeclimate.com/github/michaelchu/optopsy/maintainability)
 [![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
-[![codecov](https://codecov.io/gh/michaelchu/optopsy/branch/master/graph/badge.svg)](https://codecov.io/gh/michaelchu/optopsy)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/test_coverage)](https://codeclimate.com/github/michaelchu/optopsy/test_coverage)
 
 # Optopsy
 
@@ -35,23 +35,20 @@ the rapid development of complex options trading strategies.
 * Spread delta
 * Spread price
 
-### Planned Features
-* Indicator Support - Create entry and exit rules based on indicators
-* Optimizer - Allows users to run multiple backtests with different combinations of parameters
-* Option strategy support:
-    * Single Calls/Puts
-    * Vertical Spreads
-    * Iron Condors (Iron Butterflies)
-    * Covered Stock
-    * Combos (Synthetics/Collars)
-    * Diagonal Spreads
-    * Calendar Spreads
-    * Custom Spreads
-    * Strangles
-    * Straddles
+### Option strategy support
+* Single Calls/Puts
+* Vertical Spreads
+* (Coming Soon) Iron Condors (Iron Butterflies)
+* (Coming Soon) Covered Stock
+* (Coming Soon) Combos (Synthetics/Collars)
+* (Coming Soon) Diagonal Spreads
+* (Coming Soon) Calendar Spreads
+* (Coming Soon) Custom Spreads
+* (Coming Soon) Strangles
+* (Coming Soon) Straddles
 
 ### Dependencies
-You will need Python 3.6.x. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
+You will need Python 3.6.x and Pandas 0.23.1 or newer. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
 
 ### Installation
 ```
@@ -69,7 +66,6 @@ In order to use it, you will need to define the struct variable to map the colum
 First we import the library and other nessesary libaries:
 ```python
 import optopsy as op
-import os
 from datetime import datetime
 ```
 
@@ -112,12 +108,8 @@ def run_strategy():
     start = datetime(2016, 1, 1)
     end = datetime(2016, 12, 31)
 
-    # create the option spread that matches the entry filters
+    # create the option spreads that matches the entry filters
     trades = op.strategies.short_call_spread(data, start, end, filters)
-
-    # we get a dataframe of our orders based on the entry filter rules, let's export
-    # this to csv file for reference
-    trades.to_csv('./strategies/results/trades.csv')
 
     # call the run method with our data, option spreads and filters to run the backtest
     backtest = op.run(data, trades, filters)
