@@ -19,16 +19,20 @@ from datetime import datetime
 import pandas as pd
 
 
+def _process_tuples(data, col, groupby, value):
+    if len(set(value)) == 1:
+        return eq(data, col, value[1])
+    else:
+        return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
+            between, col, value[0], value[2], absolute=True
+        )
+
+
 def _process_values(data, col, value, groupby=None, valid_types=(int, float, tuple)):
     if not isinstance(value, valid_types):
         raise ValueError("Invalid value passed to filter")
     elif isinstance(value, tuple):
-        if len(set(value)) == 1:
-            return eq(data, col, value[1])
-        else:
-            return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
-                between, col, value[0], value[2], absolute=True
-            )
+        return _process_tuples(data, col, groupby, value)
     else:
         return nearest(data, col, value, groupby=groupby)
 

@@ -37,24 +37,6 @@ class Period(Enum):
     SEVEN_WEEKS = 49
 
 
-class Struct(Enum):
-    CBOE = (
-        ("symbol", 0),
-        ("quote_date", 1),
-        ("root", 2),
-        ("expiration", 3),
-        ("strike", 4),
-        ("option_type", 5),
-        ("bid", 12),
-        ("ask", 14),
-        ("underlying_price", 17),
-        ("delta", 19),
-        ("gamma", 20),
-        ("theta", 21),
-        ("vega", 22),
-    )
-
-
 class OptionType(Enum):
     CALL = ("c", 1)
     PUT = ("p", -1)

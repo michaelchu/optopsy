@@ -43,21 +43,11 @@ def test_duplicate_idx_in_struct(mock_file_dir, invalid_struct):
         op.get(mock_file_dir, struct=invalid_struct, prompt=False)
 
 
-def test_invalid_path_data_import(mock_daily_dir, cboe_struct):
-    with pytest.raises(ValueError):
-        op.get(mock_daily_dir, struct=cboe_struct, prompt=False)
-
-
-def test_invalid_path_data_import_bulk(mock_daily_file, cboe_struct):
-    with pytest.raises(ValueError):
-        op.gets(mock_daily_file, struct=cboe_struct, prompt=False)
-
-
 def test_data_import(mock_daily_file, cboe_struct):
     data = op.get(mock_daily_file, struct=cboe_struct, prompt=False)
     assert data.shape == (2, 13)
 
 
 def test_data_import_bulk(mock_daily_dir, cboe_struct):
-    data = op.gets(mock_daily_dir, struct=cboe_struct, prompt=False)
+    data = op.get(mock_daily_dir, struct=cboe_struct, prompt=False)
     assert data.shape == (6, 13)

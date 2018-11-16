@@ -27,7 +27,10 @@ def test_long_call_spread_integration(hod_struct):
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == -80.25
-    assert backtest[1]["profit"].sum() == -80.25
+    assert backtest[1].iat[0, 5] == 1
+    assert backtest[1].iat[1, 5] == -1
+    assert backtest[1].iat[2, 5] == 1
+    assert backtest[1].iat[3, 5] == -1
 
 
 def test_long_call_spread_no_exit_dte_integration(hod_struct):
@@ -41,7 +44,10 @@ def test_long_call_spread_no_exit_dte_integration(hod_struct):
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == -72.00
-    assert backtest[1]["profit"].sum() == -72.00
+    assert backtest[1].iat[0, 5] == 1
+    assert backtest[1].iat[1, 5] == -1
+    assert backtest[1].iat[2, 5] == 1
+    assert backtest[1].iat[3, 5] == -1
 
 
 def test_short_call_spread_integration(hod_struct):
@@ -55,7 +61,10 @@ def test_short_call_spread_integration(hod_struct):
     trades = short_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == 80.25
-    assert backtest[1]["profit"].sum() == 80.25
+    assert backtest[1].iat[0, 5] == -1
+    assert backtest[1].iat[1, 5] == 1
+    assert backtest[1].iat[2, 5] == -1
+    assert backtest[1].iat[3, 5] == 1
 
 
 def test_long_put_spread_integration(hod_struct):
@@ -68,8 +77,11 @@ def test_long_put_spread_integration(hod_struct):
 
     trades = long_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == -227.50
-    assert backtest[1]["profit"].sum() == -227.50
+    assert backtest[0] == 227.50
+    assert backtest[1].iat[0, 5] == -1
+    assert backtest[1].iat[1, 5] == 1
+    assert backtest[1].iat[2, 5] == -1
+    assert backtest[1].iat[3, 5] == 1
 
 
 def test_short_put_spread_integration(hod_struct):
@@ -82,5 +94,8 @@ def test_short_put_spread_integration(hod_struct):
 
     trades = short_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == 227.50
-    assert backtest[1]["profit"].sum() == 227.50
+    assert backtest[0] == -227.50
+    assert backtest[1].iat[0, 5] == 1
+    assert backtest[1].iat[1, 5] == -1
+    assert backtest[1].iat[2, 5] == 1
+    assert backtest[1].iat[3, 5] == -1

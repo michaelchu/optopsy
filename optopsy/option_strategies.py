@@ -82,10 +82,10 @@ def short_call_spread(data, start_date, end_date, filters):
 
 
 def long_put_spread(data, start_date, end_date, filters):
-    legs = [(OptionType.PUT, 1), (OptionType.PUT, -1)]
+    legs = [(OptionType.PUT, -1), (OptionType.PUT, 1)]
     return _process_legs(data, start_date, end_date, legs, filters)
 
 
 def short_put_spread(data, start_date, end_date, filters):
-    legs = [(OptionType.PUT, -1), (OptionType.PUT, 1)]
+    legs = [(OptionType.PUT, 1), (OptionType.PUT, -1)]
     return _process_legs(data, start_date, end_date, legs, filters)
