@@ -28,23 +28,23 @@ def _calc_abs_distance(row, column, val, absolute):
 
 
 def calls(df):
-    return df[df.option_type.str.lower().str.startswith('c')]
+    return df[df.option_type.str.lower().str.startswith("c")]
 
 
 def puts(df):
-    return df[df.option_type.str.lower().str.startswith('p')]
+    return df[df.option_type.str.lower().str.startswith("p")]
 
 
 def opt_type(df, option_type):
     if isinstance(option_type, OptionType):
-        return df[df['option_type'] == option_type.value[0]]
+        return df[df["option_type"] == option_type.value[0]]
     else:
         raise ValueError("option_type must be of type OptionType")
 
 
 def underlying_price(df):
-    if 'underlying_price' in df:
-        dates = df['underlying_price'].unique()
+    if "underlying_price" in df:
+        dates = df["underlying_price"].unique()
         return dates.mean()
     else:
         raise ValueError("Underlying Price column undefined!")
@@ -55,22 +55,18 @@ def nearest(df, column, val, groupby=None, absolute=True, tie="roundup"):
     # getting the min abs dist over multiple sets of option groups
     # instead of the absolute min of the entire data set.
     if groupby is None:
-        groupby = ['quote_date', 'option_type',
-                   'expiration', 'underlying_symbol']
+        groupby = ["quote_date", "option_type", "expiration", "underlying_symbol"]
 
     on = groupby + ["abs_dist"]
 
-    data = df.assign(
-        abs_dist=lambda r:
-        _calc_abs_distance(r, column, val, absolute)
-    )
+    data = df.assign(abs_dist=lambda r: _calc_abs_distance(r, column, val, absolute))
 
     return (
-        data
-        .groupby(groupby)['abs_dist'].min()
+        data.groupby(groupby)["abs_dist"]
+        .min()
         .to_frame()
         .merge(data, on=on)
-        .drop('abs_dist', axis=1)
+        .drop("abs_dist", axis=1)
     )
 
 
@@ -105,6 +101,7 @@ def between(df, column, start, end, inclusive=True, absolute=False):
     else:
         temp_col = column
 
-    result = df[df[temp_col].between(
-        _convert(start), _convert(end), inclusive=inclusive)]
+    result = df[
+        df[temp_col].between(_convert(start), _convert(end), inclusive=inclusive)
+    ]
     return result.drop(temp_col, axis=1) if absolute else result
