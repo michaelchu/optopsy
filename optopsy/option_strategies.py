@@ -39,53 +39,94 @@ def _dedup_legs(spreads):
     )
 
 
-def _filter_check(filters):
-    return True
-
-
 def _date_checks(start, end):
     return isinstance(start, datetime) and isinstance(end, datetime)
 
 
-def _process_legs(data, start, end, legs, filters):
+def _process_legs(data, start, end, legs, filters, check_func):
     filters = _add_date_range(start, end, filters)
-    if _filter_check(filters) and _date_checks(start, end):
+    if check_func(filters) and _date_checks(start, end):
         return _dedup_legs(create_spread(data, legs, filters))
     else:
         raise ValueError("Invalid filters, or date types provided!")
 
 
 def long_call(data, start_date, end_date, filters):
-    return _process_legs(data, start_date, end_date, [(OptionType.CALL, 1)], filters)
+    legs = [(OptionType.CALL, 1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _singles_checks)
 
 
 def short_call(data, start_date, end_date, filters):
-    return _process_legs(data, start_date, end_date, [(OptionType.CALL, -1)], filters)
+    legs = [(OptionType.CALL, -1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _singles_checks)
 
 
 def long_put(data, start_date, end_date, filters):
-    return _process_legs(data, start_date, end_date, [(OptionType.PUT, 1)], filters)
+    legs = [(OptionType.PUT, 1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _singles_checks)
 
 
 def short_put(data, start_date, end_date, filters):
-    return _process_legs(data, start_date, end_date, [(OptionType.PUT, -1)], filters)
+    legs = [(OptionType.PUT, -1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _singles_checks)
 
 
 def long_call_spread(data, start_date, end_date, filters):
-    legs = [(OptionType.CALL, -1), (OptionType.CALL, 1)]
-    return _process_legs(data, start_date, end_date, legs, filters)
+    legs = [(OptionType.CALL, 1), (OptionType.CALL, -1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _call_spread_checks)
 
 
 def short_call_spread(data, start_date, end_date, filters):
-    legs = [(OptionType.CALL, 1), (OptionType.CALL, -1)]
-    return _process_legs(data, start_date, end_date, legs, filters)
+    legs = [(OptionType.CALL, -1), (OptionType.CALL, 1)]
+    return _process_legs(data, start_date, end_date, legs, filters, _call_spread_checks)
 
 
 def long_put_spread(data, start_date, end_date, filters):
     legs = [(OptionType.PUT, -1), (OptionType.PUT, 1)]
-    return _process_legs(data, start_date, end_date, legs, filters)
+    return _process_legs(data, start_date, end_date, legs, filters, _put_spread_checks)
 
 
 def short_put_spread(data, start_date, end_date, filters):
     legs = [(OptionType.PUT, 1), (OptionType.PUT, -1)]
-    return _process_legs(data, start_date, end_date, legs, filters)
+    return _process_legs(data, start_date, end_date, legs, filters, _put_spread_checks)
+
+
+def long_iron_condor(data, start_date, end_date, filters):
+    legs = [
+        (OptionType.CALL, 1),
+        (OptionType.CALL, -1),
+        (OptionType.PUT, 1),
+        (OptionType.PUT, -1),
+    ]
+    return _process_legs(data, start_date, end_date, legs, filters, _iron_condor_checks)
+
+
+def _singles_checks(filter):
+    return "leg1_delta" in filter
+
+
+def _call_spread_checks(filter):
+    return (
+        "leg1_delta" in filter
+        and "leg2_delta" in filter
+        and filter["leg1_delta"] > filter["leg2_delta"]
+    )
+
+
+def _put_spread_checks(filter):
+    return (
+        "leg1_delta" in filter
+        and "leg2_delta" in filter
+        and filter["leg1_delta"] < filter["leg2_delta"]
+    )
+
+
+def _iron_condor_checks(filter):
+    return (
+        "leg1_delta" in filter
+        and "leg2_delta" in filter
+        and "leg3_delta" in filter
+        and "leg4_delta" in filter
+        and filter["leg1_delta"] > filter["leg2_delta"]
+        and filter["leg3_delta"] < filter["leg4_delta"]
+    )

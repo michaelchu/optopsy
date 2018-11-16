@@ -22,6 +22,8 @@ def test_long_call_integration(hod_struct):
     trades = long_call(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == 963.0
+    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.31
+    assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == 0.30
 
 
 def test_long_call_no_exit_dte_integration(hod_struct):
@@ -35,6 +37,8 @@ def test_long_call_no_exit_dte_integration(hod_struct):
     trades = long_call(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == 818.75
+    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.31
+    assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == 0.30
 
 
 def test_short_call_integration(hod_struct):
@@ -48,9 +52,11 @@ def test_short_call_integration(hod_struct):
     trades = short_call(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == -963.0
+    assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == 0.31
+    assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == 0.30
 
 
-def test_long_put_spread_integration(hod_struct):
+def test_long_put_integration(hod_struct):
     data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
 
     filters = {"entry_dte": 31, "leg1_delta": 0.30, "exit_dte": 7}
@@ -61,9 +67,11 @@ def test_long_put_spread_integration(hod_struct):
     trades = long_put(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == 476.5
+    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == -0.3
+    assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == -0.3
 
 
-def test_short_put_spread_integration(hod_struct):
+def test_short_put_integration(hod_struct):
     data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
 
     filters = {"entry_dte": 31, "leg1_delta": 0.30, "exit_dte": 7}
@@ -74,3 +82,5 @@ def test_short_put_spread_integration(hod_struct):
     trades = short_put(data, start, end, filters)
     backtest = run(data, trades, filters)
     assert backtest[0] == -476.5
+    assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == -0.3
+    assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == -0.3
