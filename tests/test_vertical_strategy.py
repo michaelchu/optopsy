@@ -26,23 +26,20 @@ put_params = {
 }
 
 
-def _test_call_results(result):
-    print(result)
-    assert all(result["option_type"] == "c")
-    assert all(v in [0.35, 0.55] for v in result["delta"].unique().tolist())
-    assert result.shape == (2, 15)
-
-
-def _test_put_results(result):
-    print(result)
-    assert all(result["option_type"] == "p")
-    assert all(v in [-0.31, -0.46] for v in result["delta"].unique().tolist())
-    assert result.shape == (2, 15)
-
-
 def test_long_call_spread(options_data):
     actual_spread = long_call_spread(options_data, start, end, call_params)
-    _test_call_results(actual_spread)
+    print(actual_spread)
+    assert all(actual_spread["option_type"] == "c")
+    assert (
+        actual_spread.iat[0, 3] == 1
+        and actual_spread.iat[0, 5] == 360
+        and actual_spread.iat[0, 9] == 0.55
+    )
+    assert (
+        actual_spread.iat[1, 3] == -1
+        and actual_spread.iat[0, 5] == 360
+        and actual_spread.iat[1, 9] == 0.35
+    )
 
 
 def test_invalid_long_call_spread(options_data):
@@ -52,7 +49,18 @@ def test_invalid_long_call_spread(options_data):
 
 def test_short_call_spread(options_data):
     actual_spread = short_call_spread(options_data, start, end, call_params)
-    _test_call_results(actual_spread)
+    print(actual_spread)
+    assert all(actual_spread["option_type"] == "c")
+    assert (
+        actual_spread.iat[0, 3] == -1
+        and actual_spread.iat[0, 5] == 360
+        and actual_spread.iat[0, 9] == 0.55
+    )
+    assert (
+        actual_spread.iat[1, 3] == 1
+        and actual_spread.iat[1, 5] == 365
+        and actual_spread.iat[1, 9] == 0.35
+    )
 
 
 def test_invalid_short_call_spread(options_data):
@@ -62,7 +70,18 @@ def test_invalid_short_call_spread(options_data):
 
 def test_long_put_spread(options_data):
     actual_spread = long_put_spread(options_data, start, end, put_params)
-    _test_put_results(actual_spread)
+    print(actual_spread)
+    assert all(actual_spread["option_type"] == "p")
+    assert (
+        actual_spread.iat[0, 3] == -1
+        and actual_spread.iat[0, 5] == 355
+        and actual_spread.iat[0, 9] == -0.31
+    )
+    assert (
+        actual_spread.iat[1, 3] == 1
+        and actual_spread.iat[1, 5] == 360
+        and actual_spread.iat[1, 9] == -0.46
+    )
 
 
 def test_invalid_long_put_spread(options_data):
@@ -72,7 +91,18 @@ def test_invalid_long_put_spread(options_data):
 
 def test_short_put_spread(options_data):
     actual_spread = short_put_spread(options_data, start, end, put_params)
-    _test_put_results(actual_spread)
+    print(actual_spread)
+    assert all(actual_spread["option_type"] == "p")
+    assert (
+        actual_spread.iat[0, 3] == 1
+        and actual_spread.iat[0, 5] == 355
+        and actual_spread.iat[0, 9] == -0.31
+    )
+    assert (
+        actual_spread.iat[1, 3] == -1
+        and actual_spread.iat[1, 5] == 360
+        and actual_spread.iat[1, 9] == -0.46
+    )
 
 
 def test_invalid_short_put_spread(options_data):

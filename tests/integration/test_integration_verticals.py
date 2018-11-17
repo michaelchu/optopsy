@@ -15,18 +15,6 @@ TEST_FILE_PATH_FULL = os.path.join(
     CURRENT_FILE, "../test_data/test_options_data_full.csv"
 )
 
-call_params = {
-    "leg1_delta": (0.45, 0.50, 0.55),
-    "leg2_delta": (0.25, 0.30, 0.45),
-    "entry_dte": (18, 18, 18),
-}
-
-put_params = {
-    "leg1_delta": (0.25, 0.30, 0.45),
-    "leg2_delta": (0.45, 0.50, 0.55),
-    "entry_dte": (18, 18, 18),
-}
-
 
 def test_long_call_spread_integration(hod_struct):
     data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
@@ -40,10 +28,26 @@ def test_long_call_spread_integration(hod_struct):
     backtest = run(data, trades, filters)
     print(backtest[1])
     assert backtest[0] == -80.25
-    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.49
-    assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == 0.31
-    assert backtest[1].iat[2, 5] == 1 and backtest[1].iat[2, 9] == 0.51
-    assert backtest[1].iat[3, 5] == -1 and backtest[1].iat[3, 9] == 0.30
+    assert (
+        backtest[1].iat[0, 5] == 1
+        and backtest[1].iat[0, 8] == 2700
+        and backtest[1].iat[0, 9] == 0.49
+    )
+    assert (
+        backtest[1].iat[1, 5] == -1
+        and backtest[1].iat[1, 8] == 2720
+        and backtest[1].iat[1, 9] == 0.31
+    )
+    assert (
+        backtest[1].iat[2, 5] == 1
+        and backtest[1].iat[2, 8] == 2825
+        and backtest[1].iat[2, 9] == 0.51
+    )
+    assert (
+        backtest[1].iat[3, 5] == -1
+        and backtest[1].iat[3, 8] == 2865
+        and backtest[1].iat[3, 9] == 0.30
+    )
 
 
 def test_long_call_spread_no_exit_dte_integration(hod_struct):
@@ -56,11 +60,28 @@ def test_long_call_spread_no_exit_dte_integration(hod_struct):
 
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
+    print(backtest[1])
     assert backtest[0] == -72.00
-    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.49
-    assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == 0.31
-    assert backtest[1].iat[2, 5] == 1 and backtest[1].iat[2, 9] == 0.51
-    assert backtest[1].iat[3, 5] == -1 and backtest[1].iat[3, 9] == 0.30
+    assert (
+        backtest[1].iat[0, 5] == 1
+        and backtest[1].iat[0, 8] == 2700
+        and backtest[1].iat[0, 9] == 0.49
+    )
+    assert (
+        backtest[1].iat[1, 5] == -1
+        and backtest[1].iat[1, 8] == 2720
+        and backtest[1].iat[1, 9] == 0.31
+    )
+    assert (
+        backtest[1].iat[2, 5] == 1
+        and backtest[1].iat[2, 8] == 2825
+        and backtest[1].iat[2, 9] == 0.51
+    )
+    assert (
+        backtest[1].iat[3, 5] == -1
+        and backtest[1].iat[3, 8] == 2865
+        and backtest[1].iat[3, 9] == 0.30
+    )
 
 
 def test_short_call_spread_integration(hod_struct):
@@ -73,11 +94,28 @@ def test_short_call_spread_integration(hod_struct):
 
     trades = short_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
+    print(backtest[1])
     assert backtest[0] == 80.25
-    assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == 0.49
-    assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == 0.31
-    assert backtest[1].iat[2, 5] == -1 and backtest[1].iat[2, 9] == 0.51
-    assert backtest[1].iat[3, 5] == 1 and backtest[1].iat[3, 9] == 0.30
+    assert (
+        backtest[1].iat[0, 5] == -1
+        and backtest[1].iat[0, 8] == 2700
+        and backtest[1].iat[0, 9] == 0.49
+    )
+    assert (
+        backtest[1].iat[1, 5] == 1
+        and backtest[1].iat[1, 8] == 2720
+        and backtest[1].iat[1, 9] == 0.31
+    )
+    assert (
+        backtest[1].iat[2, 5] == -1
+        and backtest[1].iat[2, 8] == 2825
+        and backtest[1].iat[2, 9] == 0.51
+    )
+    assert (
+        backtest[1].iat[3, 5] == 1
+        and backtest[1].iat[3, 8] == 2865
+        and backtest[1].iat[3, 9] == 0.30
+    )
 
 
 def test_long_put_spread_integration(hod_struct):
@@ -90,11 +128,28 @@ def test_long_put_spread_integration(hod_struct):
 
     trades = long_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == 227.50
-    assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == -0.30
-    assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == -0.51
-    assert backtest[1].iat[2, 5] == -1 and backtest[1].iat[2, 9] == -0.30
-    assert backtest[1].iat[3, 5] == 1 and backtest[1].iat[3, 9] == -0.49
+    print(backtest[1])
+    assert backtest[0] == 256.50
+    assert (
+        backtest[1].iat[0, 5] == -1
+        and backtest[1].iat[0, 8] == 2665
+        and backtest[1].iat[0, 9] == -0.30
+    )
+    assert (
+        backtest[1].iat[1, 5] == 1
+        and backtest[1].iat[1, 8] == 2700
+        and backtest[1].iat[1, 9] == -0.51
+    )
+    assert (
+        backtest[1].iat[2, 5] == -1
+        and backtest[1].iat[2, 8] == 2775
+        and backtest[1].iat[2, 9] == -0.30
+    )
+    assert (
+        backtest[1].iat[3, 5] == 1
+        and backtest[1].iat[3, 8] == 2830
+        and backtest[1].iat[3, 9] == -0.51
+    )
 
 
 def test_short_put_spread_integration(hod_struct):
@@ -107,8 +162,25 @@ def test_short_put_spread_integration(hod_struct):
 
     trades = short_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == -227.50
-    assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == -0.30
-    assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == -0.51
-    assert backtest[1].iat[2, 5] == 1 and backtest[1].iat[2, 9] == -0.30
-    assert backtest[1].iat[3, 5] == -1 and backtest[1].iat[3, 9] == -0.49
+    print(backtest[1])
+    assert backtest[0] == -256.5
+    assert (
+        backtest[1].iat[0, 5] == 1
+        and backtest[1].iat[0, 8] == 2665
+        and backtest[1].iat[0, 9] == -0.30
+    )
+    assert (
+        backtest[1].iat[1, 5] == -1
+        and backtest[1].iat[1, 8] == 2700
+        and backtest[1].iat[1, 9] == -0.51
+    )
+    assert (
+        backtest[1].iat[2, 5] == 1
+        and backtest[1].iat[2, 8] == 2775
+        and backtest[1].iat[2, 9] == -0.30
+    )
+    assert (
+        backtest[1].iat[3, 5] == -1
+        and backtest[1].iat[3, 8] == 2830
+        and backtest[1].iat[3, 9] == -0.51
+    )

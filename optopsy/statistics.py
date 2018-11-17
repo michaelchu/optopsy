@@ -25,8 +25,7 @@ def _assign_opt_px(data, mode, action):
     return data
 
 
-def assign_trade_num(data):
-    groupby = ["entry_date", "expiration", "underlying_symbol"]
+def assign_trade_num(data, groupby):
     data["trade_num"] = data.groupby(groupby).ngroup()
     data.set_index("trade_num", inplace=True)
     return data

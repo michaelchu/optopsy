@@ -83,8 +83,36 @@ def _filter_data(data, filters):
     return pd.concat(_apply_filters(data, filters))
 
 
-def create_spread(data, leg_structs, filters):
+def _do_dedupe(spread, groupby, col, mode):
+    # dedupe delta dist ties
+    if groupby is None:
+        groupby = [
+            "quote_date",
+            "expiration",
+            "underlying_symbol",
+            "ratio",
+            "option_type",
+        ]
+
+    on = groupby + [col]
+
+    if mode == "min":
+        return spread.groupby(groupby)[col].min().to_frame().merge(spread, on=on)
+    else:
+        return spread.groupby(groupby)[col].max().to_frame().merge(spread, on=on)
+
+
+def _dedup_rows_by_cols(spreads, cols, groupby=None, mode="max"):
+    return reduce(lambda i, c: _do_dedupe(spreads, groupby, c, mode), cols, spreads)
+
+
+def create_spread(data, leg_structs, filters, sort_by, ascending):
     legs = [_create_legs(data, leg) for leg in leg_structs]
+    sort_by = (
+        ["quote_date", "expiration", "underlying_symbol", "strike"]
+        if sort_by is None
+        else sort_by
+    )
 
     # merge and apply leg filters to create spread
     filters = {**default_entry_filters, **filters}
@@ -97,7 +125,12 @@ def create_spread(data, leg_structs, filters):
 
     # apply spread level filters to spread
     spread_filters = {f: filters[f] for f in filters if f.startswith("entry_spread")}
-    return _filter_data(spread, spread_filters)
+    return (
+        _filter_data(spread, spread_filters)
+        .pipe(_dedup_rows_by_cols, ["delta", "strike"])
+        .sort_values(sort_by, ascending=ascending)
+        .pipe(assign_trade_num, ["quote_date", "expiration", "underlying_symbol"])
+    )
 
 
 # this is the main function that runs the backtest engine
@@ -113,7 +146,7 @@ def run(data, trades, filters, init_balance=10000, mode="midpoint"):
         .pipe(calc_pnl)
         .rename(columns=output_cols)
         .sort_values(["entry_date", "expiration", "underlying_symbol", "strike"])
-        .pipe(assign_trade_num)
+        .pipe(assign_trade_num, ["entry_date", "expiration", "underlying_symbol"])
     )
 
     return calc_total_profit(res), res[output_format]
