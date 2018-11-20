@@ -21,7 +21,7 @@ def test_long_call_integration(hod_struct):
 
     trades = long_call(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == 963.0
+    assert backtest[0] == 96300.0
     assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.31
     assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == 0.30
 
@@ -36,7 +36,7 @@ def test_long_call_no_exit_dte_integration(hod_struct):
 
     trades = long_call(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == 818.75
+    assert backtest[0] == 81875
     assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == 0.31
     assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == 0.30
 
@@ -51,7 +51,7 @@ def test_short_call_integration(hod_struct):
 
     trades = short_call(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == -963.0
+    assert backtest[0] == -96300.0
     assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == 0.31
     assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == 0.30
 
@@ -66,7 +66,7 @@ def test_long_put_integration(hod_struct):
 
     trades = long_put(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == 476.5
+    assert backtest[0] == 47650
     assert backtest[1].iat[0, 5] == 1 and backtest[1].iat[0, 9] == -0.3
     assert backtest[1].iat[1, 5] == 1 and backtest[1].iat[1, 9] == -0.3
 
@@ -81,6 +81,6 @@ def test_short_put_integration(hod_struct):
 
     trades = short_put(data, start, end, filters)
     backtest = run(data, trades, filters)
-    assert backtest[0] == -476.5
+    assert backtest[0] == -47650
     assert backtest[1].iat[0, 5] == -1 and backtest[1].iat[0, 9] == -0.3
     assert backtest[1].iat[1, 5] == -1 and backtest[1].iat[1, 9] == -0.3

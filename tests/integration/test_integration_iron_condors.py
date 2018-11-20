@@ -29,7 +29,7 @@ def test_long_iron_condor_integration(hod_struct):
     trades = long_iron_condor(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == -532.25
+    assert backtest[0] == -53225
     assert (
         backtest[1].iat[0, 5] == 1
         and backtest[1].iat[0, 9] == -0.10
@@ -111,7 +111,7 @@ def test_short_iron_condor_integration(hod_struct):
     trades = short_iron_condor(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == 532.25
+    assert backtest[0] == 53225
     assert (
         backtest[1].iat[0, 5] == -1
         and backtest[1].iat[0, 9] == -0.10

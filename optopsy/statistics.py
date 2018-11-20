@@ -41,8 +41,12 @@ def calc_exit_px(data, mode="midpoint"):
 
 def calc_pnl(data):
     # calculate the p/l for the trades
-    data["entry_price"] = data["entry_opt_price"] * data["ratio"] * data["contracts"]
-    data["exit_price"] = data["exit_opt_price"] * data["ratio"] * data["contracts"]
+    data["entry_price"] = (
+        data["entry_opt_price"] * data["ratio"] * data["contracts"] * 100
+    )
+    data["exit_price"] = (
+        data["exit_opt_price"] * data["ratio"] * data["contracts"] * 100
+    )
     data["profit"] = data["exit_price"] - data["entry_price"]
     return data.round(2)
 

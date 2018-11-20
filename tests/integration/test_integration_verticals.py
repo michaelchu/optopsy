@@ -27,7 +27,7 @@ def test_long_call_spread_integration(hod_struct):
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == -80.25
+    assert backtest[0] == -8025
     assert (
         backtest[1].iat[0, 5] == 1
         and backtest[1].iat[0, 8] == 2700
@@ -61,7 +61,7 @@ def test_long_call_spread_no_exit_dte_integration(hod_struct):
     trades = long_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == -72.00
+    assert backtest[0] == -7200.00
     assert (
         backtest[1].iat[0, 5] == 1
         and backtest[1].iat[0, 8] == 2700
@@ -95,7 +95,7 @@ def test_short_call_spread_integration(hod_struct):
     trades = short_call_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == 80.25
+    assert backtest[0] == 8025
     assert (
         backtest[1].iat[0, 5] == -1
         and backtest[1].iat[0, 8] == 2700
@@ -129,7 +129,7 @@ def test_long_put_spread_integration(hod_struct):
     trades = long_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == 256.50
+    assert backtest[0] == 25650
     assert (
         backtest[1].iat[0, 5] == -1
         and backtest[1].iat[0, 8] == 2665
@@ -163,7 +163,7 @@ def test_short_put_spread_integration(hod_struct):
     trades = short_put_spread(data, start, end, filters)
     backtest = run(data, trades, filters)
     print(backtest[1])
-    assert backtest[0] == -256.5
+    assert backtest[0] == -25650
     assert (
         backtest[1].iat[0, 5] == 1
         and backtest[1].iat[0, 8] == 2665
