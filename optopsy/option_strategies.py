@@ -16,130 +16,92 @@
 
 from .enums import OptionType, OrderAction
 from .backtest import create_spread
-from .checks import *
+from .checks import (
+    singles_checks,
+    call_spread_checks,
+    put_spread_checks,
+    iron_condor_checks,
+    iron_condor_spread_check,
+)
 from datetime import datetime
 
 
-def _process_legs(data, start, end, legs, filters, sort_by=None, asc=True):
-    filters = {**filters, **{"start_date": start, "end_date": end}}
-    return create_spread(data, legs, filters, sort_by=sort_by, ascending=asc)
+def _process_legs(data, legs, filters, check_func, sort_by=None, asc=True):
+    if _filter_checks(filters, check_func):
+        return create_spread(data, legs, filters, sort_by=sort_by, ascending=asc)
+    else:
+        raise ValueError(
+            "Invalid filter values provided, please check the filters and try again."
+        )
 
 
 def _filter_checks(filter, func=None):
     return True if func is None else func(filter)
 
 
-def long_call(data, start_date, end_date, filters):
+def _merge(filters, start, end):
+    return {**filters, **{"start_date": start, "end_date": end}}
+
+
+def long_call(data, start, end, filters):
     legs = [(OptionType.CALL, 1)]
-    if _filter_checks(filters, singles_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
 
 
-def short_call(data, start_date, end_date, filters):
+def short_call(data, start, end, filters):
     legs = [(OptionType.CALL, -1)]
-    if _filter_checks(filters, singles_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filterv alues provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
 
 
-def long_put(data, start_date, end_date, filters):
+def long_put(data, start, end, filters):
     legs = [(OptionType.PUT, 1)]
-    if _filter_checks(filters, singles_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
 
 
-def short_put(data, start_date, end_date, filters):
+def short_put(data, start, end, filters):
     legs = [(OptionType.PUT, -1)]
-    if _filter_checks(filters, singles_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
 
 
-def long_call_spread(data, start_date, end_date, filters):
+def long_call_spread(data, start, end, filters):
     legs = [(OptionType.CALL, 1), (OptionType.CALL, -1)]
-    if _filter_checks(filters, call_spread_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), call_spread_checks)
 
 
-def short_call_spread(data, start_date, end_date, filters):
+def short_call_spread(data, start, end, filters):
     legs = [(OptionType.CALL, -1), (OptionType.CALL, 1)]
-    if _filter_checks(filters, call_spread_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), call_spread_checks)
 
 
-def long_put_spread(data, start_date, end_date, filters):
+def long_put_spread(data, start, end, filters):
     legs = [(OptionType.PUT, -1), (OptionType.PUT, 1)]
-    if _filter_checks(filters, put_spread_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), put_spread_checks)
 
 
-def short_put_spread(data, start_date, end_date, filters):
+def short_put_spread(data, start, end, filters):
     legs = [(OptionType.PUT, 1), (OptionType.PUT, -1)]
-    if _filter_checks(filters, put_spread_checks):
-        return _process_legs(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(data, legs, _merge(filters, start, end), put_spread_checks)
 
 
-def long_iron_condor(data, start_date, end_date, filters):
+def long_iron_condor(data, start, end, filters):
     legs = [
         (OptionType.PUT, 1),
         (OptionType.PUT, -1),
         (OptionType.CALL, -1),
         (OptionType.CALL, 1),
     ]
-    if _filter_checks(filters, iron_condor_checks):
-        return _iron_condor(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
+    return _process_legs(
+        data, legs, _merge(filters, start, end), iron_condor_checks
+    ).pipe(iron_condor_spread_check)
 
 
-def short_iron_condor(data, start_date, end_date, filters):
+def short_iron_condor(data, start, end, filters):
     legs = [
         (OptionType.PUT, -1),
         (OptionType.PUT, 1),
         (OptionType.CALL, 1),
         (OptionType.CALL, -1),
     ]
-    if _filter_checks(filters, iron_condor_checks):
-        return _iron_condor(data, start_date, end_date, legs, filters)
-    else:
-        raise ValueError(
-            "Invalid filter values provided, please check the filters and try again."
-        )
-
-
-def _iron_condor(data, start_date, end_date, legs, filters):
-    return _process_legs(data, start_date, end_date, legs, filters).pipe(
-        iron_condor_spread_check
-    )
+    return _process_legs(
+        data, legs, _merge(filters, start, end), iron_condor_checks
+    ).pipe(iron_condor_spread_check)
