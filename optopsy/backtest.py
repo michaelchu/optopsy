@@ -60,7 +60,7 @@ output_format = [
     "exit_opt_price",
     "entry_price",
     "exit_price",
-    "profit",
+    "cost",
 ]
 
 

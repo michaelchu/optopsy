@@ -14,14 +14,26 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import numpy as np
+
+
+def _calc_opt_px(data, action):
+    ask = f"ask_{action}"
+    bid = f"bid_{action}"
+
+    if action == "entry":
+        return np.where(data["ratio"] > 0, data[ask], data[bid])
+    elif action == "exit":
+        return np.where(data["ratio"] > 0, data[bid], data[ask])
+    return data
+
 
 def _assign_opt_px(data, mode, action):
     if mode == "midpoint":
-        data[f"{action}_opt_price"] = data[[f"bid_{action}", f"ask_{action}"]].mean(
-            axis=1
-        )
+        bid_ask = [f"bid_{action}", f"ask_{action}"]
+        data[f"{action}_opt_price"] = data[bid_ask].mean(axis=1)
     elif mode == "market":
-        data[f"{action}_opt_price"] = data[f"ask_{action}"]
+        data[f"{action}_opt_price"] = _calc_opt_px(data, action)
     return data
 
 
@@ -45,11 +57,11 @@ def calc_pnl(data):
         data["entry_opt_price"] * data["ratio"] * data["contracts"] * 100
     )
     data["exit_price"] = (
-        data["exit_opt_price"] * data["ratio"] * data["contracts"] * 100
+        data["exit_opt_price"] * data["ratio"] * -1 * data["contracts"] * 100
     )
-    data["profit"] = data["exit_price"] - data["entry_price"]
+    data["cost"] = data["exit_price"] + data["entry_price"]
     return data.round(2)
 
 
 def calc_total_profit(data):
-    return data["profit"].sum().round(2)
+    return data["cost"].sum().round(2)
