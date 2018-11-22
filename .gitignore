@@ -35,4 +35,5 @@ MANIFEST
 /tests/.pytest_cache/
 /strategies/data/
 /strategies/results/
+/strategies/private/
 
