@@ -15,24 +15,16 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from functools import reduce
-
-import pandas as pd
-
-import optopsy.filters as fil
+from .filters import filter_data
 from .option_queries import opt_type
-from .statistics import *
+from .statistics import calc_entry_px, calc_exit_px, assign_trade_num, calc_pnl
+import pandas as pd
+import optopsy.filters as fil
 
 pd.set_option("display.expand_frame_repr", False)
 
 
 on = ["underlying_symbol", "option_type", "expiration", "strike"]
-
-default_entry_filters = {
-    "std_expr": False,
-    "contract_size": 10,
-    "entry_dte": (27, 30, 31),
-    "exit_dte": None,
-}
 
 output_cols = {
     "quote_date_entry": "entry_date",
@@ -68,21 +60,6 @@ def _create_legs(data, leg):
     return data.pipe(opt_type, option_type=leg[0]).assign(ratio=leg[1])
 
 
-def _apply_filters(legs, filters):
-    if not filters:
-        return legs
-    else:
-        return [
-            reduce(lambda l, f: getattr(fil, f)(l, filters[f], idx), filters, leg)
-            for idx, leg in enumerate(legs)
-        ]
-
-
-def _filter_data(data, filters):
-    data = data if isinstance(data, list) else [data]
-    return pd.concat(_apply_filters(data, filters))
-
-
 def _do_dedupe(spread, groupby, col, mode):
     # dedupe delta dist ties
     if groupby is None:
@@ -106,47 +83,31 @@ def _dedup_rows_by_cols(spreads, cols, groupby=None, mode="max"):
     return reduce(lambda i, c: _do_dedupe(spreads, groupby, c, mode), cols, spreads)
 
 
-def create_spread(data, leg_structs, filters, sort_by, ascending):
+def create_spread(data, leg_structs, entry_filters, entry_spread_filters, mode):
     legs = [_create_legs(data, leg) for leg in leg_structs]
-    sort_by = (
-        ["quote_date", "expiration", "underlying_symbol", "strike"]
-        if sort_by is None
-        else sort_by
-    )
-
-    # merge and apply leg filters to create spread
-    filters = {**default_entry_filters, **filters}
-    entry_filters = {
-        f: filters[f]
-        for f in filters
-        if (not f.startswith("entry_spread") and not f.startswith("exit_"))
-    }
-    spread = _filter_data(legs, entry_filters)
-
-    # apply spread level filters to spread
-    spread_filters = {f: filters[f] for f in filters if f.startswith("entry_spread")}
     return (
-        _filter_data(spread, spread_filters)
+        filter_data(legs, entry_filters)
+        .rename(columns={"bid": "bid_entry", "ask": "ask_entry"})
+        .pipe(calc_entry_px, mode)
+        .pipe(filter_data, entry_spread_filters)
         .pipe(_dedup_rows_by_cols, ["delta", "strike"])
-        .sort_values(sort_by, ascending=ascending)
         .pipe(assign_trade_num, ["quote_date", "expiration", "underlying_symbol"])
     )
 
 
 # this is the main function that runs the backtest engine
-def run(data, trades, filters, init_balance=10000, mode="midpoint"):
+def simulate(spreads, data, exit_filters, exit_spread_filters, mode):
     # for each option to be traded, determine the historical price action
-    filters = {**default_entry_filters, **filters}
-    exit_filters = {f: filters[f] for f in filters if f.startswith("exit_")}
     res = (
-        pd.merge(trades, data, on=on, suffixes=("_entry", "_exit"))
-        .pipe(_filter_data, exit_filters)
-        .pipe(calc_entry_px, mode)
+        pd.merge(spreads, data, on=on, suffixes=("_entry", "_exit"))
+        .pipe(filter_data, exit_filters)
+        .rename(columns={"bid": "bid_exit", "ask": "ask_exit"})
         .pipe(calc_exit_px, mode)
         .pipe(calc_pnl)
+        .pipe(filter_data, exit_spread_filters)
         .rename(columns=output_cols)
         .sort_values(["entry_date", "expiration", "underlying_symbol", "strike"])
         .pipe(assign_trade_num, ["entry_date", "expiration", "underlying_symbol"])
     )
 
-    return calc_total_profit(res), res[output_format]
+    return res[output_format]

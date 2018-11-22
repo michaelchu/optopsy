@@ -17,6 +17,10 @@
 import numpy as np
 
 
+def show(perf, init_balance=10000):
+    pass
+
+
 def _calc_opt_px(data, action):
     ask = f"ask_{action}"
     bid = f"bid_{action}"

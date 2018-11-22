@@ -15,7 +15,8 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .enums import OptionType, OrderAction
-from .backtest import create_spread
+from .backtest import create_spread, simulate
+from .filters import filter_data
 from .checks import (
     singles_checks,
     call_spread_checks,
@@ -23,12 +24,44 @@ from .checks import (
     iron_condor_checks,
     iron_condor_spread_check,
 )
-from datetime import datetime
+
+default_entry_filters = {
+    "std_expr": False,
+    "contract_size": 10,
+    "entry_dte": (27, 30, 31),
+    "exit_dte": None,
+}
 
 
-def _process_legs(data, legs, filters, check_func, sort_by=None, asc=True):
-    if _filter_checks(filters, check_func):
-        return create_spread(data, legs, filters, sort_by=sort_by, ascending=asc)
+def _process_legs(data, legs, fil, check_func, mode):
+    if _filter_checks(fil, check_func):
+        # first pass, filter date in one go
+        date_fil = {
+            "start_date": fil.pop("start_date"),
+            "end_date": fil.pop("end_date"),
+        }
+
+        filters = {**default_entry_filters, **fil}
+
+        entry_spread_fil = {k: v for (k, v) in filters.items() if "entry_spread" in k}
+        exit_spread_fil = {k: v for (k, v) in filters.items() if "exit_spread" in k}
+
+        entry_fil = {
+            k: v
+            for (k, v) in filters.items()
+            if not k.startswith("exit_") and "spread" not in k
+        }
+        exit_fil = {
+            k: v
+            for (k, v) in filters.items()
+            if k.startswith("exit_") and "spread" not in k
+        }
+
+        return (
+            filter_data(data, date_fil)
+            .pipe(create_spread, legs, entry_fil, entry_spread_fil, mode)
+            .pipe(simulate, data, exit_fil, exit_spread_fil, mode)
+        )
     else:
         raise ValueError(
             "Invalid filter values provided, please check the filters and try again."
@@ -39,69 +72,65 @@ def _filter_checks(filter, func=None):
     return True if func is None else func(filter)
 
 
-def _merge(filters, start, end):
-    return {**filters, **{"start_date": start, "end_date": end}}
-
-
-def long_call(data, start, end, filters):
+def long_call(data, filters, mode="market"):
     legs = [(OptionType.CALL, 1)]
-    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
+    return _process_legs(data, legs, filters, singles_checks, mode)
 
 
-def short_call(data, start, end, filters):
+def short_call(data, filters, mode="market"):
     legs = [(OptionType.CALL, -1)]
-    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
+    return _process_legs(data, legs, filters, singles_checks, mode)
 
 
-def long_put(data, start, end, filters):
+def long_put(data, filters, mode="market"):
     legs = [(OptionType.PUT, 1)]
-    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
+    return _process_legs(data, legs, filters, singles_checks, mode)
 
 
-def short_put(data, start, end, filters):
+def short_put(data, filters, mode="market"):
     legs = [(OptionType.PUT, -1)]
-    return _process_legs(data, legs, _merge(filters, start, end), singles_checks)
+    return _process_legs(data, legs, filters, singles_checks, mode)
 
 
-def long_call_spread(data, start, end, filters):
+def long_call_spread(data, filters, mode="market"):
     legs = [(OptionType.CALL, 1), (OptionType.CALL, -1)]
-    return _process_legs(data, legs, _merge(filters, start, end), call_spread_checks)
+    return _process_legs(data, legs, filters, call_spread_checks, mode)
 
 
-def short_call_spread(data, start, end, filters):
+def short_call_spread(data, filters, mode="market"):
     legs = [(OptionType.CALL, -1), (OptionType.CALL, 1)]
-    return _process_legs(data, legs, _merge(filters, start, end), call_spread_checks)
+    return _process_legs(data, legs, filters, call_spread_checks, mode)
 
 
-def long_put_spread(data, start, end, filters):
+def long_put_spread(data, filters, mode="market"):
     legs = [(OptionType.PUT, -1), (OptionType.PUT, 1)]
-    return _process_legs(data, legs, _merge(filters, start, end), put_spread_checks)
+    return _process_legs(data, legs, filters, put_spread_checks, mode)
 
 
-def short_put_spread(data, start, end, filters):
+def short_put_spread(data, filters, mode="market"):
     legs = [(OptionType.PUT, 1), (OptionType.PUT, -1)]
-    return _process_legs(data, legs, _merge(filters, start, end), put_spread_checks)
+    return _process_legs(data, legs, filters, put_spread_checks, mode)
 
 
-def long_iron_condor(data, start, end, filters):
+def long_iron_condor(data, filters, mode="market"):
     legs = [
         (OptionType.PUT, 1),
         (OptionType.PUT, -1),
         (OptionType.CALL, -1),
         (OptionType.CALL, 1),
     ]
-    return _process_legs(
-        data, legs, _merge(filters, start, end), iron_condor_checks
-    ).pipe(iron_condor_spread_check)
+    return _process_legs(data, legs, filters, iron_condor_checks, mode).pipe(
+        iron_condor_spread_check
+    )
 
 
-def short_iron_condor(data, start, end, filters):
+def short_iron_condor(data, filters, mode="market"):
     legs = [
         (OptionType.PUT, -1),
         (OptionType.PUT, 1),
         (OptionType.CALL, 1),
         (OptionType.CALL, -1),
     ]
-    return _process_legs(
-        data, legs, _merge(filters, start, end), iron_condor_checks
-    ).pipe(iron_condor_spread_check)
+    return _process_legs(data, legs, filters, iron_condor_checks, mode).pipe(
+        iron_condor_spread_check
+    )

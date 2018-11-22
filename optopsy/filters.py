@@ -17,6 +17,7 @@
 from .option_queries import between, nearest, eq
 from datetime import datetime
 import pandas as pd
+from functools import reduce
 
 
 def _process_tuples(data, col, groupby, value):
@@ -46,6 +47,21 @@ def _calc_strike_pct(data, value, n, idx):
         ).pipe(_process_values, "strike_pct", value)
     else:
         return data
+
+
+def _apply_filters(legs, filters):
+    if not filters:
+        return legs
+    else:
+        return [
+            reduce(lambda l, f: func_map[f](l, filters[f], idx), filters, leg)
+            for idx, leg in enumerate(legs)
+        ]
+
+
+def filter_data(data, filters):
+    data = data if isinstance(data, list) else [data]
+    return pd.concat(_apply_filters(data, filters))
 
 
 def start_date(data, value, _idx):
@@ -271,3 +287,32 @@ def exit_strike_diff_pct(data, value, _idx):
     that is above the max of .90.
     """
     pass
+
+
+func_map = {
+    "start_date": start_date,
+    "end_date": end_date,
+    "std_expr": std_expr,
+    "contract_size": contract_size,
+    "entry_dte": entry_dte,
+    "entry_days": entry_days,
+    "leg1_delta": leg1_delta,
+    "leg2_delta": leg2_delta,
+    "leg3_delta": leg3_delta,
+    "leg4_delta": leg4_delta,
+    "leg1_strike_pct": leg1_strike_pct,
+    "leg2_strike_pct": leg2_strike_pct,
+    "leg3_strike_pct": leg3_strike_pct,
+    "leg4_strike_pct": leg4_strike_pct,
+    "entry_spread_price": entry_spread_price,
+    "entry_spread_delta": entry_spread_delta,
+    "entry_spread_yield": entry_spread_yield,
+    "exit_dte": exit_dte,
+    "exit_hold_days": exit_hold_days,
+    "exit_leg_1_delta": exit_leg_1_delta,
+    "exit_leg_1_otm_pct": exit_leg_1_otm_pct,
+    "exit_profit_loss_pct": exit_profit_loss_pct,
+    "exit_spread_delta": exit_spread_delta,
+    "exit_spread_price": exit_spread_price,
+    "exit_strike_diff_pct": exit_strike_diff_pct,
+}
