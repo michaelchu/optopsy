@@ -17,6 +17,7 @@ def test_long_call(options_data):
         {"leg1_delta": (0.45, 0.50, 0.55), "entry_dte": (18, 18, 18)},
     )
     results = actual_spread
+    print(results)
     assert all(results["option_type"] == "c")
     assert all(v in [0.55, 0.51] for v in results["delta"].unique().tolist())
     assert results.shape == (1, 15)

@@ -3,4 +3,5 @@ pandas>=0.23.1
 enum34; python_version <= '2.7'
 pathlib2; python_version <= '2.7'
 pytest>=3.10.0
+numpy>=1.14.3
 pyprind>=2.11.2
