@@ -38,7 +38,8 @@ the rapid development of complex options trading strategies.
 ### Option strategy support
 * Single Calls/Puts
 * Vertical Spreads
-* (Coming Soon) Iron Condors (Iron Butterflies)
+* Iron Condors
+* (Coming Soon) Iron Butterfly
 * (Coming Soon) Covered Stock
 * (Coming Soon) Combos (Synthetics/Collars)
 * (Coming Soon) Diagonal Spreads
