@@ -88,10 +88,10 @@ def create_spread(data, leg_structs, entry_filters, entry_spread_filters, mode):
     return (
         filter_data(legs, entry_filters)
         .rename(columns={"bid": "bid_entry", "ask": "ask_entry"})
-        .pipe(calc_entry_px, mode)
-        .pipe(filter_data, entry_spread_filters)
         .pipe(_dedup_rows_by_cols, ["delta", "strike"])
         .pipe(assign_trade_num, ["quote_date", "expiration", "underlying_symbol"])
+        .pipe(calc_entry_px, mode)
+        .pipe(filter_data, entry_spread_filters)
     )
 
 
@@ -111,3 +111,7 @@ def simulate(spreads, data, exit_filters, exit_spread_filters, mode):
     )
 
     return res[output_format]
+
+
+def optimize(func, params):
+    pass

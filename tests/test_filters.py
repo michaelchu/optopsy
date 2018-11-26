@@ -1,5 +1,7 @@
 from pandas.util.testing import assert_frame_equal
 from optopsy.filters import *
+from optopsy.enums import OptionType
+from optopsy.option_strategies import create_spread
 from datetime import datetime
 import pytest
 

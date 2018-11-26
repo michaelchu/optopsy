@@ -183,7 +183,16 @@ def entry_spread_price(data, value, _idx):
     For example, it would set a min max of $0.10 to $0.20 and find only spreads with prices
     within that range.
     """
-    pass
+
+    return (
+        data.groupby(["trade_num"])["entry_opt_price"]
+        .sum()
+        .to_frame(name="entry_opt_price")
+        .pipe(_process_values, "entry_opt_price", value, groupby=["trade_num"])
+        .merge(data, left_index=True, right_index=True)
+        .drop(["entry_opt_price_x"], axis=1)
+        .rename(columns={"entry_opt_price_y": "entry_opt_price"})
+    )
 
 
 def entry_spread_delta(data, value, _idx):

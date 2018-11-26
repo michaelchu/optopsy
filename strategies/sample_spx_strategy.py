@@ -1,9 +1,7 @@
 import os
 from datetime import datetime
 import pandas as pd
-from optopsy.option_strategies import short_call_spread
-from optopsy.statistics import show
-from optopsy.data import get
+import optopsy as op
 
 
 def run_strategy(data):
@@ -21,7 +19,7 @@ def run_strategy(data):
     # set the start and end dates for the backtest, the dates are inclusive,
     # start and end dates are python datetime objects.
     # strategy functions will return a dataframe containing all the simulated trades
-    return short_call_spread(data, filters, fill="market")
+    return op.short_call_spread(data, filters)
 
 
 def store_and_get_data(file_name):
@@ -66,4 +64,7 @@ if __name__ == "__main__":
 
     # retrieve the data from pickle file if available,
     # otherwise read in the csv file
-    print(store_and_get_data("SPX_2016").pipe(run_strategy).pipe(show).head())
+    print(
+        store_and_get_data("SPX_2016").pipe(run_strategy).pipe(op.show_ending_balance)
+    )
+

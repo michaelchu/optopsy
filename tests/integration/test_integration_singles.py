@@ -103,6 +103,7 @@ def test_short_call_market_integration(hod_struct):
     }
 
     backtest = short_call(data, filters)
+    print(backtest)
     assert backtest["cost"].sum() == 99300.0
     assert (
         backtest.iat[0, 5] == -1
@@ -128,6 +129,7 @@ def test_short_call_midpoint_integration(hod_struct):
     }
 
     backtest = short_call(data, filters, mode="midpoint")
+    print(backtest)
     assert backtest["cost"].sum() == 96300.0
     assert (
         backtest.iat[0, 5] == -1
@@ -230,7 +232,7 @@ def test_short_put_midpoint_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = short_put(data, filters)
+    backtest = short_put(data, filters, mode="market")
     print(backtest)
     assert backtest["cost"].sum() == 50600.0
     assert (
