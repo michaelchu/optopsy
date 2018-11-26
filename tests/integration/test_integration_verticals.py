@@ -14,23 +14,37 @@ TEST_FILE_PATH_FULL = os.path.join(
     CURRENT_FILE, "../test_data/test_options_data_full.csv"
 )
 
+hod_struct = (
+    ("underlying_symbol", 0),
+    ("underlying_price", 1),
+    ("option_type", 5),
+    ("expiration", 6),
+    ("quote_date", 7),
+    ("strike", 8),
+    ("bid", 10),
+    ("ask", 11),
+    ("delta", 15),
+    ("gamma", 16),
+    ("theta", 17),
+    ("vega", 18),
+)
 
-def test_long_call_spread_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
+DATA = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
 
+
+def test_long_call_spread_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018, 2, 28), 
-            "entry_dte": 31,
-            "leg1_delta": 0.50,
-            "leg2_delta": 0.30, 
-            "exit_dte": 7
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.50,
+        "leg2_delta": 0.30,
+        "exit_dte": 7,
+    }
 
-
-    backtest = long_call_spread(data, filters, mode='midpoint')
+    backtest = long_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest['cost'].sum() == 8025
+    assert backtest["cost"].sum() == 8025
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
@@ -57,21 +71,19 @@ def test_long_call_spread_integration(hod_struct):
     )
 
 
-def test_long_call_spread_market_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_call_spread_market_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018, 2, 28),
-            "entry_dte": 31,
-            "leg1_delta": 0.50, 
-            "leg2_delta": 0.30,
-            "exit_dte": 7
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.50,
+        "leg2_delta": 0.30,
+        "exit_dte": 7,
+    }
 
-    backtest = long_call_spread(data, filters)
+    backtest = long_call_spread(DATA, filters)
     print(backtest)
-    assert backtest['cost'].sum() == 14250.0
+    assert backtest["cost"].sum() == 14250.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
@@ -98,20 +110,18 @@ def test_long_call_spread_market_integration(hod_struct):
     )
 
 
-def test_long_call_spread_no_exit_dte_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_call_spread_no_exit_dte_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018,2, 28),
-            "entry_dte": 31, 
-            "leg1_delta": 0.50, 
-            "leg2_delta": 0.30
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.50,
+        "leg2_delta": 0.30,
+    }
 
-    backtest = long_call_spread(data, filters, mode="midpoint")
+    backtest = long_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest['cost'].sum() == 7200.00
+    assert backtest["cost"].sum() == 7200.00
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
@@ -138,21 +148,19 @@ def test_long_call_spread_no_exit_dte_integration(hod_struct):
     )
 
 
-def test_short_call_spread_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_call_spread_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018, 2, 28),
-            "entry_dte": 31, 
-            "leg1_delta": 0.50, 
-            "leg2_delta": 0.30, 
-            "exit_dte": 7
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.50,
+        "leg2_delta": 0.30,
+        "exit_dte": 7,
+    }
 
-    backtest = short_call_spread(data, filters, mode='midpoint')
+    backtest = short_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest['cost'].sum() == -8025
+    assert backtest["cost"].sum() == -8025
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 8] == 2700
@@ -179,21 +187,19 @@ def test_short_call_spread_integration(hod_struct):
     )
 
 
-def test_long_put_spread_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_put_spread_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018, 2, 28),
-            "entry_dte": 31,
-            "leg1_delta": 0.30,
-            "leg2_delta": 0.50,
-            "exit_dte": 7
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.30,
+        "leg2_delta": 0.50,
+        "exit_dte": 7,
+    }
 
-    backtest = long_put_spread(data, filters, mode='midpoint')
+    backtest = long_put_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest['cost'].sum() == -25650
+    assert backtest["cost"].sum() == -25650
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 8] == 2665
@@ -220,21 +226,19 @@ def test_long_put_spread_integration(hod_struct):
     )
 
 
-def test_short_put_spread_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_put_spread_integration():
     filters = {
-            "start_date": datetime(2018, 1, 1),
-            "end_date": datetime(2018, 2, 28),
-            "entry_dte": 31,
-            "leg1_delta": 0.30, 
-            "leg2_delta": 0.50, 
-            "exit_dte": 7
-            }
+        "start_date": datetime(2018, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": 31,
+        "leg1_delta": 0.30,
+        "leg2_delta": 0.50,
+        "exit_dte": 7,
+    }
 
-    backtest = short_put_spread(data, filters, mode='midpoint')
+    backtest = short_put_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest['cost'].sum() == 25650
+    assert backtest["cost"].sum() == 25650
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2665

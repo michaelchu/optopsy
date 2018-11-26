@@ -64,7 +64,7 @@ def cboe_struct():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def hod_struct():
     return (
         ("underlying_symbol", 0),

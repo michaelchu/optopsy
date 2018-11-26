@@ -16,7 +16,7 @@
 
 from .enums import OptionType, OrderAction
 from .backtest import create_spread, simulate
-from .filters import filter_data
+from .filters import filter_data, func_map
 from .checks import (
     singles_checks,
     call_spread_checks,
@@ -26,41 +26,30 @@ from .checks import (
 )
 
 default_entry_filters = {
-    "std_expr": False,
+    "expr_type": None,
     "contract_size": 10,
     "entry_dte": (27, 30, 31),
     "exit_dte": None,
 }
 
 
+def _prepare_filters(fil):
+    f = {**default_entry_filters, **fil}
+    init_fil = {k: v for (k, v) in f.items() if func_map[k]["type"] == "init"}
+    entry_s_fil = {k: v for (k, v) in f.items() if func_map[k]["type"] == "entry_s"}
+    exit_s_fil = {k: v for (k, v) in f.items() if func_map[k]["type"] == "exit_s"}
+    entry_fil = {k: v for (k, v) in f.items() if func_map[k]["type"] == "entry"}
+    exit_fil = {k: v for (k, v) in f.items() if func_map[k]["type"] == "exit"}
+    return init_fil, entry_fil, exit_fil, entry_s_fil, exit_s_fil
+
+
 def _process_legs(data, legs, fil, check_func, mode):
     if _filter_checks(fil, check_func):
-        # first pass, filter date in one go
-        date_fil = {
-            "start_date": fil.pop("start_date"),
-            "end_date": fil.pop("end_date"),
-        }
-
-        filters = {**default_entry_filters, **fil}
-
-        entry_spread_fil = {k: v for (k, v) in filters.items() if "entry_spread" in k}
-        exit_spread_fil = {k: v for (k, v) in filters.items() if "exit_spread" in k}
-
-        entry_fil = {
-            k: v
-            for (k, v) in filters.items()
-            if not k.startswith("exit_") and "spread" not in k
-        }
-        exit_fil = {
-            k: v
-            for (k, v) in filters.items()
-            if k.startswith("exit_") and "spread" not in k
-        }
-
+        f = _prepare_filters(fil)
         return (
-            filter_data(data, date_fil)
-            .pipe(create_spread, legs, entry_fil, entry_spread_fil, mode)
-            .pipe(simulate, data, exit_fil, exit_spread_fil, mode)
+            data.pipe(filter_data, f[0])
+            .pipe(create_spread, legs, f[1], f[3], mode)
+            .pipe(simulate, data, f[2], f[4], mode)
         )
     else:
         raise ValueError(

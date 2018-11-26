@@ -17,32 +17,29 @@
 import numpy as np
 
 
-def calc_ending_balance(data, init_balance=10000):
-    return init_balance - data["cost"].sum()
+def calc_ending_balance(data, init_balance):
+    window = np.insert(data["cost"].values, 0, init_balance, axis=0)
+    return np.cumsum(window)[-1]
 
 
 def calc_total_trades(data):
-    return data.index.max()
+    return data.index.max() + 1
 
 
 def calc_total_profit(data):
-    return data["cost"].sum() * -1
+    return data["cost"].sum().round(2) * -1
 
 
-def calc_total_win_cnt(data):
-    pass
-
-
-def calc_total_win_pct(data):
-    pass
-
-
-def calc_total_loss_cnt(data):
-    pass
-
-
-def calc_total_loss_pct(data):
-    pass
+def _calc_with_groups(data):
+    df = data.groupby("trade_num")["cost"].sum()
+    wins = df[df <= 0].count()
+    losses = df[df > 0].count()
+    return {
+        "win_cnt": wins,
+        "win_pct": wins / df.size,
+        "loss_cnt": losses,
+        "loss_pct": losses / df.size,
+    }
 
 
 def _calc_opt_px(data, action):
@@ -93,5 +90,15 @@ def calc_pnl(data):
     return data.round(2)
 
 
-def calc_total_profit(data):
-    return data["cost"].sum().round(2)
+def get_results(data, init_balance=10000):
+    return {
+        "Initial Balance": init_balance,
+        "Ending Balance": calc_ending_balance(data, init_balance),
+        "Total Profit": calc_total_profit(data),
+        "Total Win Count": _calc_with_groups(data)["win_cnt"],
+        "Total Win Percent": _calc_with_groups(data)["win_pct"],
+        "Total Loss Count": _calc_with_groups(data)["loss_cnt"],
+        "Total Loss Percent": _calc_with_groups(data)["loss_pct"],
+        "Total Trades": calc_total_trades(data),
+    }
+

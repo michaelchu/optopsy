@@ -17,6 +17,7 @@
 from .option_queries import between, nearest, eq
 from datetime import datetime
 import pandas as pd
+import numpy as np
 from functools import reduce
 
 
@@ -54,7 +55,7 @@ def _apply_filters(legs, filters):
         return legs
     else:
         return [
-            reduce(lambda l, f: func_map[f](l, filters[f], idx), filters, leg)
+            reduce(lambda l, f: func_map[f]["func"](l, filters[f], idx), filters, leg)
             for idx, leg in enumerate(legs)
         ]
 
@@ -78,14 +79,23 @@ def end_date(data, value, _idx):
         raise ValueError("End Dates must of Date type")
 
 
-def std_expr(data, value, _idx):
+def expr_type(data, value, _idx):
     """
     Use all expirations, only standard or only non standard.
+    Takes a list of expiration symbol types to include in the dataset.
+    If none, includes all expiration types.
 
-    For example, only using non standard would only use weekly,
-    monthly and quarterly expirations.
+    For example:
+    value = ["SPX", "SPXW"]
     """
-    return data
+    if isinstance(value, list):
+        mask = np.in1d(data["underlying_symbol"].values, value)
+        result = data[mask]
+        return data if result.empty else result
+    elif value is None:
+        return data
+    else:
+        raise ValueError("expr_type value must be of dict type")
 
 
 def contract_size(data, value, _idx):
@@ -299,29 +309,29 @@ def exit_strike_diff_pct(data, value, _idx):
 
 
 func_map = {
-    "start_date": start_date,
-    "end_date": end_date,
-    "std_expr": std_expr,
-    "contract_size": contract_size,
-    "entry_dte": entry_dte,
-    "entry_days": entry_days,
-    "leg1_delta": leg1_delta,
-    "leg2_delta": leg2_delta,
-    "leg3_delta": leg3_delta,
-    "leg4_delta": leg4_delta,
-    "leg1_strike_pct": leg1_strike_pct,
-    "leg2_strike_pct": leg2_strike_pct,
-    "leg3_strike_pct": leg3_strike_pct,
-    "leg4_strike_pct": leg4_strike_pct,
-    "entry_spread_price": entry_spread_price,
-    "entry_spread_delta": entry_spread_delta,
-    "entry_spread_yield": entry_spread_yield,
-    "exit_dte": exit_dte,
-    "exit_hold_days": exit_hold_days,
-    "exit_leg_1_delta": exit_leg_1_delta,
-    "exit_leg_1_otm_pct": exit_leg_1_otm_pct,
-    "exit_profit_loss_pct": exit_profit_loss_pct,
-    "exit_spread_delta": exit_spread_delta,
-    "exit_spread_price": exit_spread_price,
-    "exit_strike_diff_pct": exit_strike_diff_pct,
+    "start_date": {"func": start_date, "type": "init"},
+    "end_date": {"func": end_date, "type": "init"},
+    "expr_type": {"func": expr_type, "type": "init"},
+    "contract_size": {"func": contract_size, "type": "entry"},
+    "entry_dte": {"func": entry_dte, "type": "entry"},
+    "entry_days": {"func": entry_days, "type": "entry"},
+    "leg1_delta": {"func": leg1_delta, "type": "entry"},
+    "leg2_delta": {"func": leg2_delta, "type": "entry"},
+    "leg3_delta": {"func": leg3_delta, "type": "entry"},
+    "leg4_delta": {"func": leg4_delta, "type": "entry"},
+    "leg1_strike_pct": {"func": leg1_strike_pct, "type": "entry"},
+    "leg2_strike_pct": {"func": leg2_strike_pct, "type": "entry"},
+    "leg3_strike_pct": {"func": leg3_strike_pct, "type": "entry"},
+    "leg4_strike_pct": {"func": leg4_strike_pct, "type": "entry"},
+    "entry_spread_price": {"func": entry_spread_price, "type": "entry_s"},
+    "entry_spread_delta": {"func": entry_spread_delta, "type": "entry_s"},
+    "entry_spread_yield": {"func": entry_spread_yield, "type": "entry_s"},
+    "exit_dte": {"func": exit_dte, "type": "exit"},
+    "exit_hold_days": {"func": exit_hold_days, "type": "exit"},
+    "exit_leg_1_delta": {"func": exit_leg_1_delta, "type": "exit"},
+    "exit_leg_1_otm_pct": {"func": exit_leg_1_otm_pct, "type": "exit"},
+    "exit_profit_loss_pct": {"func": exit_profit_loss_pct, "type": "exit"},
+    "exit_spread_delta": {"func": exit_spread_delta, "type": "exit_s"},
+    "exit_spread_price": {"func": exit_spread_price, "type": "exit_s"},
+    "exit_strike_diff_pct": {"func": exit_strike_diff_pct, "type": "exit"},
 }

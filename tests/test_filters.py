@@ -3,7 +3,31 @@ from optopsy.filters import *
 from optopsy.enums import OptionType
 from optopsy.option_strategies import create_spread
 from datetime import datetime
+from optopsy.data import get
 import pytest
+import os
+
+CURRENT_FILE = os.path.abspath(os.path.dirname(__file__))
+TEST_FILE_PATH_FULL = os.path.join(
+    CURRENT_FILE, "./test_data/test_options_data_full.csv"
+)
+
+hod_struct = (
+    ("underlying_symbol", 0),
+    ("underlying_price", 1),
+    ("option_type", 5),
+    ("expiration", 6),
+    ("quote_date", 7),
+    ("strike", 8),
+    ("bid", 10),
+    ("ask", 11),
+    ("delta", 15),
+    ("gamma", 16),
+    ("theta", 17),
+    ("vega", 18),
+)
+
+DATA = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
 
 
 def test_start_date(options_data):
@@ -40,6 +64,24 @@ def test_invalid_start_date(options_data):
 def test_invalid_end_date(options_data):
     with pytest.raises(ValueError):
         end_date(options_data, "123", 0)
+
+
+@pytest.mark.parametrize(
+    "value", [(["SPX"], ["SPX"]), (["SPX", "SPXW"], ["SPX", "SPXW"])]
+)
+def test_expr_type(value):
+    df = expr_type(DATA, value[0], 0)
+    assert set(df["underlying_symbol"].unique()).issubset(value[1])
+
+
+@pytest.mark.parametrize(
+    "value", [(["INVALID"], ["SPX", "SPXW"]), (None, ["SPX", "SPXW"])]
+)
+def test_invalid_expr_type(value):
+    df = expr_type(DATA, value[0], 0)
+    result = df["underlying_symbol"].unique()
+    assert result != []
+    assert set(result).issubset(value[1])
 
 
 def test_contract_size(options_data):

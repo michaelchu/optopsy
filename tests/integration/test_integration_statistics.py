@@ -40,7 +40,8 @@ def test_win_count():
     backtest = long_call(DATA, filters)
     print(get_results(backtest))
     assert get_results(backtest) == {
-        "Ending Balance": 103300.0,
+        "Initial Balance": 10000,
+        "Ending Balance": -83300.0,
         "Total Profit": 93300.0,
         "Total Win Count": 1,
         "Total Win Percent": 0.5,

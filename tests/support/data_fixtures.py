@@ -45,3 +45,17 @@ def options_data(hod_struct):
         skiprows=1,
         nrows=None,
     ).pipe(format_option_df)
+
+
+@pytest.fixture
+def options_data_full(hod_struct):
+    cols = list(zip(*hod_struct))
+    date_cols = _parse_date_cols(cols)
+    return pd.read_csv(
+        TEST_FILE_PATH_FULL,
+        parse_dates=date_cols,
+        names=cols[0],
+        usecols=cols[1],
+        skiprows=1,
+        nrows=None,
+    ).pipe(format_option_df)

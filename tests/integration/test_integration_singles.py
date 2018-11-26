@@ -9,10 +9,25 @@ TEST_FILE_PATH_FULL = os.path.join(
     CURRENT_FILE, "../test_data/test_options_data_full.csv"
 )
 
+hod_struct = (
+    ("underlying_symbol", 0),
+    ("underlying_price", 1),
+    ("option_type", 5),
+    ("expiration", 6),
+    ("quote_date", 7),
+    ("strike", 8),
+    ("bid", 10),
+    ("ask", 11),
+    ("delta", 15),
+    ("gamma", 16),
+    ("theta", 17),
+    ("vega", 18),
+)
 
-def test_long_call_market_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
+DATA = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
 
+
+def test_long_call_market_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -21,7 +36,7 @@ def test_long_call_market_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = long_call(data, filters)
+    backtest = long_call(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == -93300.0
     assert (
@@ -38,9 +53,7 @@ def test_long_call_market_integration(hod_struct):
     )
 
 
-def test_long_call_midpoint_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_call_midpoint_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -49,7 +62,7 @@ def test_long_call_midpoint_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = long_call(data, filters, mode="midpoint")
+    backtest = long_call(DATA, filters, mode="midpoint")
     print(backtest)
     assert backtest["cost"].sum() == -96300.0
     assert (
@@ -66,9 +79,7 @@ def test_long_call_midpoint_integration(hod_struct):
     )
 
 
-def test_long_call_no_exit_dte_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_call_no_exit_dte_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -76,7 +87,7 @@ def test_long_call_no_exit_dte_integration(hod_struct):
         "leg1_delta": 0.30,
     }
 
-    backtest = long_call(data, filters)
+    backtest = long_call(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == -77100.0
     assert (
@@ -91,9 +102,7 @@ def test_long_call_no_exit_dte_integration(hod_struct):
     )
 
 
-def test_short_call_market_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_call_market_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -102,7 +111,7 @@ def test_short_call_market_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = short_call(data, filters)
+    backtest = short_call(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == 99300.0
     assert (
@@ -117,9 +126,7 @@ def test_short_call_market_integration(hod_struct):
     )
 
 
-def test_short_call_midpoint_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_call_midpoint_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -128,7 +135,7 @@ def test_short_call_midpoint_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = short_call(data, filters, mode="midpoint")
+    backtest = short_call(DATA, filters, mode="midpoint")
     print(backtest)
     assert backtest["cost"].sum() == 96300.0
     assert (
@@ -143,9 +150,7 @@ def test_short_call_midpoint_integration(hod_struct):
     )
 
 
-def test_long_put_market_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_put_market_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -154,7 +159,7 @@ def test_long_put_market_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = long_put(data, filters)
+    backtest = long_put(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == -44700.0
     assert (
@@ -169,9 +174,7 @@ def test_long_put_market_integration(hod_struct):
     )
 
 
-def test_long_put_midpoint_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_long_put_midpoint_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -180,7 +183,7 @@ def test_long_put_midpoint_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = long_put(data, filters)
+    backtest = long_put(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == -44700.0
     assert (
@@ -195,9 +198,7 @@ def test_long_put_midpoint_integration(hod_struct):
     )
 
 
-def test_short_put_market_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_put_market_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -206,7 +207,7 @@ def test_short_put_market_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = short_put(data, filters)
+    backtest = short_put(DATA, filters)
     print(backtest)
     assert backtest["cost"].sum() == 50600.0
     assert (
@@ -221,9 +222,7 @@ def test_short_put_market_integration(hod_struct):
     )
 
 
-def test_short_put_midpoint_integration(hod_struct):
-    data = get(TEST_FILE_PATH_FULL, hod_struct, prompt=False)
-
+def test_short_put_midpoint_integration():
     filters = {
         "start_date": datetime(2018, 1, 1),
         "end_date": datetime(2018, 2, 28),
@@ -232,7 +231,7 @@ def test_short_put_midpoint_integration(hod_struct):
         "exit_dte": 7,
     }
 
-    backtest = short_put(data, filters, mode="market")
+    backtest = short_put(DATA, filters, mode="market")
     print(backtest)
     assert backtest["cost"].sum() == 50600.0
     assert (
