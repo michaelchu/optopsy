@@ -107,18 +107,21 @@ def run_strategy(data):
     # define the entry and exit filters to use for this strategy, full list of
     # filters will be listed in the documentation (WIP).
     filters = {
-        "start_date": datetime(2016, 1, 1), # dates are inclusive and are datetime objects
-        "end_date": datetime(2016, 12, 31),
-        # values can be tupples where first element: min value, 
+         # dates are inclusive and are datetime objects
+        "start_date": datetime(2016, 1, 1),
+        "end_date": datetime(2018, 2, 28),
+        # values can be a tuple where first element: min value, 
         # second element: ideal (nearest) to this value, third element: max value
-        "entry_dte": (27, 30, 31), 
+        "entry_dte": (6, 7, 8),
         "leg1_delta": 0.50,
         "leg2_delta": 0.30,
-        "contract_size": 10,
-        "expr_type": ["SPX"], # select only weekly options
+        "contract_size": 1,
+        # Select only standard options
+        "expr_type": ["SPX"],
     }
 
-
+    # set the start and end dates for the backtest, the dates are inclusive,
+    # start and end dates are python datetime objects.
     # strategy functions will return a dataframe containing all the simulated trades
     return op.long_call_spread(data, filters)
 
@@ -128,8 +131,7 @@ def store_and_get_data(file_name):
     curr_file = os.path.abspath(os.path.dirname(__file__))
     file = os.path.join(curr_file, "data", f"{file_name}.pkl")
 
-    # check if we have a pickle store, if exists, use it, otherwise create it 
-    # to save time on subsequent runs
+    # check if we have a pickle store
     if os.path.isfile(file):
         print("pickle file found, retrieving...")
         return pd.read_pickle(file)
@@ -151,7 +153,6 @@ if __name__ == "__main__":
     SPX_FILE_STRUCT = (
         ("underlying_symbol", 0),
         ("underlying_price", 1),
-        ("option_symbol", 3),
         ("option_type", 5),
         ("expiration", 6),
         ("quote_date", 7),
@@ -165,7 +166,7 @@ if __name__ == "__main__":
     )
 
     # calling results function from the results returned from run_strategy()
-    r = store_and_get_data("SPX_2016").pipe(run_strategy).pipe(op.results)
+    r = store_and_get_data("SPX_2018").pipe(run_strategy).pipe(op.results)
 
     # the first item in tuple returned from op.results is the sumamary stats
     print(r[0])
@@ -180,45 +181,27 @@ Results:
 ```
 {
     'Initial Balance': 10000, 
-    'Ending Balance': 49100.0, 
-    'Total Profit': 39100.0, 
-    'Total Win Count': 7, 
-    'Total Win Percent': 0.64, 
-    'Total Loss Count': 4, 
-    'Total Loss Percent': 0.36, 
-    'Total Trades': 11
+    'Ending Balance': 8560.0, 
+    'Total Profit': -1440.0, 
+    'Total Win Count': 0, 
+    'Total Win Percent': 0.0, 
+    'Total Loss Count': 2, 
+    'Total Loss Percent': 1.0, 
+    'Total Trades': 2
 }
 ```
 
 Trades:
 ```
-          entry_date  exit_date expiration underlying_symbol  dte  ratio  contracts option_type  strike  entry_delta  entry_stk_price  exit_stk_price  entry_opt_price  exit_opt_price  entry_price  exit_price     cost
+          entry_date  exit_date expiration underlying_symbol  dte  ratio  contracts option_type  strike  entry_delta  entry_stk_price  exit_stk_price  entry_opt_price  exit_opt_price  entry_price  exit_price    cost
 trade_num
-0         2016-01-20 2016-02-19 2016-02-19               SPX   30      1         10           c    1865         0.49          1864.38         1917.01             45.8          -51.30      45800.0    -51300.0  -5500.0
-0         2016-01-20 2016-02-19 2016-02-19               SPX   30     -1         10           c    1920         0.29          1864.38         1917.01            -18.4            7.20     -18400.0      7200.0 -11200.0
-1         2016-02-17 2016-03-18 2016-03-18               SPX   30      1         10           c    1925         0.50          1926.46         2049.39             43.5         -114.30      43500.0   -114300.0 -70800.0
-1         2016-02-17 2016-03-18 2016-03-18               SPX   30     -1         10           c    1980         0.29          1926.46         2049.39            -16.2           60.80     -16200.0     60800.0  44600.0
-2         2016-03-16 2016-04-15 2016-04-15               SPX   30      1         10           c    2025         0.51          2028.07         2079.46             30.2          -54.90      30200.0    -54900.0 -24700.0
-2         2016-03-16 2016-04-15 2016-04-15               SPX   30     -1         10           c    2060         0.31          2028.07         2079.46            -12.2           27.50     -12200.0     27500.0  15300.0
-3         2016-04-20 2016-05-20 2016-05-20               SPX   30      1         10           c    2100         0.51          2103.27         2051.32             27.4           -0.00      27400.0        -0.0  27400.0
-3         2016-04-20 2016-05-20 2016-05-20               SPX   30     -1         10           c    2130         0.31          2103.27         2051.32            -11.5            0.05     -11500.0        50.0 -11450.0
-4         2016-05-18 2016-06-17 2016-06-17               SPX   30      1         10           c    2045         0.49          2043.22         2070.97             31.5          -31.40      31500.0    -31400.0    100.0
-4         2016-05-18 2016-06-17 2016-06-17               SPX   30     -1         10           c    2080         0.31          2043.22         2070.97            -13.2            3.80     -13200.0      3800.0  -9400.0
-5         2016-06-15 2016-07-15 2016-07-15               SPX   30      1         10           c    2070         0.49          2070.30         2161.20             39.1          -91.60      39100.0    -91600.0 -52500.0
-5         2016-06-15 2016-07-15 2016-07-15               SPX   30     -1         10           c    2105         0.29          2070.30         2161.20            -18.9           61.20     -18900.0     61200.0  42300.0
-6         2016-07-20 2016-08-19 2016-08-19               SPX   30      1         10           c    2170         0.51          2174.12         2183.42             24.4          -14.50      24400.0    -14500.0   9900.0
-6         2016-07-20 2016-08-19 2016-08-19               SPX   30     -1         10           c    2200         0.29          2174.12         2183.42             -9.3            0.35      -9300.0       350.0  -8950.0
-7         2016-08-17 2016-09-16 2016-09-16               SPX   30      1         10           c    2180         0.50          2181.95         2139.01             24.4           -0.05      24400.0       -50.0  24350.0
-7         2016-08-17 2016-09-16 2016-09-16               SPX   30     -1         10           c    2210         0.28          2181.95         2139.01             -8.2            0.05      -8200.0        50.0  -8150.0
-8         2016-09-21 2016-10-21 2016-10-21               SPX   30      1         10           c    2160         0.51          2163.07         2141.15             30.8           -0.15      30800.0      -150.0  30650.0
-8         2016-09-21 2016-10-21 2016-10-21               SPX   30     -1         10           c    2195         0.29          2163.07         2141.15            -10.3            0.05     -10300.0        50.0 -10250.0
-9         2016-10-19 2016-11-18 2016-11-18               SPX   30      1         10           c    2145         0.51          2144.29         2181.98             29.5          -41.20      29500.0    -41200.0 -11700.0
-9         2016-10-19 2016-11-18 2016-11-18               SPX   30     -1         10           c    2180         0.30          2144.29         2181.98            -10.7           12.50     -10700.0     12500.0   1800.0
-10        2016-11-16 2016-12-16 2016-12-16               SPX   30      1         10           c    2175         0.50          2176.95         2258.05             29.0          -84.80      29000.0    -84800.0 -55800.0
-10        2016-11-16 2016-12-16 2016-12-16               SPX   30     -1         10           c    2210         0.30          2176.95         2258.05            -11.4           56.30     -11400.0     56300.0  44900.0
+0         2018-01-24 2018-01-31 2018-01-31              SPXW    7      1          1           c    2840         0.48          2837.60         2823.89             15.0           -0.00       1500.0        -0.0  1500.0
+0         2018-01-24 2018-01-31 2018-01-31              SPXW    7     -1          1           c    2860         0.28          2837.60         2823.89             -6.4            0.05       -640.0         5.0  -635.0
+1         2018-02-21 2018-02-28 2018-02-28              SPXW    7      1          1           c    2705         0.48          2701.39         2713.78             20.7           -5.80       2070.0      -580.0  1490.0
+1         2018-02-21 2018-02-28 2018-02-28              SPXW    7     -1          1           c    2730         0.30          2701.39         2713.78             -9.2            0.05       -920.0         5.0  -915.0
 ...
 
-Total Profit: 39100.0
+Total Profit: -1440.0
 ```
 
 **Full Documentation Coming Soon!**
