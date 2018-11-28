@@ -14,12 +14,13 @@ def run_strategy(data):
         "leg1_delta": 0.50,
         "leg2_delta": 0.30,
         "contract_size": 10,
+        "expr_type": ["SPX"],
     }
 
     # set the start and end dates for the backtest, the dates are inclusive,
     # start and end dates are python datetime objects.
     # strategy functions will return a dataframe containing all the simulated trades
-    return op.short_call_spread(data, filters)
+    return op.long_call_spread(data, filters)
 
 
 def store_and_get_data(file_name):
@@ -35,7 +36,7 @@ def store_and_get_data(file_name):
         print("no picked file found, retrieving csv data...")
 
         csv_file = os.path.join(curr_file, "data", f"{file_name}.csv")
-        data = get(csv_file, SPX_FILE_STRUCT, prompt=False)
+        data = op.get(csv_file, SPX_FILE_STRUCT, prompt=False)
 
         print("storing to pickle file...")
         pd.to_pickle(data, file)
@@ -62,9 +63,12 @@ if __name__ == "__main__":
         ("vega", 18),
     )
 
-    # retrieve the data from pickle file if available,
-    # otherwise read in the csv file
-    print(
-        store_and_get_data("SPX_2016").pipe(run_strategy).pipe(op.show_ending_balance)
-    )
+    # calling results function from the results returned from run_strategy()
+    r = store_and_get_data("SPX_2016").pipe(run_strategy).pipe(op.results)
+
+    # the first item in tuple returned from op.results is the sumamary stats
+    print(r[0])
+
+    # second item is a dataframe containing all the trades of the strategy
+    print(r[1])
 

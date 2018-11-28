@@ -3,7 +3,7 @@ import datetime
 filters = {
     "start_date": datetime.date,
     "end_date": datetime.date,
-    "std_expr": bool,
+    "expr_type": list,
     "contract_size": int,
     "entry_dte": (int, tuple),
     "entry_days": int,

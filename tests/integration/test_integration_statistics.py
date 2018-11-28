@@ -1,6 +1,6 @@
 from optopsy.option_strategies import long_call, short_call, long_put, short_put
 from optopsy.data import get
-from optopsy.statistics import get_results
+from optopsy.statistics import results
 from datetime import datetime
 import os
 import pytest
@@ -38,10 +38,10 @@ def test_win_count():
     }
 
     backtest = long_call(DATA, filters)
-    print(get_results(backtest))
-    assert get_results(backtest) == {
+    print(results(backtest))
+    assert results(backtest)[0] == {
         "Initial Balance": 10000,
-        "Ending Balance": -83300.0,
+        "Ending Balance": 103300.0,
         "Total Profit": 93300.0,
         "Total Win Count": 1,
         "Total Win Percent": 0.5,
