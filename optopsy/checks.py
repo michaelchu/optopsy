@@ -3,7 +3,7 @@ import datetime
 filters = {
     "start_date": datetime.date,
     "end_date": datetime.date,
-    "std_expr": bool,
+    "expr_type": list,
     "contract_size": int,
     "entry_dte": (int, tuple),
     "entry_days": int,
@@ -33,8 +33,12 @@ def _type_check(filter):
     return all([isinstance(filter[f], filters[f]) for f in filter])
 
 
-def singles_checks(filter):
-    return "leg1_delta" in filter and _type_check(filter)
+def _date_check(f):
+    return "start_date" in f and "end_date" in f
+
+
+def singles_checks(f):
+    return "leg1_delta" in f and _date_check(f) and _type_check(f)
 
 
 def _sanitize(filters, f):
@@ -45,6 +49,7 @@ def call_spread_checks(f):
     return (
         "leg1_delta" in f
         and "leg2_delta" in f
+        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") > _sanitize(f, "leg2_delta"))
     )
@@ -54,6 +59,7 @@ def put_spread_checks(f):
     return (
         "leg1_delta" in f
         and "leg2_delta" in f
+        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
     )
@@ -65,6 +71,7 @@ def iron_condor_checks(f):
         and "leg2_delta" in f
         and "leg3_delta" in f
         and "leg4_delta" in f
+        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
         and (_sanitize(f, "leg3_delta") > _sanitize(f, "leg4_delta"))

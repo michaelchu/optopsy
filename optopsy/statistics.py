@@ -17,21 +17,52 @@
 import numpy as np
 
 
+def calc_ending_balance(data, init_balance):
+    window = np.insert(data["cost"].values, 0, init_balance, axis=0)
+    return np.subtract.accumulate(window)[-1]
+
+
+def calc_total_trades(data):
+    return data.index.max() + 1
+
+
+def calc_total_profit(data):
+    return data["cost"].sum().round(2) * -1
+
+
+def _calc_with_groups(data):
+    df = data.groupby("trade_num")["cost"].sum()
+    wins = df[df <= 0].count()
+    losses = df[df > 0].count()
+    return {
+        "win_cnt": wins,
+        "win_pct": round(wins / df.size, 2),
+        "loss_cnt": losses,
+        "loss_pct": round(losses / df.size, 2),
+    }
+
+
 def _calc_opt_px(data, action):
-    ask = f"ask_{action}"
-    bid = f"bid_{action}"
+    ask = data[f"ask_{action}"] * data["ratio"]
+    bid = data[f"bid_{action}"] * data["ratio"]
 
     if action == "entry":
-        return np.where(data["ratio"] > 0, data[ask], data[bid])
+        return np.where(data["ratio"] > 0, ask, bid)
     elif action == "exit":
-        return np.where(data["ratio"] > 0, data[bid], data[ask])
-    return data
+        return np.where(data["ratio"] > 0, bid * -1, ask * -1)
+
+
+def _calc_midpint_opt_px(data, action):
+    bid_ask = [f"bid_{action}", f"ask_{action}"]
+    if action == "entry":
+        return data[bid_ask].mean(axis=1) * data["ratio"]
+    elif action == "exit":
+        return data[bid_ask].mean(axis=1) * data["ratio"] * -1
 
 
 def _assign_opt_px(data, mode, action):
     if mode == "midpoint":
-        bid_ask = [f"bid_{action}", f"ask_{action}"]
-        data[f"{action}_opt_price"] = data[bid_ask].mean(axis=1)
+        data[f"{action}_opt_price"] = _calc_midpint_opt_px(data, action)
     elif mode == "market":
         data[f"{action}_opt_price"] = _calc_opt_px(data, action)
     return data
@@ -53,15 +84,24 @@ def calc_exit_px(data, mode="midpoint"):
 
 def calc_pnl(data):
     # calculate the p/l for the trades
-    data["entry_price"] = (
-        data["entry_opt_price"] * data["ratio"] * data["contracts"] * 100
-    )
-    data["exit_price"] = (
-        data["exit_opt_price"] * data["ratio"] * -1 * data["contracts"] * 100
-    )
+    data["entry_price"] = data["entry_opt_price"] * data["contracts"] * 100
+    data["exit_price"] = data["exit_opt_price"] * data["contracts"] * 100
     data["cost"] = data["exit_price"] + data["entry_price"]
     return data.round(2)
 
 
-def calc_total_profit(data):
-    return data["cost"].sum().round(2)
+def results(data, init_balance=10000):
+    return (
+        {
+            "Initial Balance": init_balance,
+            "Ending Balance": calc_ending_balance(data, init_balance),
+            "Total Profit": calc_total_profit(data),
+            "Total Win Count": _calc_with_groups(data)["win_cnt"],
+            "Total Win Percent": _calc_with_groups(data)["win_pct"],
+            "Total Loss Count": _calc_with_groups(data)["loss_cnt"],
+            "Total Loss Percent": _calc_with_groups(data)["loss_pct"],
+            "Total Trades": calc_total_trades(data),
+        },
+        data,
+    )
+
