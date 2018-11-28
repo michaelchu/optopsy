@@ -1,4 +1,5 @@
 from .data import get as get
 from .enums import *
-from .backtest import run
-import optopsy.option_strategies as strategies
+from .option_strategies import *
+from .backtest import optimize
+from .statistics import results
