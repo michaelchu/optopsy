@@ -9,11 +9,11 @@ def run_strategy(data):
     # filters will be listed in the documentation (WIP).
     filters = {
         "start_date": datetime(2016, 1, 1),
-        "end_date": datetime(2016, 12, 31),
-        "entry_dte": (27, 30, 31),
+        "end_date": datetime(2018, 2, 28),
+        "entry_dte": (6, 7, 8),
         "leg1_delta": 0.50,
         "leg2_delta": 0.30,
-        "contract_size": 10,
+        "contract_size": 1,
         "expr_type": ["SPX"],
     }
 
@@ -50,7 +50,6 @@ if __name__ == "__main__":
     SPX_FILE_STRUCT = (
         ("underlying_symbol", 0),
         ("underlying_price", 1),
-        ("option_symbol", 3),
         ("option_type", 5),
         ("expiration", 6),
         ("quote_date", 7),
@@ -64,7 +63,7 @@ if __name__ == "__main__":
     )
 
     # calling results function from the results returned from run_strategy()
-    r = store_and_get_data("SPX_2016").pipe(run_strategy).pipe(op.results)
+    r = store_and_get_data("SPX_2018").pipe(run_strategy).pipe(op.results)
 
     # the first item in tuple returned from op.results is the sumamary stats
     print(r[0])
