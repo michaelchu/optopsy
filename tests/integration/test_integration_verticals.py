@@ -44,30 +44,30 @@ def test_long_call_spread_integration():
 
     backtest = long_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == 8025
+    assert backtest["cost"].sum() == 802.5
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
         and backtest.iat[0, 9] == 0.49
-        and backtest.iat[0, 16] == -121000.0
+        and backtest.iat[0, 16] == -12100.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 8] == 2720
         and backtest.iat[1, 9] == 0.31
-        and backtest.iat[1, 16] == 110550.0
+        and backtest.iat[1, 16] == 11055.0
     )
     assert (
         backtest.iat[2, 5] == 1
         and backtest.iat[2, 8] == 2825
         and backtest.iat[2, 9] == 0.51
-        and backtest.iat[2, 16] == 32725.0
+        and backtest.iat[2, 16] == 3272.5
     )
     assert (
         backtest.iat[3, 5] == -1
         and backtest.iat[3, 8] == 2865
         and backtest.iat[3, 9] == 0.30
-        and backtest.iat[3, 16] == -14250.0
+        and backtest.iat[3, 16] == -1425.0
     )
 
 
@@ -83,30 +83,30 @@ def test_long_call_spread_market_integration():
 
     backtest = long_call_spread(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == 14250.0
+    assert backtest["cost"].sum() == 1425.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
         and backtest.iat[0, 9] == 0.49
-        and backtest.iat[0, 16] == -118100.0
+        and backtest.iat[0, 16] == -11810.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 8] == 2720
         and backtest.iat[1, 9] == 0.31
-        and backtest.iat[1, 16] == 113300.0
+        and backtest.iat[1, 16] == 11330.0
     )
     assert (
         backtest.iat[2, 5] == 1
         and backtest.iat[2, 8] == 2825
         and backtest.iat[2, 9] == 0.51
-        and backtest.iat[2, 16] == 33050.0
+        and backtest.iat[2, 16] == 3305.0
     )
     assert (
         backtest.iat[3, 5] == -1
         and backtest.iat[3, 8] == 2865
         and backtest.iat[3, 9] == 0.30
-        and backtest.iat[3, 16] == -14000.0
+        and backtest.iat[3, 16] == -1400.0
     )
 
 
@@ -121,30 +121,30 @@ def test_long_call_spread_no_exit_dte_integration():
 
     backtest = long_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == 7200.00
+    assert backtest["cost"].sum() == 720.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2700
         and backtest.iat[0, 9] == 0.49
-        and backtest.iat[0, 16] == -107600.0
+        and backtest.iat[0, 16] == -10760.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 8] == 2720
         and backtest.iat[1, 9] == 0.31
-        and backtest.iat[1, 16] == 96200.0
+        and backtest.iat[1, 16] == 9620.0
     )
     assert (
         backtest.iat[2, 5] == 1
         and backtest.iat[2, 8] == 2825
         and backtest.iat[2, 9] == 0.51
-        and backtest.iat[2, 16] == 32925.0
+        and backtest.iat[2, 16] == 3292.5
     )
     assert (
         backtest.iat[3, 5] == -1
         and backtest.iat[3, 8] == 2865
         and backtest.iat[3, 9] == 0.30
-        and backtest.iat[3, 16] == -14325.0
+        and backtest.iat[3, 16] == -1432.5
     )
 
 
@@ -160,30 +160,30 @@ def test_short_call_spread_integration():
 
     backtest = short_call_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == -8025
+    assert backtest["cost"].sum() == -802.5
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 8] == 2700
         and backtest.iat[0, 9] == 0.49
-        and backtest.iat[0, 16] == 121000.0
+        and backtest.iat[0, 16] == 12100.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 8] == 2720
         and backtest.iat[1, 9] == 0.31
-        and backtest.iat[1, 16] == -110550.0
+        and backtest.iat[1, 16] == -11055.0
     )
     assert (
         backtest.iat[2, 5] == -1
         and backtest.iat[2, 8] == 2825
         and backtest.iat[2, 9] == 0.51
-        and backtest.iat[2, 16] == -32725.0
+        and backtest.iat[2, 16] == -3272.5
     )
     assert (
         backtest.iat[3, 5] == 1
         and backtest.iat[3, 8] == 2865
         and backtest.iat[3, 9] == 0.30
-        and backtest.iat[3, 16] == 14250.0
+        and backtest.iat[3, 16] == 1425.0
     )
 
 
@@ -199,30 +199,30 @@ def test_long_put_spread_integration():
 
     backtest = long_put_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == -25650
+    assert backtest["cost"].sum() == -2565.0
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 8] == 2665
         and backtest.iat[0, 9] == -0.30
-        and backtest.iat[0, 16] == -12550.0
+        and backtest.iat[0, 16] == -1255.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 8] == 2700
         and backtest.iat[1, 9] == -0.51
-        and backtest.iat[1, 16] == 22400.0
+        and backtest.iat[1, 16] == 2240.0
     )
     assert (
         backtest.iat[2, 5] == -1
         and backtest.iat[2, 8] == 2775
         and backtest.iat[2, 9] == -0.30
-        and backtest.iat[2, 16] == 60200.0
+        and backtest.iat[2, 16] == 6020.0
     )
     assert (
         backtest.iat[3, 5] == 1
         and backtest.iat[3, 8] == 2830
         and backtest.iat[3, 9] == -0.51
-        and backtest.iat[3, 16] == -95700.0
+        and backtest.iat[3, 16] == -9570.0
     )
 
 
@@ -238,28 +238,28 @@ def test_short_put_spread_integration():
 
     backtest = short_put_spread(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == 25650
+    assert backtest["cost"].sum() == 2565.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 8] == 2665
         and backtest.iat[0, 9] == -0.30
-        and backtest.iat[0, 16] == 12550.0
+        and backtest.iat[0, 16] == 1255.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 8] == 2700
         and backtest.iat[1, 9] == -0.51
-        and backtest.iat[1, 16] == -22400.0
+        and backtest.iat[1, 16] == -2240.0
     )
     assert (
         backtest.iat[2, 5] == 1
         and backtest.iat[2, 8] == 2775
         and backtest.iat[2, 9] == -0.30
-        and backtest.iat[2, 16] == -60200.0
+        and backtest.iat[2, 16] == -6020.0
     )
     assert (
         backtest.iat[3, 5] == -1
         and backtest.iat[3, 8] == 2830
         and backtest.iat[3, 9] == -0.51
-        and backtest.iat[3, 16] == 95700.0
+        and backtest.iat[3, 16] == 9570.0
     )

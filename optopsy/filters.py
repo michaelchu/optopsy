@@ -1,4 +1,3 @@
-#     Optopsy - Python Backtesting library for options trading strategies
 #     Copyright (C) 2018  Michael Chu
 
 #     This program is free software: you can redistribute it and/or modify
@@ -14,20 +13,20 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .option_queries import between, nearest, eq
-from datetime import datetime
+import logging
 import pandas as pd
 import numpy as np
+from .option_queries import between, nearest, eq
+from datetime import datetime
 from functools import reduce
 
 
 def _process_tuples(data, col, groupby, value):
     if len(set(value)) == 1:
         return eq(data, col, value[1])
-    else:
-        return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
-            between, col, value[0], value[2], absolute=True
-        )
+    return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
+        between, col, value[0], value[2], absolute=True
+    )
 
 
 def _process_values(data, col, value, groupby=None, valid_types=(int, float, tuple)):
@@ -53,11 +52,10 @@ def _calc_strike_pct(data, value, n, idx):
 def _apply_filters(legs, filters):
     if not filters:
         return legs
-    else:
-        return [
-            reduce(lambda l, f: func_map[f]["func"](l, filters[f], idx), filters, leg)
-            for idx, leg in enumerate(legs)
-        ]
+    return [
+        reduce(lambda l, f: func_map[f]["func"](l, filters[f], idx), filters, leg)
+        for idx, leg in enumerate(legs)
+    ]
 
 
 def filter_data(data, filters):
@@ -88,14 +86,17 @@ def expr_type(data, value, _idx):
     For example:
     value = ["SPX", "SPXW"]
     """
-    if isinstance(value, list):
-        mask = np.in1d(data["underlying_symbol"].values, value)
-        result = data[mask]
-        return data if result.empty else result
-    elif value is None:
+    value = [value] if isinstance(value, str) else value
+
+    if value is None and not isinstance(value, list):
         return data
-    else:
-        raise ValueError("expr_type value must be of dict type")
+
+    mask = np.in1d(data["underlying_symbol"].values, value)
+    filtered = data[mask]
+
+    if filtered.empty:
+        logging.info("Nothing returned from filtering by expr_type")
+    return data if filtered.empty else filtered
 
 
 def contract_size(data, value, _idx):
@@ -110,7 +111,7 @@ def contract_size(data, value, _idx):
         raise ValueError("Contract sizes must of Int type")
 
 
-def entry_dte(data, value, _idx):
+def entry_dte(data, value, idx):
     """
     Days to expiration min and max for the trade to be considered.
 
@@ -118,7 +119,10 @@ def entry_dte(data, value, _idx):
     between and including 20 to 55.
     """
     groupby = ["option_type", "expiration", "underlying_symbol"]
-    return _process_values(data, "dte", value, groupby=groupby)
+    filtered = _process_values(data, "dte", value, groupby=groupby)
+    if filtered.empty:
+        logging.info(f"Nothing returned from filtering by entry_dte for leg{idx+1}")
+    return filtered
 
 
 def entry_days(data, value, _idx):
@@ -134,28 +138,56 @@ def leg1_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, "delta", value) if idx == 0 else data
+    if idx == 0:
+        filtered = _process_values(data, "delta", value)
+        if filtered.empty:
+            logging.info(
+                f"Nothing returned from filtering by leg1_delta for leg{idx+1}"
+            )
+        return filtered
+    return data
 
 
 def leg2_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, "delta", value) if idx == 1 else data
+    if idx == 1:
+        filtered = _process_values(data, "delta", value)
+        if filtered.empty:
+            logging.info(
+                f"Nothing returned from filtering by leg2_delta for leg{idx+1}"
+            )
+        return filtered
+    return data
 
 
 def leg3_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, "delta", value) if idx == 2 else data
+    if idx == 2:
+        filtered = _process_values(data, "delta", value)
+        if filtered.empty:
+            logging.info(
+                f"Nothing returned from filtering by leg3_delta for leg{idx+1}"
+            )
+        return filtered
+    return data
 
 
 def leg4_delta(data, value, idx):
     """
     Absolute value of a delta of an option.
     """
-    return _process_values(data, "delta", value) if idx == 3 else data
+    if idx == 3:
+        filtered = _process_values(data, "delta", value)
+        if filtered.empty:
+            logging.info(
+                f"Nothing returned from filtering by leg4_delta for leg{idx+1}"
+            )
+        return filtered
+    return data
 
 
 def leg1_strike_pct(data, value, idx):
@@ -193,7 +225,8 @@ def entry_spread_price(data, value, _idx):
     For example, it would set a min max of $0.10 to $0.20 and find only spreads with prices
     within that range.
     """
-
+    # TODO: Make this delta independant, may need to self join on legs to get every
+    # possible combination of strike prices and filter on spread prices.
     return (
         data.groupby(["trade_num"])["entry_opt_price"]
         .sum()
@@ -217,10 +250,7 @@ def entry_spread_delta(data, value, _idx):
 
 def entry_spread_yield(data, value, _idx):
     """
-    Yield Percentage is (option entry price / stockprice).
-
-    For example it would search options that have yldpct between
-    and including .05 to .10 (5 and 10 percent).
+    Yield Percentage is (option max profit / option max loss).
     """
     pass
 
