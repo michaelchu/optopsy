@@ -61,7 +61,12 @@ def _import_file(path, names, usecols, date_cols, skiprow):
         fls = sorted(glob.glob(os.path.join(path, "*.csv")))
         data = pd.concat(
             pd.read_csv(
-                f, names=names, usecols=usecols, parse_dates=date_cols, skiprows=skiprow
+                f,
+                names=names,
+                usecols=usecols,
+                parse_dates=date_cols,
+                skiprows=skiprow,
+                infer_datetime_format=True,
             )
             for f in fls
         )

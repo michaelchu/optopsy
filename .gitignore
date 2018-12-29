@@ -31,8 +31,10 @@ MANIFEST
 .idea
 .vscode
 
-/data/
+strategies/data/SPX_2014_2018.pkl
 /tests/.pytest_cache/
 /strategies/results/
 /strategies/private/
 
+*.swp
+*.swo

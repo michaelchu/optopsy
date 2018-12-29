@@ -38,18 +38,18 @@ def test_long_call_market_integration():
 
     backtest = long_call(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == -93300.0
+    assert backtest["cost"].sum() == -9330.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 9] == 0.31
         and backtest.iat[0, 8] == 2720
-        and backtest.iat[0, 16] == -107800.0
+        and backtest.iat[0, 16] == -10780.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 9] == 0.30
         and backtest.iat[1, 8] == 2865
-        and backtest.iat[1, 16] == 14500.0
+        and backtest.iat[1, 16] == 1450.0
     )
 
 
@@ -64,18 +64,18 @@ def test_long_call_midpoint_integration():
 
     backtest = long_call(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == -96300.0
+    assert backtest["cost"].sum() == -9630.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 9] == 0.31
         and backtest.iat[0, 8] == 2720
-        and backtest.iat[0, 16] == -110550.0
+        and backtest.iat[0, 16] == -11055.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 9] == 0.30
         and backtest.iat[1, 8] == 2865
-        and backtest.iat[1, 16] == 14250.0
+        and backtest.iat[1, 16] == 1425.0
     )
 
 
@@ -89,16 +89,16 @@ def test_long_call_no_exit_dte_integration():
 
     backtest = long_call(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == -77100.0
+    assert backtest["cost"].sum() == -7710.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 9] == 0.31
-        and backtest.iat[0, 16] == -91600.0
+        and backtest.iat[0, 16] == -9160.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 9] == 0.30
-        and backtest.iat[1, 16] == 14500.0
+        and backtest.iat[1, 16] == 1450.0
     )
 
 
@@ -113,16 +113,16 @@ def test_short_call_market_integration():
 
     backtest = short_call(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == 99300.0
+    assert backtest["cost"].sum() == 9930.0
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 9] == 0.31
-        and backtest.iat[0, 16] == 113300.0
+        and backtest.iat[0, 16] == 11330.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 9] == 0.30
-        and backtest.iat[1, 16] == -14000.0
+        and backtest.iat[1, 16] == -1400.0
     )
 
 
@@ -137,16 +137,16 @@ def test_short_call_midpoint_integration():
 
     backtest = short_call(DATA, filters, mode="midpoint")
     print(backtest)
-    assert backtest["cost"].sum() == 96300.0
+    assert backtest["cost"].sum() == 9630.0
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 9] == 0.31
-        and backtest.iat[0, 16] == 110550.0
+        and backtest.iat[0, 16] == 11055.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 9] == 0.30
-        and backtest.iat[1, 16] == -14250.0
+        and backtest.iat[1, 16] == -1425.0
     )
 
 
@@ -161,16 +161,16 @@ def test_long_put_market_integration():
 
     backtest = long_put(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == -44700.0
+    assert backtest["cost"].sum() == -4470.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 9] == -0.3
-        and backtest.iat[0, 16] == 12800.0
+        and backtest.iat[0, 16] == 1280.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 9] == -0.3
-        and backtest.iat[1, 16] == -57500.0
+        and backtest.iat[1, 16] == -5750.0
     )
 
 
@@ -185,16 +185,16 @@ def test_long_put_midpoint_integration():
 
     backtest = long_put(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == -44700.0
+    assert backtest["cost"].sum() == -4470.0
     assert (
         backtest.iat[0, 5] == 1
         and backtest.iat[0, 9] == -0.3
-        and backtest.iat[0, 16] == 12800.0
+        and backtest.iat[0, 16] == 1280.0
     )
     assert (
         backtest.iat[1, 5] == 1
         and backtest.iat[1, 9] == -0.3
-        and backtest.iat[1, 16] == -57500.0
+        and backtest.iat[1, 16] == -5750.0
     )
 
 
@@ -209,16 +209,16 @@ def test_short_put_market_integration():
 
     backtest = short_put(DATA, filters)
     print(backtest)
-    assert backtest["cost"].sum() == 50600.0
+    assert backtest["cost"].sum() == 5060.0
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 9] == -0.3
-        and backtest.iat[0, 16] == -12300.0
+        and backtest.iat[0, 16] == -1230.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 9] == -0.3
-        and backtest.iat[1, 16] == 62900.0
+        and backtest.iat[1, 16] == 6290.0
     )
 
 
@@ -233,15 +233,14 @@ def test_short_put_midpoint_integration():
 
     backtest = short_put(DATA, filters, mode="market")
     print(backtest)
-    assert backtest["cost"].sum() == 50600.0
+    assert backtest["cost"].sum() == 5060.0
     assert (
         backtest.iat[0, 5] == -1
         and backtest.iat[0, 9] == -0.3
-        and backtest.iat[0, 16] == -12300.0
+        and backtest.iat[0, 16] == -1230.0
     )
     assert (
         backtest.iat[1, 5] == -1
         and backtest.iat[1, 9] == -0.3
-        and backtest.iat[1, 16] == 62900.0
+        and backtest.iat[1, 16] == 6290.0
     )
-

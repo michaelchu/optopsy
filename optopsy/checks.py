@@ -1,9 +1,11 @@
 import datetime
+import logging
+
 
 filters = {
     "start_date": datetime.date,
     "end_date": datetime.date,
-    "expr_type": list,
+    "expr_type": (str, list),
     "contract_size": int,
     "entry_dte": (int, tuple),
     "entry_days": int,
@@ -30,15 +32,22 @@ filters = {
 
 
 def _type_check(filter):
-    return all([isinstance(filter[f], filters[f]) for f in filter])
-
-
-def _date_check(f):
-    return "start_date" in f and "end_date" in f
+    logging.debug("Performing type checks...")
+    if all([isinstance(filter[f], filters[f]) for f in filter]):
+        return True
+    else:
+        logging.debug("Failed at value type check...")
+        return False
 
 
 def singles_checks(f):
-    return "leg1_delta" in f and _date_check(f) and _type_check(f)
+    logging.debug("Performing singles checks...")
+    if "leg1_delta" in f and _type_check(f):
+        return True
+        logging.debug("Checks passed...")
+    else:
+        logging.debug("Failed at singles checks...")
+        return False
 
 
 def _sanitize(filters, f):
@@ -46,42 +55,48 @@ def _sanitize(filters, f):
 
 
 def call_spread_checks(f):
-    return (
+    logging.debug("Performing call spread checks...")
+    if (
         "leg1_delta" in f
         and "leg2_delta" in f
-        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") > _sanitize(f, "leg2_delta"))
-    )
+    ):
+        logging.debug("Checks passed...")
+        return True
+    else:
+        logging.debug("Failed call spread checks...")
+        return False
 
 
 def put_spread_checks(f):
-    return (
+    logging.debug("Performing put spread checks...")
+    if (
         "leg1_delta" in f
         and "leg2_delta" in f
-        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
-    )
+    ):
+        logging.debug("Checks passed...")
+        return True
+    else:
+        logging.debug("Failed at put spread checks...")
+        return False
 
 
 def iron_condor_checks(f):
-    return (
+    logging.debug("Performing iron condor checks...")
+    if (
         "leg1_delta" in f
         and "leg2_delta" in f
         and "leg3_delta" in f
         and "leg4_delta" in f
-        and _date_check(f)
         and _type_check(f)
         and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
         and (_sanitize(f, "leg3_delta") > _sanitize(f, "leg4_delta"))
-    )
-
-
-def iron_condor_spread_check(ic):
-    return (
-        ic.assign(d_strike=lambda r: ic.duplicated(subset="strike", keep=False))
-        .groupby(ic.index)
-        .filter(lambda r: (r.d_strike == False).all())
-        .drop(columns="d_strike")
-    )
+    ):
+        logging.debug("Checks passed...")
+        return True
+    else:
+        logging.debug("Failed at iron condor checks...")
+        return False
