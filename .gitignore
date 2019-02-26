@@ -31,7 +31,8 @@ MANIFEST
 .idea
 .vscode
 
-strategies/data/SPX_2014_2018.pkl
+/data
+/strategies/data/
 /tests/.pytest_cache/
 /strategies/results/
 /strategies/private/
