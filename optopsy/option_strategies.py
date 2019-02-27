@@ -19,6 +19,7 @@ from .enums import OptionType
 from .backtest import create_spread 
 from .filters import filter_data, func_map
 from .checks import (
+	data_checks,
     singles_checks,
     call_spread_checks,
     put_spread_checks,
