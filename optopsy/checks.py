@@ -38,7 +38,9 @@ def _type_check(filter):
     else:
         logging.debug("Failed at value type check...")
         return False
-
+        
+def data_checks(data):
+	pass
 
 def singles_checks(f):
     logging.debug("Performing singles checks...")
