@@ -3,22 +3,20 @@
 
 # Optopsy
 
-Optopsy is a simple and fast backtesting libary for option strategies. The library makes no assumptions
-on your data and is designed to be focused on backtesting options data and compose well into your analysis work.
+Optopsy is a nimble backtesting libary for option strategies, it is designed to abstract away the complexities of backtesting large option chain datasets and allows you to focus on what matters, your trading strategy.
 
-This library allows you to mix and match different 'filters' to create an option strategy. Results will be returned as Pandas dataframes so that complex strategies can be composed upon.
+The library makes no assumptions on your data and is designed to compose well into your data analysis work. It uses Pandas extensively under the hood and takes Pandas dataframe objects as input and outputs. For example, instead of trying to be a full featured backtester or provide visualizations on your results, it allows the developers to build on top of the backtested results. 
 
 *This library is currently in development, please use at your own risk*
 
-## Features
-
-### Easy Backtesting
-* Easily set up a backtest in seconds by defining filters for the backtest
+## Usage
 
 ### Use Your Data
 * Use data from any source, just provide a Pandas dataframe with the required columns when calling optopsy functions.
 
 ### Advanced Backtest Parameters:
+
+* Optopsy allows you to mix and match different 'filters' to create an option strategy. Results will be returned as Pandas dataframes so that complex strategies can be composed upon.
 
 **Entry rules:**
 * Days to expiration
@@ -52,26 +50,19 @@ You will need Python 3.6.x and Pandas 0.23.1 or newer. It is recommended to inst
 
 ### Installation
 ```
-git clone git@github.com:michaelchu/optopsy.git
-cd optopsy
-python3 -m pip install --user virtualenv
-python3 -m virtualenv env
-source env/bin/activate
 pip install optopsy
-pip install -r requirements.txt
 ```
 
 ### Usage
-```
-python strategies/sample_spx_strategy.py
-```
-The sample strategy can be used with [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
+Optopsy is best used with Jupyter notebooks, however, it is also possible to incorporate it into your python scripts:
+
+The following example uses [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
 
 ```python
 
 import os
 from datetime import datetime
-import pandas as pd
+import pandas as pd
 import optopsy as op
 
 #     Optopsy is a lightweight library, it does not make any
