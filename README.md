@@ -67,7 +67,6 @@ python strategies/sample_spx_strategy.py
 ```
 The sample strategy can be used with [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
 
-An example of a simple strategy for trading short call spreads with strikes at 30 and 50 deltas with around 30 days to expiration for the SPX:
 ```python
 
 import os
@@ -117,15 +116,16 @@ def run_strategy():
         "end_date": datetime(2018, 12, 31),
         # filter values can be int, float, or tuple types
         # tuples are of the following format: (min, ideal, max)
-        "entry_dte": (40, 47, 50),
-        "leg1_delta": 0.30,
+        "entry_dte": (5, 7, 9),
+        "leg1_delta": 0.50,
+        "leg2_delta": 0.30,
         "contract_size": 1,
         "expr_type": "SPXW"
     }
 
     # strategy functions will return an optopsy dataframe
     # containing all the simulated trades
-    spreads = op.long_call(data, filters)
+    spreads = op.long_call_spread(data, filters)
     spreads.stats()
 
 if __name__ == "__main__":
