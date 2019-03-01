@@ -1,13 +1,13 @@
 import os
 from datetime import datetime
-import pandas as pd
+import pandas as pd
 import optopsy as op
 
 #     Optopsy is a lightweight library, it does not make any
-#     assumptions on the format of your data. Therefore, 
-#     you are free to store your data however you like. 
+#     assumptions on the format of your data. Therefore,
+#     you are free to store your data however you like.
 #
-#     To use your data with this library, 
+#     To use your data with this library,
 #     convert your data set into a pandas DataFrame with
 #     the following list of standard column names:
 #
@@ -29,6 +29,7 @@ import optopsy as op
 #     vega               Required
 #     rho                Optional
 
+
 def run_strategy():
 
     # grab our data created externally
@@ -48,13 +49,14 @@ def run_strategy():
         "entry_dte": (40, 47, 50),
         "leg1_delta": 0.30,
         "contract_size": 1,
-        "expr_type": "SPXW"
+        "expr_type": "SPXW",
     }
 
     # strategy functions will return an optopsy dataframe
     # containing all the simulated trades
     spreads = op.long_call(data, filters)
     spreads.stats()
+
 
 if __name__ == "__main__":
     run_strategy()
