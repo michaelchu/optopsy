@@ -14,70 +14,55 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import pandas as pd
-import numpy as np
-from .option_queries import between, nearest, eq
 from datetime import datetime
-from functools import reduce
+
+import numpy as np
+from pandas.core.base import PandasObject
+
+from .helpers import assign_dte, inspect
+from .option_queries import between, eq, nearest
 
 
-def _process_tuples(data, col, groupby, value):
-    if len(set(value)) == 1:
-        return eq(data, col, value[1])
-    return data.pipe(nearest, col, value[1], groupby=groupby).pipe(
-        between, col, value[0], value[2], absolute=True
+def _process_range(data, col, groupby, value, min, max):
+    if value == min == max:
+        return eq(data, col, value)
+    return (
+        data.pipe(nearest, col, value, groupby=groupby)
+        .pipe(inspect)
+        .pipe(between, col, min, max, absolute=True)
     )
 
 
-def _process_values(data, col, value, groupby=None, valid_types=(int, float, tuple)):
-    if not isinstance(value, valid_types):
-        raise ValueError("Invalid value passed to filter")
-    elif isinstance(value, tuple):
-        return _process_tuples(data, col, groupby, value)
+def _process_values(data, col, value, min, max, groupby=None):
+    if min is not None and max is not None:
+        return _process_range(data, col, groupby, value, min, max)
     else:
         return nearest(data, col, value, groupby=groupby)
 
 
-def _calc_strike_pct(data, value, n, idx):
-    if not isinstance(value, (int, float, tuple)):
-        raise ValueError(f"Invalid value passed for leg {n+1} entry strike percentage")
-    elif idx == n:
-        return data.assign(
-            strike_pct=lambda r: (r["strike"] / r["underlying_price"]).round(2)
-        ).pipe(_process_values, "strike_pct", value)
-    else:
-        return data
+def calls(df):
+    return df[df.option_type.str.lower().str.startswith("c")]
 
 
-def _apply_filters(legs, filters):
-    if not filters:
-        return legs
-    return [
-        reduce(lambda l, f: func_map[f]["func"](l, filters[f], idx), filters, leg)
-        for idx, leg in enumerate(legs)
-    ]
+def puts(df):
+    return df[df.option_type.str.lower().str.startswith("p")]
 
 
-def filter_data(data, filters):
-    data = data if isinstance(data, list) else [data]
-    return pd.concat(_apply_filters(data, filters))
-
-
-def start_date(data, value, _idx):
+def start_date(data, value):
     if isinstance(value, datetime):
         return data[data["expiration"] >= value]
     else:
         raise ValueError("Start Dates must of Date type")
 
 
-def end_date(data, value, _idx):
+def end_date(data, value):
     if isinstance(value, datetime):
         return data[data["expiration"] <= value]
     else:
         raise ValueError("End Dates must of Date type")
 
 
-def expr_type(data, value, _idx):
+def expr_type(data, value):
     """
     Use all expirations, only standard or only non standard.
     Takes a list of expiration symbol types to include in the dataset.
@@ -88,30 +73,16 @@ def expr_type(data, value, _idx):
     """
     value = [value] if isinstance(value, str) else value
 
-    if value is None and not isinstance(value, list):
-        return data
-
     mask = np.in1d(data["underlying_symbol"].values, value)
     filtered = data[mask]
 
     if filtered.empty:
-        logging.info("Nothing returned from filtering by expr_type")
-    return data if filtered.empty else filtered
+        raise ValueError("No matching expiration types in dataset")
+
+    return filtered
 
 
-def contract_size(data, value, _idx):
-    """
-    Multiply the profit in the trades report by the Contract Size.
-
-    For example, the profit is multiplied by 10 contract size.
-    """
-    if isinstance(value, int):
-        return data.assign(contracts=value)
-    else:
-        raise ValueError("Contract sizes must of Int type")
-
-
-def entry_dte(data, value, idx):
+def entry_dte(data, value, min=None, max=None):
     """
     Days to expiration min and max for the trade to be considered.
 
@@ -119,13 +90,16 @@ def entry_dte(data, value, idx):
     between and including 20 to 55.
     """
     groupby = ["option_type", "expiration", "underlying_symbol"]
-    filtered = _process_values(data, "dte", value, groupby=groupby)
+    filtered = data.pipe(assign_dte).pipe(
+        _process_values, "dte", value, min, max, groupby=groupby
+    )
+
     if filtered.empty:
-        logging.info(f"Nothing returned from filtering by entry_dte for leg{idx+1}")
+        logging.info(f"Nothing returned from filtering by entry_dte")
     return filtered
 
 
-def entry_days(data, value, _idx):
+def entry_days(data, value, min=None, max=None):
     """
     Stagger trades every this many Entry Days.
 
@@ -134,91 +108,31 @@ def entry_days(data, value, _idx):
     pass
 
 
-def leg1_delta(data, value, idx):
+def delta(data, value, min=None, max=None):
     """
     Absolute value of a delta of an option.
     """
-    if idx == 0:
-        filtered = _process_values(data, "delta", value)
-        if filtered.empty:
-            logging.info(
-                f"Nothing returned from filtering by leg1_delta for leg{idx+1}"
-            )
-        return filtered
-    return data
+    if not isinstance(value, (int, float)):
+        raise ValueError("Invalid value passed for delta")
+
+    filtered = _process_values(data, "delta", value, min, max)
+    if filtered.empty:
+        logging.info(f"Nothing returned from filtering by delta")
+    return filtered
 
 
-def leg2_delta(data, value, idx):
-    """
-    Absolute value of a delta of an option.
-    """
-    if idx == 1:
-        filtered = _process_values(data, "delta", value)
-        if filtered.empty:
-            logging.info(
-                f"Nothing returned from filtering by leg2_delta for leg{idx+1}"
-            )
-        return filtered
-    return data
-
-
-def leg3_delta(data, value, idx):
-    """
-    Absolute value of a delta of an option.
-    """
-    if idx == 2:
-        filtered = _process_values(data, "delta", value)
-        if filtered.empty:
-            logging.info(
-                f"Nothing returned from filtering by leg3_delta for leg{idx+1}"
-            )
-        return filtered
-    return data
-
-
-def leg4_delta(data, value, idx):
-    """
-    Absolute value of a delta of an option.
-    """
-    if idx == 3:
-        filtered = _process_values(data, "delta", value)
-        if filtered.empty:
-            logging.info(
-                f"Nothing returned from filtering by leg4_delta for leg{idx+1}"
-            )
-        return filtered
-    return data
-
-
-def leg1_strike_pct(data, value, idx):
+def strike_pct(data, value, min=None, max=None):
     """
     Stock Percentage (strike / stock price).
     """
-    return _calc_strike_pct(data, value, 0, idx)
+    if not isinstance(value, (int, float, tuple)):
+        raise ValueError(f"Invalid value passed for entry strike percentage")
+    return data.assign(
+        strike_pct=lambda r: (r["strike"] / r["underlying_price"]).round(2)
+    ).pipe(_process_values, "strike_pct", value, min, max)
 
 
-def leg2_strike_pct(data, value, idx):
-    """
-    Stock Percentage (strike / stock price).
-    """
-    return _calc_strike_pct(data, value, 1, idx)
-
-
-def leg3_strike_pct(data, value, idx):
-    """
-    Stock Percentage (strike / stock price).
-    """
-    return _calc_strike_pct(data, value, 2, idx)
-
-
-def leg4_strike_pct(data, value, idx):
-    """
-    Stock Percentage (strike / stock price).
-    """
-    return _calc_strike_pct(data, value, 3, idx)
-
-
-def entry_spread_price(data, value, _idx):
+def entry_spread_price(data, value, min=None, max=None):
     """
     The net price of the spread.
 
@@ -231,14 +145,16 @@ def entry_spread_price(data, value, _idx):
         data.groupby(["trade_num"])["entry_opt_price"]
         .sum()
         .to_frame(name="entry_opt_price")
-        .pipe(_process_values, "entry_opt_price", value, groupby=["trade_num"])
+        .pipe(
+            _process_values, "entry_opt_price", value, min, max, groupby=["trade_num"]
+        )
         .merge(data, left_index=True, right_index=True)
         .drop(["entry_opt_price_x"], axis=1)
         .rename(columns={"entry_opt_price_y": "entry_opt_price"})
     )
 
 
-def entry_spread_delta(data, value, _idx):
+def entry_spread_delta(data, value, min=None, max=None):
     """
     The net delta of the spread.
 
@@ -248,27 +164,30 @@ def entry_spread_delta(data, value, _idx):
     pass
 
 
-def entry_spread_yield(data, value, _idx):
+def entry_spread_yield(data, value, min=None, max=None):
     """
     Yield Percentage is (option max profit / option max loss).
     """
     pass
 
 
-def exit_dte(data, value, _idx):
+def exit_dte(data, value, min=None, max=None):
     """
     Exit the trade when the days to expiration left is equal to or below this.
 
     For example, it would exit a trade with 10 days to expiration.
     """
-    if value is None:
-        return data[data["quote_date_exit"] == data["expiration"]]
+
+    exit_dte = 0 if value is "expire" else value
+
+    if (value == min == max) or exit_dte == 0:
+        return data[data["exit_dte"] == exit_dte]
     else:
         groupby = ["option_type", "expiration", "underlying_symbol"]
-        return _process_values(data, "dte_exit", value, groupby=groupby)
+        return _process_values(data, "exit_dte", exit_dte, min, max, groupby=groupby)
 
 
-def exit_hold_days(data, value, _idx):
+def exit_hold_days(data, value, min=None, max=None):
     """
     Exit the trade when the trade was held this many days.
 
@@ -277,28 +196,7 @@ def exit_hold_days(data, value, _idx):
     pass
 
 
-def exit_leg_1_delta(data, value, idx):
-    """
-    Exit the trade when the delta of leg 1 is below the min or above the max.
-
-    For example, it would exit when the delta of the
-    first leg is below .10 or above .90 delta.
-    """
-    pass
-
-
-def exit_leg_1_otm_pct(data, value, idx):
-    """
-    Exit the trade when the strike as a percent of stock price
-    of leg 1 is below the min or above the max.
-
-    For example, it would exit when the strike percentage
-    of stock price is below 1.05 or above 1.20.
-    """
-    pass
-
-
-def exit_profit_loss_pct(data, value, _idx):
+def exit_profit_loss_pct(data, value, min=None, max=None):
     """
     Take profits and add stop loss to exit trade at these intervals.
 
@@ -308,7 +206,7 @@ def exit_profit_loss_pct(data, value, _idx):
     pass
 
 
-def exit_spread_delta(data, value, _idx):
+def exit_spread_delta(data, value, min=None, max=None):
     """
     Exit and roll the trade if the spread total delta exceed the min or max value. For Example;
 
@@ -317,7 +215,7 @@ def exit_spread_delta(data, value, _idx):
     pass
 
 
-def exit_spread_price(data, value, _idx):
+def exit_spread_price(data, value, min=None, max=None):
     """
     Exit the trade when the trade price falls below the min or rises above the max.
 
@@ -326,42 +224,21 @@ def exit_spread_price(data, value, _idx):
     pass
 
 
-def exit_strike_diff_pct(data, value, _idx):
-    """
-    Exit the trade when the trade price divided by the difference
-    in strike prices falls below the min or rises above the max.
-
-    For example, a $5 wide call spread would exit if the price of
-    $1 divided by 5 is below the min of .20 or the price of 4.5
-    that is above the max of .90.
-    """
-    pass
-
-
-func_map = {
-    "start_date": {"func": start_date, "type": "init"},
-    "end_date": {"func": end_date, "type": "init"},
-    "expr_type": {"func": expr_type, "type": "init"},
-    "contract_size": {"func": contract_size, "type": "entry"},
-    "entry_dte": {"func": entry_dte, "type": "entry"},
-    "entry_days": {"func": entry_days, "type": "entry"},
-    "leg1_delta": {"func": leg1_delta, "type": "entry"},
-    "leg2_delta": {"func": leg2_delta, "type": "entry"},
-    "leg3_delta": {"func": leg3_delta, "type": "entry"},
-    "leg4_delta": {"func": leg4_delta, "type": "entry"},
-    "leg1_strike_pct": {"func": leg1_strike_pct, "type": "entry"},
-    "leg2_strike_pct": {"func": leg2_strike_pct, "type": "entry"},
-    "leg3_strike_pct": {"func": leg3_strike_pct, "type": "entry"},
-    "leg4_strike_pct": {"func": leg4_strike_pct, "type": "entry"},
-    "entry_spread_price": {"func": entry_spread_price, "type": "entry_s"},
-    "entry_spread_delta": {"func": entry_spread_delta, "type": "entry_s"},
-    "entry_spread_yield": {"func": entry_spread_yield, "type": "entry_s"},
-    "exit_dte": {"func": exit_dte, "type": "exit"},
-    "exit_hold_days": {"func": exit_hold_days, "type": "exit"},
-    "exit_leg_1_delta": {"func": exit_leg_1_delta, "type": "exit"},
-    "exit_leg_1_otm_pct": {"func": exit_leg_1_otm_pct, "type": "exit"},
-    "exit_profit_loss_pct": {"func": exit_profit_loss_pct, "type": "exit"},
-    "exit_spread_delta": {"func": exit_spread_delta, "type": "exit_s"},
-    "exit_spread_price": {"func": exit_spread_price, "type": "exit_s"},
-    "exit_strike_diff_pct": {"func": exit_strike_diff_pct, "type": "exit"},
-}
+def extend_pandas_filters():
+    PandasObject.calls = calls
+    PandasObject.puts = puts
+    PandasObject.start_date = start_date
+    PandasObject.end_date = end_date
+    PandasObject.expr_type = expr_type
+    PandasObject.entry_dte = entry_dte
+    PandasObject.entry_days = entry_days
+    PandasObject.delta = delta
+    PandasObject.strike_pct = strike_pct
+    PandasObject.entry_spread_price = entry_spread_price
+    PandasObject.entry_spread_delta = entry_spread_delta
+    PandasObject.entry_spread_yield = entry_spread_yield
+    PandasObject.exit_dte = exit_dte
+    PandasObject.exit_hold_days = exit_hold_days
+    PandasObject.exit_profit_loss_pct = exit_profit_loss_pct
+    PandasObject.exit_spread_delta = exit_spread_delta
+    PandasObject.exit_spread_price = exit_spread_price

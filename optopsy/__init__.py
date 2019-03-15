@@ -1,7 +1,9 @@
-from .data import get as get
 from .enums import *
+from .filters import extend_pandas_filters
 from .option_strategies import *
-from .backtest import optimize
-from .statistics import extend_pandas
+from .backtest import backtest
+from .statistics import extend_pandas_statistics
+from pandas.core.base import PandasObject
 
-extend_pandas()
+extend_pandas_statistics()
+extend_pandas_filters()

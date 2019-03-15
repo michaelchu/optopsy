@@ -128,7 +128,7 @@ def calc_stats(data, fil=None, transpose=False, round=2):
         print("No data was passed to results function")
 
 
-def extend_pandas():
+def extend_pandas_statistics():
     PandasObject.to_returns = to_returns
     PandasObject.calc_win_rate = calc_win_rate
     PandasObject.stats = stats

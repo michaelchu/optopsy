@@ -38,8 +38,8 @@ class Period(Enum):
 
 
 class OptionType(Enum):
-    CALL = ("c", 1)
-    PUT = ("p", -1)
+    CALL = ("call", 1)
+    PUT = ("put", -1)
 
 
 class OrderAction(Enum):
