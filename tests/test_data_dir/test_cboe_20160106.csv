@@ -1,3 +1,0 @@
-"underlying_symbol","quote_date","root","expiration","strike","option_type","open","high","low","close","trade_volume","bid_size_1545","bid_1545","ask_size_1545","ask_1545","underlying_bid_1545","underlying_ask_1545","active_underlying_price_1545","implied_volatility_1545","delta_1545","gamma_1545","theta_1545","vega_1545","rho_1545","open_interest"
-"^SPX",1/6/2016 0:00:00,"SPXW",1/8/2016 0:00:00,700.00,"c",0.00,0.00,0.00,0.00,0,100,1299.60,100,1305.30,2003.82,2003.82,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0
-"^SPX",1/6/2016 0:00:00,"SPXW",1/8/2016 0:00:00,700.00,"p",0.00,0.00,0.00,0.00,0,0,0.00,430,0.05,2003.82,2003.82,0.00,0.00,0.00,0.00,0.00,0.00,0.00,350

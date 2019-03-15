@@ -1,104 +1,44 @@
 import datetime
 import logging
+import operator
 
 
-filters = {
-    "start_date": datetime.date,
-    "end_date": datetime.date,
-    "expr_type": (str, list),
-    "contract_size": int,
-    "entry_dte": (int, tuple),
-    "entry_days": int,
-    "leg1_delta": (int, float, tuple),
-    "leg2_delta": (int, float, tuple),
-    "leg3_delta": (int, float, tuple),
-    "leg4_delta": (int, float, tuple),
-    "leg1_strike_pct": (int, float, tuple),
-    "leg2_strike_pct": (int, float, tuple),
-    "leg3_strike_pct": (int, float, tuple),
-    "leg4_strike_pct": (int, float, tuple),
-    "entry_spread_price": (int, float, tuple),
-    "entry_spread_delta": (int, float, tuple),
-    "entry_spread_yield": (int, float, tuple),
-    "exit_dte": int,
-    "exit_hold_days": int,
-    "exit_leg_1_delta": (int, float, tuple),
-    "exit_leg_1_otm_pct": (int, float, tuple),
-    "exit_profit_loss_pct": (int, float, tuple),
-    "exit_spread_delta": (int, float, tuple),
-    "exit_spread_price": (int, float, tuple),
-    "exit_strike_diff_pct": (int, float, tuple),
-}
+def _do_checks(data):
+    required = {
+        "underlying_symbol": "object",
+        "quote_date": "datetime64[ns]",
+        "expiration": "datetime64[ns]",
+        "strike": ("float64", "int64"),
+        "option_type": "object",
+        "bid": "float64",
+        "ask": "float64",
+        "underlying_price": "float64",
+        "delta": "float64",
+    }
+
+    if not all(col in data.columns.values for col in list(required.keys())):
+        raise ValueError("Required columns missing!")
+
+    data_types = data.dtypes.astype(str).to_dict()
+
+    for key, val in required.items():
+        if (key == "strike" and str(data_types[key]) not in val) or (
+            key != "strike" and data_types[key] != val
+        ):
+            raise ValueError("Incorrect datatypes detected!")
 
 
-def _type_check(filter):
-    logging.debug("Performing type checks...")
-    if all([isinstance(filter[f], filters[f]) for f in filter]):
-        return True
-    else:
-        logging.debug("Failed at value type check...")
-        return False
-        
-def data_checks(data):
-	pass
-
-def singles_checks(f):
-    logging.debug("Performing singles checks...")
-    if "leg1_delta" in f and _type_check(f):
-        return True
-        logging.debug("Checks passed...")
-    else:
-        logging.debug("Failed at singles checks...")
-        return False
+def singles_checks(data):
+    _do_checks(data)
 
 
-def _sanitize(filters, f):
-    return filters[f][1] if isinstance(filters[f], tuple) else filters[f]
+def vertical_call_checks(data):
+    _do_checks(data)
 
 
-def call_spread_checks(f):
-    logging.debug("Performing call spread checks...")
-    if (
-        "leg1_delta" in f
-        and "leg2_delta" in f
-        and _type_check(f)
-        and (_sanitize(f, "leg1_delta") > _sanitize(f, "leg2_delta"))
-    ):
-        logging.debug("Checks passed...")
-        return True
-    else:
-        logging.debug("Failed call spread checks...")
-        return False
+def vertical_put_checks(data):
+    _do_checks(data)
 
 
-def put_spread_checks(f):
-    logging.debug("Performing put spread checks...")
-    if (
-        "leg1_delta" in f
-        and "leg2_delta" in f
-        and _type_check(f)
-        and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
-    ):
-        logging.debug("Checks passed...")
-        return True
-    else:
-        logging.debug("Failed at put spread checks...")
-        return False
-
-
-def iron_condor_checks(f):
-    logging.debug("Performing iron condor checks...")
-    if (
-        "leg1_delta" in f
-        and "leg2_delta" in f
-        and "leg3_delta" in f
-        and "leg4_delta" in f
-        and _type_check(f)
-        and (_sanitize(f, "leg1_delta") < _sanitize(f, "leg2_delta"))
-        and (_sanitize(f, "leg3_delta") > _sanitize(f, "leg4_delta"))
-    ):
-        logging.debug("Checks passed...")
-        return True
-    else:
-        logging.debug("Failed at iron condor checks...")
-        return False
+def condor_checks(data):
+    _do_checks(data)

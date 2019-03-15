@@ -14,8 +14,8 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from optopsy.data import fields
-from optopsy.enums import Period, OptionType
+from optopsy.enums import OptionType, Period
+from optopsy.helpers import inspect
 
 
 def _convert(val):
@@ -27,17 +27,9 @@ def _calc_abs_distance(row, column, val, absolute):
     return abs(col - _convert(val))
 
 
-def calls(df):
-    return df[df.option_type.str.lower().str.startswith("c")]
-
-
-def puts(df):
-    return df[df.option_type.str.lower().str.startswith("p")]
-
-
 def opt_type(df, option_type):
     if isinstance(option_type, OptionType):
-        return df[df["option_type"] == option_type.value[0]]
+        return df[df.option_type.str.lower().str.startswith(option_type.value[0])]
     else:
         raise ValueError("option_type must be of type OptionType")
 
@@ -54,11 +46,13 @@ def nearest(df, column, val, groupby=None, absolute=True, tie="roundup"):
     # we need to group by unique option columns so that we are
     # getting the min abs dist over multiple sets of option groups
     # instead of the absolute min of the entire data set.
+
+    # TODO: redesign this algorithm so that it does not modify the original
+    # dataframe to get the nearest value.
     if groupby is None:
         groupby = ["quote_date", "option_type", "expiration", "underlying_symbol"]
 
     on = groupby + ["abs_dist"]
-
     data = df.assign(abs_dist=lambda r: _calc_abs_distance(r, column, val, absolute))
 
     return (
