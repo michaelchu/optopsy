@@ -17,92 +17,105 @@ data = pd.read_csv(
 
 
 def test_long_call():
-    results = (
+    filtered_opt_chains = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .calls()
-        .pipe(op.long_call)
+    )
+
+    results = (
+        op.long_call(filtered_opt_chains)
         .pipe(op.backtest, data)
         .exit_dte(7)
-        .total_profit()
     )
-    assert results == 9330.0
+
+    assert results.total_profit() == 9330.0
 
 
 def test_long_call_midpoint():
-    results = (
+    filtered_opt_chains  = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .calls()
-        .pipe(op.long_call)
+    )
+
+    results = (
+        op.long_call(filtered_opt_chains)
         .pipe(op.backtest, data, mode="midpoint")
         .exit_dte(7)
-        .total_profit()
     )
-    assert results == 9630.0
+    assert results.total_profit() == 9630.0
 
 
 def test_long_call_expire():
-    results = (
+    filtered_opt_chains = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .calls()
-        .pipe(op.long_call)
+    )
+
+    results = (
+        op.long_call(filtered_opt_chains)
         .pipe(op.backtest, data)
         .exit_dte("expire")
-        .total_profit()
     )
-    assert results == 7710.0
+    assert results.total_profit() == 7710.0
 
 
 def test_short_call():
-    results = (
+    filtered_opt_chains = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .calls()
-        .pipe(op.short_call)
-        .pipe(op.backtest, data)
-        .exit_dte(7)
-        .total_profit()
     )
 
-    assert results == -9930.0
+    results = (
+        op.short_call(filtered_opt_chains)
+        .pipe(op.backtest, data)
+        .exit_dte(7)
+    )
+
+    assert results.total_profit() == -9930.0
 
 
 def test_long_put():
-    results = (
+    filtered_opt_chains = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .puts()
-        .pipe(op.long_put)
+    )
+
+    results = (
+        op.long_put(filtered_opt_chains)
         .pipe(op.backtest, data)
         .exit_dte(7)
-        .total_profit()
     )
-    assert results == 4470.0
+    assert results.total_profit() == 4470.0
 
 
 def test_short_put():
-    results = (
+    filtered_opt_chains = (
         data.start_date(datetime(2018, 1, 1))
         .end_date(datetime(2018, 2, 28))
         .entry_dte(31)
         .delta(0.30)
         .puts()
-        .pipe(op.short_put)
-        .pipe(op.backtest, data)
-        .exit_dte(7)
-        .total_profit()
     )
 
-    assert results == -5060.0
+    results = (
+        op.short_put(filtered_opt_chains)
+        .pipe(op.backtest, data)
+        .exit_dte(7)
+    )
+
+    assert results.total_profit() == -5060.0

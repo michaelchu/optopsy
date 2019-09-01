@@ -32,10 +32,9 @@ def test_long_iron_condor():
         op.long_iron_condor(leg1, leg2, leg3, leg4)
         .pipe(op.backtest, data)
         .exit_dte(7)
-        .total_profit()
     )
 
-    assert results == -6135.0
+    assert results.total_profit() == -6135.0
 
 
 def test_short_iron_condor_integration():
@@ -54,7 +53,6 @@ def test_short_iron_condor_integration():
         op.short_iron_condor(leg1, leg2, leg3, leg4)
         .pipe(op.backtest, data)
         .exit_dte(7)
-        .total_profit()
     )
 
-    assert results == 4510.0
+    assert results.total_profit() == 4510.0

@@ -98,11 +98,14 @@ def short_put_spread(leg1, leg2):
     return _create_strategy([leg1, leg2], vertical_call_checks, struct)
 
 
-def _iron_condor(leg1, leg2, leg3, leg4, struct):
+def _iron_condor(leg1, leg2, leg3, leg4, struct, butterfly=False):
     spread = _create_strategy([leg1, leg2, leg3, leg4], vertical_call_checks, struct)
 
     if spread is None:
         return None
+    elif butterfly:
+        # here we filter only for condors with same strikes for legs 2 and 3
+        pass
     else:
         return (
             spread.assign(
@@ -132,3 +135,22 @@ def short_iron_condor(leg1, leg2, leg3, leg4):
         (OptionType.CALL, -1),
     ]
     return _iron_condor(leg1, leg2, leg3, leg4, struct)
+
+def long_iron_butterfly(leg1, leg2, leg3, leg4):
+    struct = [
+        (OptionType.PUT, 1),
+        (OptionType.PUT, -1),
+        (OptionType.CALL, -1),
+        (OptionType.CALL, 1),
+    ]
+    return _iron_condor(leg1, leg2, leg3, leg4, struct, butterfly=True)
+
+
+def short_iron_butterfly(leg1, leg2, leg3, leg4):
+    struct = [
+        (OptionType.PUT, -1),
+        (OptionType.PUT, 1),
+        (OptionType.CALL, 1),
+        (OptionType.CALL, -1),
+    ]
+    return _iron_condor(leg1, leg2, leg3, leg4, struct, butterfly=True)
