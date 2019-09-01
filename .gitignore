@@ -5,6 +5,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Virtual environments
+optopsy-env
+
 # C extensions
 *.so
 
