@@ -10,8 +10,6 @@ Optopsy is a nimble backtesting libary for option strategies, it is designed to 
 
 The library is designed to compose well into your data analysis work and uses Pandas extensively under the hood. It extends PandasObject to faciliate common functional composition used in quant finance. **As such, please note that importing `optopsy` modifies `pandas.core.base.PandasObject` to provide added functionality to pandas objects, including DataFrames.**
 
-*This library is currently in development, please use at your own risk*
-
 ## Usage
 
 ### Use Your Data
@@ -60,5 +58,3 @@ pip install optopsy
 Optopsy is best used with Jupyter notebooks, however, it is also possible to incorporate it into your python scripts:
 
 The following example uses [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
-
-**Full Documentation Coming Soon!**
