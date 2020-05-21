@@ -4,7 +4,7 @@
 
 # Optopsy
 
-**NOTE: This library is no longer in active development, as I have less time to commit to this project. However, I hope that this project will be a good basis for other trading/options backtesting projects in the future. As such, I will keep this project active on Github for reference. I am also open to transfering ownership of this repo to those who are interested. Please feel free to contact me if you have any issues, I will try my best to help!**
+**NOTE: This library is no longer in active development, however, I hope that this project will be a good basis for other trading/options backtesting projects in the future. As such, I will keep this project active on Github for reference. I am also open to transfering ownership of this repo to those who are interested. Please feel free to contact me if you have any issues, I will try my best to help!**
 
 Optopsy is a nimble backtesting libary for option strategies, it is designed to act as an API for your option chain datasets and allows you to focus on what matters, your trading strategy.
 
