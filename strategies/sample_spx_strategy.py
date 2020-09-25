@@ -32,6 +32,9 @@ import optopsy as op
 
 def filepath():
     curr_file = os.path.abspath(os.path.dirname(__file__))
+    # Manually download sample data file from http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv
+    # and create a folder named 'data' in the same directory as this file
+    # A sample data file format is provided at /data/sample_spx_data.csv
     return os.path.join(curr_file, "data", "SPX_20151001_to_20151030.csv")
 
 
