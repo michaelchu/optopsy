@@ -34,11 +34,11 @@ MANIFEST
 .idea
 .vscode
 
-/data
-/strategies/data/
 /tests/.pytest_cache/
 /strategies/results/
 /strategies/private/
 
 *.swp
 *.swo
+
+/venv/

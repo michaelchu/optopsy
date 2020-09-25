@@ -30,32 +30,39 @@ import optopsy as op
 #     rho                Optional
 
 
-def run_strategy():
-
-    # grab our data created externally
+def filepath():
     curr_file = os.path.abspath(os.path.dirname(__file__))
-    file = os.path.join(curr_file, "data", "SPX_2014_2018.pkl")
-    data = pd.read_pickle(file)
+    return os.path.join(curr_file, "data", "SPX_20151001_to_20151030.csv")
 
-    # define the entry and exit filters to use for this strategy, full list of
-    # filters will be listed in the documentation (WIP).
-    filters = {
-        # set the start and end dates for the backtest,
-        # the dates are inclusive, and are python datetime objects.
-        "start_date": datetime(2018, 1, 1),
-        "end_date": datetime(2018, 12, 31),
-        # filter values can be int, float, or tuple types
-        # tuples are of the following format: (min, ideal, max)
-        "entry_dte": (40, 47, 50),
-        "leg1_delta": 0.30,
-        "contract_size": 1,
-        "expr_type": "SPXW",
-    }
 
-    # strategy functions will return an optopsy dataframe
-    # containing all the simulated trades
-    spreads = op.long_call(data, filters)
-    spreads.stats()
+def run_strategy():
+    data = pd.read_csv(
+        filepath(), parse_dates=["expiration", "quotedate"], infer_datetime_format=True
+    )
+
+    # manually rename the data header columns to the standard column names as defined above
+    data.rename(
+        columns={
+            'underlying': 'underlying_symbol',
+            'underlying_last': 'underlying_price',
+            'type': 'option_type',
+            'quotedate': 'quote_date'
+        },
+        inplace=True)
+
+    results = (
+        data.start_date(datetime(2015, 1, 1))
+            .end_date(datetime(2015, 10, 30))
+            .entry_dte(31)
+            .delta(0.50)
+            .calls()
+            .pipe(op.long_call)
+            .pipe(op.backtest, data)
+            .exit_dte(7)
+    )
+
+    print("Total trades: " + str(results.total_trades()))
+    print("Total profit: " + str(results.total_profit()))
 
 
 if __name__ == "__main__":
