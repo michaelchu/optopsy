@@ -35,8 +35,6 @@ MANIFEST
 .vscode
 
 /tests/.pytest_cache/
-/strategies/results/
-/strategies/private/
 
 *.swp
 *.swo
