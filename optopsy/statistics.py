@@ -81,7 +81,8 @@ def trades(data, cols=None):
         cols = [
             "underlying_symbol",
             "expiration",
-            "dte",
+            "entry_date",
+            "exit_date",
             "ratio",
             "contracts",
             "strike",

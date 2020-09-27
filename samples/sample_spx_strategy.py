@@ -64,8 +64,17 @@ def run_strategy():
             .exit_dte(7)
     )
 
+    # the results variable is just a dataframe, which at this point contains all the trades
+    # there are a few convenient functions in statistics.py to quickly calculate simple statistics
+    # since results is a dataframe, you can analyze it however you like.
     print("Total trades: " + str(results.total_trades()))
     print("Total profit: " + str(results.total_profit()))
+    print("\n")
+
+    # print the trades,
+    # NOTE: for the cost column a negative cost denotes an overall credit to the account
+    # meaning it was a profitable trade.
+    results.trades()
 
 
 if __name__ == "__main__":
