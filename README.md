@@ -23,28 +23,22 @@ The library is designed to compose well into your data analysis work and uses Pa
 * Days to expiration
 * Entry Days (Staggered trades)
 * Absolute Delta
-* Percentage out-of-the-money
-* Contract size
+* Percentage out-of-the-money (WIP)
+* Contract size (WIP)
 
 **Exit rules:**
 * Days to expiration
-* Hold days
-* Profit/Stop loss percent
-* Spread delta
-* Spread price
+* Hold days (WIP)
+* Profit/Stop loss percent (WIP)
+* Spread delta (WIP)
+* Spread price (WIP)
 
 ### Option strategy support
 * Single Calls/Puts
 * Vertical Spreads
 * Iron Condors
-* (Coming Soon) Iron Butterfly
-* (Coming Soon) Covered Stock
-* (Coming Soon) Combos (Synthetics/Collars)
-* (Coming Soon) Diagonal Spreads
-* (Coming Soon) Calendar Spreads
-* (Coming Soon) Custom Spreads
-* (Coming Soon) Strangles
-* (Coming Soon) Straddles
+* More coming soon!
+
 
 ### Dependencies
 You will need Python 3.7.x and Pandas 0.24.1 or newer. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
@@ -58,3 +52,5 @@ pip install optopsy
 Optopsy is best used with Jupyter notebooks, however, it is also possible to incorporate it into your python scripts:
 
 The following example uses [Level 2 Historical CSV Data Sample](http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv) from historicaloptiondata.com.
+
+See sample usage at [samples/sample_spx_strategy.py](https://github.com/michaelchu/optopsy/blob/master/samples/sample_spx_strategy.py)
