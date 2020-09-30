@@ -55,7 +55,7 @@ You will need Python 3.7.x and Pandas 0.24.1 or newer. It is recommended to inst
 
 ### Installation
 ```
-pip install optopsy
+pip install optopsy==2.0.0b1
 ```
 
 ### Example
