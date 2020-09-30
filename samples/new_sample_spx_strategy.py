@@ -12,7 +12,7 @@ def filepath():
     # DeltaNeutral: http://www.deltaneutral.com/
 
     # following file was downloaded from: http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv
-    return os.path.join(curr_file, "./data/SPX_20151001_to_20151030.csv")
+    return os.path.join(curr_file, "./data/Sample_SPX_20151001_to_20151030.csv")
 
 
 def run_strategy():
@@ -30,7 +30,8 @@ def run_strategy():
         ask=11,
     )
 
-    # Backtest all single calls(long) on the SPX and sort by long_profit_pct
+    # Backtest all single calls(long) on the SPX
+    
     # All public optopsy functions return a regular Pandas DataFrame so you can use
     # regular pandas functions as you see fit to analyse the dataset
     long_single_calls = (
