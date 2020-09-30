@@ -17,7 +17,7 @@ jobs:
           name: Setup Dependancies
           command: |
             pip install -r requirements.txt
-            pip install coverage 
+            pip install pytest-cov
       - run:
           name: Setup Code Climate test-reporter
           command: |
@@ -28,8 +28,7 @@ jobs:
           name: Run Tests
           command: |
             ./cc-test-reporter before-build
-            coverage run -m pytest
-            coverage xml
+            pytest --cov=optopsy --cov-report tests/
             GIT_BRANCH=$CIRCLE_BRANCH GIT_COMMIT_SHA=$CIRCLE_SHA1 ./cc-test-reporter after-build -t coverage.py --exit-code $?
 
 workflows:
