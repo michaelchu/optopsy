@@ -28,7 +28,7 @@ jobs:
           name: Run Tests
           command: |
             ./cc-test-reporter before-build
-            python -m pytest --cov=optopsy --cov-report tests/
+            python -m pytest --cov=optopsy --cov-report xml tests/
             GIT_BRANCH=$CIRCLE_BRANCH GIT_COMMIT_SHA=$CIRCLE_SHA1 ./cc-test-reporter after-build -t coverage.py --exit-code $?
 
 workflows:
