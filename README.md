@@ -7,6 +7,8 @@
 Optopsy is a nimble backtesting and statistics library for option strategies, it is designed to answer questions like
 "How do vertical spreads perform on the SPX?" or "Which strikes and/or expiration dates should I choose to make the most potential profit?"
 
+**This library is currently being rewritten and is in beta state, use at your own risk**
+
 ## Supported Option Strategies
 * Calls/Puts
 * Straddles/Strangles (WIP)
