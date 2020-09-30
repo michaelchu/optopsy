@@ -1,0 +1,38 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    executor: python/default
+    environment:
+      CC_TEST_REPORTER_ID: 9a990fea3fb57063b45010735b989c837fbf4b5da5d4bdfeafb89539e2b61d19
+    steps:
+      - checkout
+      - python/load-cache
+      - python/install-deps
+      - python/save-cache
+      - run:
+          name: Setup Dependancies
+          command: |
+            pip install -r requirements.txt
+            pip install coverage 
+      - run:
+          name: Setup Code Climate test-reporter
+          command: |
+            # download test reporter as a static binary
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      - run:
+          name: Run Tests
+          command: |
+            ./cc-test-reporter before-build
+            coverage run -m pytest
+            coverage xml
+            ./cc-test-reporter after-build -t coverage.py --exit-code $?
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
