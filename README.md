@@ -1,5 +1,6 @@
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
 [![CircleCI](https://circleci.com/gh/michaelchu/optopsy.svg?style=shield)](https://circleci.com/gh/michaelchu/optopsy)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/a99a88d28ad37a79dbf6/test_coverage)](https://codeclimate.com/github/codeclimate/codeclimate/test_coverage)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Optopsy
