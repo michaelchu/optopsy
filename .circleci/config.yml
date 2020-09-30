@@ -27,6 +27,7 @@ jobs:
           command: |
             ./cc-test-reporter before-build
             coverage run -m pytest
+            coverage xml
             ./cc-test-reporter after-build -t coverage.py --exit-code $?
 
 workflows:
