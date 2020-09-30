@@ -6,6 +6,8 @@ orbs:
 jobs:
   build-and-test:
     executor: python/default
+    environment:
+      CC_TEST_REPORTER_ID: 9a990fea3fb57063b45010735b989c837fbf4b5da5d4bdfeafb89539e2b61d19
     steps:
       - checkout
       - python/load-cache
