@@ -1,5 +1,4 @@
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
-[![Build Status](https://travis-ci.org/michaelchu/optopsy.svg?branch=master)](https://travis-ci.org/michaelchu/optopsy)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Optopsy
