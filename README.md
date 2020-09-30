@@ -25,7 +25,7 @@ a list of entry and exit dates created from external sources based on indicators
 There are two main parts of the library:
 
 * Statistics Module - Focused on generating statistics on various options strategies (Independent of chronological events)
-* Backtester Module (Comming Soon) - Replay the generated statistics with chronological order to create an **approximated** backtest.
+* Backtester Module (Coming Soon) - Replay the generated statistics with chronological order to create an **approximated** backtest.
 
 The algorithm for the statistics module is as follows:
 
@@ -43,7 +43,7 @@ by expiration dates with a running balance to simulate what would have happened.
 
 ### Notes
 As the algorithm is **heavily** based on bucketing and approximations to improve performance, it is not recommeded to 
-make trade decisions based on the results from this library. Please use at your own risk.
+make trade decisions based on the results solely from this library. Please use at your own risk.
 
 ## Usage
 
@@ -51,7 +51,7 @@ make trade decisions based on the results from this library. Please use at your 
 * Use data from any source, just provide a Pandas dataframe with the required columns when calling optopsy functions.
 
 ### Dependencies
-You will need Python 3.7.x and Pandas 0.24.1 or newer. It is recommended to install [Miniconda3](https://conda.io/miniconda.html). See [requirements.txt](https://github.com/michaelchu/optopsy/blob/master/requirements.txt) for full details.
+You will need Python 3.6 or newer and Pandas 0.23.1 or newer and Numpy 1.14.3 or newer.
 
 ### Installation
 ```
