@@ -5,7 +5,7 @@ setup(
     description="Python Backtesting library for options trading strategies",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    version="1.0.4",
+    version="2.0.0b1",
     url="https://github.com/michaelchu/optopsy",
     author="Michael Chu",
     author_email="mchchu88@gmail.com",
@@ -16,4 +16,8 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     packages=["optopsy"],
+    install_requires=[
+        'pandas',
+        'numpy'
+    ]
 )
