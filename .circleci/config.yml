@@ -30,7 +30,7 @@ jobs:
             ./cc-test-reporter before-build
             coverage run -m pytest
             coverage xml
-            GIT_BRANCH=${CIRCLE_BRANCH} GIT_COMMIT_SHA=${CIRCLE_SHA1} ./cc-test-reporter after-build -t coverage.py --exit-code $?
+            GIT_BRANCH=$CIRCLE_BRANCH GIT_COMMIT_SHA=$CIRCLE_SHA1 ./cc-test-reporter after-build -t coverage.py --exit-code $?
 
 workflows:
   main:
