@@ -31,13 +31,12 @@ def run_strategy():
     )
 
     # Backtest all single calls(long) on the SPX
-    
+
     # All public optopsy functions return a regular Pandas DataFrame so you can use
     # regular pandas functions as you see fit to analyse the dataset
-    long_single_calls = (
-        op.singles_calls(spx_data, strike_dist_pct_interval=0.05, side="long")
-        .round(2)
-    )
+    long_single_calls = op.singles_calls(
+        spx_data, strike_dist_pct_interval=0.05, side="long"
+    ).round(2)
 
     print("Statistics for SPX long calls from 2015-10-01 to 2015-10-30 \n")
     print(

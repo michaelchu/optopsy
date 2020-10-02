@@ -163,25 +163,17 @@ def _evaluate_options(data, min_bid_ask, exit_dte):
     )
 
 
-def _process_entries_and_exits(
-    data,
-    dte_interval,
-    max_entry_dte,
-    exit_dte,
-    strike_dist_pct_interval,
-    max_strike_dist_pct_interval,
-    min_bid_ask,
-):
+def _process_entries_and_exits(data, **kwargs):
     return (
         data.pipe(_assign_dte)
-        .pipe(_trim_data, "dte", exit_dte, max_entry_dte)
-        .pipe(_evaluate_options, min_bid_ask, exit_dte)
-        .pipe(_cut_options_by_dte, dte_interval, max_entry_dte)
+        .pipe(_trim_data, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
+        .pipe(_evaluate_options, kwargs["min_bid_ask"], kwargs["exit_dte"])
+        .pipe(_cut_options_by_dte, kwargs["dte_interval"], kwargs["max_entry_dte"])
         .pipe(_calculate_strike_dist_pct)
         .pipe(
             _cut_options_by_strike_dist,
-            strike_dist_pct_interval,
-            max_strike_dist_pct_interval,
+            kwargs["strike_dist_pct_interval"],
+            kwargs["max_strike_dist_pct"],
         )
     )
 

@@ -1,13 +1,28 @@
 import pandas as pd
 
+default_kwargs = {
+    "start_date": None,
+    "end_date": None,
+    "underlying_symbol": 0,
+    "underlying_price": 1,
+    "option_type": 2,
+    "expiration": 3,
+    "quote_date": 4,
+    "strike": 5,
+    "bid": 6,
+    "ask": 7,
+}
+
 
 def _trim_dates(data, start_date, end_date):
     if start_date is not None and end_date is not None:
-        return data.loc[(data['expiration'] >= start_date) & (data['expiration'] <= end_date)]
+        return data.loc[
+            (data["expiration"] >= start_date) & (data["expiration"] <= end_date)
+        ]
     elif start_date is None and end_date is not None:
-        return data.loc[data['expiration'] <= end_date]
+        return data.loc[data["expiration"] <= end_date]
     elif start_date is not None and end_date is None:
-        return data.loc[data['expiration'] >= start_date]
+        return data.loc[data["expiration"] >= start_date]
     else:
         return data
 
@@ -29,19 +44,8 @@ def _infer_date_cols(data):
     return data
 
 
-def csv_data(
-    file_path,
-    start_date=None,
-    end_date=None,
-    underlying_symbol=0,
-    underlying_price=1,
-    option_type=2,
-    expiration=3,
-    quote_date=4,
-    strike=5,
-    bid=6,
-    ask=7,
-):
+# noinspection PyIncorrectDocstring
+def csv_data(file_path, **kwargs):
     """
     Uses pandas DataFrame.read_csv function to import data from CSV files.
     It will automatically generate standardized headers for this library to use.
@@ -63,16 +67,17 @@ def csv_data(
         DataFrame: A dataframe of option chains with standardized columns
 
     """
+    params = {**default_kwargs, **kwargs}
 
     column_mapping = [
-        (underlying_symbol, "underlying_symbol"),
-        (underlying_price, "underlying_price"),
-        (option_type, "option_type"),
-        (expiration, "expiration"),
-        (quote_date, "quote_date"),
-        (strike, "strike"),
-        (bid, "bid"),
-        (ask, "ask"),
+        (params["underlying_symbol"], "underlying_symbol"),
+        (params["underlying_price"], "underlying_price"),
+        (params["option_type"], "option_type"),
+        (params["expiration"], "expiration"),
+        (params["quote_date"], "quote_date"),
+        (params["strike"], "strike"),
+        (params["bid"], "bid"),
+        (params["ask"], "ask"),
     ]
 
     return (
@@ -80,5 +85,5 @@ def csv_data(
         .pipe(_standardize_cols, column_mapping)
         .pipe(_trim_cols, column_mapping)
         .pipe(_infer_date_cols)
-        .pipe(_trim_dates, start_date, end_date)
+        .pipe(_trim_dates, params["start_date"], params["end_date"])
     )
