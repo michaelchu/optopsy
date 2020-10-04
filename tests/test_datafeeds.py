@@ -29,9 +29,9 @@ def test_import_csv_file():
         "quote_date",
         "strike",
         "bid",
-        "ask"
+        "ask",
     ]
-    assert (list(data.columns) == expected_columns)
+    assert list(data.columns) == expected_columns
     assert not data.empty
 
 

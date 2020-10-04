@@ -16,6 +16,9 @@ Optopsy is a nimble backtesting and statistics library for option strategies, it
 * Butterflies/Iron Condors (WIP)
 * Many more to follow
 
+## Documentation
+Please see the [wiki](https://github.com/michaelchu/optopsy/wiki) for API reference.
+
 ## Methodology
 Most backtesting tools for option strategies don't reveal how the options are backtested, since this is open sourced, I
 will try to be as transparent as possible on how the algorithm works. You can decide if it works for your situation. My aim
@@ -39,7 +42,7 @@ and either 'delta' or 'strike distance percent' from current price (grouped in i
 5. The result will contain the average profit/loss amounts of the strategy (and other statistics such as min/max, distributions) for all the combinations of inputs (strike dist %/ DTE)
 
 Obviously strategy statistics do not take into account real world events in a chronological order. 
-For that, there is the backtester module that will replay each backtest ordered by expiration dates with a running balance to simulate what would have happened.
+For that, there is the backtestercc module that will replay each backtest ordered by expiration dates with a running balance to simulate what would have happened.
 
 ### Notes
 As the algorithm is **heavily** based on bucketing and approximations to improve performance, it is not recommeded to 
