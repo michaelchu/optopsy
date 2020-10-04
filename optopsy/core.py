@@ -46,7 +46,7 @@ def _calculate_profit_loss(data):
 def _calculate_profit_loss_pct(data):
     return data.assign(
         long_profit_pct=lambda r: round((r["exit"] - r["entry"]) / r["entry"], 2)
-    ).assign(short_profit_pct=lambda r: round((r["entry"] - r["exit"]) / r["exit"], 2))
+    ).assign(short_profit_pct=lambda r: round((r["entry"] - r["exit"]) / r["entry"], 2))
 
 
 def _select_final_output_column(data, cols, side):
@@ -81,7 +81,9 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
 
 
 def _group_by_intervals(data, cols, drop_na):
-    grouped_dataset = data.groupby(cols)[["long_profit_pct", "short_profit_pct"]].describe()
+    grouped_dataset = data.groupby(cols)[
+        ["long_profit_pct", "short_profit_pct"]
+    ].describe()
     grouped_dataset.columns = [
         "_".join(col).rstrip("_") for col in grouped_dataset.columns.values
     ]
@@ -94,7 +96,14 @@ def _group_by_intervals(data, cols, drop_na):
     return grouped_dataset
 
 
-def _evaluate(entries, exits):
+def _evaluate_options(data, min_bid_ask, exit_dte):
+    # remove option chains that are worthless, it's unrealistic to enter
+    # trades with worthless options
+    entries = _remove_min_bid_ask(data, min_bid_ask)
+
+    # to reduce unnecessary computation, filter for options with the desired exit DTE
+    exits = _get(data, "dte", exit_dte)
+
     return (
         entries.merge(
             right=exits,
@@ -102,40 +111,14 @@ def _evaluate(entries, exits):
             suffixes=("_entry", "_exit"),
         )
         # by default we use the midpoint spread price to calculate entry and exit costs
-        .assign(entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2).assign(
-            exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2
-        )
-    )
-
-
-def _evaluate_options(data, min_bid_ask, exit_dte):
-    """
-    Take all option entries and exits and calculate the profit/loss
-    per option chain.
-
-    Args:
-        data: Dataframe containing option chains
-
-    Returns:
-        DataFrame with each option chain evaluated in all entry and exit combinations
-
-    """
-
-    # remove option chains that are worthless, it's unrealistic to enter
-    # trades with worthless options
-    entries = _remove_min_bid_ask(data, min_bid_ask)
-
-    # to reduce unnecessary computation, filter for options with the desired exit DTE
-    exits = _get(data, "dte", exit_dte)
-    evaluated_options = _evaluate(entries, exits)
-
-    return (
-        evaluated_options.pipe(_remove_invalid_evaluated_options)
+        .assign(entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2)
+        .assign(exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2)
+        .pipe(_remove_invalid_evaluated_options)
         .pipe(_calculate_profit_loss)
     )[evaluated_cols]
 
 
-def _process_entries_and_exits(data, **kwargs):
+def _evaluate_all_options(data, **kwargs):
     return (
         data.pipe(_assign_dte)
         .pipe(_trim_data, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
