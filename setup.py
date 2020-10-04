@@ -16,8 +16,5 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     packages=["optopsy"],
-    install_requires=[
-        'pandas',
-        'numpy'
-    ]
+    install_requires=["pandas", "numpy"],
 )
