@@ -49,6 +49,7 @@ def run_strategy():
 
 if __name__ == "__main__":
     import timeit
+
     start = timeit.default_timer()
 
     # All the program statements

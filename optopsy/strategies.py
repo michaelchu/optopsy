@@ -1,5 +1,5 @@
 from .core import (
-    _process_entries_and_exits,
+    _evaluate_all_options,
     _calls,
     _puts,
     _group_by_intervals,
@@ -16,16 +16,16 @@ default_kwargs = {
     "otm_pct_interval": 0.05,
     "max_otm_pct": 1,
     "min_bid_ask": 0.05,
-    "side": None,
+    "side": "long",
     "drop_nan": True,
     "raw": False,
     "on": None,
 }
 
 
-def _process_strategy(data, internal_cols, external_cols, strategy_func, params):
+def _process_strategy(data, internal_cols, external_cols, _strategy_func, params):
     return (
-        _process_entries_and_exits(
+        _evaluate_all_options(
             data,
             dte_interval=params["dte_interval"],
             max_entry_dte=params["max_entry_dte"],
@@ -34,15 +34,18 @@ def _process_strategy(data, internal_cols, external_cols, strategy_func, params)
             max_otm_pct=params["max_otm_pct"],
             min_bid_ask=params["min_bid_ask"],
         )
-        .pipe(strategy_func, params["on"], internal_cols)
-        .pipe(_format_output, params, external_cols)
+        .pipe(_strategy_func, params["on"])
+        .pipe(_calculate_profit_loss_pct)
+        .pipe(_format_output, params, internal_cols, external_cols)
     )
 
 
-def _format_output(data, params, external_cols):
+def _format_output(data, params, internal_cols, external_cols):
+    if params["raw"]:
+        return data[internal_cols]
+
     return (
-        data.pipe(_calculate_profit_loss_pct)
-        .pipe(_group_by_intervals, external_cols, params["drop_nan"])
+        data.pipe(_group_by_intervals, external_cols, params["drop_nan"])
         .reset_index()
         .pipe(
             _select_final_output_column,
@@ -52,7 +55,7 @@ def _format_output(data, params, external_cols):
     )
 
 
-def _straddles(data, on, internal_cols):
+def _straddles(data, on):
     calls = _calls(data)
     puts = _puts(data)
 
@@ -63,13 +66,15 @@ def _straddles(data, on, internal_cols):
             suffixes=("_leg1", "_leg2"),
         )
         .assign(long_profit=lambda r: (r["long_profit_leg1"] + r["long_profit_leg2"]))
-        .assign(short_profit=lambda r: (r["short_profit_leg1"] + r["short_profit_leg2"]))
+        .assign(
+            short_profit=lambda r: (r["short_profit_leg1"] + r["short_profit_leg2"])
+        )
         .assign(entry=lambda r: (r["entry_leg1"] + r["entry_leg2"]))
         .assign(exit=lambda r: (r["exit_leg1"] + r["exit_leg2"]))
-    )[internal_cols]
+    )
 
 
-def _strangles(data, on, internal_cols):
+def _strangles(data, on):
     calls = _calls(data)
     puts = _puts(data)
 
@@ -85,10 +90,12 @@ def _strangles(data, on, internal_cols):
         )
         .pipe(_apply_strangle_rules)
         .assign(long_profit=lambda r: (r["long_profit_leg1"] + r["long_profit_leg2"]))
-        .assign(short_profit=lambda r: (r["short_profit_leg1"] + r["short_profit_leg2"]))
+        .assign(
+            short_profit=lambda r: (r["short_profit_leg1"] + r["short_profit_leg2"])
+        )
         .assign(entry=lambda r: (r["entry_leg1"] + r["entry_leg2"]))
         .assign(exit=lambda r: (r["exit_leg1"] + r["exit_leg2"]))
-    )[internal_cols]
+    )
 
 
 def singles_calls(data, **kwargs):
@@ -97,7 +104,7 @@ def singles_calls(data, **kwargs):
         _process_strategy,
         single_strike_internal_cols,
         single_strike_external_cols,
-        lambda d, o, c: d,
+        lambda d, o: d,
         params,
     )
 
@@ -108,7 +115,7 @@ def singles_puts(data, **kwargs):
         _process_strategy,
         single_strike_internal_cols,
         single_strike_external_cols,
-        lambda d, o, c: d,
+        lambda d, o: d,
         params,
     )
 
@@ -128,7 +135,7 @@ def straddles(data, **kwargs):
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
-        single_strike_internal_cols,
+        straddle_internal_cols,
         single_strike_external_cols,
         _straddles,
         params,
