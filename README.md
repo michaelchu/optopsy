@@ -19,35 +19,6 @@ Optopsy is a nimble backtesting and statistics library for option strategies, it
 ## Documentation
 Please see the [wiki](https://github.com/michaelchu/optopsy/wiki) for API reference.
 
-## Methodology
-Most backtesting tools for option strategies don't reveal how the options are backtested, since this is open sourced, I
-will try to be as transparent as possible on how the algorithm works. You can decide if it works for your situation. My aim
-for this libary is not to be able to backtest every possible event driven scenarios out there, but to focus on answering the core questions
-laid out in the introduction. There are no fancy features such as being 'event driven', but theoretically, it is possible by injecting
-a list of entry and exit dates created from external sources based on indicators.
- 
-There are two main parts of the library:
-
-* Statistics Module - Focused on generating statistics on various options strategies (Independent of chronological events)
-* Backtester Module (Coming Soon) - Replay the generated statistics with chronological order to create an **approximated** backtest.
-
-The algorithm for the statistics module is as follows:
-
-1. Evaluate all option chains provided (filter for desired the entry and exit dates and calculate the profit/loss of each 
-individual option chain)
-2. Group each 'evaluated' option chain into buckets (buckets are assigned to 'Days to Expiration' (grouped by days in intervals of 7, by default), 
-and either 'delta' or 'strike distance percent' from current price (grouped in intervals of 5%, by default). Obviously, the smaller the intervals, the more accurate the results should be
-3. Construct the legs of the option strategy with the previously evaluated amounts and net out the profit/loss
-4. Aggregate all the constructed strategies into their buckets and calculate the average profit loss for each bucket combination
-5. The result will contain the average profit/loss amounts of the strategy (and other statistics such as min/max, distributions) for all the combinations of inputs (strike dist %/ DTE)
-
-Obviously strategy statistics do not take into account real world events in a chronological order. 
-For that, there is the backtestercc module that will replay each backtest ordered by expiration dates with a running balance to simulate what would have happened.
-
-### Notes
-As the algorithm is **heavily** based on bucketing and approximations to improve performance, it is not recommeded to 
-make trade decisions based on the results solely from this library. Please use at your own risk.
-
 ## Usage
 
 ### Use Your Data
