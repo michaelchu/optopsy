@@ -11,15 +11,16 @@ def _assign_dte(data):
     return data.assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
 
 
-def _trim_data(data, col, lower, upper):
-    if lower is not None and upper is not None:
-        return data.loc[(data[col] >= lower) & (data[col] <= upper)]
-    elif lower is None and upper is not None:
-        return data.loc[data[col] <= upper]
-    elif lower is not None and upper is None:
-        return data.loc[data[col] >= lower]
-    else:
-        return data
+def _trim(data, col, lower, upper):
+    return data.loc[(data[col] >= lower) & (data[col] <= upper)]
+
+
+def _ltrim(data, col, lower):
+    return data.loc[data[col] >= lower]
+
+
+def _rtrim(data, col, upper):
+    return data.loc[data[col] <= upper]
 
 
 def _get(data, col, val):
@@ -50,12 +51,9 @@ def _calculate_profit_loss_pct(data):
 
 
 def _select_final_output_column(data, cols, side):
-    if side == "long" or side == "short":
-        root = f"{side}_profit_pct"
-        all_cols = cols + [col for col in data.columns if root in col]
-        return data[all_cols]
-    else:
-        return data
+    root = f"{side}_profit_pct"
+    all_cols = cols + [col for col in data.columns if root in col]
+    return data[all_cols]
 
 
 def _cut_options_by_dte(data, dte_interval, max_entry_dte):
@@ -70,20 +68,20 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
         round(i, 2)
         for i in list(
             np.arange(
-                max_otm_pct_interval * -1,
-                max_otm_pct_interval,
-                otm_pct_interval,
+                max_otm_pct_interval * -1, max_otm_pct_interval, otm_pct_interval,
             )
         )
     ]
-    data["otm_pct_range"] = pd.cut(data["otm_pct"], otm_pct_intervals)
+    data["otm_pct_range"] = pd.cut(data["otm_pct_entry"], otm_pct_intervals)
     return data
 
 
-def _group_by_intervals(data, cols, drop_na):
-    grouped_dataset = data.groupby(cols)[
-        ["long_profit_pct", "short_profit_pct"]
-    ].describe()
+def _group_by_intervals(data, cols, drop_na, side):
+    labels = ["long_profit_pct"] if side == "long" else ["short_profit_pct"]
+
+    # this is a bottleneck, try to optimize
+    grouped_dataset = data.groupby(cols)[labels].describe()
+
     grouped_dataset.columns = [
         "_".join(col).rstrip("_") for col in grouped_dataset.columns.values
     ]
@@ -96,13 +94,19 @@ def _group_by_intervals(data, cols, drop_na):
     return grouped_dataset
 
 
-def _evaluate_options(data, min_bid_ask, exit_dte):
+def _evaluate_options(data, **kwargs):
+
+    # trim option chains with strikes too far out from current price
+    data = data.pipe(_calculate_otm_pct).pipe(
+        _trim, "otm_pct", lower=kwargs["max_otm_pct"] * -1, upper=kwargs["max_otm_pct"],
+    )
+
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
-    entries = _remove_min_bid_ask(data, min_bid_ask)
+    entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
-    exits = _get(data, "dte", exit_dte)
+    exits = _get(data, "dte", kwargs["exit_dte"])
 
     return (
         entries.merge(
@@ -121,15 +125,10 @@ def _evaluate_options(data, min_bid_ask, exit_dte):
 def _evaluate_all_options(data, **kwargs):
     return (
         data.pipe(_assign_dte)
-        .pipe(_trim_data, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
-        .pipe(_evaluate_options, kwargs["min_bid_ask"], kwargs["exit_dte"])
+        .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
+        .pipe(_evaluate_options, **kwargs)
         .pipe(_cut_options_by_dte, kwargs["dte_interval"], kwargs["max_entry_dte"])
-        .pipe(_calculate_otm_pct)
-        .pipe(
-            _cut_options_by_otm,
-            kwargs["otm_pct_interval"],
-            kwargs["max_otm_pct"],
-        )
+        .pipe(_cut_options_by_otm, kwargs["otm_pct_interval"], kwargs["max_otm_pct"],)
     )
 
 
@@ -143,7 +142,5 @@ def _puts(data):
 
 def _calculate_otm_pct(data):
     return data.assign(
-        otm_pct=lambda r: round(
-            (r["strike"] - r["underlying_price_entry"]) / r["strike"], 2
-        )
+        otm_pct=lambda r: round((r["strike"] - r["underlying_price"]) / r["strike"], 2)
     )
