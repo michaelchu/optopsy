@@ -11,10 +11,10 @@ from .definitions import *
 
 default_kwargs = {
     "dte_interval": 7,
-    "max_entry_dte": 180,
+    "max_entry_dte": 90,
     "exit_dte": 0,
     "otm_pct_interval": 0.05,
-    "max_otm_pct": 1,
+    "max_otm_pct": 0.5,
     "min_bid_ask": 0.05,
     "side": "long",
     "drop_nan": True,
@@ -45,7 +45,9 @@ def _format_output(data, params, internal_cols, external_cols):
         return data[internal_cols]
 
     return (
-        data.pipe(_group_by_intervals, external_cols, params["drop_nan"])
+        data.pipe(
+            _group_by_intervals, external_cols, params["drop_nan"], params["side"]
+        )
         .reset_index()
         .pipe(
             _select_final_output_column,

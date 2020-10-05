@@ -1,4 +1,5 @@
 import pandas as pd
+from .core import _trim, _ltrim, _rtrim
 
 default_kwargs = {
     "start_date": None,
@@ -16,13 +17,11 @@ default_kwargs = {
 
 def _trim_dates(data, start_date, end_date):
     if start_date is not None and end_date is not None:
-        return data.loc[
-            (data["expiration"] >= start_date) & (data["expiration"] <= end_date)
-        ]
+        return _trim(data, "expiration", start_date, end_date)
     elif start_date is None and end_date is not None:
-        return data.loc[data["expiration"] <= end_date]
+        return _rtrim(data, "expiration", end_date)
     elif start_date is not None and end_date is None:
-        return data.loc[data["expiration"] >= start_date]
+        return _ltrim(data, "expiration", start_date)
     else:
         return data
 

@@ -5,6 +5,7 @@ evaluated_cols = [
     "expiration",
     "dte_entry",
     "strike",
+    "otm_pct_entry",
     "underlying_price_entry",
     "underlying_price_exit",
     "entry",
