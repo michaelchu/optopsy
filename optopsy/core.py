@@ -51,12 +51,9 @@ def _calculate_profit_loss_pct(data):
 
 
 def _select_final_output_column(data, cols, side):
-    if side == "long" or side == "short":
-        root = f"{side}_profit_pct"
-        all_cols = cols + [col for col in data.columns if root in col]
-        return data[all_cols]
-    else:
-        return data
+    root = f"{side}_profit_pct"
+    all_cols = cols + [col for col in data.columns if root in col]
+    return data[all_cols]
 
 
 def _cut_options_by_dte(data, dte_interval, max_entry_dte):
@@ -71,9 +68,7 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
         round(i, 2)
         for i in list(
             np.arange(
-                max_otm_pct_interval * -1,
-                max_otm_pct_interval,
-                otm_pct_interval,
+                max_otm_pct_interval * -1, max_otm_pct_interval, otm_pct_interval,
             )
         )
     ]
@@ -82,15 +77,10 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
 
 
 def _group_by_intervals(data, cols, drop_na, side):
+    labels = ["long_profit_pct"] if side == "long" else ["short_profit_pct"]
 
-    if side == "long":
-        side = ["long_profit_pct"]
-    elif side == "short":
-        side = ["short_profit_pct"]
-    else:
-        side = ["long_profit_pct", "short_profit_pct"]
-
-    grouped_dataset = data.groupby(cols)[side].describe()
+    # this is a bottleneck, try to optimize
+    grouped_dataset = data.groupby(cols)[labels].describe()
 
     grouped_dataset.columns = [
         "_".join(col).rstrip("_") for col in grouped_dataset.columns.values
@@ -108,10 +98,7 @@ def _evaluate_options(data, **kwargs):
 
     # trim option chains with strikes too far out from current price
     data = data.pipe(_calculate_otm_pct).pipe(
-        _trim,
-        "otm_pct",
-        lower=kwargs["max_otm_pct"] * -1,
-        upper=kwargs["max_otm_pct"],
+        _trim, "otm_pct", lower=kwargs["max_otm_pct"] * -1, upper=kwargs["max_otm_pct"],
     )
 
     # remove option chains that are worthless, it's unrealistic to enter
@@ -141,11 +128,7 @@ def _evaluate_all_options(data, **kwargs):
         .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
         .pipe(_evaluate_options, **kwargs)
         .pipe(_cut_options_by_dte, kwargs["dte_interval"], kwargs["max_entry_dte"])
-        .pipe(
-            _cut_options_by_otm,
-            kwargs["otm_pct_interval"],
-            kwargs["max_otm_pct"],
-        )
+        .pipe(_cut_options_by_otm, kwargs["otm_pct_interval"], kwargs["max_otm_pct"],)
     )
 
 

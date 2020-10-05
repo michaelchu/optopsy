@@ -1,5 +1,6 @@
 import pandas as pd
 from .core import _trim, _ltrim, _rtrim
+from .checks import _check_data_types
 
 default_kwargs = {
     "start_date": None,
