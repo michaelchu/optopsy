@@ -7,13 +7,18 @@
 # Optopsy
 
 Optopsy is a nimble backtesting and statistics library for option strategies, it is designed to answer questions like
-"How do vertical spreads perform on the SPX?" or "Which strikes and/or expiration dates should I choose to make the most potential profit?"
+"How do straddles perform on the SPX?" or "Which strikes and/or expiration dates should I choose to make the most potential profit?"
+
+Use cases for Optopsy:
+* Generate option strategies from raw option chain datasets for your own analysis
+* Discover performance statistics for various options strategies on a given stock
+* Run backtests on option strategies based on entry conditions generated from Optopsy (Planned)
 
 ## Supported Option Strategies
 * Calls/Puts
 * Straddles/Strangles
-* Butterflies (WIP)
-* Iron Condors (WIP)
+* Butterflies (Planned)
+* Iron Condors (Planned)
 * Many more to follow
 
 ## Documentation
