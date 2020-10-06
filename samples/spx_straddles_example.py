@@ -48,4 +48,14 @@ def run_strategy():
 
 
 if __name__ == "__main__":
+    import timeit
+
+    start = timeit.default_timer()
+
+    # All the program statements
     run_strategy()
+
+    stop = timeit.default_timer()
+    execution_time = round(stop - start, 0)
+
+    print("Program Executed in " + str(execution_time))  # It returns time in seconds

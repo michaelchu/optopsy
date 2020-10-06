@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="optopsy",
-    description="Python Backtesting library for options trading strategies",
+    description="A nimble options backtesting library for Python",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     version="2.0.0",

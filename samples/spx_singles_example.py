@@ -34,9 +34,7 @@ def run_strategy():
 
     # All public optopsy functions return a regular Pandas DataFrame so you can use
     # regular pandas functions as you see fit to analyse the dataset
-    long_single_calls = op.singles_calls(
-        spx_data, strike_dist_pct_interval=0.05, side="long"
-    ).round(2)
+    long_single_calls = op.singles_calls(spx_data, side="long").round(2)
 
     print("Statistics for SPX long calls from 2015-10-01 to 2015-10-30 \n")
     print(
@@ -50,4 +48,14 @@ def run_strategy():
 
 
 if __name__ == "__main__":
+    import timeit
+
+    start = timeit.default_timer()
+
+    # All the program statements
     run_strategy()
+
+    stop = timeit.default_timer()
+    execution_time = round(stop - start, 0)
+
+    print("Program Executed in " + str(execution_time))  # It returns time in seconds
