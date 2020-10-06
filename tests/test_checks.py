@@ -58,6 +58,10 @@ def test_check_data_types():
     invalid_cols = {"some_col": ["some val"]}
     invalid_types = {"underlying_symbol": [123]}
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected column"):
         op._check_data_types(pd.DataFrame(invalid_cols))
+
+    with pytest.raises(
+        ValueError, match="underlying_symbol does not match expected types"
+    ):
         op._check_data_types(pd.DataFrame(invalid_types))
