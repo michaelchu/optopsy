@@ -9,12 +9,11 @@
 Optopsy is a nimble backtesting and statistics library for option strategies, it is designed to answer questions like
 "How do vertical spreads perform on the SPX?" or "Which strikes and/or expiration dates should I choose to make the most potential profit?"
 
-**This library is currently being rewritten and is in beta state, use at your own risk**
-
 ## Supported Option Strategies
 * Calls/Puts
 * Straddles/Strangles
-* Butterflies/Iron Condors (WIP)
+* Butterflies (WIP)
+* Iron Condors (WIP)
 * Many more to follow
 
 ## Documentation
@@ -30,7 +29,7 @@ You will need Python 3.6 or newer and Pandas 0.23.1 or newer and Numpy 1.14.3 or
 
 ### Installation
 ```
-pip install optopsy==2.0.0b2
+pip install optopsy==2.0.0
 ```
 
 ### Example
