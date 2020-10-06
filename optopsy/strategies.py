@@ -6,19 +6,8 @@ from .core import (
     _calculate_profit_loss_pct,
     _select_final_output_column,
 )
-
-from .checks import (
-    _check_positive_integer,
-    _check_positive_float,
-    _check_side,
-    _check_bool_type,
-    _check_list_type,
-    _check_positive_integer_inclusive,
-    _check_data_types,
-)
-
+from .checks import _run_checks
 from .definitions import *
-
 
 default_kwargs = {
     "dte_interval": 7,
@@ -32,25 +21,6 @@ default_kwargs = {
     "raw": False,
     "on": [],
 }
-
-check_funcs = {
-    "dte_interval": _check_positive_integer,
-    "max_entry_dte": _check_positive_integer,
-    "exit_dte": _check_positive_integer_inclusive,
-    "otm_pct_interval": _check_positive_float,
-    "max_otm_pct": _check_positive_float,
-    "min_bid_ask": _check_positive_float,
-    "side": _check_side,
-    "drop_nan": _check_bool_type,
-    "raw": _check_bool_type,
-    "on": _check_list_type,
-}
-
-
-def _run_checks(params, data):
-    for k, v in params.items():
-        check_funcs[k](k, v)
-    _check_data_types(data)
 
 
 def _process_strategy(data, internal_cols, external_cols, _strategy_func, params):
@@ -80,7 +50,11 @@ def _format_output(data, params, internal_cols, external_cols):
             _group_by_intervals, external_cols, params["drop_nan"], params["side"]
         )
         .reset_index()
-        .pipe(_select_final_output_column, external_cols, params["side"],)
+        .pipe(
+            _select_final_output_column,
+            external_cols,
+            params["side"],
+        )
     )
 
 
@@ -89,7 +63,11 @@ def _straddles(data, on):
     puts = _puts(data)
 
     return (
-        puts.merge(right=calls, on=on, suffixes=("_leg1", "_leg2"),)
+        puts.merge(
+            right=calls,
+            on=on,
+            suffixes=("_leg1", "_leg2"),
+        )
         .assign(long_profit=lambda r: (r["long_profit_leg1"] + r["long_profit_leg2"]))
         .assign(
             short_profit=lambda r: (r["short_profit_leg1"] + r["short_profit_leg2"])
@@ -108,7 +86,11 @@ def _strangles(data, on):
         return d.loc[d["strike_leg2"] > d["strike_leg1"]]
 
     return (
-        puts.merge(right=calls, on=on, suffixes=("_leg1", "_leg2"),)
+        puts.merge(
+            right=calls,
+            on=on,
+            suffixes=("_leg1", "_leg2"),
+        )
         .pipe(_apply_strangle_rules)
         .assign(long_profit=lambda r: (r["long_profit_leg1"] + r["long_profit_leg2"]))
         .assign(
@@ -155,7 +137,11 @@ def straddles(data, **kwargs):
     ]
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
-        data, straddle_internal_cols, single_strike_external_cols, _straddles, params,
+        data,
+        straddle_internal_cols,
+        single_strike_external_cols,
+        _straddles,
+        params,
     )
 
 
