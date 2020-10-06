@@ -73,7 +73,7 @@ to have Optopsy generate all combinations of a simple long call strategy for the
 also use Panda's `round()` function to return data within two decimal places.
 
 ```
-long_single_calls = op.singles_calls(spx_data, strike_dist_pct_interval=0.05, side="long").round(2)
+long_single_calls = op.singles_calls(spx_data, side="long").round(2)
 ```
 
 The function will returned a Pandas DataFrame containing the statistics of running long calls in all *valid* combinations on the SPX (**The example below is truncated**):
