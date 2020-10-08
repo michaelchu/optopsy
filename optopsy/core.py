@@ -44,18 +44,6 @@ def _calculate_profit_loss(data):
     )
 
 
-def _calculate_profit_loss_pct(data):
-    return data.assign(
-        long_profit_pct=lambda r: round((r["exit"] - r["entry"]) / r["entry"], 2)
-    ).assign(short_profit_pct=lambda r: round((r["entry"] - r["exit"]) / r["entry"], 2))
-
-
-def _select_final_output_column(data, cols, side):
-    root = f"{side}_profit_pct"
-    all_cols = cols + [col for col in data.columns if root in col]
-    return data[all_cols]
-
-
 def _cut_options_by_dte(data, dte_interval, max_entry_dte):
     dte_intervals = list(range(0, max_entry_dte, dte_interval))
     data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
@@ -78,15 +66,9 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
     return data
 
 
-def _group_by_intervals(data, cols, drop_na, side):
-    labels = ["long_profit_pct"] if side == "long" else ["short_profit_pct"]
-
+def _group_by_intervals(data, cols, drop_na):
     # this is a bottleneck, try to optimize
-    grouped_dataset = data.groupby(cols)[labels].describe()
-
-    grouped_dataset.columns = [
-        "_".join(col).rstrip("_") for col in grouped_dataset.columns.values
-    ]
+    grouped_dataset = data.groupby(cols)["profit_pct"].describe()
 
     # if any non-count columns return NaN remove the row
     if drop_na:
