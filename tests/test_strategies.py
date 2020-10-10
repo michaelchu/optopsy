@@ -6,26 +6,15 @@ from optopsy.strategies import *
 from optopsy.definitions import *
 
 
-describe_long_cols = [
-    "long_profit_pct_count",
-    "long_profit_pct_mean",
-    "long_profit_pct_std",
-    "long_profit_pct_min",
-    "long_profit_pct_25%",
-    "long_profit_pct_50%",
-    "long_profit_pct_75%",
-    "long_profit_pct_max",
-]
-
-describe_short_cols = [
-    "short_profit_pct_count",
-    "short_profit_pct_mean",
-    "short_profit_pct_std",
-    "short_profit_pct_min",
-    "short_profit_pct_25%",
-    "short_profit_pct_50%",
-    "short_profit_pct_75%",
-    "short_profit_pct_max",
+describe_cols = [
+    "count",
+    "mean",
+    "std",
+    "min",
+    "25%",
+    "50%",
+    "75%",
+    "max",
 ]
 
 
@@ -44,115 +33,113 @@ def data():
         "ask",
     ]
     d = [
-        ["SPX", 1000, "call", exp_date, quote_dates[0], 900, 120, 121],
-        ["SPX", 1000, "call", exp_date, quote_dates[0], 1000, 100, 101],
-        ["SPX", 1000, "put", exp_date, quote_dates[0], 900, 80, 81],
-        ["SPX", 1000, "put", exp_date, quote_dates[0], 1000, 100, 101],
-        ["SPX", 1060, "call", exp_date, quote_dates[1], 900, 150, 151],
-        ["SPX", 1060, "call", exp_date, quote_dates[1], 1000, 130, 131],
-        ["SPX", 1060, "put", exp_date, quote_dates[1], 900, 50, 51],
-        ["SPX", 1060, "put", exp_date, quote_dates[1], 1000, 70, 71],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
 
 def test_single_calls_raw(data):
-    results = singles_calls(data, raw=True, side="long")
+    results = long_calls(data, raw=True)
+    assert len(results) == 2
     assert list(results.columns) == single_strike_internal_cols
-    assert results.iloc[0]["option_type"] == "call"
+    assert "call" in list(results["option_type"].values)
+    assert round(results.iloc[0]["profit_pct"], 2) == 0.01
+    assert round(results.iloc[1]["profit_pct"], 2) == -0.17
 
 
 def test_single_puts_raw(data):
-    results = singles_puts(data, raw=True, side="long")
+    results = long_puts(data, raw=True)
+    assert len(results) == 2
     assert list(results.columns) == single_strike_internal_cols
-    assert results.iloc[0]["option_type"] == "put"
+    assert "put" in list(results["option_type"].values)
+    assert round(results.iloc[0]["profit_pct"], 2) == -1
+    assert round(results.iloc[1]["profit_pct"], 2) == -1
 
 
 def test_singles_long_calls(data):
-    results = singles_calls(data, side="long")
-    assert len(results) == 2
-    assert results.iloc[0]["long_profit_pct_count"] == 1.0
-    assert results.iloc[1]["long_profit_pct_count"] == 1.0
-    assert results.iloc[0]["long_profit_pct_mean"] == 0.25
-    assert results.iloc[1]["long_profit_pct_mean"] == 0.30
-    assert list(results.columns) == single_strike_external_cols + describe_long_cols
+    results = long_calls(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == -0.08
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_singles_long_puts(data):
-    results = singles_puts(data, side="long")
-    assert len(results) == 2
-    assert results.iloc[0]["long_profit_pct_count"] == 1.0
-    assert results.iloc[1]["long_profit_pct_count"] == 1.0
-    assert results.iloc[0]["long_profit_pct_mean"] == -0.37
-    assert results.iloc[1]["long_profit_pct_mean"] == -0.30
-    assert list(results.columns) == single_strike_external_cols + describe_long_cols
+    results = long_puts(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == -1.0
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_singles_short_calls(data):
-    results = singles_calls(data, side="short")
-    assert len(results) == 2
-    assert results.iloc[0]["short_profit_pct_count"] == 1.0
-    assert results.iloc[1]["short_profit_pct_count"] == 1.0
-    assert results.iloc[0]["short_profit_pct_mean"] == -0.25
-    assert results.iloc[1]["short_profit_pct_mean"] == -0.30
-    assert list(results.columns) == single_strike_external_cols + describe_short_cols
+    results = short_calls(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == 0.08
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_singles_short_puts(data):
-    results = singles_puts(data, side="short")
-    assert len(results) == 2
-    assert results.iloc[0]["short_profit_pct_count"] == 1.0
-    assert results.iloc[1]["short_profit_pct_count"] == 1.0
-    assert results.iloc[0]["short_profit_pct_mean"] == 0.37
-    assert results.iloc[1]["short_profit_pct_mean"] == 0.30
-    assert list(results.columns) == single_strike_external_cols + describe_short_cols
+    results = short_puts(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == 1.0
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_straddles_raw(data):
-    results = straddles(data, raw=True, side="long")
+    results = long_straddles(data, raw=True)
     assert list(results.columns) == straddle_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
+    assert round(results.iloc[0]["profit_pct"], 2) == -0.43
+    assert round(results.iloc[1]["profit_pct"], 2) == -0.62
 
 
 def test_long_straddles(data):
-    results = straddles(data, side="long")
-    assert len(results) == 2
-    assert results.iloc[0]["long_profit_pct_count"] == 1.0
-    assert results.iloc[1]["long_profit_pct_count"] == 1.0
-    assert results.iloc[0]["long_profit_pct_mean"] == 0.0
-    assert results.iloc[1]["long_profit_pct_mean"] == 0.0
-    assert list(results.columns) == single_strike_external_cols + describe_long_cols
+    results = long_straddles(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == -0.52
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_short_straddles(data):
-    results = straddles(data, side="short")
-    assert len(results) == 2
-    assert results.iloc[0]["short_profit_pct_count"] == 1.0
-    assert results.iloc[1]["short_profit_pct_count"] == 1.0
-    assert results.iloc[0]["short_profit_pct_mean"] == 0.0
-    assert results.iloc[1]["short_profit_pct_mean"] == 0.0
-    assert list(results.columns) == single_strike_external_cols + describe_short_cols
+    results = short_straddles(data)
+    assert len(results) == 1
+    assert results.iloc[0]["count"] == 2.0
+    assert round(results.iloc[0]["mean"], 2) == 0.52
+    assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_strangles_raw(data):
-    results = strangles(data, raw=True, side="long")
+    results = long_strangles(data, raw=True)
+    assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
+    assert round(results.iloc[0]["profit_pct"], 2) == -0.57
 
 
 def test_long_strangles(data):
-    results = strangles(data, side="long")
+    results = long_strangles(data)
     assert len(results) == 1
-    assert results.iloc[0]["long_profit_pct_count"] == 1.0
-    assert results.iloc[0]["long_profit_pct_mean"] == 0.0
-    assert list(results.columns) == double_strike_external_cols + describe_long_cols
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == -0.57
+    assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_short_strangles(data):
-    results = strangles(data, side="short")
+    results = short_strangles(data)
     assert len(results) == 1
-    assert results.iloc[0]["short_profit_pct_count"] == 1.0
-    assert results.iloc[0]["short_profit_pct_mean"] == 0.0
-    assert list(results.columns) == double_strike_external_cols + describe_short_cols
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == 0.57
+    assert list(results.columns) == double_strike_external_cols + describe_cols

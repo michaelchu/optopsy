@@ -24,10 +24,7 @@ single_strike_internal_cols = [
     "strike",
     "entry",
     "exit",
-    "long_profit",
-    "short_profit",
-    "long_profit_pct",
-    "short_profit_pct",
+    "profit_pct",
 ]
 
 
@@ -39,30 +36,24 @@ straddle_internal_cols = [
     "option_type_leg1",
     "option_type_leg2",
     "strike",
-    "entry",
-    "exit",
-    "long_profit",
-    "short_profit",
-    "long_profit_pct",
-    "short_profit_pct",
+    "total_entry",
+    "total_exit",
+    "profit_pct",
 ]
 
 
 double_strike_internal_cols = [
     "underlying_symbol",
-    "underlying_price_entry",
+    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
     "option_type_leg1",
     "strike_leg1",
     "option_type_leg2",
     "strike_leg2",
-    "entry",
-    "exit",
-    "long_profit",
-    "short_profit",
-    "long_profit_pct",
-    "short_profit_pct",
+    "total_entry",
+    "total_exit",
+    "profit_pct",
 ]
 
 triple_strike_internal_cols = [

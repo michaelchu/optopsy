@@ -12,7 +12,8 @@ expected_types = {
 
 def _run_checks(params, data):
     for k, v in params.items():
-        param_checks[k](k, v)
+        if k in param_checks:
+            param_checks[k](k, v)
     _check_data_types(data)
 
 
@@ -67,5 +68,4 @@ param_checks = {
     "side": _check_side,
     "drop_nan": _check_bool_type,
     "raw": _check_bool_type,
-    "on": _check_list_type,
 }
