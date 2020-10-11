@@ -82,7 +82,7 @@ also use Panda's `round()` function to return data within two decimal places.
 long_calls_spx = op.long_calls(spx_data).round(2)
 ```
 
-The function will returned a Pandas DataFrame containing the statistics of running long calls in all *valid* combinations on the SPX (**The example below is truncated**):
+The function will returned a Pandas DataFrame containing the statistics of running long calls in all *valid* combinations on the SPX:
 
 |    | dte_range   | otm_pct_range   |   count |   mean |   std |   min |   25% |   50% |   75% |   max |
 |----|-------------|-----------------|---------|--------|-------|-------|-------|-------|-------|-------|
