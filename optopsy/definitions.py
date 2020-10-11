@@ -10,8 +10,6 @@ evaluated_cols = [
     "underlying_price_exit",
     "entry",
     "exit",
-    "long_profit",
-    "short_profit",
 ]
 
 # columns of dataframe after generating strategy
@@ -24,7 +22,7 @@ single_strike_internal_cols = [
     "strike",
     "entry",
     "exit",
-    "profit_pct",
+    "pct_change",
 ]
 
 
@@ -36,9 +34,9 @@ straddle_internal_cols = [
     "option_type_leg1",
     "option_type_leg2",
     "strike",
-    "total_entry",
-    "total_exit",
-    "profit_pct",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
 ]
 
 
@@ -51,9 +49,9 @@ double_strike_internal_cols = [
     "strike_leg1",
     "option_type_leg2",
     "strike_leg2",
-    "total_entry",
-    "total_exit",
-    "profit_pct",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
 ]
 
 triple_strike_internal_cols = [
@@ -71,8 +69,8 @@ triple_strike_internal_cols = [
     "exit",
     "long_profit",
     "short_profit",
-    "long_profit_pct",
-    "short_profit_pct",
+    "long_pct_change",
+    "short_pct_change",
 ]
 
 quadruple_strike_internal_cols = [
@@ -93,8 +91,8 @@ quadruple_strike_internal_cols = [
     "exit",
     "long_profit",
     "short_profit",
-    "long_profit_pct",
-    "short_profit_pct",
+    "long_pct_change",
+    "short_pct_change",
 ]
 
 # base columns of dataframe after aggregation(minus the calculated columns)

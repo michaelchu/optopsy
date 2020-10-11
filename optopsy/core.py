@@ -39,12 +39,6 @@ def _remove_invalid_evaluated_options(data):
     ]
 
 
-def _calculate_profit_loss(data):
-    return data.assign(long_profit=lambda r: r["exit"] - r["entry"]).assign(
-        short_profit=lambda r: r["entry"] - r["exit"]
-    )
-
-
 def _cut_options_by_dte(data, dte_interval, max_entry_dte):
     dte_intervals = list(range(0, max_entry_dte, dte_interval))
     data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
@@ -69,7 +63,7 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
 
 def _group_by_intervals(data, cols, drop_na):
     # this is a bottleneck, try to optimize
-    grouped_dataset = data.groupby(cols)["profit_pct"].describe()
+    grouped_dataset = data.groupby(cols)["pct_change"].describe()
 
     # if any non-count columns return NaN remove the row
     if drop_na:
@@ -106,7 +100,6 @@ def _evaluate_options(data, **kwargs):
         .assign(entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2)
         .assign(exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2)
         .pipe(_remove_invalid_evaluated_options)
-        .pipe(_calculate_profit_loss)
     )[evaluated_cols]
 
 
@@ -138,36 +131,47 @@ def _calculate_otm_pct(data):
     )
 
 
+def _apply_ratios(data, leg_def):
+    for idx in range(1, len(leg_def) + 1):
+        entry_col = f"entry_leg{idx}"
+        exit_col = f"exit_leg{idx}"
+        entry_kwargs = {entry_col: lambda r: r[entry_col] * leg_def[idx - 1][0].value}
+        exit_kwargs = {exit_col: lambda r: r[exit_col] * leg_def[idx - 1][0].value}
+        data = data.assign(**entry_kwargs).assign(**exit_kwargs)
+
+    return data
+
+
 def _assign_profit(data, leg_def, suffixes):
+    data = _apply_ratios(data, leg_def)
+
+    # determine all entry and exit columns
     entry_cols = ["entry" + s for s in suffixes]
     exit_cols = ["exit" + s for s in suffixes]
 
-    data["total_entry"] = data.loc[:, entry_cols].sum(axis=1)
-    data["total_exit"] = data.loc[:, exit_cols].sum(axis=1)
+    # calculate the total entry costs and exit proceeds
+    data["total_entry_cost"] = data.loc[:, entry_cols].sum(axis=1)
+    data["total_exit_proceeds"] = data.loc[:, exit_cols].sum(axis=1)
 
-    # apply leg ratio to entry/exit cols by leg
-    profit_cols = [
-        f"{leg_def[idx][0]}_profit_leg{idx+1}" for idx in range(0, len(leg_def))
-    ]
-    data["total_profit"] = data.loc[:, profit_cols].sum(axis=1)
-
-    # profit_pct = total_profit / total_entry
-    data["profit_pct"] = data["total_profit"] / data["total_entry"]
+    data["pct_change"] = (
+        data["total_exit_proceeds"] - data["total_entry_cost"]
+    ) / data["total_entry_cost"].abs()
 
     return data
 
 
 def _strategy_engine(data, leg_def, join_on=None, rules=None):
     if len(leg_def) == 1:
-        data["profit_pct"] = data[f"{leg_def[0][0]}_profit"] / data["entry"]
+        data["pct_change"] = (data["exit"] - data["entry"]) / data["entry"].abs()
         return leg_def[0][1](data)
 
-    def _rule_func(d, r):
-        return d if r is None else r(d)
+    def _rule_func(d, r, ld):
+        return d if r is None else r(d, ld)
 
     partials = [leg[1](data) for leg in leg_def]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
+    # noinspection PyTypeChecker
     return (
         reduce(
             lambda left, right: pd.merge(
@@ -175,8 +179,8 @@ def _strategy_engine(data, leg_def, join_on=None, rules=None):
             ),
             partials,
         )
-            .pipe(_rule_func, rules)
-            .pipe(_assign_profit, leg_def, suffixes)
+        .pipe(_rule_func, rules, leg_def)
+        .pipe(_assign_profit, leg_def, suffixes)
     )
 
 
@@ -192,13 +196,13 @@ def _process_strategy(data, **context):
             max_otm_pct=context["params"]["max_otm_pct"],
             min_bid_ask=context["params"]["min_bid_ask"],
         )
-            .pipe(
+        .pipe(
             _strategy_engine,
             context["leg_def"],
             context.get("join_on"),
             context.get("rules"),
         )
-            .pipe(
+        .pipe(
             _format_output,
             context["params"],
             context["internal_cols"],
