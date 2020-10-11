@@ -34,7 +34,7 @@ def run_strategy():
 
     # All public optopsy functions return a regular Pandas DataFrame so you can use
     # regular pandas functions as you see fit to analyse the dataset
-    strangles = op.strangles(spx_data, side="long").round(2)
+    strangles = op.long_strangles(spx_data).round(2)
 
     print("Statistics for SPX strangles from 2015-10-01 to 2015-10-30 \n")
     print(
