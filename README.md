@@ -11,7 +11,7 @@ Optopsy is a nimble backtesting and statistics library for option strategies, it
 
 Use cases for Optopsy:
 * Generate option strategies from raw option chain datasets for your own analysis
-* Discover performance statistics for various options strategies on a given stock
+* Discover performance statistics on **percentage change** for various options strategies on a given stock
 * Run backtests on option strategies based on entry conditions generated from Optopsy (Planned)
 
 ## Supported Option Strategies
@@ -76,13 +76,13 @@ There are other parameters that can help with loading the csv data, consult the 
 Optopsy is a small simple library that offloads the heavy work of backtesting option strategies, the API is designed to be simple
 and easy to implement into your regular Panda's data analysis workflow. As such, we just need to call the `long_calls()` function
 to have Optopsy generate all combinations of a simple long call strategy for the specified time period and return a DataFrame. Here we
-also use Panda's `round()` function to return data within two decimal places.
+also use Panda's `round()` function afterwards to return statistics within two decimal places.
 
 ```
-long_calls_spx = op.long_calls(spx_data).round(2)
+long_calls_spx_pct_chgs = op.long_calls(spx_data).round(2)
 ```
 
-The function will returned a Pandas DataFrame containing the statistics of running long calls in all *valid* combinations on the SPX:
+The function will returned a Pandas DataFrame containing the statistics on the **percentange changes** of running long calls in all *valid* combinations on the SPX:
 
 |    | dte_range   | otm_pct_range   |   count |   mean |   std |   min |   25% |   50% |   75% |   max |
 |----|-------------|-----------------|---------|--------|-------|-------|-------|-------|-------|-------|
