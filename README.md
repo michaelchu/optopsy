@@ -16,8 +16,8 @@ Use cases for Optopsy:
 
 I made this little tool for free, but you can still make a donation if you want to show your support :)
 
-[![Donate with Bitcoin](https://en.cryptobadges.io/badge/micro/3663PdHskB6Bww3W4taaHU6Txot3gBVXZb)](https://en.cryptobadges.io/donate/3663PdHskB6Bww3W4taaHU6Txot3gBVXZb)
-[![Donate with Ethereum](https://en.cryptobadges.io/badge/micro/0xEe66feB7604a5F3CA26c9456D20be8AEe2ad16D6)](https://en.cryptobadges.io/donate/0xEe66feB7604a5F3CA26c9456D20be8AEe2ad16D6)
+[![Donate with Bitcoin](https://en.cryptobadges.io/badge/micro/19hqbAtWCMdZHjgyAA6D4o5arRkM68JqRu)](https://en.cryptobadges.io/donate/19hqbAtWCMdZHjgyAA6D4o5arRkM68JqRu)
+[![Donate with Ethereum](https://en.cryptobadges.io/badge/micro/0x15DC7D81fDA5e0DfDb5ad6048E2BC909D1047E86)](https://en.cryptobadges.io/donate/0x15DC7D81fDA5e0DfDb5ad6048E2BC909D1047E86)
 
 ## Supported Option Strategies
 * Calls/Puts
