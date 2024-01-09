@@ -1,6 +1,6 @@
 [![Test Coverage](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/test_coverage)](https://codeclimate.com/github/michaelchu/optopsy/test_coverage)
 [![Maintainability](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/maintainability)](https://codeclimate.com/github/michaelchu/optopsy/maintainability)
-[![CircleCI](https://circleci.com/gh/michaelchu/optopsy.svg?style=shield)](https://circleci.com/gh/michaelchu/optopsy)
+[![CircleCI](https://dl.circleci.com/status-badge/img/circleci/VMFzA5UwR46LbVfw5Vqu1y/HSmBGost1Je6XPbmLRjRs4/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/circleci/VMFzA5UwR46LbVfw5Vqu1y/HSmBGost1Je6XPbmLRjRs4/tree/main)
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
@@ -18,9 +18,6 @@ Use cases for Optopsy:
 * Calls/Puts
 * Straddles/Strangles
 * Vertical Call/Put Spreads
-* Butterflies (Planned)
-* Iron Condors (Planned)
-* Many more to follow
 
 ## Documentation
 Please see the [wiki](https://github.com/michaelchu/optopsy/wiki) for API reference.
@@ -147,6 +144,3 @@ The function will returned a Pandas DataFrame containing the statistics on the *
 
 There are more customization options for Optopsy's strategy functions, consult the codebase/future documentation to see how it can be used to adjust the results, such as increasing/decreasing
 the intervals and other data to be returned.
-
-The library is currently under development, as such expect changes to the API in the future.
-
