@@ -1,6 +1,5 @@
 [![Test Coverage](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/test_coverage)](https://codeclimate.com/github/michaelchu/optopsy/test_coverage)
 [![Maintainability](https://api.codeclimate.com/v1/badges/37b11e992a6900d30310/maintainability)](https://codeclimate.com/github/michaelchu/optopsy/maintainability)
-[![CircleCI](https://dl.circleci.com/status-badge/img/circleci/VMFzA5UwR46LbVfw5Vqu1y/HSmBGost1Je6XPbmLRjRs4/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/circleci/VMFzA5UwR46LbVfw5Vqu1y/HSmBGost1Je6XPbmLRjRs4/tree/main)
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
