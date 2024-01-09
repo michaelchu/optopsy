@@ -14,10 +14,6 @@ Use cases for Optopsy:
 * Discover performance statistics on **percentage change** for various options strategies on a given stock
 * Run backtests on option strategies based on entry conditions generated from Optopsy (Planned)
 
-I made this little tool for free, but you can still make a donation if you want to show your support :)
-
-[![Donate with Ethereum](https://en.cryptobadges.io/badge/micro/0x2eC669446475bfECfAF2CC6FdF555A4DD662cd38)](https://en.cryptobadges.io/donate/0x2eC669446475bfECfAF2CC6FdF555A4DD662cd38)
-
 ## Supported Option Strategies
 * Calls/Puts
 * Straddles/Strangles
