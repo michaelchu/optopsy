@@ -9,7 +9,6 @@ Optopsy is a nimble backtesting and statistics library for option strategies, it
 Use cases for Optopsy:
 * Generate option strategies from raw option chain datasets for your own analysis
 * Discover performance statistics on **percentage change** for various options strategies on a given stock
-* Run backtests on option strategies based on entry conditions generated from Optopsy (Planned)
 
 ## Supported Option Strategies
 * Calls/Puts
