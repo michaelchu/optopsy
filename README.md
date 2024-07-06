@@ -34,7 +34,11 @@ pip install optopsy==2.0.1
 ### Example
 
 Let's see how long calls perform on the SPX on a small demo dataset on the SPX:
-Download the following data sample from DeltaNeutral: http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv
+
+**Note:** As of July 2024, the link below is broken, however DeltaNeutral still provides free data [here](https://historicaloptiondata.com/free-data/).
+You should still be able to proceed by mapping the columns according to the current format of the sample data as shown below.
+
+~~Download the following data sample from DeltaNeutral: http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv~~
 
 This dataset is for the month of October in 2015, lets load it into Optopsy. First create a small helper function
 that returns a file path to our file. We will store it under a folder named 'data', in the same directory as the working python file.
