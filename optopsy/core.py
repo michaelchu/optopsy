@@ -1,3 +1,4 @@
+from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
 import numpy as np
 from functools import reduce
@@ -8,44 +9,53 @@ pd.set_option("expand_frame_repr", False)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 
-def _assign_dte(data):
+def _assign_dte(data: pd.DataFrame) -> pd.DataFrame:
+    """Assign days to expiration (DTE) to the dataset."""
     return data.assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
 
 
-def _trim(data, col, lower, upper):
+def _trim(data: pd.DataFrame, col: str, lower: float, upper: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is between lower and upper bounds."""
     return data.loc[(data[col] >= lower) & (data[col] <= upper)]
 
 
-def _ltrim(data, col, lower):
+def _ltrim(data: pd.DataFrame, col: str, lower: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is greater than or equal to lower bound."""
     return data.loc[data[col] >= lower]
 
 
-def _rtrim(data, col, upper):
+def _rtrim(data: pd.DataFrame, col: str, upper: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is less than or equal to upper bound."""
     return data.loc[data[col] <= upper]
 
 
-def _get(data, col, val):
+def _get(data: pd.DataFrame, col: str, val: Any) -> pd.DataFrame:
+    """Filter dataframe rows where column equals specified value."""
     return data.loc[data[col] == val]
 
 
-def _remove_min_bid_ask(data, min_bid_ask):
+def _remove_min_bid_ask(data: pd.DataFrame, min_bid_ask: float) -> pd.DataFrame:
+    """Remove options with bid or ask prices below minimum threshold."""
     return data.loc[(data["bid"] > min_bid_ask) & (data["ask"] > min_bid_ask)]
 
 
-def _remove_invalid_evaluated_options(data):
+def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
+    """Remove evaluated options where entry DTE is not greater than exit DTE."""
     return data.loc[
         (data["dte_exit"] <= data["dte_entry"])
         & (data["dte_entry"] != data["dte_exit"])
     ]
 
 
-def _cut_options_by_dte(data, dte_interval, max_entry_dte):
+def _cut_options_by_dte(data: pd.DataFrame, dte_interval: int, max_entry_dte: int) -> pd.DataFrame:
+    """Categorize options into DTE intervals for grouping."""
     dte_intervals = list(range(0, max_entry_dte, dte_interval))
     data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
     return data
 
 
-def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
+def _cut_options_by_otm(data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float) -> pd.DataFrame:
+    """Categorize options into out-of-the-money percentage intervals."""
     # consider using np.linspace in future
     otm_pct_intervals = [
         round(i, 2)
@@ -61,7 +71,8 @@ def _cut_options_by_otm(data, otm_pct_interval, max_otm_pct_interval):
     return data
 
 
-def _group_by_intervals(data, cols, drop_na):
+def _group_by_intervals(data: pd.DataFrame, cols: List[str], drop_na: bool) -> pd.DataFrame:
+    """Group options by intervals and calculate descriptive statistics."""
     # this is a bottleneck, try to optimize
     grouped_dataset = data.groupby(cols)["pct_change"].describe()
 
@@ -73,8 +84,17 @@ def _group_by_intervals(data, cols, drop_na):
     return grouped_dataset
 
 
-def _evaluate_options(data, **kwargs):
-
+def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Evaluate options by filtering, merging entry and exit data, and calculating costs.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Configuration parameters including max_otm_pct, min_bid_ask, exit_dte
+        
+    Returns:
+        DataFrame with evaluated options including entry and exit prices
+    """
     # trim option chains with strikes too far out from current price
     data = data.pipe(_calculate_otm_pct).pipe(
         _trim,
@@ -103,7 +123,17 @@ def _evaluate_options(data, **kwargs):
     )[evaluated_cols]
 
 
-def _evaluate_all_options(data, **kwargs):
+def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Complete pipeline to evaluate all options with DTE and OTM percentage categorization.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Configuration parameters for evaluation and categorization
+        
+    Returns:
+        DataFrame with evaluated and categorized options
+    """
     return (
         data.pipe(_assign_dte)
         .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
@@ -117,21 +147,25 @@ def _evaluate_all_options(data, **kwargs):
     )
 
 
-def _calls(data):
+def _calls(data: pd.DataFrame) -> pd.DataFrame:
+    """Filter dataframe for call options only."""
     return data[data.option_type.str.lower().str.startswith("c")]
 
 
-def _puts(data):
+def _puts(data: pd.DataFrame) -> pd.DataFrame:
+    """Filter dataframe for put options only."""
     return data[data.option_type.str.lower().str.startswith("p")]
 
 
-def _calculate_otm_pct(data):
+def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
+    """Calculate out-of-the-money percentage for each option."""
     return data.assign(
         otm_pct=lambda r: round((r["strike"] - r["underlying_price"]) / r["strike"], 2)
     )
 
 
-def _apply_ratios(data, leg_def):
+def _apply_ratios(data: pd.DataFrame, leg_def: List[tuple]) -> pd.DataFrame:
+    """Apply position ratios (long/short multipliers) to entry and exit prices."""
     for idx in range(1, len(leg_def) + 1):
         entry_col = f"entry_leg{idx}"
         exit_col = f"exit_leg{idx}"
@@ -142,7 +176,8 @@ def _apply_ratios(data, leg_def):
     return data
 
 
-def _assign_profit(data, leg_def, suffixes):
+def _assign_profit(data: pd.DataFrame, leg_def: List[tuple], suffixes: List[str]) -> pd.DataFrame:
+    """Calculate total profit/loss and percentage change for multi-leg strategies."""
     data = _apply_ratios(data, leg_def)
 
     # determine all entry and exit columns
@@ -162,7 +197,24 @@ def _assign_profit(data, leg_def, suffixes):
     return data
 
 
-def _strategy_engine(data, leg_def, join_on=None, rules=None):
+def _strategy_engine(
+    data: pd.DataFrame,
+    leg_def: List[tuple],
+    join_on: Optional[List[str]] = None,
+    rules: Optional[Callable] = None
+) -> pd.DataFrame:
+    """
+    Core strategy execution engine that constructs single or multi-leg option strategies.
+    
+    Args:
+        data: DataFrame containing evaluated option data
+        leg_def: List of tuples defining strategy legs (side, filter_function)
+        join_on: Columns to join on for multi-leg strategies
+        rules: Optional filtering rules to apply after joining legs
+        
+    Returns:
+        DataFrame with constructed strategy and calculated profit/loss
+    """
     if len(leg_def) == 1:
         data["pct_change"] = np.where(
             data["entry"].abs() > 0,
@@ -171,13 +223,12 @@ def _strategy_engine(data, leg_def, join_on=None, rules=None):
         )
         return leg_def[0][1](data)
 
-    def _rule_func(d, r, ld):
+    def _rule_func(d: pd.DataFrame, r: Optional[Callable], ld: List[tuple]) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
     partials = [leg[1](data) for leg in leg_def]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    # noinspection PyTypeChecker
     return (
         reduce(
             lambda left, right: pd.merge(
@@ -190,7 +241,17 @@ def _strategy_engine(data, leg_def, join_on=None, rules=None):
     )
 
 
-def _process_strategy(data, **context):
+def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
+    """
+    Main entry point for processing option strategies.
+    
+    Args:
+        data: DataFrame containing raw option chain data
+        **context: Dictionary containing strategy parameters, leg definitions, and formatting options
+        
+    Returns:
+        DataFrame with processed strategy results
+    """
     _run_checks(context["params"], data)
     return (
         _evaluate_all_options(
@@ -217,7 +278,24 @@ def _process_strategy(data, **context):
     )
 
 
-def _format_output(data, params, internal_cols, external_cols):
+def _format_output(
+    data: pd.DataFrame,
+    params: Dict[str, Any],
+    internal_cols: List[str],
+    external_cols: List[str]
+) -> pd.DataFrame:
+    """
+    Format strategy output as either raw data or grouped statistics.
+    
+    Args:
+        data: DataFrame with strategy results
+        params: Parameters including 'raw' and 'drop_nan' flags
+        internal_cols: Columns to include in raw output
+        external_cols: Columns to group by for statistics output
+        
+    Returns:
+        Formatted DataFrame with either raw data or descriptive statistics
+    """
     if params["raw"]:
         return data[internal_cols].reset_index(drop=True)
 

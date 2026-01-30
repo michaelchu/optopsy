@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Tuple
+import pandas as pd
 from .core import _calls, _puts, _process_strategy
 from .definitions import (
     single_strike_external_cols,
@@ -9,7 +11,7 @@ from .definitions import (
 from .rules import _rule_non_overlapping_strike
 from enum import Enum
 
-default_kwargs = {
+default_kwargs: Dict[str, Any] = {
     "dte_interval": 7,
     "max_entry_dte": 90,
     "exit_dte": 0,
@@ -22,11 +24,13 @@ default_kwargs = {
 
 
 class Side(Enum):
+    """Enum representing long or short position side with multiplier values."""
     long = 1
     short = -1
 
 
-def _singles(data, leg_def, **kwargs):
+def _singles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process single-leg option strategies (calls or puts)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -37,7 +41,8 @@ def _singles(data, leg_def, **kwargs):
     )
 
 
-def _straddles(data, leg_def, **kwargs):
+def _straddles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process straddle strategies (call and put at same strike)."""
     params = {**default_kwargs, **kwargs}
 
     return _process_strategy(
@@ -58,7 +63,8 @@ def _straddles(data, leg_def, **kwargs):
     )
 
 
-def _strangles(data, leg_def, **kwargs):
+def _strangles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process strangle strategies (call and put at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -71,7 +77,8 @@ def _strangles(data, leg_def, **kwargs):
     )
 
 
-def _call_spread(data, leg_def, **kwargs):
+def _call_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process call spread strategies (long and short calls at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -84,7 +91,8 @@ def _call_spread(data, leg_def, **kwargs):
     )
 
 
-def _put_spread(data, leg_def, **kwargs):
+def _put_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process put spread strategies (long and short puts at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -97,49 +105,169 @@ def _put_spread(data, leg_def, **kwargs):
     )
 
 
-def long_calls(data, **kwargs):
+def long_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long call strategy statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters (dte_interval, max_entry_dte, etc.)
+        
+    Returns:
+        DataFrame with long call strategy performance statistics
+    """
     return _singles(data, [(Side.long, _calls)], **kwargs)
 
 
-def long_puts(data, **kwargs):
+def long_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long put strategy statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with long put strategy performance statistics
+    """
     return _singles(data, [(Side.long, _puts)], **kwargs)
 
 
-def short_calls(data, **kwargs):
+def short_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short call strategy statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short call strategy performance statistics
+    """
     return _singles(data, [(Side.short, _calls)], **kwargs)
 
 
-def short_puts(data, **kwargs):
+def short_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short put strategy statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short put strategy performance statistics
+    """
     return _singles(data, [(Side.short, _puts)], **kwargs)
 
 
-def long_straddles(data, **kwargs):
+def long_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long straddle strategy statistics (long call + long put at same strike).
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with long straddle strategy performance statistics
+    """
     return _straddles(data, [(Side.long, _puts), (Side.long, _calls)], **kwargs)
 
 
-def short_straddles(data, **kwargs):
+def short_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short straddle strategy statistics (short call + short put at same strike).
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short straddle strategy performance statistics
+    """
     return _straddles(data, [(Side.short, _puts), (Side.short, _calls)], **kwargs)
 
 
-def long_strangles(data, **kwargs):
+def long_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long strangle strategy statistics (long call + long put at different strikes).
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with long strangle strategy performance statistics
+    """
     return _strangles(data, [(Side.long, _puts), (Side.long, _calls)], **kwargs)
 
 
-def short_strangles(data, **kwargs):
+def short_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short strangle strategy statistics (short call + short put at different strikes).
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short strangle strategy performance statistics
+    """
     return _strangles(data, [(Side.short, _puts), (Side.short, _calls)], **kwargs)
 
 
-def long_call_spread(data, **kwargs):
+def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long call spread (bull call spread) statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with long call spread strategy performance statistics
+    """
     return _call_spread(data, [(Side.long, _calls), (Side.short, _calls)], **kwargs)
 
 
-def short_call_spread(data, **kwargs):
+def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short call spread (bear call spread) statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short call spread strategy performance statistics
+    """
     return _call_spread(data, [(Side.short, _calls), (Side.long, _calls)], **kwargs)
 
 
-def long_put_spread(data, **kwargs):
+def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long put spread (bear put spread) statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with long put spread strategy performance statistics
+    """
     return _put_spread(data, [(Side.short, _puts), (Side.long, _puts)], **kwargs)
 
 
-def short_put_spread(data, **kwargs):
+def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short put spread (bull put spread) statistics.
+    
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+        
+    Returns:
+        DataFrame with short put spread strategy performance statistics
+    """
     return _put_spread(data, [(Side.long, _puts), (Side.short, _puts)], **kwargs)
