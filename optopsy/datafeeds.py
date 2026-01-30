@@ -39,8 +39,17 @@ def _standardize_cols(data, column_mapping):
 
 
 def _infer_date_cols(data):
-    data["expiration"] = pd.to_datetime(data.expiration)
-    data["quote_date"] = pd.to_datetime(data.quote_date)
+    # infer_datetime_format was deprecated in pandas 2.0 and removed in 3.0
+    # For pandas < 2.0, use infer_datetime_format=True for better performance
+    # For pandas >= 2.0, the strict inference is now default behavior
+    pandas_version = tuple(int(x) for x in pd.__version__.split('.')[:2])
+    
+    if pandas_version < (2, 0):
+        data["expiration"] = pd.to_datetime(data.expiration, infer_datetime_format=True)
+        data["quote_date"] = pd.to_datetime(data.quote_date, infer_datetime_format=True)
+    else:
+        data["expiration"] = pd.to_datetime(data.expiration)
+        data["quote_date"] = pd.to_datetime(data.quote_date)
     return data
 
 
