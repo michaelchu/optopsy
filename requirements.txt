@@ -1,4 +1,4 @@
-# It is recommended to install Miniconda3 for Python 3.6.1 and Pandas
-pandas>=0.23.1
-pytest>=3.10.0
-numpy>=1.14.3
+# Updated to support modern Python and pandas versions
+pandas>=2.0.0
+pytest>=7.0.0
+numpy>=1.26.0
