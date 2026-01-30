@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from functools import reduce
-from .definitions import *
+from .definitions import evaluated_cols
 from .checks import _run_checks
 
 pd.set_option("expand_frame_repr", False)
@@ -153,16 +153,22 @@ def _assign_profit(data, leg_def, suffixes):
     data["total_entry_cost"] = data.loc[:, entry_cols].sum(axis=1)
     data["total_exit_proceeds"] = data.loc[:, exit_cols].sum(axis=1)
 
-    data["pct_change"] = (
-        data["total_exit_proceeds"] - data["total_entry_cost"]
-    ) / data["total_entry_cost"].abs()
+    data["pct_change"] = np.where(
+        data["total_entry_cost"].abs() > 0,
+        (data["total_exit_proceeds"] - data["total_entry_cost"]) / data["total_entry_cost"].abs(),
+        np.nan
+    )
 
     return data
 
 
 def _strategy_engine(data, leg_def, join_on=None, rules=None):
     if len(leg_def) == 1:
-        data["pct_change"] = (data["exit"] - data["entry"]) / data["entry"].abs()
+        data["pct_change"] = np.where(
+            data["entry"].abs() > 0,
+            (data["exit"] - data["entry"]) / data["entry"].abs(),
+            np.nan
+        )
         return leg_def[0][1](data)
 
     def _rule_func(d, r, ld):

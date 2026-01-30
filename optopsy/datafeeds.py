@@ -39,8 +39,17 @@ def _standardize_cols(data, column_mapping):
 
 
 def _infer_date_cols(data):
-    data["expiration"] = pd.to_datetime(data.expiration, infer_datetime_format=True)
-    data["quote_date"] = pd.to_datetime(data.quote_date, infer_datetime_format=True)
+    # infer_datetime_format was deprecated in pandas 2.0 and removed in 3.0
+    # For pandas < 2.0, use infer_datetime_format=True for better performance
+    # For pandas >= 2.0, the strict inference is now default behavior
+    pandas_version = tuple(int(x) for x in pd.__version__.split('.')[:2])
+    
+    if pandas_version < (2, 0):
+        data["expiration"] = pd.to_datetime(data.expiration, infer_datetime_format=True)
+        data["quote_date"] = pd.to_datetime(data.quote_date, infer_datetime_format=True)
+    else:
+        data["expiration"] = pd.to_datetime(data.expiration)
+        data["quote_date"] = pd.to_datetime(data.quote_date)
     return data
 
 
@@ -80,10 +89,17 @@ def csv_data(file_path, **kwargs):
         (params["ask"], "ask"),
     ]
 
-    return (
-        pd.read_csv(file_path)
-        .pipe(_standardize_cols, column_mapping)
-        .pipe(_trim_cols, column_mapping)
-        .pipe(_infer_date_cols)
-        .pipe(_trim_dates, params["start_date"], params["end_date"])
-    )
+    try:
+        return (
+            pd.read_csv(file_path)
+            .pipe(_standardize_cols, column_mapping)
+            .pipe(_trim_cols, column_mapping)
+            .pipe(_infer_date_cols)
+            .pipe(_trim_dates, params["start_date"], params["end_date"])
+        )
+    except FileNotFoundError:
+        raise FileNotFoundError(f"CSV file not found at path: {file_path}")
+    except pd.errors.EmptyDataError:
+        raise ValueError(f"CSV file is empty: {file_path}")
+    except Exception as e:
+        raise ValueError(f"Error reading CSV file {file_path}: {str(e)}")
