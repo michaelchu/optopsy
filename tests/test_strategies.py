@@ -1,7 +1,6 @@
 from optopsy.strategies import *
 from optopsy.definitions import *
 
-
 describe_cols = [
     "count",
     "mean",
