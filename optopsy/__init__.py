@@ -17,6 +17,7 @@ from .strategies import (
 from .datafeeds import csv_data
 
 __all__ = [
+    "__version__",
     "long_calls",
     "long_puts",
     "short_calls",
