@@ -1,9 +1,9 @@
 expected_types = {
-    "underlying_symbol": ("object",),
+    "underlying_symbol": ("object", "str"),
     "underlying_price": ("int64", "float64"),
-    "option_type": ("object",),
-    "expiration": ("datetime64[ns]",),
-    "quote_date": ("datetime64[ns]",),
+    "option_type": ("object", "str"),
+    "expiration": ("datetime64[ns]", "datetime64[us]"),
+    "quote_date": ("datetime64[ns]", "datetime64[us]"),
     "strike": ("int64", "float64"),
     "bid": ("int64", "float64"),
     "ask": ("int64", "float64"),
@@ -34,7 +34,7 @@ def _check_positive_float(key, value):
 
 def _check_side(key, value):
     if value != "long" and value != "short":
-        raise ValueError(f"Invalid setting for '{key}', must be only 'long' or short'")
+        raise ValueError(f"Invalid setting for '{key}', must be only 'long' or 'short'")
 
 
 def _check_bool_type(key, value):
@@ -51,7 +51,7 @@ def _check_data_types(data):
     df_type_dict = data.dtypes.astype(str).to_dict()
     for k, et in expected_types.items():
         if k not in df_type_dict:
-            raise ValueError("Expected column: {k} not found in DataFrame")
+            raise ValueError(f"Expected column: {k} not found in DataFrame")
         if all(df_type_dict[k] != t for t in et):
             raise ValueError(
                 f"{df_type_dict[k]} of {k} does not match expected types: {expected_types[k]}"
