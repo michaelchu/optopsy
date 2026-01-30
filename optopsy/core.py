@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from functools import reduce
@@ -40,7 +40,7 @@ def _remove_min_bid_ask(data: pd.DataFrame, min_bid_ask: float) -> pd.DataFrame:
 
 
 def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
-    """Remove evaluated options where entry DTE is not greater than exit DTE."""
+    """Keep evaluated options where entry DTE is greater than exit DTE."""
     return data.loc[
         (data["dte_exit"] <= data["dte_entry"])
         & (data["dte_entry"] != data["dte_exit"])
@@ -164,7 +164,7 @@ def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _apply_ratios(data: pd.DataFrame, leg_def: List[tuple]) -> pd.DataFrame:
+def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
     """Apply position ratios (long/short multipliers) to entry and exit prices."""
     for idx in range(1, len(leg_def) + 1):
         entry_col = f"entry_leg{idx}"
@@ -176,7 +176,7 @@ def _apply_ratios(data: pd.DataFrame, leg_def: List[tuple]) -> pd.DataFrame:
     return data
 
 
-def _assign_profit(data: pd.DataFrame, leg_def: List[tuple], suffixes: List[str]) -> pd.DataFrame:
+def _assign_profit(data: pd.DataFrame, leg_def: List[Tuple], suffixes: List[str]) -> pd.DataFrame:
     """Calculate total profit/loss and percentage change for multi-leg strategies."""
     data = _apply_ratios(data, leg_def)
 
@@ -199,7 +199,7 @@ def _assign_profit(data: pd.DataFrame, leg_def: List[tuple], suffixes: List[str]
 
 def _strategy_engine(
     data: pd.DataFrame,
-    leg_def: List[tuple],
+    leg_def: List[Tuple],
     join_on: Optional[List[str]] = None,
     rules: Optional[Callable] = None
 ) -> pd.DataFrame:
@@ -223,7 +223,7 @@ def _strategy_engine(
         )
         return leg_def[0][1](data)
 
-    def _rule_func(d: pd.DataFrame, r: Optional[Callable], ld: List[tuple]) -> pd.DataFrame:
+    def _rule_func(d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
     partials = [leg[1](data) for leg in leg_def]

@@ -87,7 +87,8 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         
     Raises:
         FileNotFoundError: If CSV file doesn't exist at specified path
-        ValueError: If CSV file is empty or cannot be parsed
+        ValueError: If CSV file is empty, has parsing errors, column mapping errors,
+                   or other data processing issues
 
     """
     params = {**default_kwargs, **kwargs}
@@ -117,7 +118,7 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         raise ValueError(f"CSV file is empty: {file_path}")
     except pd.errors.ParserError as e:
         raise ValueError(f"Error parsing CSV file {file_path}: {str(e)}")
-    except KeyError as e:
+    except (IndexError, KeyError) as e:
         raise ValueError(f"Column mapping error in {file_path}: {str(e)}")
     except Exception as e:
         raise ValueError(f"Unexpected error reading CSV file {file_path}: {str(e)}")
