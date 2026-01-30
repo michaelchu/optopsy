@@ -24,7 +24,7 @@ Please see the [wiki](https://github.com/michaelchu/optopsy/wiki) for API refere
 * Use data from any source, just provide a Pandas dataframe with the required columns when calling optopsy functions.
 
 ### Dependencies
-You will need Python 3.6 or newer and Pandas 0.23.1 or newer and Numpy 1.14.3 or newer.
+You will need Python 3.8 or newer and Pandas 2.0.0 or newer and Numpy 1.26.0 or newer.
 
 ### Installation
 ```
