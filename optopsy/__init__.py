@@ -1,3 +1,5 @@
+__version__ = "2.0.2"
+
 from .strategies import (
     long_calls,
     long_puts,
