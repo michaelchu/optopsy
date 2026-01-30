@@ -16,11 +16,11 @@ expected_types: Dict[str, Tuple[str, ...]] = {
 def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     """
     Run all validation checks on parameters and data.
-    
+
     Args:
         params: Dictionary of strategy parameters
         data: DataFrame containing option chain data
-        
+
     Raises:
         ValueError: If any validation check fails
     """
@@ -69,10 +69,10 @@ def _check_list_type(key: str, value: Any) -> None:
 def _check_data_types(data: pd.DataFrame) -> None:
     """
     Validate that DataFrame has required columns with correct data types.
-    
+
     Args:
         data: DataFrame to validate
-        
+
     Raises:
         ValueError: If required column is missing or has incorrect type
     """

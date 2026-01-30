@@ -25,6 +25,7 @@ default_kwargs: Dict[str, Any] = {
 
 class Side(Enum):
     """Enum representing long or short position side with multiplier values."""
+
     long = 1
     short = -1
 
@@ -77,7 +78,9 @@ def _strangles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Da
     )
 
 
-def _call_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _call_spread(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
+) -> pd.DataFrame:
     """Process call spread strategies (long and short calls at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -91,7 +94,9 @@ def _call_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.
     )
 
 
-def _put_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _put_spread(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
+) -> pd.DataFrame:
     """Process put spread strategies (long and short puts at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -108,11 +113,11 @@ def _put_spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.D
 def long_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long call strategy statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters (dte_interval, max_entry_dte, etc.)
-        
+
     Returns:
         DataFrame with long call strategy performance statistics
     """
@@ -122,11 +127,11 @@ def long_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def long_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long put strategy statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with long put strategy performance statistics
     """
@@ -136,11 +141,11 @@ def long_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short call strategy statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short call strategy performance statistics
     """
@@ -150,11 +155,11 @@ def short_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short put strategy statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short put strategy performance statistics
     """
@@ -164,11 +169,11 @@ def short_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def long_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long straddle strategy statistics (long call + long put at same strike).
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with long straddle strategy performance statistics
     """
@@ -178,11 +183,11 @@ def long_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short straddle strategy statistics (short call + short put at same strike).
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short straddle strategy performance statistics
     """
@@ -192,11 +197,11 @@ def short_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def long_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long strangle strategy statistics (long call + long put at different strikes).
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with long strangle strategy performance statistics
     """
@@ -206,11 +211,11 @@ def long_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short strangle strategy statistics (short call + short put at different strikes).
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short strangle strategy performance statistics
     """
@@ -220,11 +225,11 @@ def short_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long call spread (bull call spread) statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with long call spread strategy performance statistics
     """
@@ -234,11 +239,11 @@ def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short call spread (bear call spread) statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short call spread strategy performance statistics
     """
@@ -248,11 +253,11 @@ def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate long put spread (bear put spread) statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with long put spread strategy performance statistics
     """
@@ -262,11 +267,11 @@ def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Generate short put spread (bull put spread) statistics.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters
-        
+
     Returns:
         DataFrame with short put spread strategy performance statistics
     """

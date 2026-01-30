@@ -47,14 +47,18 @@ def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
-def _cut_options_by_dte(data: pd.DataFrame, dte_interval: int, max_entry_dte: int) -> pd.DataFrame:
+def _cut_options_by_dte(
+    data: pd.DataFrame, dte_interval: int, max_entry_dte: int
+) -> pd.DataFrame:
     """Categorize options into DTE intervals for grouping."""
     dte_intervals = list(range(0, max_entry_dte, dte_interval))
     data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
     return data
 
 
-def _cut_options_by_otm(data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float) -> pd.DataFrame:
+def _cut_options_by_otm(
+    data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float
+) -> pd.DataFrame:
     """Categorize options into out-of-the-money percentage intervals."""
     # consider using np.linspace in future
     otm_pct_intervals = [
@@ -71,7 +75,9 @@ def _cut_options_by_otm(data: pd.DataFrame, otm_pct_interval: float, max_otm_pct
     return data
 
 
-def _group_by_intervals(data: pd.DataFrame, cols: List[str], drop_na: bool) -> pd.DataFrame:
+def _group_by_intervals(
+    data: pd.DataFrame, cols: List[str], drop_na: bool
+) -> pd.DataFrame:
     """Group options by intervals and calculate descriptive statistics."""
     # this is a bottleneck, try to optimize
     grouped_dataset = data.groupby(cols)["pct_change"].describe()
@@ -87,11 +93,11 @@ def _group_by_intervals(data: pd.DataFrame, cols: List[str], drop_na: bool) -> p
 def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Evaluate options by filtering, merging entry and exit data, and calculating costs.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Configuration parameters including max_otm_pct, min_bid_ask, exit_dte
-        
+
     Returns:
         DataFrame with evaluated options including entry and exit prices
     """
@@ -126,11 +132,11 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Complete pipeline to evaluate all options with DTE and OTM percentage categorization.
-    
+
     Args:
         data: DataFrame containing option chain data
         **kwargs: Configuration parameters for evaluation and categorization
-        
+
     Returns:
         DataFrame with evaluated and categorized options
     """
@@ -176,7 +182,9 @@ def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
     return data
 
 
-def _assign_profit(data: pd.DataFrame, leg_def: List[Tuple], suffixes: List[str]) -> pd.DataFrame:
+def _assign_profit(
+    data: pd.DataFrame, leg_def: List[Tuple], suffixes: List[str]
+) -> pd.DataFrame:
     """Calculate total profit/loss and percentage change for multi-leg strategies."""
     data = _apply_ratios(data, leg_def)
 
@@ -190,8 +198,9 @@ def _assign_profit(data: pd.DataFrame, leg_def: List[Tuple], suffixes: List[str]
 
     data["pct_change"] = np.where(
         data["total_entry_cost"].abs() > 0,
-        (data["total_exit_proceeds"] - data["total_entry_cost"]) / data["total_entry_cost"].abs(),
-        np.nan
+        (data["total_exit_proceeds"] - data["total_entry_cost"])
+        / data["total_entry_cost"].abs(),
+        np.nan,
     )
 
     return data
@@ -201,17 +210,17 @@ def _strategy_engine(
     data: pd.DataFrame,
     leg_def: List[Tuple],
     join_on: Optional[List[str]] = None,
-    rules: Optional[Callable] = None
+    rules: Optional[Callable] = None,
 ) -> pd.DataFrame:
     """
     Core strategy execution engine that constructs single or multi-leg option strategies.
-    
+
     Args:
         data: DataFrame containing evaluated option data
         leg_def: List of tuples defining strategy legs (side, filter_function)
         join_on: Columns to join on for multi-leg strategies
         rules: Optional filtering rules to apply after joining legs
-        
+
     Returns:
         DataFrame with constructed strategy and calculated profit/loss
     """
@@ -219,11 +228,13 @@ def _strategy_engine(
         data["pct_change"] = np.where(
             data["entry"].abs() > 0,
             (data["exit"] - data["entry"]) / data["entry"].abs(),
-            np.nan
+            np.nan,
         )
         return leg_def[0][1](data)
 
-    def _rule_func(d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]) -> pd.DataFrame:
+    def _rule_func(
+        d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]
+    ) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
     partials = [leg[1](data) for leg in leg_def]
@@ -244,11 +255,11 @@ def _strategy_engine(
 def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     Main entry point for processing option strategies.
-    
+
     Args:
         data: DataFrame containing raw option chain data
         **context: Dictionary containing strategy parameters, leg definitions, and formatting options
-        
+
     Returns:
         DataFrame with processed strategy results
     """
@@ -282,17 +293,17 @@ def _format_output(
     data: pd.DataFrame,
     params: Dict[str, Any],
     internal_cols: List[str],
-    external_cols: List[str]
+    external_cols: List[str],
 ) -> pd.DataFrame:
     """
     Format strategy output as either raw data or grouped statistics.
-    
+
     Args:
         data: DataFrame with strategy results
         params: Parameters including 'raw' and 'drop_nan' flags
         internal_cols: Columns to include in raw output
         external_cols: Columns to group by for statistics output
-        
+
     Returns:
         Formatted DataFrame with either raw data or descriptive statistics
     """

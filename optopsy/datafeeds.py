@@ -18,9 +18,7 @@ default_kwargs: Dict[str, Any] = {
 
 
 def _trim_dates(
-    data: pd.DataFrame,
-    start_date: Optional[str],
-    end_date: Optional[str]
+    data: pd.DataFrame, start_date: Optional[str], end_date: Optional[str]
 ) -> pd.DataFrame:
     """Filter dataframe by date range."""
     if start_date is not None and end_date is not None:
@@ -33,13 +31,17 @@ def _trim_dates(
         return data
 
 
-def _trim_cols(data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]) -> pd.DataFrame:
+def _trim_cols(
+    data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
+) -> pd.DataFrame:
     """Select only the columns specified in the mapping."""
     cols = [c for c, _ in column_mapping if c is not None]
     return data.iloc[:, cols]
 
 
-def _standardize_cols(data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]) -> pd.DataFrame:
+def _standardize_cols(
+    data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
+) -> pd.DataFrame:
     """Rename columns to standardized names."""
     col_names = list(data.columns)
     cols = {col_names[idx]: label for idx, label in column_mapping if idx is not None}
@@ -51,8 +53,8 @@ def _infer_date_cols(data: pd.DataFrame) -> pd.DataFrame:
     # infer_datetime_format was deprecated in pandas 2.0 and removed in 3.0
     # For pandas < 2.0, use infer_datetime_format=True for better performance
     # For pandas >= 2.0, the strict inference is now default behavior
-    pandas_version = tuple(int(x) for x in pd.__version__.split('.')[:2])
-    
+    pandas_version = tuple(int(x) for x in pd.__version__.split(".")[:2])
+
     if pandas_version < (2, 0):
         data["expiration"] = pd.to_datetime(data.expiration, infer_datetime_format=True)
         data["quote_date"] = pd.to_datetime(data.quote_date, infer_datetime_format=True)
@@ -65,7 +67,7 @@ def _infer_date_cols(data: pd.DataFrame) -> pd.DataFrame:
 def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
     """
     Import option chain data from CSV files with standardized column names.
-    
+
     Uses pandas DataFrame.read_csv function to import data from CSV files.
     Automatically generates standardized headers for library use.
 
@@ -84,7 +86,7 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
 
     Returns:
         DataFrame with option chains and standardized column names
-        
+
     Raises:
         FileNotFoundError: If CSV file doesn't exist at specified path
         ValueError: If CSV file is empty, has parsing errors, column mapping errors,
