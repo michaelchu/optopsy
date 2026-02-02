@@ -30,7 +30,7 @@ def test_long_call_butterfly_raw(multi_strike_data):
     assert results.iloc[0]["strike_leg1"] < results.iloc[0]["strike_leg2"]
     assert results.iloc[0]["strike_leg2"] < results.iloc[0]["strike_leg3"]
     # Check calculated values for butterfly at strikes 210, 212.5, 215
-    # Entry: long 210 call (4.95) + short 2x 212.5 calls (-6.10) + long 215 call (1.55) = 0.40
+    # Entry: long 210 call (4.95) + short 2x 212.5 calls (-3.05*2=-6.10) + long 215 call (1.55) = 0.40
     # Exit: 5.00 + (-5.00) + 0.05 = 0.05
     row = results[
         (results["strike_leg1"] == 210.0)
