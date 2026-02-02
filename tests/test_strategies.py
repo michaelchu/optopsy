@@ -72,7 +72,7 @@ def test_long_put_butterfly_raw(multi_strike_data):
         & (results["strike_leg2"] == 212.5)
         & (results["strike_leg3"] == 215.0)
     ].iloc[0]
-    # Entry: long 210 put (1.45) + short 2x 212.5 puts (-6.10) + long 215 put (5.05) = 0.40
+    # Entry: long 210 put (1.45) + short 2x 212.5 puts (2 * -3.05 = -6.10) + long 215 put (5.05) = 0.40
     assert round(row["total_entry_cost"], 2) == 0.40
     # Exit: all puts worthless = 0.025 + (-0.05) + 0.025 = 0.0
     assert round(row["total_exit_proceeds"], 2) == 0.0
