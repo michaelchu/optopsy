@@ -170,13 +170,25 @@ def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _get_leg_quantity(leg: Tuple) -> int:
+    """Get quantity for a leg, defaulting to 1 if not specified."""
+    return leg[2] if len(leg) > 2 else 1
+
+
 def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
-    """Apply position ratios (long/short multipliers) to entry and exit prices."""
+    """Apply position ratios (long/short multipliers) and quantities to entry and exit prices."""
     for idx in range(1, len(leg_def) + 1):
         entry_col = f"entry_leg{idx}"
         exit_col = f"exit_leg{idx}"
-        entry_kwargs = {entry_col: lambda r: r[entry_col] * leg_def[idx - 1][0].value}
-        exit_kwargs = {exit_col: lambda r: r[exit_col] * leg_def[idx - 1][0].value}
+        leg = leg_def[idx - 1]
+        multiplier = leg[0].value * _get_leg_quantity(leg)
+        # Use default argument to capture multiplier value at each iteration
+        entry_kwargs = {
+            entry_col: lambda r, m=multiplier: r[entry_col] * m
+        }
+        exit_kwargs = {
+            exit_col: lambda r, m=multiplier: r[exit_col] * m
+        }
         data = data.assign(**entry_kwargs).assign(**exit_kwargs)
 
     return data
@@ -204,6 +216,16 @@ def _assign_profit(
     )
 
     return data
+
+
+def _rename_leg_columns(
+    data: pd.DataFrame, leg_idx: int, join_on: List[str]
+) -> pd.DataFrame:
+    """Rename columns with leg suffix, excluding join columns."""
+    rename_map = {
+        col: f"{col}_leg{leg_idx}" for col in data.columns if col not in join_on
+    }
+    return data.rename(columns=rename_map)
 
 
 def _strategy_engine(
@@ -237,19 +259,19 @@ def _strategy_engine(
     ) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
-    partials = [leg[1](data) for leg in leg_def]
+    # Pre-rename columns for each leg to avoid suffix issues with 3+ legs
+    partials = [
+        _rename_leg_columns(leg[1](data).copy(), idx, join_on or [])
+        for idx, leg in enumerate(leg_def, start=1)
+    ]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    return (
-        reduce(
-            lambda left, right: pd.merge(
-                left, right, on=join_on, how="inner", suffixes=suffixes
-            ),
-            partials,
-        )
-        .pipe(_rule_func, rules, leg_def)
-        .pipe(_assign_profit, leg_def, suffixes)
-    )
+    # Merge all legs sequentially
+    result = partials[0]
+    for partial in partials[1:]:
+        result = pd.merge(result, partial, on=join_on, how="inner")
+
+    return result.pipe(_rule_func, rules, leg_def).pipe(_assign_profit, leg_def, suffixes)
 
 
 def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
