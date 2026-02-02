@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
-from functools import reduce
 from .definitions import evaluated_cols
 from .checks import _run_checks
 
