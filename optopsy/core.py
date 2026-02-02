@@ -181,12 +181,12 @@ def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
         exit_col = f"exit_leg{idx}"
         leg = leg_def[idx - 1]
         multiplier = leg[0].value * _get_leg_quantity(leg)
-        # Use default argument to capture multiplier value at each iteration
+        # Use default arguments to capture values at each iteration (avoid late binding)
         entry_kwargs = {
-            entry_col: lambda r, m=multiplier: r[entry_col] * m
+            entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m
         }
         exit_kwargs = {
-            exit_col: lambda r, m=multiplier: r[exit_col] * m
+            exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m
         }
         data = data.assign(**entry_kwargs).assign(**exit_kwargs)
 
