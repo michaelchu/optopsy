@@ -737,6 +737,9 @@ def _format_calendar_output(
         available_cols = [c for c in internal_cols if c in data.columns]
         return data[available_cols].reset_index(drop=True)
 
+    # Work with a copy to avoid modifying input
+    data = data.copy()
+
     # For aggregated output, create DTE ranges and OTM ranges
     dte_interval = params["dte_interval"]
 

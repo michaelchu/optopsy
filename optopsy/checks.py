@@ -59,26 +59,31 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     _check_data_types(data)
 
     # Validate DTE range ordering
-    if params.get("front_dte_min") and params.get("front_dte_max"):
-        if params["front_dte_min"] > params["front_dte_max"]:
+    front_dte_min = params.get("front_dte_min")
+    front_dte_max = params.get("front_dte_max")
+    back_dte_min = params.get("back_dte_min")
+    back_dte_max = params.get("back_dte_max")
+
+    if front_dte_min is not None and front_dte_max is not None:
+        if front_dte_min > front_dte_max:
             raise ValueError(
-                f"front_dte_min ({params['front_dte_min']}) must be <= "
-                f"front_dte_max ({params['front_dte_max']})"
+                f"front_dte_min ({front_dte_min}) must be <= "
+                f"front_dte_max ({front_dte_max})"
             )
 
-    if params.get("back_dte_min") and params.get("back_dte_max"):
-        if params["back_dte_min"] > params["back_dte_max"]:
+    if back_dte_min is not None and back_dte_max is not None:
+        if back_dte_min > back_dte_max:
             raise ValueError(
-                f"back_dte_min ({params['back_dte_min']}) must be <= "
-                f"back_dte_max ({params['back_dte_max']})"
+                f"back_dte_min ({back_dte_min}) must be <= "
+                f"back_dte_max ({back_dte_max})"
             )
 
     # Validate no overlap between front and back DTE ranges
-    if params.get("front_dte_max") and params.get("back_dte_min"):
-        if params["front_dte_max"] > params["back_dte_min"]:
+    if front_dte_max is not None and back_dte_min is not None:
+        if front_dte_max > back_dte_min:
             raise ValueError(
-                f"front_dte_max ({params['front_dte_max']}) must be <= "
-                f"back_dte_min ({params['back_dte_min']}) to avoid overlapping ranges"
+                f"front_dte_max ({front_dte_max}) must be <= "
+                f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
             )
 
 
