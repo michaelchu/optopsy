@@ -174,7 +174,9 @@ def _group_by_intervals(
 ) -> pd.DataFrame:
     """Group options by intervals and calculate descriptive statistics."""
     # this is a bottleneck, try to optimize
-    grouped_dataset = data.groupby(cols, observed=False)["pct_change"].describe()
+    # Use observed=True to only return groups with actual data (avoids pandas 3.0
+    # issue where observed=False returns all category combinations as empty rows)
+    grouped_dataset = data.groupby(cols, observed=True)["pct_change"].describe()
 
     # if any non-count columns return NaN remove the row
     if drop_na:
