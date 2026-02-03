@@ -150,4 +150,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "delta_min": _check_optional_float,
     "delta_max": _check_optional_float,
     "delta_interval": _check_optional_float,
+    # Calendar/diagonal spread parameters
+    "front_dte_min": _check_positive_integer,
+    "front_dte_max": _check_positive_integer,
+    "back_dte_min": _check_positive_integer,
+    "back_dte_max": _check_positive_integer,
 }
