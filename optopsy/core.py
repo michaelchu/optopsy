@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
-from .definitions import evaluated_cols
+from .definitions import evaluated_cols, describe_cols
 from .checks import _run_checks, _run_calendar_checks
 
 pd.set_option("expand_frame_repr", False)
@@ -558,7 +558,9 @@ def _find_calendar_exit_prices(
     Returns:
         DataFrame with exit prices merged in, or empty DataFrame if no exit data
     """
-    # Calculate exit date for each position
+    # Calculate exit date for each position.
+    # Exit is timed relative to front leg (leg1) expiration, which is standard
+    # calendar spread management: close before the short-dated option expires.
     merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
 
     # Filter data for exit prices
@@ -608,9 +610,11 @@ def _calculate_calendar_pnl(merged: pd.DataFrame, leg_def: List[Tuple]) -> pd.Da
     merged["total_entry_cost"] = merged["entry_leg1"] + merged["entry_leg2"]
     merged["total_exit_proceeds"] = merged["exit_leg1"] + merged["exit_leg2"]
 
-    # Calculate percentage change
+    # Calculate percentage change.
+    # Use a minimum threshold to avoid misleading percentages from near-zero entries.
+    min_entry_threshold = 0.01
     merged["pct_change"] = np.where(
-        merged["total_entry_cost"].abs() > 0,
+        merged["total_entry_cost"].abs() >= min_entry_threshold,
         (merged["total_exit_proceeds"] - merged["total_entry_cost"])
         / merged["total_entry_cost"].abs(),
         np.nan,
@@ -727,10 +731,7 @@ def _format_calendar_output(
     if data.empty:
         if params["raw"]:
             return pd.DataFrame(columns=internal_cols)
-        return pd.DataFrame(
-            columns=external_cols
-            + ["count", "mean", "std", "min", "25%", "50%", "75%", "max"]
-        )
+        return pd.DataFrame(columns=external_cols + describe_cols)
 
     if params["raw"]:
         # Return only the columns that exist in the data

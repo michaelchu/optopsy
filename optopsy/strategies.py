@@ -43,8 +43,8 @@ default_kwargs: Dict[str, Any] = {
 
 calendar_default_kwargs: Dict[str, Any] = {
     "front_dte_min": 20,
-    "front_dte_max": 44,
-    "back_dte_min": 45,
+    "front_dte_max": 40,
+    "back_dte_min": 50,
     "back_dte_max": 90,
     "exit_dte": 7,
     "dte_interval": 7,
@@ -752,8 +752,8 @@ def long_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
         data: DataFrame containing option chain data
         **kwargs: Optional strategy parameters including:
             - front_dte_min: Minimum DTE for front leg (default: 20)
-            - front_dte_max: Maximum DTE for front leg (default: 45)
-            - back_dte_min: Minimum DTE for back leg (default: 45)
+            - front_dte_max: Maximum DTE for front leg (default: 40)
+            - back_dte_min: Minimum DTE for back leg (default: 50)
             - back_dte_max: Maximum DTE for back leg (default: 90)
             - exit_dte: Days before front expiration to exit (default: 7)
 
