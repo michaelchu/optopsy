@@ -781,3 +781,139 @@ def test_calendar_adjacent_dte_ranges_rejected(calendar_data):
             back_dte_min=45,
             back_dte_max=90,
         )
+
+
+# =============================================================================
+# Slippage Tests
+# =============================================================================
+
+
+def test_slippage_mid_is_default(data):
+    """Test that default slippage mode is 'mid' (backward compatible)."""
+    results = long_calls(data, raw=True)
+    # With mid slippage, entry should be (bid + ask) / 2
+    # For 212.5 strike call: bid=7.35, ask=7.45, mid=7.40
+    row = results[results["strike"] == 212.5].iloc[0]
+    assert round(row["entry"], 2) == 7.40
+
+
+def test_slippage_spread_mode(data):
+    """Test that spread slippage mode uses ask for long entries."""
+    # Default (mid) - entry should be (7.35 + 7.45) / 2 = 7.40
+    results_mid = long_calls(data, raw=True, slippage="mid")
+
+    # Spread - for long calls, entry should be at ask price (7.45)
+    results_spread = long_calls(data, raw=True, slippage="spread")
+
+    row_mid = results_mid[results_mid["strike"] == 212.5].iloc[0]
+    row_spread = results_spread[results_spread["strike"] == 212.5].iloc[0]
+
+    # Spread entry should be higher than mid for long positions
+    assert row_spread["entry"] > row_mid["entry"]
+    assert round(row_spread["entry"], 2) == 7.45  # ask price
+
+
+def test_slippage_spread_short_positions(data):
+    """Test that spread slippage uses bid for short entries."""
+    results_spread = short_calls(data, raw=True, slippage="spread")
+
+    # For short calls, entry should be at bid price (7.35)
+    # But short positions have negative entry (credit received)
+    row = results_spread[results_spread["strike"] == 212.5].iloc[0]
+    # entry = bid * -1 = -7.35
+    assert round(row["entry"], 2) == 7.35
+
+
+def test_slippage_liquidity_mode(data_with_volume):
+    """Test liquidity-based slippage adjusts based on volume."""
+    # With reference_volume=1000, high volume options get better fills
+    results = long_calls(
+        data_with_volume,
+        raw=True,
+        slippage="liquidity",
+        fill_ratio=0.5,
+        reference_volume=1000,
+    )
+
+    # High volume option (2000 vol) should get fill closer to mid
+    high_vol_row = results[results["strike"] == 212.5].iloc[0]
+    # Low volume option (100 vol) should get fill closer to ask
+    low_vol_row = results[results["strike"] == 215.0].iloc[0]
+
+    # Calculate expected fills
+    # High vol: vol=2000, reference=1000 -> liquidity_score=1.0 -> ratio=0.5
+    # bid=7.35, ask=7.45, mid=7.40, half_spread=0.05
+    # entry = 7.40 + 0.05 * 0.5 = 7.425
+    assert round(high_vol_row["entry"], 3) == 7.425
+
+    # Low vol: vol=100, reference=1000 -> liquidity_score=0.1 -> ratio=0.5+(1-0.5)*(1-0.1)=0.95
+    # bid=6.00, ask=6.10, mid=6.05, half_spread=0.05
+    # entry = 6.05 + 0.05 * 0.95 = 6.0975
+    assert round(low_vol_row["entry"], 4) == 6.0975
+
+
+def test_slippage_liquidity_requires_volume_column(data):
+    """Test that liquidity slippage raises error without volume column."""
+    with pytest.raises(ValueError, match="volume.*not found"):
+        long_calls(data, slippage="liquidity")
+
+
+def test_slippage_invalid_mode_raises(data):
+    """Test that invalid slippage mode raises error."""
+    with pytest.raises(ValueError, match="must be 'mid', 'spread', or 'liquidity'"):
+        long_calls(data, slippage="invalid")
+
+
+def test_slippage_fill_ratio_validation(data):
+    """Test that fill_ratio must be between 0 and 1."""
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        long_calls(data, slippage="liquidity", fill_ratio=1.5)
+
+
+def test_slippage_multi_leg_spread_mode(multi_strike_data):
+    """Test slippage on multi-leg strategies (vertical spreads)."""
+    # Long call spread: long lower strike, short higher strike
+    results_mid = long_call_spread(multi_strike_data, raw=True, slippage="mid")
+    results_spread = long_call_spread(multi_strike_data, raw=True, slippage="spread")
+
+    # With spread slippage:
+    # - Long leg entry at ask (higher cost)
+    # - Short leg entry at bid (lower credit)
+    # Net result: worse entry for the spread
+    row_mid = results_mid.iloc[0]
+    row_spread = results_spread.iloc[0]
+
+    # Spread mode should have higher (worse) total entry cost for debit spread
+    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+
+
+def test_slippage_calendar_spread_mode(calendar_data):
+    """Test slippage on calendar spreads."""
+    results_mid = long_call_calendar(
+        calendar_data,
+        raw=True,
+        slippage="mid",
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    results_spread = long_call_calendar(
+        calendar_data,
+        raw=True,
+        slippage="spread",
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+
+    # With spread slippage, calendar spread entry cost should be higher
+    # (worse fills for both legs)
+    row_mid = results_mid[results_mid["strike"] == 212.5].iloc[0]
+    row_spread = results_spread[results_spread["strike"] == 212.5].iloc[0]
+
+    # Calendar spread is a debit spread, so higher entry cost is worse
+    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]

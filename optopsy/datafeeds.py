@@ -19,6 +19,9 @@ default_kwargs: Dict[str, Any] = {
     "gamma": None,
     "theta": None,
     "vega": None,
+    # Optional liquidity columns (set to column index to include)
+    "volume": None,
+    "open_interest": None,
 }
 
 
@@ -92,6 +95,8 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         gamma: Optional column index containing gamma Greek
         theta: Optional column index containing theta Greek
         vega: Optional column index containing vega Greek
+        volume: Optional column index containing trading volume
+        open_interest: Optional column index containing open interest
 
     Returns:
         DataFrame with option chains and standardized column names
@@ -120,6 +125,11 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
     for greek in ["delta", "gamma", "theta", "vega"]:
         if params.get(greek) is not None:
             column_mapping.append((params[greek], greek))
+
+    # Add optional liquidity columns if specified
+    for col in ["volume", "open_interest"]:
+        if params.get(col) is not None:
+            column_mapping.append((params[col], col))
 
     try:
         return (

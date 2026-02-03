@@ -20,6 +20,12 @@ optional_greek_types: Dict[str, Tuple[str, ...]] = {
     "vega": ("int64", "float64"),
 }
 
+# Optional liquidity columns - only validated when liquidity slippage is enabled
+optional_liquidity_types: Dict[str, Tuple[str, ...]] = {
+    "volume": ("int64", "float64"),
+    "open_interest": ("int64", "float64"),
+}
+
 
 def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     """
@@ -40,6 +46,10 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     # Check for delta column if delta filtering/grouping is enabled
     if _requires_delta(params):
         _check_greek_column(data, "delta")
+
+    # Check for volume column if liquidity slippage is enabled
+    if _requires_volume(params):
+        _check_volume_column(data)
 
 
 def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
@@ -86,6 +96,10 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
                 f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
             )
 
+    # Check for volume column if liquidity slippage is enabled
+    if _requires_volume(params):
+        _check_volume_column(data)
+
 
 def _check_positive_integer(key: str, value: Any) -> None:
     """Validate that value is a positive integer."""
@@ -127,6 +141,20 @@ def _check_optional_float(key: str, value: Any) -> None:
     """Validate that value is a float or None."""
     if value is not None and not isinstance(value, (int, float)):
         raise ValueError(f"Invalid setting for {key}, must be float type or None")
+
+
+def _check_slippage(key: str, value: Any) -> None:
+    """Validate that value is a valid slippage mode."""
+    if value not in ("mid", "spread", "liquidity"):
+        raise ValueError(
+            f"Invalid setting for {key}, must be 'mid', 'spread', or 'liquidity'"
+        )
+
+
+def _check_fill_ratio(key: str, value: Any) -> None:
+    """Validate that value is a float between 0 and 1."""
+    if not isinstance(value, (int, float)) or not 0 <= value <= 1:
+        raise ValueError(f"Invalid setting for {key}, must be a number between 0 and 1")
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
@@ -181,6 +209,34 @@ def _requires_delta(params: Dict[str, Any]) -> bool:
     )
 
 
+def _requires_volume(params: Dict[str, Any]) -> bool:
+    """Check if liquidity slippage is enabled, which requires volume column."""
+    return params.get("slippage") == "liquidity"
+
+
+def _check_volume_column(data: pd.DataFrame) -> None:
+    """
+    Validate that volume column exists and has correct data type.
+
+    Args:
+        data: DataFrame to validate
+
+    Raises:
+        ValueError: If volume column is missing or has incorrect type
+    """
+    df_type_dict = data.dtypes.astype(str).to_dict()
+    if "volume" not in df_type_dict:
+        raise ValueError(
+            "Column 'volume' not found in DataFrame. "
+            "Required for liquidity-based slippage."
+        )
+    expected = optional_liquidity_types.get("volume", ("int64", "float64"))
+    if all(df_type_dict["volume"] != t for t in expected):
+        raise ValueError(
+            f"{df_type_dict['volume']} of volume does not match expected types: {expected}"
+        )
+
+
 param_checks: Dict[str, Callable[[str, Any], None]] = {
     "dte_interval": _check_positive_integer,
     "max_entry_dte": _check_positive_integer,
@@ -200,4 +256,8 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "front_dte_max": _check_positive_integer,
     "back_dte_min": _check_positive_integer,
     "back_dte_max": _check_positive_integer,
+    # Slippage parameters
+    "slippage": _check_slippage,
+    "fill_ratio": _check_fill_ratio,
+    "reference_volume": _check_positive_integer,
 }
