@@ -2,7 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment Setup
+
+Always use the virtual environment for running commands:
+
+```bash
+# Activate the virtual environment before running any commands
+source venv/bin/activate
+```
+
 ## Build & Test Commands
+
+All commands below assume the virtual environment is activated.
 
 ```bash
 # Install in development mode
