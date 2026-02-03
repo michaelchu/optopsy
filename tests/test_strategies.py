@@ -729,3 +729,42 @@ def test_calendar_no_matching_expirations(data):
     # Should return empty DataFrame with correct columns
     assert len(results) == 0
     assert list(results.columns) == calendar_spread_internal_cols
+
+
+def test_calendar_invalid_front_dte_range(calendar_data):
+    """Test that calendar raises error when front_dte_min > front_dte_max."""
+    with pytest.raises(ValueError, match="front_dte_min.*must be <=.*front_dte_max"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=50,
+            front_dte_max=20,
+            back_dte_min=60,
+            back_dte_max=90,
+        )
+
+
+def test_calendar_invalid_back_dte_range(calendar_data):
+    """Test that calendar raises error when back_dte_min > back_dte_max."""
+    with pytest.raises(ValueError, match="back_dte_min.*must be <=.*back_dte_max"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=40,
+            back_dte_min=90,
+            back_dte_max=60,
+        )
+
+
+def test_calendar_overlapping_dte_ranges(calendar_data):
+    """Test that calendar raises error when front and back DTE ranges overlap."""
+    with pytest.raises(ValueError, match="front_dte_max.*must be <=.*back_dte_min"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=60,
+            back_dte_min=40,
+            back_dte_max=90,
+        )

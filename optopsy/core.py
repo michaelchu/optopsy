@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from .definitions import evaluated_cols
-from .checks import _run_checks
+from .checks import _run_checks, _run_calendar_checks
 
 pd.set_option("expand_frame_repr", False)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
@@ -393,14 +393,13 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
 
 
 def _evaluate_calendar_options(
-    data: pd.DataFrame, leg_type: str, dte_min: int, dte_max: int, **kwargs: Any
+    data: pd.DataFrame, dte_min: int, dte_max: int, **kwargs: Any
 ) -> pd.DataFrame:
     """
     Evaluate options for a single leg of a calendar/diagonal spread.
 
     Args:
         data: DataFrame containing option chain data with DTE assigned
-        leg_type: 'front' or 'back' to identify the leg
         dte_min: Minimum DTE for this leg
         dte_max: Maximum DTE for this leg
         **kwargs: Additional parameters including max_otm_pct, min_bid_ask
@@ -425,21 +424,207 @@ def _evaluate_calendar_options(
     return leg_data
 
 
+def _get_strike_column(same_strike: bool, leg_num: int) -> str:
+    """Return the appropriate strike column name based on spread type."""
+    return "strike" if same_strike else f"strike_leg{leg_num}"
+
+
+def _prepare_calendar_leg(
+    options: pd.DataFrame, leg_num: int, same_strike: bool
+) -> pd.DataFrame:
+    """
+    Rename columns for a calendar/diagonal spread leg.
+
+    Args:
+        options: DataFrame with option data for this leg
+        leg_num: Leg number (1 for front, 2 for back)
+        same_strike: True for calendar spreads, False for diagonal
+
+    Returns:
+        DataFrame with renamed columns
+    """
+    strike_col = _get_strike_column(same_strike, leg_num)
+    price_col = "underlying_price_entry" if leg_num == 1 else "underlying_price_back"
+
+    return options.rename(
+        columns={
+            "expiration": f"expiration_leg{leg_num}",
+            "dte": f"dte_entry_leg{leg_num}",
+            "strike": strike_col,
+            "bid": f"bid_leg{leg_num}",
+            "ask": f"ask_leg{leg_num}",
+            "otm_pct": f"otm_pct_leg{leg_num}",
+            "underlying_price": price_col,
+        }
+    )
+
+
+def _get_calendar_leg_columns(leg_num: int, same_strike: bool) -> List[str]:
+    """Return the columns needed for a calendar spread leg."""
+    strike_col = _get_strike_column(same_strike, leg_num)
+    cols = [
+        "underlying_symbol",
+        "quote_date",
+        "option_type",
+        f"expiration_leg{leg_num}",
+        f"dte_entry_leg{leg_num}",
+        f"bid_leg{leg_num}",
+        f"ask_leg{leg_num}",
+        f"otm_pct_leg{leg_num}",
+    ]
+    if leg_num == 1:
+        cols.append("underlying_price_entry")
+    cols.append(strike_col)
+    return cols
+
+
+def _merge_calendar_legs(
+    front: pd.DataFrame, back: pd.DataFrame, same_strike: bool
+) -> pd.DataFrame:
+    """
+    Merge front and back legs of a calendar/diagonal spread.
+
+    Args:
+        front: DataFrame with front leg data
+        back: DataFrame with back leg data
+        same_strike: True for calendar spreads, False for diagonal
+
+    Returns:
+        Merged DataFrame
+    """
+    join_cols = ["underlying_symbol", "quote_date", "option_type"]
+    if same_strike:
+        join_cols.append("strike")
+
+    front_cols = _get_calendar_leg_columns(1, same_strike)
+    back_cols = _get_calendar_leg_columns(2, same_strike)
+
+    return pd.merge(front[front_cols], back[back_cols], on=join_cols, how="inner")
+
+
+def _get_exit_leg_subset(
+    exit_data: pd.DataFrame, leg_num: int, same_strike: bool
+) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Prepare exit data for joining with a specific leg.
+
+    Args:
+        exit_data: DataFrame with exit date prices
+        leg_num: Leg number (1 or 2)
+        same_strike: True for calendar spreads, False for diagonal
+
+    Returns:
+        Tuple of (subset DataFrame, join columns)
+    """
+    strike_col = _get_strike_column(same_strike, leg_num)
+
+    renamed = exit_data.rename(
+        columns={
+            "quote_date": "exit_date",
+            "expiration": f"expiration_leg{leg_num}",
+            "bid": f"exit_bid_leg{leg_num}",
+            "ask": f"exit_ask_leg{leg_num}",
+        }
+    )
+
+    if not same_strike:
+        renamed = renamed.rename(columns={"strike": strike_col})
+
+    join_cols = [
+        "underlying_symbol",
+        "exit_date",
+        "option_type",
+        f"expiration_leg{leg_num}",
+        strike_col,
+    ]
+
+    subset_cols = join_cols + [f"exit_bid_leg{leg_num}", f"exit_ask_leg{leg_num}"]
+
+    return renamed[subset_cols], join_cols
+
+
+def _find_calendar_exit_prices(
+    merged: pd.DataFrame, data: pd.DataFrame, exit_dte: int, same_strike: bool
+) -> pd.DataFrame:
+    """
+    Find exit prices for calendar/diagonal spread positions.
+
+    Args:
+        merged: DataFrame with merged entry positions
+        data: Original DataFrame with all option data (with DTE assigned)
+        exit_dte: Days before front expiration to exit
+        same_strike: True for calendar spreads, False for diagonal
+
+    Returns:
+        DataFrame with exit prices merged in, or empty DataFrame if no exit data
+    """
+    # Calculate exit date for each position
+    merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
+
+    # Filter data for exit prices
+    exit_dates = merged["exit_date"].unique()
+    exit_data = data[data["quote_date"].isin(exit_dates)]
+
+    if exit_data.empty:
+        return merged.iloc[:0]
+
+    # Merge exit prices for each leg
+    for leg_num in [1, 2]:
+        exit_subset, join_cols = _get_exit_leg_subset(exit_data, leg_num, same_strike)
+        merged = pd.merge(merged, exit_subset, on=join_cols, how="inner")
+        if merged.empty:
+            return merged
+
+    return merged
+
+
+def _calculate_calendar_pnl(merged: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
+    """
+    Calculate P&L for calendar/diagonal spread positions.
+
+    Args:
+        merged: DataFrame with entry and exit prices
+        leg_def: List of tuples defining strategy legs
+
+    Returns:
+        DataFrame with P&L columns added
+    """
+    # Calculate entry and exit prices (midpoint of bid/ask)
+    merged["entry_leg1"] = (merged["bid_leg1"] + merged["ask_leg1"]) / 2
+    merged["entry_leg2"] = (merged["bid_leg2"] + merged["ask_leg2"]) / 2
+    merged["exit_leg1"] = (merged["exit_bid_leg1"] + merged["exit_ask_leg1"]) / 2
+    merged["exit_leg2"] = (merged["exit_bid_leg2"] + merged["exit_ask_leg2"]) / 2
+
+    # Apply position multipliers based on leg definition
+    front_multiplier = leg_def[0][0].value
+    back_multiplier = leg_def[1][0].value
+
+    merged["entry_leg1"] = merged["entry_leg1"] * front_multiplier
+    merged["exit_leg1"] = merged["exit_leg1"] * front_multiplier
+    merged["entry_leg2"] = merged["entry_leg2"] * back_multiplier
+    merged["exit_leg2"] = merged["exit_leg2"] * back_multiplier
+
+    # Calculate totals
+    merged["total_entry_cost"] = merged["entry_leg1"] + merged["entry_leg2"]
+    merged["total_exit_proceeds"] = merged["exit_leg1"] + merged["exit_leg2"]
+
+    # Calculate percentage change
+    merged["pct_change"] = np.where(
+        merged["total_entry_cost"].abs() > 0,
+        (merged["total_exit_proceeds"] - merged["total_entry_cost"])
+        / merged["total_entry_cost"].abs(),
+        np.nan,
+    )
+
+    return merged
+
+
 def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     Process calendar/diagonal spread strategies with different expirations.
 
     Calendar spreads have the same strike but different expirations.
     Diagonal spreads have different strikes and different expirations.
-
-    Algorithm:
-    1. Assign DTE to all options
-    2. Filter front leg options (front_dte_min to front_dte_max)
-    3. Filter back leg options (back_dte_min to back_dte_max)
-    4. Join on (underlying_symbol, quote_date, option_type, [strike if calendar])
-    5. Filter: expiration_leg2 > expiration_leg1
-    6. Find exit prices at (front_expiration - exit_dte) days before front expiration
-    7. Calculate P&L, apply rules, format output
 
     Args:
         data: DataFrame containing raw option chain data
@@ -448,22 +633,20 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     Returns:
         DataFrame with processed calendar/diagonal strategy results
     """
-    from .checks import _run_checks
-
     params = context["params"]
-    _run_checks(params, data)
+    _run_calendar_checks(params, data)
 
     leg_def = context["leg_def"]
     same_strike = context.get("same_strike", True)
     rules = context.get("rules")
 
-    # Assign DTE to all options
+    # Work with a copy to avoid modifying input
+    data = data.copy()
     data = _assign_dte(data)
 
     # Get front and back leg options
     front_options = _evaluate_calendar_options(
         data,
-        "front",
         params["front_dte_min"],
         params["front_dte_max"],
         max_otm_pct=params["max_otm_pct"],
@@ -472,7 +655,6 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
 
     back_options = _evaluate_calendar_options(
         data,
-        "back",
         params["back_dte_min"],
         params["back_dte_max"],
         max_otm_pct=params["max_otm_pct"],
@@ -480,79 +662,16 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     )
 
     # Filter by option type (calls or puts) based on leg definition
-    option_filter = leg_def[0][1]  # Both legs use the same option type
+    option_filter = leg_def[0][1]
     front_options = option_filter(front_options)
     back_options = option_filter(back_options)
 
-    # Prepare columns for join
-    # Join on quote_date (entry date), underlying_symbol, option_type
-    join_cols = ["underlying_symbol", "quote_date", "option_type"]
-    if same_strike:
-        join_cols.append("strike")
+    # Prepare and merge legs
+    front_renamed = _prepare_calendar_leg(front_options, 1, same_strike)
+    back_renamed = _prepare_calendar_leg(back_options, 2, same_strike)
+    merged = _merge_calendar_legs(front_renamed, back_renamed, same_strike)
 
-    # Rename columns for front leg (leg1)
-    front_renamed = front_options.rename(
-        columns={
-            "expiration": "expiration_leg1",
-            "dte": "dte_entry_leg1",
-            "strike": "strike_leg1" if not same_strike else "strike",
-            "bid": "bid_leg1",
-            "ask": "ask_leg1",
-            "otm_pct": "otm_pct_leg1",
-            "underlying_price": "underlying_price_entry",
-        }
-    )
-
-    # Rename columns for back leg (leg2)
-    back_renamed = back_options.rename(
-        columns={
-            "expiration": "expiration_leg2",
-            "dte": "dte_entry_leg2",
-            "strike": "strike_leg2" if not same_strike else "strike",
-            "bid": "bid_leg2",
-            "ask": "ask_leg2",
-            "otm_pct": "otm_pct_leg2",
-            "underlying_price": "underlying_price_back",
-        }
-    )
-
-    # Select columns for merge
-    front_cols = [
-        "underlying_symbol",
-        "quote_date",
-        "option_type",
-        "expiration_leg1",
-        "dte_entry_leg1",
-        "bid_leg1",
-        "ask_leg1",
-        "otm_pct_leg1",
-        "underlying_price_entry",
-    ]
-    back_cols = [
-        "underlying_symbol",
-        "quote_date",
-        "option_type",
-        "expiration_leg2",
-        "dte_entry_leg2",
-        "bid_leg2",
-        "ask_leg2",
-        "otm_pct_leg2",
-    ]
-
-    if same_strike:
-        front_cols.append("strike")
-        back_cols.append("strike")
-    else:
-        front_cols.append("strike_leg1")
-        back_cols.append("strike_leg2")
-
-    front_subset = front_renamed[front_cols]
-    back_subset = back_renamed[back_cols]
-
-    # Merge front and back legs
-    merged = pd.merge(front_subset, back_subset, on=join_cols, how="inner")
-
-    # Filter to ensure front expiration < back expiration
+    # Apply expiration ordering rule
     if rules is not None:
         merged = rules(merged, leg_def)
 
@@ -565,125 +684,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             same_strike,
         )
 
-    # Calculate entry prices (midpoint of bid/ask)
-    merged["entry_leg1"] = (merged["bid_leg1"] + merged["ask_leg1"]) / 2
-    merged["entry_leg2"] = (merged["bid_leg2"] + merged["ask_leg2"]) / 2
-
-    # Find exit prices: exit_dte days before front leg expiration
-    exit_dte = params["exit_dte"]
-
-    # Calculate exit date for each position
-    merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
-
-    # Get all unique exit dates we need to find prices for
-    exit_dates = merged["exit_date"].unique()
-
-    # Filter data for exit prices - we need prices on the exit date
-    exit_data = data[data["quote_date"].isin(exit_dates)]
-
-    if exit_data.empty:
-        # No exit data available, return empty
-        return _format_calendar_output(
-            merged.iloc[:0],
-            params,
-            context["internal_cols"],
-            context["external_cols"],
-            same_strike,
-        )
-
-    # For exits, we need to join each leg with its own expiration
-    # Exit leg1 (front): join on exit_date, expiration_leg1, strike
-    exit_leg1 = exit_data.rename(
-        columns={
-            "quote_date": "exit_date",
-            "expiration": "expiration_leg1",
-            "bid": "exit_bid_leg1",
-            "ask": "exit_ask_leg1",
-        }
-    )
-
-    exit_leg2 = exit_data.rename(
-        columns={
-            "quote_date": "exit_date",
-            "expiration": "expiration_leg2",
-            "bid": "exit_bid_leg2",
-            "ask": "exit_ask_leg2",
-        }
-    )
-
-    # Merge exit prices for leg1
-    exit_join_cols1 = [
-        "underlying_symbol",
-        "exit_date",
-        "option_type",
-        "expiration_leg1",
-    ]
-    if same_strike:
-        exit_join_cols1.append("strike")
-        exit_leg1_subset = exit_leg1[
-            [
-                "underlying_symbol",
-                "exit_date",
-                "option_type",
-                "expiration_leg1",
-                "strike",
-                "exit_bid_leg1",
-                "exit_ask_leg1",
-            ]
-        ]
-    else:
-        exit_leg1 = exit_leg1.rename(columns={"strike": "strike_leg1"})
-        exit_join_cols1.append("strike_leg1")
-        exit_leg1_subset = exit_leg1[
-            [
-                "underlying_symbol",
-                "exit_date",
-                "option_type",
-                "expiration_leg1",
-                "strike_leg1",
-                "exit_bid_leg1",
-                "exit_ask_leg1",
-            ]
-        ]
-
-    merged = pd.merge(merged, exit_leg1_subset, on=exit_join_cols1, how="inner")
-
-    # Merge exit prices for leg2
-    exit_join_cols2 = [
-        "underlying_symbol",
-        "exit_date",
-        "option_type",
-        "expiration_leg2",
-    ]
-    if same_strike:
-        exit_join_cols2.append("strike")
-        exit_leg2_subset = exit_leg2[
-            [
-                "underlying_symbol",
-                "exit_date",
-                "option_type",
-                "expiration_leg2",
-                "strike",
-                "exit_bid_leg2",
-                "exit_ask_leg2",
-            ]
-        ]
-    else:
-        exit_leg2 = exit_leg2.rename(columns={"strike": "strike_leg2"})
-        exit_join_cols2.append("strike_leg2")
-        exit_leg2_subset = exit_leg2[
-            [
-                "underlying_symbol",
-                "exit_date",
-                "option_type",
-                "expiration_leg2",
-                "strike_leg2",
-                "exit_bid_leg2",
-                "exit_ask_leg2",
-            ]
-        ]
-
-    merged = pd.merge(merged, exit_leg2_subset, on=exit_join_cols2, how="inner")
+    # Find exit prices
+    merged = _find_calendar_exit_prices(merged, data, params["exit_dte"], same_strike)
 
     if merged.empty:
         return _format_calendar_output(
@@ -694,31 +696,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             same_strike,
         )
 
-    # Calculate exit prices (midpoint)
-    merged["exit_leg1"] = (merged["exit_bid_leg1"] + merged["exit_ask_leg1"]) / 2
-    merged["exit_leg2"] = (merged["exit_bid_leg2"] + merged["exit_ask_leg2"]) / 2
-
-    # Apply position multipliers based on leg definition
-    # leg_def[0] is front leg (leg1), leg_def[1] is back leg (leg2)
-    front_multiplier = leg_def[0][0].value  # Side enum value
-    back_multiplier = leg_def[1][0].value
-
-    merged["entry_leg1"] = merged["entry_leg1"] * front_multiplier
-    merged["exit_leg1"] = merged["exit_leg1"] * front_multiplier
-    merged["entry_leg2"] = merged["entry_leg2"] * back_multiplier
-    merged["exit_leg2"] = merged["exit_leg2"] * back_multiplier
-
-    # Calculate total entry cost and exit proceeds
-    merged["total_entry_cost"] = merged["entry_leg1"] + merged["entry_leg2"]
-    merged["total_exit_proceeds"] = merged["exit_leg1"] + merged["exit_leg2"]
-
-    # Calculate percentage change
-    merged["pct_change"] = np.where(
-        merged["total_entry_cost"].abs() > 0,
-        (merged["total_exit_proceeds"] - merged["total_entry_cost"])
-        / merged["total_entry_cost"].abs(),
-        np.nan,
-    )
+    # Calculate P&L
+    merged = _calculate_calendar_pnl(merged, leg_def)
 
     return _format_calendar_output(
         merged, params, context["internal_cols"], context["external_cols"], same_strike

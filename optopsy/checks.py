@@ -42,6 +42,46 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
         _check_greek_column(data, "delta")
 
 
+def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+    """
+    Run validation checks for calendar/diagonal spread parameters.
+
+    Args:
+        params: Dictionary of strategy parameters
+        data: DataFrame containing option chain data
+
+    Raises:
+        ValueError: If any validation check fails
+    """
+    for k, v in params.items():
+        if k in param_checks and v is not None:
+            param_checks[k](k, v)
+    _check_data_types(data)
+
+    # Validate DTE range ordering
+    if params.get("front_dte_min") and params.get("front_dte_max"):
+        if params["front_dte_min"] > params["front_dte_max"]:
+            raise ValueError(
+                f"front_dte_min ({params['front_dte_min']}) must be <= "
+                f"front_dte_max ({params['front_dte_max']})"
+            )
+
+    if params.get("back_dte_min") and params.get("back_dte_max"):
+        if params["back_dte_min"] > params["back_dte_max"]:
+            raise ValueError(
+                f"back_dte_min ({params['back_dte_min']}) must be <= "
+                f"back_dte_max ({params['back_dte_max']})"
+            )
+
+    # Validate no overlap between front and back DTE ranges
+    if params.get("front_dte_max") and params.get("back_dte_min"):
+        if params["front_dte_max"] > params["back_dte_min"]:
+            raise ValueError(
+                f"front_dte_max ({params['front_dte_max']}) must be <= "
+                f"back_dte_min ({params['back_dte_min']}) to avoid overlapping ranges"
+            )
+
+
 def _check_positive_integer(key: str, value: Any) -> None:
     """Validate that value is a positive integer."""
     if value <= 0 or not isinstance(value, int):

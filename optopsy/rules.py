@@ -97,45 +97,19 @@ def _rule_iron_butterfly_strikes(
     )
 
 
-def _rule_calendar_expirations(
-    data: pd.DataFrame, leg_def: List[Tuple]
-) -> pd.DataFrame:
+def _rule_expiration_ordering(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
     """
-    Filter calendar spread strategies to ensure front leg expires before back leg.
+    Filter calendar/diagonal spread strategies to ensure front leg expires before back leg.
 
-    A calendar spread requires:
+    Both calendar and diagonal spreads require:
     - expiration_leg1 (front/short-term) < expiration_leg2 (back/long-term)
-    - Same strike for both legs (enforced during join)
 
     Args:
-        data: DataFrame containing calendar spread strategy data
+        data: DataFrame containing calendar/diagonal spread strategy data
         leg_def: List of tuples defining strategy legs
 
     Returns:
-        Filtered DataFrame with valid calendar spread expiration configurations
-    """
-    if len(leg_def) != 2:
-        return data
-
-    return data.query("expiration_leg1 < expiration_leg2")
-
-
-def _rule_diagonal_expirations(
-    data: pd.DataFrame, leg_def: List[Tuple]
-) -> pd.DataFrame:
-    """
-    Filter diagonal spread strategies to ensure front leg expires before back leg.
-
-    A diagonal spread requires:
-    - expiration_leg1 (front/short-term) < expiration_leg2 (back/long-term)
-    - Different strikes allowed (unlike calendar spreads)
-
-    Args:
-        data: DataFrame containing diagonal spread strategy data
-        leg_def: List of tuples defining strategy legs
-
-    Returns:
-        Filtered DataFrame with valid diagonal spread expiration configurations
+        Filtered DataFrame with valid expiration configurations
     """
     if len(leg_def) != 2:
         return data

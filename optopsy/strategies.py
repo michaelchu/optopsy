@@ -21,8 +21,7 @@ from .rules import (
     _rule_butterfly_strikes,
     _rule_iron_condor_strikes,
     _rule_iron_butterfly_strikes,
-    _rule_calendar_expirations,
-    _rule_diagonal_expirations,
+    _rule_expiration_ordering,
 )
 from enum import Enum
 
@@ -724,14 +723,13 @@ def _calendar_spread(
     external_cols = (
         calendar_spread_external_cols if same_strike else diagonal_spread_external_cols
     )
-    rules = _rule_calendar_expirations if same_strike else _rule_diagonal_expirations
 
     return _process_calendar_strategy(
         data,
         internal_cols=internal_cols,
         external_cols=external_cols,
         leg_def=leg_def,
-        rules=rules,
+        rules=_rule_expiration_ordering,
         same_strike=same_strike,
         params=params,
     )
