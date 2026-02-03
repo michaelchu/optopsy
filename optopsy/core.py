@@ -8,6 +8,52 @@ pd.set_option("expand_frame_repr", False)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 
+def _calculate_fill_price(
+    bid: pd.Series,
+    ask: pd.Series,
+    side_value: int,
+    slippage: str,
+    fill_ratio: float = 0.5,
+    volume: Optional[pd.Series] = None,
+    reference_volume: int = 1000,
+) -> pd.Series:
+    """
+    Calculate fill price based on slippage model.
+
+    Args:
+        bid: Series of bid prices
+        ask: Series of ask prices
+        side_value: 1 for long (buying), -1 for short (selling)
+        slippage: Slippage mode - "mid", "spread", or "liquidity"
+        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        volume: Optional series of volume data for liquidity-based slippage
+        reference_volume: Volume threshold for "liquid" option
+
+    Returns:
+        Series of fill prices adjusted for slippage
+    """
+    mid = (bid + ask) / 2
+    half_spread = (ask - bid) / 2
+
+    if slippage == "mid":
+        return mid
+
+    if slippage == "spread":
+        ratio = 1.0
+    else:  # liquidity
+        if volume is None:
+            ratio = fill_ratio
+        else:
+            # Higher fill ratio for illiquid options
+            liquidity_score = (volume / reference_volume).clip(upper=1.0)
+            ratio = fill_ratio + (1 - fill_ratio) * (1 - liquidity_score)
+
+    if side_value == 1:  # long - buying at higher price
+        return mid + (half_spread * ratio)
+    else:  # short - selling at lower price
+        return mid - (half_spread * ratio)
+
+
 def _assign_dte(data: pd.DataFrame) -> pd.DataFrame:
     """Assign days to expiration (DTE) to the dataset."""
     return data.assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
@@ -193,6 +239,12 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     if has_delta and "delta_entry" in result.columns:
         output_cols = output_cols + ["delta_entry"]
 
+    # Include volume if present (for liquidity-based slippage)
+    if "volume_entry" in result.columns:
+        output_cols = output_cols + ["volume_entry"]
+    if "volume_exit" in result.columns:
+        output_cols = output_cols + ["volume_exit"]
+
     return result[output_cols]
 
 
@@ -249,26 +301,90 @@ def _get_leg_quantity(leg: Tuple) -> int:
     return leg[2] if len(leg) > 2 else 1
 
 
-def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
-    """Apply position ratios (long/short multipliers) and quantities to entry and exit prices."""
+def _apply_ratios(
+    data: pd.DataFrame,
+    leg_def: List[Tuple],
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
+) -> pd.DataFrame:
+    """
+    Apply position ratios (long/short multipliers) and quantities to entry and exit prices.
+
+    When slippage is enabled, recalculates fill prices from bid/ask based on position side.
+    """
+    data = data.copy()
     for idx in range(1, len(leg_def) + 1):
         entry_col = f"entry_leg{idx}"
         exit_col = f"exit_leg{idx}"
+        bid_entry_col = f"bid_entry_leg{idx}"
+        ask_entry_col = f"ask_entry_leg{idx}"
+        bid_exit_col = f"bid_exit_leg{idx}"
+        ask_exit_col = f"ask_exit_leg{idx}"
+        volume_col = f"volume_entry_leg{idx}"
+
         leg = leg_def[idx - 1]
-        multiplier = leg[0].value * _get_leg_quantity(leg)
-        # Use default arguments to capture values at each iteration (avoid late binding)
-        entry_kwargs = {entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m}
-        exit_kwargs = {exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m}
-        data = data.assign(**entry_kwargs).assign(**exit_kwargs)
+        side_value = leg[0].value
+        quantity = _get_leg_quantity(leg)
+        multiplier = side_value * quantity
+
+        # Check if bid/ask columns exist for slippage calculation
+        has_bid_ask = bid_entry_col in data.columns and ask_entry_col in data.columns
+
+        if has_bid_ask and slippage != "mid":
+            # Calculate fill price based on slippage model
+            volume_entry = data.get(volume_col) if volume_col in data.columns else None
+
+            # Entry: use side_value to determine buy/sell direction
+            entry_fill = _calculate_fill_price(
+                data[bid_entry_col],
+                data[ask_entry_col],
+                side_value,
+                slippage,
+                fill_ratio,
+                volume_entry,
+                reference_volume,
+            )
+
+            # Exit: reverse the side (closing the position)
+            volume_exit_col = f"volume_exit_leg{idx}"
+            volume_exit = (
+                data.get(volume_exit_col) if volume_exit_col in data.columns else None
+            )
+            exit_fill = _calculate_fill_price(
+                data[bid_exit_col],
+                data[ask_exit_col],
+                -side_value,
+                slippage,
+                fill_ratio,
+                volume_exit,
+                reference_volume,
+            )
+
+            # Apply multiplier (includes quantity)
+            data[entry_col] = entry_fill * multiplier
+            data[exit_col] = exit_fill * multiplier
+        else:
+            # Original behavior: just apply multiplier to mid price
+            entry_kwargs = {
+                entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m
+            }
+            exit_kwargs = {exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m}
+            data = data.assign(**entry_kwargs).assign(**exit_kwargs)
 
     return data
 
 
 def _assign_profit(
-    data: pd.DataFrame, leg_def: List[Tuple], suffixes: List[str]
+    data: pd.DataFrame,
+    leg_def: List[Tuple],
+    suffixes: List[str],
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
 ) -> pd.DataFrame:
     """Calculate total profit/loss and percentage change for multi-leg strategies."""
-    data = _apply_ratios(data, leg_def)
+    data = _apply_ratios(data, leg_def, slippage, fill_ratio, reference_volume)
 
     # determine all entry and exit columns
     entry_cols = ["entry" + s for s in suffixes]
@@ -303,6 +419,9 @@ def _strategy_engine(
     leg_def: List[Tuple],
     join_on: Optional[List[str]] = None,
     rules: Optional[Callable] = None,
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
 ) -> pd.DataFrame:
     """
     Core strategy execution engine that constructs single or multi-leg option strategies.
@@ -312,11 +431,47 @@ def _strategy_engine(
         leg_def: List of tuples defining strategy legs (side, filter_function)
         join_on: Columns to join on for multi-leg strategies
         rules: Optional filtering rules to apply after joining legs
+        slippage: Slippage mode - "mid", "spread", or "liquidity"
+        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        reference_volume: Volume threshold for liquid options
 
     Returns:
         DataFrame with constructed strategy and calculated profit/loss
     """
     if len(leg_def) == 1:
+        side = leg_def[0][0]
+        has_bid_ask = "bid_entry" in data.columns and "ask_entry" in data.columns
+
+        if has_bid_ask and slippage != "mid":
+            data = data.copy()  # Avoid modifying original DataFrame
+            # Calculate fill prices with slippage
+            volume_entry = (
+                data.get("volume_entry") if "volume_entry" in data.columns else None
+            )
+
+            data["entry"] = _calculate_fill_price(
+                data["bid_entry"],
+                data["ask_entry"],
+                side.value,
+                slippage,
+                fill_ratio,
+                volume_entry,
+                reference_volume,
+            )
+            # Exit: reverse the side (closing the position)
+            volume_exit = (
+                data.get("volume_exit") if "volume_exit" in data.columns else None
+            )
+            data["exit"] = _calculate_fill_price(
+                data["bid_exit"],
+                data["ask_exit"],
+                -side.value,
+                slippage,
+                fill_ratio,
+                volume_exit,
+                reference_volume,
+            )
+
         data["pct_change"] = np.where(
             data["entry"].abs() > 0,
             (data["exit"] - data["entry"]) / data["entry"].abs(),
@@ -342,7 +497,7 @@ def _strategy_engine(
         result = pd.merge(result, partial, on=join_on, how="inner")
 
     return result.pipe(_rule_func, rules, leg_def).pipe(
-        _assign_profit, leg_def, suffixes
+        _assign_profit, leg_def, suffixes, slippage, fill_ratio, reference_volume
     )
 
 
@@ -382,6 +537,9 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             context["leg_def"],
             context.get("join_on"),
             context.get("rules"),
+            context["params"].get("slippage", "mid"),
+            context["params"].get("fill_ratio", 0.5),
+            context["params"].get("reference_volume", 1000),
         )
         .pipe(
             _format_output,
@@ -580,26 +738,78 @@ def _find_calendar_exit_prices(
     return merged
 
 
-def _calculate_calendar_pnl(merged: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
+def _calculate_calendar_pnl(
+    merged: pd.DataFrame,
+    leg_def: List[Tuple],
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
+) -> pd.DataFrame:
     """
     Calculate P&L for calendar/diagonal spread positions.
 
     Args:
         merged: DataFrame with entry and exit prices
         leg_def: List of tuples defining strategy legs
+        slippage: Slippage mode - "mid", "spread", or "liquidity"
+        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        reference_volume: Volume threshold for liquid options
 
     Returns:
         DataFrame with P&L columns added
     """
-    # Calculate entry and exit prices (midpoint of bid/ask)
-    merged["entry_leg1"] = (merged["bid_leg1"] + merged["ask_leg1"]) / 2
-    merged["entry_leg2"] = (merged["bid_leg2"] + merged["ask_leg2"]) / 2
-    merged["exit_leg1"] = (merged["exit_bid_leg1"] + merged["exit_ask_leg1"]) / 2
-    merged["exit_leg2"] = (merged["exit_bid_leg2"] + merged["exit_ask_leg2"]) / 2
+    front_side = leg_def[0][0].value
+    back_side = leg_def[1][0].value
+
+    # Calculate entry prices based on slippage model
+    volume_leg1 = merged.get("volume_leg1") if "volume_leg1" in merged.columns else None
+    volume_leg2 = merged.get("volume_leg2") if "volume_leg2" in merged.columns else None
+
+    merged["entry_leg1"] = _calculate_fill_price(
+        merged["bid_leg1"],
+        merged["ask_leg1"],
+        front_side,
+        slippage,
+        fill_ratio,
+        volume_leg1,
+        reference_volume,
+    )
+    merged["entry_leg2"] = _calculate_fill_price(
+        merged["bid_leg2"],
+        merged["ask_leg2"],
+        back_side,
+        slippage,
+        fill_ratio,
+        volume_leg2,
+        reference_volume,
+    )
+
+    # Calculate exit prices (reverse sides for closing positions)
+    # Note: Exit volume is not currently tracked for calendar spreads since exit
+    # data comes from a different quote date. For liquidity mode, exits use
+    # the base fill_ratio without volume adjustment.
+    merged["exit_leg1"] = _calculate_fill_price(
+        merged["exit_bid_leg1"],
+        merged["exit_ask_leg1"],
+        -front_side,
+        slippage,
+        fill_ratio,
+        None,
+        reference_volume,
+    )
+    merged["exit_leg2"] = _calculate_fill_price(
+        merged["exit_bid_leg2"],
+        merged["exit_ask_leg2"],
+        -back_side,
+        slippage,
+        fill_ratio,
+        None,
+        reference_volume,
+    )
 
     # Apply position multipliers based on leg definition
-    front_multiplier = leg_def[0][0].value
-    back_multiplier = leg_def[1][0].value
+    front_multiplier = front_side
+    back_multiplier = back_side
 
     merged["entry_leg1"] = merged["entry_leg1"] * front_multiplier
     merged["exit_leg1"] = merged["exit_leg1"] * front_multiplier
@@ -701,7 +911,13 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         )
 
     # Calculate P&L
-    merged = _calculate_calendar_pnl(merged, leg_def)
+    merged = _calculate_calendar_pnl(
+        merged,
+        leg_def,
+        params.get("slippage", "mid"),
+        params.get("fill_ratio", 0.5),
+        params.get("reference_volume", 1000),
+    )
 
     return _format_calendar_output(
         merged, params, context["internal_cols"], context["external_cols"], same_strike

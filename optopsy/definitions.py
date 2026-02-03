@@ -10,6 +10,10 @@ evaluated_cols: List[str] = [
     "otm_pct_entry",
     "underlying_price_entry",
     "underlying_price_exit",
+    "bid_entry",
+    "ask_entry",
+    "bid_exit",
+    "ask_exit",
     "entry",
     "exit",
 ]

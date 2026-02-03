@@ -39,6 +39,10 @@ default_kwargs: Dict[str, Any] = {
     "delta_max": None,
     # Greeks grouping (optional)
     "delta_interval": None,
+    # Slippage settings
+    "slippage": "mid",  # "mid", "spread", or "liquidity"
+    "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
+    "reference_volume": 1000,  # Volume threshold for liquid options
 }
 
 calendar_default_kwargs: Dict[str, Any] = {
@@ -53,6 +57,10 @@ calendar_default_kwargs: Dict[str, Any] = {
     "min_bid_ask": 0.05,
     "drop_nan": True,
     "raw": False,
+    # Slippage settings
+    "slippage": "mid",  # "mid", "spread", or "liquidity"
+    "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
+    "reference_volume": 1000,  # Volume threshold for liquid options
 }
 
 
