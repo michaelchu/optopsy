@@ -56,26 +56,24 @@ double_strike_internal_cols = [
 
 triple_strike_internal_cols = [
     "underlying_symbol",
-    "underlying_price_entry",
+    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
+    "dte_range",
     "option_type_leg1",
     "strike_leg1",
     "option_type_leg2",
     "strike_leg2",
     "option_type_leg3",
     "strike_leg3",
-    "entry",
-    "exit",
-    "long_profit",
-    "short_profit",
-    "long_pct_change",
-    "short_pct_change",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
 ]
 
 quadruple_strike_internal_cols = [
     "underlying_symbol",
-    "underlying_price_entry",
+    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
     "dte_range",
@@ -87,12 +85,9 @@ quadruple_strike_internal_cols = [
     "strike_leg3",
     "option_type_leg4",
     "strike_leg4",
-    "entry",
-    "exit",
-    "long_profit",
-    "short_profit",
-    "long_pct_change",
-    "short_pct_change",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
 ]
 
 # base columns of dataframe after aggregation(minus the calculated columns)
