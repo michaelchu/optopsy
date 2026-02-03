@@ -43,7 +43,7 @@ default_kwargs: Dict[str, Any] = {
 
 calendar_default_kwargs: Dict[str, Any] = {
     "front_dte_min": 20,
-    "front_dte_max": 45,
+    "front_dte_max": 44,
     "back_dte_min": 45,
     "back_dte_max": 90,
     "exit_dte": 7,

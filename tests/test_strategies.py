@@ -759,12 +759,25 @@ def test_calendar_invalid_back_dte_range(calendar_data):
 
 def test_calendar_overlapping_dte_ranges(calendar_data):
     """Test that calendar raises error when front and back DTE ranges overlap."""
-    with pytest.raises(ValueError, match="front_dte_max.*must be <=.*back_dte_min"):
+    with pytest.raises(ValueError, match="front_dte_max.*must be <.*back_dte_min"):
         long_call_calendar(
             calendar_data,
             raw=True,
             front_dte_min=20,
             front_dte_max=60,
             back_dte_min=40,
+            back_dte_max=90,
+        )
+
+
+def test_calendar_adjacent_dte_ranges_rejected(calendar_data):
+    """Test that calendar raises error when front_dte_max equals back_dte_min."""
+    with pytest.raises(ValueError, match="front_dte_max.*must be <.*back_dte_min"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=45,
+            back_dte_min=45,
             back_dte_max=90,
         )

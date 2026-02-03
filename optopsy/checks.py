@@ -80,9 +80,9 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
 
     # Validate no overlap between front and back DTE ranges
     if front_dte_max is not None and back_dte_min is not None:
-        if front_dte_max > back_dte_min:
+        if front_dte_max >= back_dte_min:
             raise ValueError(
-                f"front_dte_max ({front_dte_max}) must be <= "
+                f"front_dte_max ({front_dte_max}) must be < "
                 f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
             )
 
