@@ -26,6 +26,16 @@ from .strategies import (
     # Covered strategies
     covered_call,
     protective_put,
+    # Calendar spread strategies
+    long_call_calendar,
+    short_call_calendar,
+    long_put_calendar,
+    short_put_calendar,
+    # Diagonal spread strategies
+    long_call_diagonal,
+    short_call_diagonal,
+    long_put_diagonal,
+    short_put_diagonal,
 )
 from .datafeeds import csv_data
 
@@ -56,5 +66,15 @@ __all__ = [
     # Covered strategies
     "covered_call",
     "protective_put",
+    # Calendar spread strategies
+    "long_call_calendar",
+    "short_call_calendar",
+    "long_put_calendar",
+    "short_put_calendar",
+    # Diagonal spread strategies
+    "long_call_diagonal",
+    "short_call_diagonal",
+    "long_put_diagonal",
+    "short_put_diagonal",
     "csv_data",
 ]

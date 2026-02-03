@@ -1,5 +1,6 @@
 from optopsy.strategies import *
 from optopsy.definitions import *
+import pytest
 
 describe_cols = [
     "count",
@@ -460,7 +461,323 @@ def test_long_calls_with_delta_grouping(data_with_delta):
 
 def test_delta_filter_no_delta_column_raises(data):
     """Test that using delta filter on data without delta column raises error."""
-    import pytest
-
     with pytest.raises(ValueError, match="Greek column 'delta' not found"):
         long_calls(data, delta_min=0.30)
+
+
+# =============================================================================
+# Calendar Spread Strategy Tests
+# =============================================================================
+
+
+def test_long_call_calendar_raw(calendar_data):
+    """Test long call calendar returns correct structure and calculated values."""
+    results = long_call_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_internal_cols
+    # All legs should be calls
+    assert results.iloc[0]["option_type"] == "call"
+    # Same strike for both legs (calendar spread)
+    assert "strike" in results.columns
+    # Front expiration should be before back expiration
+    assert results.iloc[0]["expiration_leg1"] < results.iloc[0]["expiration_leg2"]
+
+    # Check calculated values for calendar at strike 212.5
+    # Entry: short front call (-2.95) + long back call (4.95) = 2.00 (net debit)
+    # Exit: close short front (-3.05) + close long back (5.05) = 2.00
+    row = results[results["strike"] == 212.5].iloc[0]
+    assert round(row["total_entry_cost"], 2) == 2.00
+    assert round(row["total_exit_proceeds"], 2) == 2.00
+    assert round(row["pct_change"], 2) == 0.0
+
+
+def test_long_call_calendar(calendar_data):
+    """Test long call calendar aggregated output."""
+    results = long_call_calendar(
+        calendar_data,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_external_cols + describe_cols
+
+
+def test_short_call_calendar_raw(calendar_data):
+    """Test short call calendar returns correct structure."""
+    results = short_call_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "call"
+
+    # For short calendar, entry/exit signs are opposite
+    # Entry: long front call (2.95) + short back call (-4.95) = -2.00 (net credit)
+    # Exit: close long front (3.05) + close short back (-5.05) = -2.00
+    row = results[results["strike"] == 212.5].iloc[0]
+    assert round(row["total_entry_cost"], 2) == -2.00
+    assert round(row["total_exit_proceeds"], 2) == -2.00
+    assert round(row["pct_change"], 2) == 0.0
+
+
+def test_long_put_calendar_raw(calendar_data):
+    """Test long put calendar returns correct structure and calculated values."""
+    results = long_put_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "put"
+    assert results.iloc[0]["expiration_leg1"] < results.iloc[0]["expiration_leg2"]
+
+    # Check calculated values for put calendar at strike 212.5
+    # Entry: short front put (-2.95) + long back put (4.95) = 2.00 (net debit)
+    # Exit: close short front (-0.35) + close long back (2.55) = 2.20
+    row = results[results["strike"] == 212.5].iloc[0]
+    assert round(row["total_entry_cost"], 2) == 2.00
+    assert round(row["total_exit_proceeds"], 2) == 2.20
+    assert round(row["pct_change"], 2) == 0.10
+
+
+def test_long_put_calendar(calendar_data):
+    """Test long put calendar aggregated output."""
+    results = long_put_calendar(
+        calendar_data,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_external_cols + describe_cols
+
+
+def test_short_put_calendar_raw(calendar_data):
+    """Test short put calendar returns correct structure."""
+    results = short_put_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == calendar_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "put"
+
+
+# =============================================================================
+# Diagonal Spread Strategy Tests
+# =============================================================================
+
+
+def test_long_call_diagonal_raw(calendar_data):
+    """Test long call diagonal returns correct structure and calculated values."""
+    results = long_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "call"
+    # Different strikes for diagonal spread
+    assert "strike_leg1" in results.columns
+    assert "strike_leg2" in results.columns
+    # Front expiration should be before back expiration
+    assert results.iloc[0]["expiration_leg1"] < results.iloc[0]["expiration_leg2"]
+
+
+def test_long_call_diagonal(calendar_data):
+    """Test long call diagonal aggregated output."""
+    results = long_call_diagonal(
+        calendar_data,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_external_cols + describe_cols
+
+
+def test_short_call_diagonal_raw(calendar_data):
+    """Test short call diagonal returns correct structure."""
+    results = short_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "call"
+
+
+def test_long_put_diagonal_raw(calendar_data):
+    """Test long put diagonal returns correct structure."""
+    results = long_put_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "put"
+
+
+def test_long_put_diagonal(calendar_data):
+    """Test long put diagonal aggregated output."""
+    results = long_put_diagonal(
+        calendar_data,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_external_cols + describe_cols
+
+
+def test_short_put_diagonal_raw(calendar_data):
+    """Test short put diagonal returns correct structure."""
+    results = short_put_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert list(results.columns) == diagonal_spread_internal_cols
+    assert results.iloc[0]["option_type"] == "put"
+
+
+def test_calendar_expiration_ordering(calendar_data):
+    """Test that calendar spreads enforce front < back expiration."""
+    results = long_call_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    # All results should have front expiration before back expiration
+    for _, row in results.iterrows():
+        assert row["expiration_leg1"] < row["expiration_leg2"]
+
+
+def test_diagonal_expiration_ordering(calendar_data):
+    """Test that diagonal spreads enforce front < back expiration."""
+    results = long_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    # All results should have front expiration before back expiration
+    for _, row in results.iterrows():
+        assert row["expiration_leg1"] < row["expiration_leg2"]
+
+
+def test_calendar_no_matching_expirations(data):
+    """Test that calendar returns empty when no matching expirations exist."""
+    # The basic 'data' fixture only has one expiration date
+    results = long_call_calendar(
+        data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    # Should return empty DataFrame with correct columns
+    assert len(results) == 0
+    assert list(results.columns) == calendar_spread_internal_cols
+
+
+def test_calendar_invalid_front_dte_range(calendar_data):
+    """Test that calendar raises error when front_dte_min > front_dte_max."""
+    with pytest.raises(ValueError, match="front_dte_min.*must be <=.*front_dte_max"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=50,
+            front_dte_max=20,
+            back_dte_min=60,
+            back_dte_max=90,
+        )
+
+
+def test_calendar_invalid_back_dte_range(calendar_data):
+    """Test that calendar raises error when back_dte_min > back_dte_max."""
+    with pytest.raises(ValueError, match="back_dte_min.*must be <=.*back_dte_max"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=40,
+            back_dte_min=90,
+            back_dte_max=60,
+        )
+
+
+def test_calendar_overlapping_dte_ranges(calendar_data):
+    """Test that calendar raises error when front and back DTE ranges overlap."""
+    with pytest.raises(ValueError, match="front_dte_max.*must be <.*back_dte_min"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=60,
+            back_dte_min=40,
+            back_dte_max=90,
+        )
+
+
+def test_calendar_adjacent_dte_ranges_rejected(calendar_data):
+    """Test that calendar raises error when front_dte_max equals back_dte_min."""
+    with pytest.raises(ValueError, match="front_dte_max.*must be <.*back_dte_min"):
+        long_call_calendar(
+            calendar_data,
+            raw=True,
+            front_dte_min=20,
+            front_dte_max=45,
+            back_dte_min=45,
+            back_dte_max=90,
+        )

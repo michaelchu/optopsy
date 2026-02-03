@@ -122,3 +122,73 @@ def data_with_delta():
         ["SPX", 220, "put", exp_date, quote_dates[1], 217.5, 0.0, 0.05, -0.20],
     ]
     return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture(scope="module")
+def calendar_data():
+    """
+    Test data with multiple expirations for testing calendar and diagonal spreads.
+
+    Structure:
+    - Entry date: 2018-01-01
+    - Exit date: 2018-01-24 (7 days before front expiration)
+    - Front month expiration: 2018-01-31 (30 DTE at entry)
+    - Back month expiration: 2018-03-02 (60 DTE at entry)
+    - Underlying price at entry: 212.5 (ATM)
+    - Underlying price at exit: 215.0 (moved up)
+
+    Strikes: 210.0, 212.5, 215.0
+    """
+    front_exp = datetime.datetime(2018, 1, 31)  # 30 DTE from entry
+    back_exp = datetime.datetime(2018, 3, 2)  # 60 DTE from entry
+    entry_date = datetime.datetime(2018, 1, 1)
+    exit_date = datetime.datetime(2018, 1, 24)  # 7 days before front exp
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+
+    d = [
+        # ===== ENTRY DATE (2018-01-01) =====
+        # Front month calls (30 DTE) - lower premium due to less time value
+        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50],
+        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00],
+        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80],
+        # Front month puts (30 DTE)
+        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.90, 2.00],
+        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 2.90, 3.00],
+        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.20, 4.30],
+        # Back month calls (60 DTE) - higher premium due to more time value
+        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50],
+        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00],
+        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70],
+        # Back month puts (60 DTE)
+        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50],
+        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00],
+        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.60, 6.70],
+        # ===== EXIT DATE (2018-01-24) =====
+        # Front month calls (7 DTE remaining) - time decay accelerated
+        ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50],
+        ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10],
+        ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90],
+        # Front month puts (7 DTE remaining) - OTM, mostly decayed
+        ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.10, 0.20],
+        ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.30, 0.40],
+        ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 0.90, 1.00],
+        # Back month calls (37 DTE remaining) - still has time value
+        ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00],
+        ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10],
+        ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
+        # Back month puts (37 DTE remaining)
+        ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 1.40, 1.50],
+        ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 2.50, 2.60],
+        ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 4.30, 4.40],
+    ]
+    return pd.DataFrame(data=d, columns=cols)

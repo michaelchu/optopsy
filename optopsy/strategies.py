@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple
 import pandas as pd
-from .core import _calls, _puts, _process_strategy
+from .core import _calls, _puts, _process_strategy, _process_calendar_strategy
 from .definitions import (
     single_strike_external_cols,
     single_strike_internal_cols,
@@ -11,12 +11,17 @@ from .definitions import (
     quadruple_strike_external_cols,
     quadruple_strike_internal_cols,
     straddle_internal_cols,
+    calendar_spread_internal_cols,
+    calendar_spread_external_cols,
+    diagonal_spread_internal_cols,
+    diagonal_spread_external_cols,
 )
 from .rules import (
     _rule_non_overlapping_strike,
     _rule_butterfly_strikes,
     _rule_iron_condor_strikes,
     _rule_iron_butterfly_strikes,
+    _rule_expiration_ordering,
 )
 from enum import Enum
 
@@ -34,6 +39,20 @@ default_kwargs: Dict[str, Any] = {
     "delta_max": None,
     # Greeks grouping (optional)
     "delta_interval": None,
+}
+
+calendar_default_kwargs: Dict[str, Any] = {
+    "front_dte_min": 20,
+    "front_dte_max": 40,
+    "back_dte_min": 50,
+    "back_dte_max": 90,
+    "exit_dte": 7,
+    "dte_interval": 7,
+    "otm_pct_interval": 0.05,
+    "max_otm_pct": 0.5,
+    "min_bid_ask": 0.05,
+    "drop_nan": True,
+    "raw": False,
 }
 
 
@@ -671,4 +690,244 @@ def protective_put(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
         rules=_rule_non_overlapping_strike,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
         params=params,
+    )
+
+
+# =============================================================================
+# Calendar and Diagonal Spread Strategies
+# =============================================================================
+
+
+def _calendar_spread(
+    data: pd.DataFrame, leg_def: List[Tuple], same_strike: bool = True, **kwargs: Any
+) -> pd.DataFrame:
+    """
+    Process calendar or diagonal spread strategies.
+
+    Calendar spreads have the same strike but different expirations.
+    Diagonal spreads have different strikes and different expirations.
+
+    Args:
+        data: DataFrame containing option chain data
+        leg_def: List of tuples defining strategy legs [(side, option_filter), ...]
+        same_strike: True for calendar spreads, False for diagonal spreads
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with calendar/diagonal spread strategy results
+    """
+    params = {**calendar_default_kwargs, **kwargs}
+    internal_cols = (
+        calendar_spread_internal_cols if same_strike else diagonal_spread_internal_cols
+    )
+    external_cols = (
+        calendar_spread_external_cols if same_strike else diagonal_spread_external_cols
+    )
+
+    return _process_calendar_strategy(
+        data,
+        internal_cols=internal_cols,
+        external_cols=external_cols,
+        leg_def=leg_def,
+        rules=_rule_expiration_ordering,
+        same_strike=same_strike,
+        params=params,
+    )
+
+
+def long_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long call calendar spread strategy statistics.
+
+    A long call calendar consists of:
+    - Short 1 front-month call (near-term expiration)
+    - Long 1 back-month call (longer-term expiration)
+    - Both at the same strike
+
+    This is a neutral strategy that profits from time decay differential
+    between the two expirations. Maximum profit occurs when the underlying
+    is at the strike price at front-month expiration.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters including:
+            - front_dte_min: Minimum DTE for front leg (default: 20)
+            - front_dte_max: Maximum DTE for front leg (default: 40)
+            - back_dte_min: Minimum DTE for back leg (default: 50)
+            - back_dte_max: Maximum DTE for back leg (default: 90)
+            - exit_dte: Days before front expiration to exit (default: 7)
+
+    Returns:
+        DataFrame with long call calendar spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.short, _calls), (Side.long, _calls)], same_strike=True, **kwargs
+    )
+
+
+def short_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short call calendar spread strategy statistics.
+
+    A short call calendar consists of:
+    - Long 1 front-month call (near-term expiration)
+    - Short 1 back-month call (longer-term expiration)
+    - Both at the same strike
+
+    This strategy profits when the underlying moves significantly away
+    from the strike price before front-month expiration.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with short call calendar spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.long, _calls), (Side.short, _calls)], same_strike=True, **kwargs
+    )
+
+
+def long_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long put calendar spread strategy statistics.
+
+    A long put calendar consists of:
+    - Short 1 front-month put (near-term expiration)
+    - Long 1 back-month put (longer-term expiration)
+    - Both at the same strike
+
+    This is a neutral strategy that profits from time decay differential
+    between the two expirations.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with long put calendar spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.short, _puts), (Side.long, _puts)], same_strike=True, **kwargs
+    )
+
+
+def short_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short put calendar spread strategy statistics.
+
+    A short put calendar consists of:
+    - Long 1 front-month put (near-term expiration)
+    - Short 1 back-month put (longer-term expiration)
+    - Both at the same strike
+
+    This strategy profits when the underlying moves significantly away
+    from the strike price before front-month expiration.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with short put calendar spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.long, _puts), (Side.short, _puts)], same_strike=True, **kwargs
+    )
+
+
+def long_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long call diagonal spread strategy statistics.
+
+    A long call diagonal consists of:
+    - Short 1 front-month call (near-term expiration)
+    - Long 1 back-month call (longer-term expiration)
+    - Different strikes for each leg
+
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with long call diagonal spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.short, _calls), (Side.long, _calls)], same_strike=False, **kwargs
+    )
+
+
+def short_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short call diagonal spread strategy statistics.
+
+    A short call diagonal consists of:
+    - Long 1 front-month call (near-term expiration)
+    - Short 1 back-month call (longer-term expiration)
+    - Different strikes for each leg
+
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with short call diagonal spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.long, _calls), (Side.short, _calls)], same_strike=False, **kwargs
+    )
+
+
+def long_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate long put diagonal spread strategy statistics.
+
+    A long put diagonal consists of:
+    - Short 1 front-month put (near-term expiration)
+    - Long 1 back-month put (longer-term expiration)
+    - Different strikes for each leg
+
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with long put diagonal spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.short, _puts), (Side.long, _puts)], same_strike=False, **kwargs
+    )
+
+
+def short_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Generate short put diagonal spread strategy statistics.
+
+    A short put diagonal consists of:
+    - Long 1 front-month put (near-term expiration)
+    - Short 1 back-month put (longer-term expiration)
+    - Different strikes for each leg
+
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
+
+    Args:
+        data: DataFrame containing option chain data
+        **kwargs: Optional strategy parameters
+
+    Returns:
+        DataFrame with short put diagonal spread strategy performance statistics
+    """
+    return _calendar_spread(
+        data, [(Side.long, _puts), (Side.short, _puts)], same_strike=False, **kwargs
     )

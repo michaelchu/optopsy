@@ -112,3 +112,58 @@ quadruple_strike_external_cols: List[str] = [
     "otm_pct_range_leg3",
     "otm_pct_range_leg4",
 ]
+
+# Calendar spread columns (same strike, different expirations)
+calendar_spread_internal_cols: List[str] = [
+    "underlying_symbol",
+    "underlying_price_entry",
+    "option_type",
+    "strike",
+    "expiration_leg1",
+    "expiration_leg2",
+    "dte_entry_leg1",
+    "dte_entry_leg2",
+    "entry_leg1",
+    "exit_leg1",
+    "entry_leg2",
+    "exit_leg2",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
+]
+
+calendar_spread_external_cols: List[str] = [
+    "dte_range_leg1",
+    "dte_range_leg2",
+    "otm_pct_range",
+]
+
+# Diagonal spread columns (different strikes, different expirations)
+diagonal_spread_internal_cols: List[str] = [
+    "underlying_symbol",
+    "underlying_price_entry",
+    "option_type",
+    "strike_leg1",
+    "strike_leg2",
+    "expiration_leg1",
+    "expiration_leg2",
+    "dte_entry_leg1",
+    "dte_entry_leg2",
+    "entry_leg1",
+    "exit_leg1",
+    "entry_leg2",
+    "exit_leg2",
+    "total_entry_cost",
+    "total_exit_proceeds",
+    "pct_change",
+]
+
+diagonal_spread_external_cols: List[str] = [
+    "dte_range_leg1",
+    "dte_range_leg2",
+    "otm_pct_range_leg1",
+    "otm_pct_range_leg2",
+]
+
+# Columns added by pandas describe() for aggregated statistics output
+describe_cols: List[str] = ["count", "mean", "std", "min", "25%", "50%", "75%", "max"]

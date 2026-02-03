@@ -42,6 +42,51 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
         _check_greek_column(data, "delta")
 
 
+def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+    """
+    Run validation checks for calendar/diagonal spread parameters.
+
+    Args:
+        params: Dictionary of strategy parameters
+        data: DataFrame containing option chain data
+
+    Raises:
+        ValueError: If any validation check fails
+    """
+    for k, v in params.items():
+        if k in param_checks and v is not None:
+            param_checks[k](k, v)
+    _check_data_types(data)
+
+    # Validate DTE range ordering
+    front_dte_min = params.get("front_dte_min")
+    front_dte_max = params.get("front_dte_max")
+    back_dte_min = params.get("back_dte_min")
+    back_dte_max = params.get("back_dte_max")
+
+    if front_dte_min is not None and front_dte_max is not None:
+        if front_dte_min > front_dte_max:
+            raise ValueError(
+                f"front_dte_min ({front_dte_min}) must be <= "
+                f"front_dte_max ({front_dte_max})"
+            )
+
+    if back_dte_min is not None and back_dte_max is not None:
+        if back_dte_min > back_dte_max:
+            raise ValueError(
+                f"back_dte_min ({back_dte_min}) must be <= "
+                f"back_dte_max ({back_dte_max})"
+            )
+
+    # Validate no overlap between front and back DTE ranges
+    if front_dte_max is not None and back_dte_min is not None:
+        if front_dte_max >= back_dte_min:
+            raise ValueError(
+                f"front_dte_max ({front_dte_max}) must be < "
+                f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
+            )
+
+
 def _check_positive_integer(key: str, value: Any) -> None:
     """Validate that value is a positive integer."""
     if value <= 0 or not isinstance(value, int):
@@ -150,4 +195,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "delta_min": _check_optional_float,
     "delta_max": _check_optional_float,
     "delta_interval": _check_optional_float,
+    # Calendar/diagonal spread parameters
+    "front_dte_min": _check_positive_integer,
+    "front_dte_max": _check_positive_integer,
+    "back_dte_min": _check_positive_integer,
+    "back_dte_max": _check_positive_integer,
 }
