@@ -14,6 +14,11 @@ default_kwargs: Dict[str, Any] = {
     "strike": 5,
     "bid": 6,
     "ask": 7,
+    # Optional Greek columns (set to column index to include)
+    "delta": None,
+    "gamma": None,
+    "theta": None,
+    "vega": None,
 }
 
 
@@ -83,6 +88,10 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         option_type: Column index containing option type (call/put)
         bid: Column index containing bid price
         ask: Column index containing ask price
+        delta: Optional column index containing delta Greek
+        gamma: Optional column index containing gamma Greek
+        theta: Optional column index containing theta Greek
+        vega: Optional column index containing vega Greek
 
     Returns:
         DataFrame with option chains and standardized column names
@@ -95,6 +104,7 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
     """
     params = {**default_kwargs, **kwargs}
 
+    # Required columns
     column_mapping: List[Tuple[Optional[int], str]] = [
         (params["underlying_symbol"], "underlying_symbol"),
         (params["underlying_price"], "underlying_price"),
@@ -105,6 +115,11 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         (params["bid"], "bid"),
         (params["ask"], "ask"),
     ]
+
+    # Add optional Greek columns if specified
+    for greek in ["delta", "gamma", "theta", "vega"]:
+        if params.get(greek) is not None:
+            column_mapping.append((params[greek], greek))
 
     try:
         return (

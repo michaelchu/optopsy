@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 import pandas as pd
 
 expected_types: Dict[str, Tuple[str, ...]] = {
@@ -10,6 +10,14 @@ expected_types: Dict[str, Tuple[str, ...]] = {
     "strike": ("int64", "float64"),
     "bid": ("int64", "float64"),
     "ask": ("int64", "float64"),
+}
+
+# Optional Greek columns - only validated when Greeks filtering/grouping is enabled
+optional_greek_types: Dict[str, Tuple[str, ...]] = {
+    "delta": ("int64", "float64"),
+    "gamma": ("int64", "float64"),
+    "theta": ("int64", "float64"),
+    "vega": ("int64", "float64"),
 }
 
 
@@ -25,9 +33,13 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
         ValueError: If any validation check fails
     """
     for k, v in params.items():
-        if k in param_checks:
+        if k in param_checks and v is not None:
             param_checks[k](k, v)
     _check_data_types(data)
+
+    # Check for delta column if delta filtering/grouping is enabled
+    if _requires_delta(params):
+        _check_greek_column(data, "delta")
 
 
 def _check_positive_integer(key: str, value: Any) -> None:
@@ -66,6 +78,12 @@ def _check_list_type(key: str, value: Any) -> None:
         raise ValueError(f"Invalid setting for {key}, must be a list type")
 
 
+def _check_optional_float(key: str, value: Any) -> None:
+    """Validate that value is a float or None."""
+    if value is not None and not isinstance(value, (int, float)):
+        raise ValueError(f"Invalid setting for {key}, must be float type or None")
+
+
 def _check_data_types(data: pd.DataFrame) -> None:
     """
     Validate that DataFrame has required columns with correct data types.
@@ -86,6 +104,38 @@ def _check_data_types(data: pd.DataFrame) -> None:
             )
 
 
+def _check_greek_column(data: pd.DataFrame, greek: str) -> None:
+    """
+    Validate that an optional Greek column exists and has correct data type.
+
+    Args:
+        data: DataFrame to validate
+        greek: Name of the Greek column to check (e.g., 'delta', 'gamma')
+
+    Raises:
+        ValueError: If Greek column is missing or has incorrect type
+    """
+    df_type_dict = data.dtypes.astype(str).to_dict()
+    if greek not in df_type_dict:
+        raise ValueError(
+            f"Greek column '{greek}' not found in DataFrame. "
+            f"Required for delta filtering/grouping."
+        )
+    expected = optional_greek_types.get(greek, ("int64", "float64"))
+    if all(df_type_dict[greek] != t for t in expected):
+        raise ValueError(
+            f"{df_type_dict[greek]} of {greek} does not match expected types: {expected}"
+        )
+
+
+def _requires_delta(params: Dict[str, Any]) -> bool:
+    """Check if any delta-related parameters are set."""
+    return any(
+        params.get(key) is not None
+        for key in ["delta_min", "delta_max", "delta_interval"]
+    )
+
+
 param_checks: Dict[str, Callable[[str, Any], None]] = {
     "dte_interval": _check_positive_integer,
     "max_entry_dte": _check_positive_integer,
@@ -96,4 +146,8 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "side": _check_side,
     "drop_nan": _check_bool_type,
     "raw": _check_bool_type,
+    # Greeks parameters (optional)
+    "delta_min": _check_optional_float,
+    "delta_max": _check_optional_float,
+    "delta_interval": _check_optional_float,
 }

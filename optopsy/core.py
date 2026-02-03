@@ -74,12 +74,61 @@ def _cut_options_by_otm(
     return data
 
 
+def _filter_by_delta(
+    data: pd.DataFrame, delta_min: Optional[float], delta_max: Optional[float]
+) -> pd.DataFrame:
+    """
+    Filter options by delta range.
+
+    Args:
+        data: DataFrame with delta column
+        delta_min: Minimum delta value (inclusive), or None for no lower bound
+        delta_max: Maximum delta value (inclusive), or None for no upper bound
+
+    Returns:
+        Filtered DataFrame
+    """
+    if delta_min is None and delta_max is None:
+        return data
+
+    if delta_min is not None and delta_max is not None:
+        return _trim(data, "delta", delta_min, delta_max)
+    elif delta_min is not None:
+        return _ltrim(data, "delta", delta_min)
+    else:
+        return _rtrim(data, "delta", delta_max)
+
+
+def _cut_options_by_delta(
+    data: pd.DataFrame, delta_interval: Optional[float]
+) -> pd.DataFrame:
+    """
+    Categorize options into delta intervals for grouping.
+
+    Args:
+        data: DataFrame with delta_entry column
+        delta_interval: Interval size for delta grouping, or None to skip
+
+    Returns:
+        DataFrame with delta_range column added (if delta_interval provided)
+    """
+    if delta_interval is None:
+        return data
+
+    # Delta ranges from -1 to 1 for puts and calls
+    delta_intervals = [
+        round(i, 2) for i in list(np.arange(-1.0, 1.0 + delta_interval, delta_interval))
+    ]
+    data["delta_range"] = pd.cut(data["delta_entry"], delta_intervals)
+    return data
+
+
 def _group_by_intervals(
     data: pd.DataFrame, cols: List[str], drop_na: bool
 ) -> pd.DataFrame:
     """Group options by intervals and calculate descriptive statistics."""
     # this is a bottleneck, try to optimize
-    grouped_dataset = data.groupby(cols)["pct_change"].describe()
+    grouped_dataset = data.groupby(cols, observed=False)["pct_change"].describe()
 
     # if any non-count columns return NaN remove the row
     if drop_na:
@@ -95,7 +144,8 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
     Args:
         data: DataFrame containing option chain data
-        **kwargs: Configuration parameters including max_otm_pct, min_bid_ask, exit_dte
+        **kwargs: Configuration parameters including max_otm_pct, min_bid_ask, exit_dte,
+                  delta_min, delta_max
 
     Returns:
         DataFrame with evaluated options including entry and exit prices
@@ -108,24 +158,42 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
         upper=kwargs["max_otm_pct"],
     )
 
+    has_delta = "delta" in data.columns
+    delta_min = kwargs.get("delta_min")
+    delta_max = kwargs.get("delta_max")
+
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
     entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
 
+    # Apply delta filtering only to entries (not exits) - delta changes over time
+    if has_delta and (delta_min is not None or delta_max is not None):
+        entries = _filter_by_delta(entries, delta_min, delta_max)
+
     # to reduce unnecessary computation, filter for options with the desired exit DTE
     exits = _get(data, "dte", kwargs["exit_dte"])
 
-    return (
+    # Determine merge columns
+    merge_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
+
+    result = (
         entries.merge(
             right=exits,
-            on=["underlying_symbol", "option_type", "expiration", "strike"],
+            on=merge_cols,
             suffixes=("_entry", "_exit"),
         )
         # by default we use the midpoint spread price to calculate entry and exit costs
         .assign(entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2)
         .assign(exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2)
         .pipe(_remove_invalid_evaluated_options)
-    )[evaluated_cols]
+    )
+
+    # Determine output columns based on whether delta is present
+    output_cols = evaluated_cols.copy()
+    if has_delta and "delta_entry" in result.columns:
+        output_cols = output_cols + ["delta_entry"]
+
+    return result[output_cols]
 
 
 def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
@@ -139,7 +207,7 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with evaluated and categorized options
     """
-    return (
+    result = (
         data.pipe(_assign_dte)
         .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
         .pipe(_evaluate_options, **kwargs)
@@ -150,6 +218,13 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
             kwargs["max_otm_pct"],
         )
     )
+
+    # Apply delta grouping if delta_interval is specified
+    delta_interval = kwargs.get("delta_interval")
+    if delta_interval is not None:
+        result = result.pipe(_cut_options_by_delta, delta_interval)
+
+    return result
 
 
 def _calls(data: pd.DataFrame) -> pd.DataFrame:
@@ -283,6 +358,12 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
         DataFrame with processed strategy results
     """
     _run_checks(context["params"], data)
+
+    # Build external_cols, adding delta_range if delta grouping is enabled
+    external_cols = context["external_cols"].copy()
+    if context["params"].get("delta_interval") is not None:
+        external_cols = ["delta_range"] + external_cols
+
     return (
         _evaluate_all_options(
             data,
@@ -292,6 +373,9 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             otm_pct_interval=context["params"]["otm_pct_interval"],
             max_otm_pct=context["params"]["max_otm_pct"],
             min_bid_ask=context["params"]["min_bid_ask"],
+            delta_min=context["params"].get("delta_min"),
+            delta_max=context["params"].get("delta_max"),
+            delta_interval=context["params"].get("delta_interval"),
         )
         .pipe(
             _strategy_engine,
@@ -303,7 +387,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             _format_output,
             context["params"],
             context["internal_cols"],
-            context["external_cols"],
+            external_cols,
         )
     )
 

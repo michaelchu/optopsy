@@ -1,5 +1,7 @@
+from typing import List
+
 # columns of options after evaluation
-evaluated_cols = [
+evaluated_cols: List[str] = [
     "underlying_symbol",
     "option_type",
     "expiration",
@@ -13,7 +15,7 @@ evaluated_cols = [
 ]
 
 # columns of dataframe after generating strategy
-single_strike_internal_cols = [
+single_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry",
     "option_type",
@@ -26,7 +28,7 @@ single_strike_internal_cols = [
 ]
 
 
-straddle_internal_cols = [
+straddle_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry",
     "expiration",
@@ -40,7 +42,7 @@ straddle_internal_cols = [
 ]
 
 
-double_strike_internal_cols = [
+double_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
     "expiration",
@@ -54,7 +56,7 @@ double_strike_internal_cols = [
     "pct_change",
 ]
 
-triple_strike_internal_cols = [
+triple_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
     "expiration",
@@ -71,7 +73,7 @@ triple_strike_internal_cols = [
     "pct_change",
 ]
 
-quadruple_strike_internal_cols = [
+quadruple_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
     "expiration",
@@ -91,15 +93,19 @@ quadruple_strike_internal_cols = [
 ]
 
 # base columns of dataframe after aggregation(minus the calculated columns)
-single_strike_external_cols = ["dte_range", "otm_pct_range"]
-double_strike_external_cols = ["dte_range", "otm_pct_range_leg1", "otm_pct_range_leg2"]
-triple_strike_external_cols = [
+single_strike_external_cols: List[str] = ["dte_range", "otm_pct_range"]
+double_strike_external_cols: List[str] = [
+    "dte_range",
+    "otm_pct_range_leg1",
+    "otm_pct_range_leg2",
+]
+triple_strike_external_cols: List[str] = [
     "dte_range",
     "otm_pct_range_leg1",
     "otm_pct_range_leg2",
     "otm_pct_range_leg3",
 ]
-quadruple_strike_external_cols = [
+quadruple_strike_external_cols: List[str] = [
     "dte_range",
     "otm_pct_range_leg1",
     "otm_pct_range_leg2",
