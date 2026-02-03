@@ -12,9 +12,26 @@ Use cases for Optopsy:
 * Discover performance statistics on **percentage change** for various options strategies on a given stock
 
 ## Supported Option Strategies
-* Calls/Puts
-* Straddles/Strangles
-* Vertical Call/Put Spreads
+
+### Single Leg
+* Long/Short Calls
+* Long/Short Puts
+
+### Two Leg
+* Long/Short Straddles
+* Long/Short Strangles
+* Vertical Call Spreads (Bull/Bear)
+* Vertical Put Spreads (Bull/Bear)
+* Covered Call (synthetic)
+* Protective Put (synthetic)
+
+### Three Leg (Butterflies)
+* Long/Short Call Butterfly
+* Long/Short Put Butterfly
+
+### Four Leg
+* Iron Condor / Reverse Iron Condor
+* Iron Butterfly / Reverse Iron Butterfly
 
 ## Documentation
 Please see the [wiki](https://github.com/michaelchu/optopsy/wiki) for API reference.
@@ -29,7 +46,7 @@ You will need Python 3.8 or newer and Pandas 2.0.0 or newer and Numpy 1.26.0 or 
 
 ### Installation
 ```
-pip install optopsy==2.0.2
+pip install optopsy==2.0.3
 ```
 
 ### Example

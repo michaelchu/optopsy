@@ -26,3 +26,78 @@ def _rule_non_overlapping_strike(
     )
 
     return data.query(query)
+
+
+def _rule_butterfly_strikes(
+    data: pd.DataFrame, leg_def: List[Tuple]
+) -> pd.DataFrame:
+    """
+    Filter butterfly strategies to ensure proper strike ordering and equal width.
+
+    A butterfly requires:
+    - strike_leg1 < strike_leg2 < strike_leg3
+    - Equal wing widths: (strike_leg2 - strike_leg1) == (strike_leg3 - strike_leg2)
+
+    Args:
+        data: DataFrame containing butterfly strategy data
+        leg_def: List of tuples defining strategy legs
+
+    Returns:
+        Filtered DataFrame with valid butterfly strike configurations
+    """
+    if len(leg_def) != 3:
+        return data
+
+    return data.query(
+        "strike_leg1 < strike_leg2 < strike_leg3 & "
+        "(strike_leg2 - strike_leg1) == (strike_leg3 - strike_leg2)"
+    )
+
+
+def _rule_iron_condor_strikes(
+    data: pd.DataFrame, leg_def: List[Tuple]
+) -> pd.DataFrame:
+    """
+    Filter iron condor strategies to ensure proper strike ordering.
+
+    An iron condor requires 4 strikes in ascending order:
+    - strike_leg1 (long put) < strike_leg2 (short put) < strike_leg3 (short call) < strike_leg4 (long call)
+
+    Args:
+        data: DataFrame containing iron condor strategy data
+        leg_def: List of tuples defining strategy legs
+
+    Returns:
+        Filtered DataFrame with valid iron condor strike configurations
+    """
+    if len(leg_def) != 4:
+        return data
+
+    return data.query(
+        "strike_leg1 < strike_leg2 < strike_leg3 < strike_leg4"
+    )
+
+
+def _rule_iron_butterfly_strikes(
+    data: pd.DataFrame, leg_def: List[Tuple]
+) -> pd.DataFrame:
+    """
+    Filter iron butterfly strategies to ensure proper strike ordering.
+
+    An iron butterfly requires:
+    - strike_leg1 (long put) < strike_leg2 (short put) = strike_leg3 (short call) < strike_leg4 (long call)
+    - The short put and short call share the same strike (ATM)
+
+    Args:
+        data: DataFrame containing iron butterfly strategy data
+        leg_def: List of tuples defining strategy legs
+
+    Returns:
+        Filtered DataFrame with valid iron butterfly strike configurations
+    """
+    if len(leg_def) != 4:
+        return data
+
+    return data.query(
+        "strike_leg1 < strike_leg2 & strike_leg2 == strike_leg3 & strike_leg3 < strike_leg4"
+    )

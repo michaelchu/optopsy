@@ -13,6 +13,19 @@ from .strategies import (
     short_call_spread,
     long_put_spread,
     short_put_spread,
+    # Butterfly strategies
+    long_call_butterfly,
+    short_call_butterfly,
+    long_put_butterfly,
+    short_put_butterfly,
+    # Iron condor and iron butterfly strategies
+    iron_condor,
+    reverse_iron_condor,
+    iron_butterfly,
+    reverse_iron_butterfly,
+    # Covered strategies
+    covered_call,
+    protective_put,
 )
 from .datafeeds import csv_data
 
@@ -30,5 +43,18 @@ __all__ = [
     "short_call_spread",
     "long_put_spread",
     "short_put_spread",
+    # Butterfly strategies
+    "long_call_butterfly",
+    "short_call_butterfly",
+    "long_put_butterfly",
+    "short_put_butterfly",
+    # Iron condor and iron butterfly strategies
+    "iron_condor",
+    "reverse_iron_condor",
+    "iron_butterfly",
+    "reverse_iron_butterfly",
+    # Covered strategies
+    "covered_call",
+    "protective_put",
     "csv_data",
 ]
