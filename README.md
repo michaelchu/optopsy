@@ -11,7 +11,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 ## Features
 
-- **20+ Built-in Strategies** - From simple calls/puts to iron condors and butterflies
+- **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
 - **Greeks Filtering** - Filter options by delta to target specific probability ranges
 - **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
@@ -70,6 +70,8 @@ Results are grouped by DTE (days to expiration) and OTM% (out-of-the-money perce
 | **Iron Condors** | `iron_condor`, `reverse_iron_condor` |
 | **Iron Butterflies** | `iron_butterfly`, `reverse_iron_butterfly` |
 | **Covered** | `covered_call`, `protective_put` |
+| **Calendar Spreads** | `long_call_calendar`, `short_call_calendar`, `long_put_calendar`, `short_put_calendar` |
+| **Diagonal Spreads** | `long_call_diagonal`, `short_call_diagonal`, `long_put_diagonal`, `short_put_diagonal` |
 
 ## Configuration Options
 
@@ -96,6 +98,33 @@ results = op.short_puts(
     exit_dte=0,
     otm_pct_interval=0.10,
 )
+```
+
+### Calendar and Diagonal Spread Parameters
+
+Calendar and diagonal spreads use different parameters to manage two expirations:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `front_dte_min` | 20 | Minimum DTE for front (near-term) leg |
+| `front_dte_max` | 40 | Maximum DTE for front leg |
+| `back_dte_min` | 50 | Minimum DTE for back (longer-term) leg |
+| `back_dte_max` | 90 | Maximum DTE for back leg |
+| `exit_dte` | 7 | Days before front expiration to exit |
+
+```python
+# Long call calendar: short front-month, long back-month at same strike
+results = op.long_call_calendar(
+    data,
+    front_dte_min=25,
+    front_dte_max=35,
+    back_dte_min=50,
+    back_dte_max=70,
+    exit_dte=7,
+)
+
+# Diagonal spread: different strikes and expirations
+results = op.long_call_diagonal(data, raw=True)
 ```
 
 ## Greeks Support
