@@ -46,7 +46,7 @@ You will need Python 3.8 or newer and Pandas 2.0.0 or newer and Numpy 1.26.0 or 
 
 ### Installation
 ```
-pip install optopsy==2.0.3
+pip install optopsy==2.1.0
 ```
 
 ### Example
