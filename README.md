@@ -13,6 +13,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
 - **Greeks Filtering** - Filter options by delta to target specific probability ranges
+- **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
 - **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
@@ -86,6 +87,9 @@ All strategy functions accept these optional parameters:
 | `max_otm_pct` | 0.5 | Maximum OTM percentage to consider |
 | `min_bid_ask` | 0.05 | Minimum bid/ask to filter out worthless options |
 | `raw` | False | Return individual trades instead of grouped stats |
+| `slippage` | "mid" | Slippage mode: "mid", "spread", or "liquidity" |
+| `fill_ratio` | 0.5 | Base fill ratio for liquidity mode (0.0-1.0) |
+| `reference_volume` | 1000 | Volume threshold for liquid options |
 
 ### Example: Custom Parameters
 
@@ -180,6 +184,59 @@ results = op.long_calls(data, delta_interval=0.10)
 2   (0.4, 0.5]   (7, 14]  (-0.00,  0.05]     35   0.45   0.33
 ...
 ```
+
+## Slippage Modeling
+
+Model realistic fill prices with three slippage modes:
+
+| Mode | Description |
+|------|-------------|
+| `mid` | Uses midpoint price (default) |
+| `spread` | Assumes worst-case fill at full bid-ask spread |
+| `liquidity` | Adjusts slippage based on volume |
+
+### Basic Usage
+
+```python
+# Default: mid-price fills (optimistic)
+results = op.long_calls(data)
+
+# Full spread slippage (conservative)
+results = op.long_calls(data, slippage="spread")
+```
+
+### Liquidity-Based Slippage
+
+For more realistic modeling, use volume data to estimate slippage:
+
+```python
+# Load data with volume
+data = op.csv_data(
+    "options_data.csv",
+    underlying_symbol=0,
+    underlying_price=1,
+    option_type=2,
+    expiration=3,
+    quote_date=4,
+    strike=5,
+    bid=6,
+    ask=7,
+    volume=9,  # Volume column
+)
+
+# Liquidity-based slippage
+results = op.iron_condor(
+    data,
+    slippage="liquidity",
+    fill_ratio=0.5,        # Base fill ratio (0.0-1.0)
+    reference_volume=1000,  # Volume threshold for "liquid"
+)
+```
+
+With `liquidity` mode:
+- High-volume options get fills closer to mid-price
+- Low-volume options get fills closer to the spread edge
+- `fill_ratio=0.5` means liquid options fill at 50% of the spread from mid
 
 ## Raw Trade Data
 
