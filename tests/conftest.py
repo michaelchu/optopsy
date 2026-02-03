@@ -125,6 +125,72 @@ def data_with_delta():
 
 
 @pytest.fixture(scope="module")
+def data_with_volume():
+    """
+    Test data with volume column for testing liquidity-based slippage.
+    Similar to basic data fixture but includes volume values.
+    """
+    exp_date = datetime.datetime(2018, 1, 31)
+    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "volume",
+    ]
+    d = [
+        # Entry day - Calls with varying volume
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            212.5,
+            7.35,
+            7.45,
+            2000,
+        ],  # high vol
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            215.0,
+            6.00,
+            6.10,
+            100,
+        ],  # low vol
+        # Entry day - Puts with varying volume
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, 1500],
+        [
+            "SPX",
+            213.93,
+            "put",
+            exp_date,
+            quote_dates[0],
+            215.0,
+            7.10,
+            7.20,
+            50,
+        ],  # very low vol
+        # Exit day - Calls
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 3000],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.06, 200],
+        # Exit day - Puts
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.10, 1000],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.10, 100],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture(scope="module")
 def calendar_data():
     """
     Test data with multiple expirations for testing calendar and diagonal spreads.
