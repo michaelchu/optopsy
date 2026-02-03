@@ -443,6 +443,7 @@ def _strategy_engine(
         has_bid_ask = "bid_entry" in data.columns and "ask_entry" in data.columns
 
         if has_bid_ask and slippage != "mid":
+            data = data.copy()  # Avoid modifying original DataFrame
             # Calculate fill prices with slippage
             volume_entry = (
                 data.get("volume_entry") if "volume_entry" in data.columns else None

@@ -817,10 +817,9 @@ def test_slippage_spread_short_positions(data):
     """Test that spread slippage uses bid for short entries."""
     results_spread = short_calls(data, raw=True, slippage="spread")
 
-    # For short calls, entry should be at bid price (7.35)
-    # But short positions have negative entry (credit received)
+    # For short calls, entry fill is at bid price (7.35)
+    # The fill price is positive; the Side multiplier makes P&L negative
     row = results_spread[results_spread["strike"] == 212.5].iloc[0]
-    # entry = bid * -1 = -7.35
     assert round(row["entry"], 2) == 7.35
 
 
