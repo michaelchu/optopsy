@@ -95,3 +95,23 @@ def _rule_iron_butterfly_strikes(
     return data.query(
         "strike_leg1 < strike_leg2 & strike_leg2 == strike_leg3 & strike_leg3 < strike_leg4"
     )
+
+
+def _rule_expiration_ordering(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
+    """
+    Filter calendar/diagonal spread strategies to ensure front leg expires before back leg.
+
+    Both calendar and diagonal spreads require:
+    - expiration_leg1 (front/short-term) < expiration_leg2 (back/long-term)
+
+    Args:
+        data: DataFrame containing calendar/diagonal spread strategy data
+        leg_def: List of tuples defining strategy legs
+
+    Returns:
+        Filtered DataFrame with valid expiration configurations
+    """
+    if len(leg_def) != 2:
+        return data
+
+    return data.query("expiration_leg1 < expiration_leg2")
