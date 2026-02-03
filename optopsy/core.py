@@ -182,12 +182,8 @@ def _apply_ratios(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
         leg = leg_def[idx - 1]
         multiplier = leg[0].value * _get_leg_quantity(leg)
         # Use default arguments to capture values at each iteration (avoid late binding)
-        entry_kwargs = {
-            entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m
-        }
-        exit_kwargs = {
-            exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m
-        }
+        entry_kwargs = {entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m}
+        exit_kwargs = {exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m}
         data = data.assign(**entry_kwargs).assign(**exit_kwargs)
 
     return data
@@ -270,7 +266,9 @@ def _strategy_engine(
     for partial in partials[1:]:
         result = pd.merge(result, partial, on=join_on, how="inner")
 
-    return result.pipe(_rule_func, rules, leg_def).pipe(_assign_profit, leg_def, suffixes)
+    return result.pipe(_rule_func, rules, leg_def).pipe(
+        _assign_profit, leg_def, suffixes
+    )
 
 
 def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:

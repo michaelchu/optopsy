@@ -292,26 +292,8 @@ def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 # =============================================================================
 
 
-def _call_butterfly(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
-) -> pd.DataFrame:
-    """Process call butterfly strategies (3 legs at different strikes)."""
-    params = {**default_kwargs, **kwargs}
-    return _process_strategy(
-        data,
-        internal_cols=triple_strike_internal_cols,
-        external_cols=triple_strike_external_cols,
-        leg_def=leg_def,
-        rules=_rule_butterfly_strikes,
-        join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
-        params=params,
-    )
-
-
-def _put_butterfly(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
-) -> pd.DataFrame:
-    """Process put butterfly strategies (3 legs at different strikes)."""
+def _butterfly(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process butterfly strategies (3 legs at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -343,7 +325,7 @@ def long_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with long call butterfly strategy performance statistics
     """
-    return _call_butterfly(
+    return _butterfly(
         data,
         [
             (Side.long, _calls, 1),
@@ -373,7 +355,7 @@ def short_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with short call butterfly strategy performance statistics
     """
-    return _call_butterfly(
+    return _butterfly(
         data,
         [
             (Side.short, _calls, 1),
@@ -403,7 +385,7 @@ def long_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with long put butterfly strategy performance statistics
     """
-    return _put_butterfly(
+    return _butterfly(
         data,
         [
             (Side.long, _puts, 1),
@@ -433,7 +415,7 @@ def short_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with short put butterfly strategy performance statistics
     """
-    return _put_butterfly(
+    return _butterfly(
         data,
         [
             (Side.short, _puts, 1),

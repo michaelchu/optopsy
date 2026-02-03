@@ -28,9 +28,7 @@ def _rule_non_overlapping_strike(
     return data.query(query)
 
 
-def _rule_butterfly_strikes(
-    data: pd.DataFrame, leg_def: List[Tuple]
-) -> pd.DataFrame:
+def _rule_butterfly_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
     """
     Filter butterfly strategies to ensure proper strike ordering and equal width.
 
@@ -54,9 +52,7 @@ def _rule_butterfly_strikes(
     )
 
 
-def _rule_iron_condor_strikes(
-    data: pd.DataFrame, leg_def: List[Tuple]
-) -> pd.DataFrame:
+def _rule_iron_condor_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
     """
     Filter iron condor strategies to ensure proper strike ordering.
 
@@ -73,9 +69,7 @@ def _rule_iron_condor_strikes(
     if len(leg_def) != 4:
         return data
 
-    return data.query(
-        "strike_leg1 < strike_leg2 < strike_leg3 < strike_leg4"
-    )
+    return data.query("strike_leg1 < strike_leg2 < strike_leg3 < strike_leg4")
 
 
 def _rule_iron_butterfly_strikes(

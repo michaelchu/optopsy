@@ -7,6 +7,7 @@ __pycache__/
 
 # Virtual environments
 optopsy-env
+.venv
 
 # C extensions
 *.so
