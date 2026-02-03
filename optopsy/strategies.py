@@ -29,6 +29,11 @@ default_kwargs: Dict[str, Any] = {
     "min_bid_ask": 0.05,
     "drop_nan": True,
     "raw": False,
+    # Greeks filtering (optional)
+    "delta_min": None,
+    "delta_max": None,
+    # Greeks grouping (optional)
+    "delta_interval": None,
 }
 
 
@@ -87,26 +92,8 @@ def _strangles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Da
     )
 
 
-def _call_spread(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
-) -> pd.DataFrame:
-    """Process call spread strategies (long and short calls at different strikes)."""
-    params = {**default_kwargs, **kwargs}
-    return _process_strategy(
-        data,
-        internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
-        leg_def=leg_def,
-        rules=_rule_non_overlapping_strike,
-        join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
-        params=params,
-    )
-
-
-def _put_spread(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
-) -> pd.DataFrame:
-    """Process put spread strategies (long and short puts at different strikes)."""
+def _spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+    """Process vertical spread strategies (call or put spreads at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
@@ -242,7 +229,7 @@ def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with long call spread strategy performance statistics
     """
-    return _call_spread(data, [(Side.long, _calls), (Side.short, _calls)], **kwargs)
+    return _spread(data, [(Side.long, _calls), (Side.short, _calls)], **kwargs)
 
 
 def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
@@ -256,7 +243,7 @@ def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with short call spread strategy performance statistics
     """
-    return _call_spread(data, [(Side.short, _calls), (Side.long, _calls)], **kwargs)
+    return _spread(data, [(Side.short, _calls), (Side.long, _calls)], **kwargs)
 
 
 def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
@@ -270,7 +257,7 @@ def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with long put spread strategy performance statistics
     """
-    return _put_spread(data, [(Side.short, _puts), (Side.long, _puts)], **kwargs)
+    return _spread(data, [(Side.short, _puts), (Side.long, _puts)], **kwargs)
 
 
 def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
@@ -284,7 +271,7 @@ def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Returns:
         DataFrame with short put spread strategy performance statistics
     """
-    return _put_spread(data, [(Side.long, _puts), (Side.short, _puts)], **kwargs)
+    return _spread(data, [(Side.long, _puts), (Side.short, _puts)], **kwargs)
 
 
 # =============================================================================

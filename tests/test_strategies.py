@@ -419,3 +419,48 @@ def test_short_put_spread_raw(data):
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "put"
     assert round(results.iloc[0]["pct_change"], 2) == 1
+
+
+# =============================================================================
+# Greeks (Delta) Filtering and Grouping Tests
+# =============================================================================
+
+
+def test_long_calls_with_delta_filter(data_with_delta):
+    """Test that delta filtering works - only include calls with delta >= 0.40."""
+    results = long_calls(data_with_delta, raw=True, delta_min=0.40)
+    # Only calls with delta >= 0.40 should be included (0.60 and 0.45)
+    assert len(results) == 2
+    assert "call" in list(results["option_type"].values)
+
+
+def test_long_calls_with_delta_range(data_with_delta):
+    """Test that delta range filtering works - include calls with 0.30 <= delta <= 0.50."""
+    results = long_calls(data_with_delta, raw=True, delta_min=0.30, delta_max=0.50)
+    # Only calls with 0.30 <= delta <= 0.50 should be included (0.45 and 0.30)
+    assert len(results) == 2
+
+
+def test_long_puts_with_delta_filter(data_with_delta):
+    """Test that delta filtering works for puts - only include puts with delta <= -0.50."""
+    results = long_puts(data_with_delta, raw=True, delta_max=-0.50)
+    # Only puts with delta <= -0.50 should be included (-0.55 and -0.70)
+    assert len(results) == 2
+    assert "put" in list(results["option_type"].values)
+
+
+def test_long_calls_with_delta_grouping(data_with_delta):
+    """Test that delta grouping adds delta_range to output columns."""
+    results = long_calls(data_with_delta, delta_interval=0.10)
+    # Should have delta_range as first column in grouped output
+    assert "delta_range" in results.columns
+    # delta_range should be first column before other external cols
+    assert list(results.columns)[0] == "delta_range"
+
+
+def test_delta_filter_no_delta_column_raises(data):
+    """Test that using delta filter on data without delta column raises error."""
+    import pytest
+
+    with pytest.raises(ValueError, match="Greek column 'delta' not found"):
+        long_calls(data, delta_min=0.30)
