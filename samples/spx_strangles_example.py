@@ -6,13 +6,12 @@ import tabulate as tb
 def filepath():
     curr_file = os.path.abspath(os.path.dirname(__file__))
 
-    # for demo purposes only, download your copy of data from sites such as:
+    # This sample data file is included in the repository for demonstration.
+    # For real backtesting, download your own data from sites such as:
     # CBOE Datashop: https://datashop.cboe.com/
     # HistoricalOptionData: https://www.historicaloptiondata.com/
     # DeltaNeutral: http://www.deltaneutral.com/
-
-    # following file was downloaded from: http://www.deltaneutral.com/files/Sample_SPX_20151001_to_20151030.csv
-    return os.path.join(curr_file, "./data/Sample_SPX_20151001_to_20151030.csv")
+    return os.path.join(curr_file, "./data/sample_spx_data.csv")
 
 
 def run_strategy():
