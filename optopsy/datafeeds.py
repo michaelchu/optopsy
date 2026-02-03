@@ -19,9 +19,9 @@ default_kwargs: Dict[str, Any] = {
     "gamma": None,
     "theta": None,
     "vega": None,
-    # Optional liquidity columns (set to column index to include)
-    "volume": None,
-    "open_interest": None,
+    # Optional liquidity columns for slippage modeling (set to column index to include)
+    "volume": None,  # Used by liquidity-based slippage
+    "open_interest": None,  # Reserved for future use
 }
 
 
@@ -95,8 +95,8 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
         gamma: Optional column index containing gamma Greek
         theta: Optional column index containing theta Greek
         vega: Optional column index containing vega Greek
-        volume: Optional column index containing trading volume
-        open_interest: Optional column index containing open interest
+        volume: Optional column index containing trading volume (used by liquidity slippage)
+        open_interest: Optional column index containing open interest (reserved for future use)
 
     Returns:
         DataFrame with option chains and standardized column names

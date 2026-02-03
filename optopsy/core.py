@@ -242,6 +242,8 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     # Include volume if present (for liquidity-based slippage)
     if "volume_entry" in result.columns:
         output_cols = output_cols + ["volume_entry"]
+    if "volume_exit" in result.columns:
+        output_cols = output_cols + ["volume_exit"]
 
     return result[output_cols]
 
@@ -345,13 +347,17 @@ def _apply_ratios(
             )
 
             # Exit: reverse the side (closing the position)
+            volume_exit_col = f"volume_exit_leg{idx}"
+            volume_exit = (
+                data.get(volume_exit_col) if volume_exit_col in data.columns else None
+            )
             exit_fill = _calculate_fill_price(
                 data[bid_exit_col],
                 data[ask_exit_col],
                 -side_value,
                 slippage,
                 fill_ratio,
-                None,  # No volume for exit
+                volume_exit,
                 reference_volume,
             )
 
@@ -452,13 +458,16 @@ def _strategy_engine(
                 reference_volume,
             )
             # Exit: reverse the side (closing the position)
+            volume_exit = (
+                data.get("volume_exit") if "volume_exit" in data.columns else None
+            )
             data["exit"] = _calculate_fill_price(
                 data["bid_exit"],
                 data["ask_exit"],
                 -side.value,
                 slippage,
                 fill_ratio,
-                None,
+                volume_exit,
                 reference_volume,
             )
 
@@ -775,6 +784,9 @@ def _calculate_calendar_pnl(
     )
 
     # Calculate exit prices (reverse sides for closing positions)
+    # Note: Exit volume is not currently tracked for calendar spreads since exit
+    # data comes from a different quote date. For liquidity mode, exits use
+    # the base fill_ratio without volume adjustment.
     merged["exit_leg1"] = _calculate_fill_price(
         merged["exit_bid_leg1"],
         merged["exit_ask_leg1"],
