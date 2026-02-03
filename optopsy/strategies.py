@@ -842,11 +842,12 @@ def long_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Generate long call diagonal spread strategy statistics.
 
     A long call diagonal consists of:
-    - Short 1 front-month call at a lower strike (near-term expiration)
-    - Long 1 back-month call at a higher strike (longer-term expiration)
+    - Short 1 front-month call (near-term expiration)
+    - Long 1 back-month call (longer-term expiration)
+    - Different strikes for each leg
 
-    This is a moderately bullish strategy that combines elements of a
-    calendar spread and a vertical spread.
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
 
     Args:
         data: DataFrame containing option chain data
@@ -865,11 +866,12 @@ def short_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Generate short call diagonal spread strategy statistics.
 
     A short call diagonal consists of:
-    - Long 1 front-month call at a lower strike (near-term expiration)
-    - Short 1 back-month call at a higher strike (longer-term expiration)
+    - Long 1 front-month call (near-term expiration)
+    - Short 1 back-month call (longer-term expiration)
+    - Different strikes for each leg
 
-    This strategy profits when the underlying moves significantly or
-    when volatility decreases.
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
 
     Args:
         data: DataFrame containing option chain data
@@ -888,11 +890,12 @@ def long_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Generate long put diagonal spread strategy statistics.
 
     A long put diagonal consists of:
-    - Short 1 front-month put at a higher strike (near-term expiration)
-    - Long 1 back-month put at a lower strike (longer-term expiration)
+    - Short 1 front-month put (near-term expiration)
+    - Long 1 back-month put (longer-term expiration)
+    - Different strikes for each leg
 
-    This is a moderately bearish strategy that combines elements of a
-    calendar spread and a vertical spread.
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
 
     Args:
         data: DataFrame containing option chain data
@@ -911,11 +914,12 @@ def short_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     Generate short put diagonal spread strategy statistics.
 
     A short put diagonal consists of:
-    - Long 1 front-month put at a higher strike (near-term expiration)
-    - Short 1 back-month put at a lower strike (longer-term expiration)
+    - Long 1 front-month put (near-term expiration)
+    - Short 1 back-month put (longer-term expiration)
+    - Different strikes for each leg
 
-    This strategy profits when the underlying moves significantly or
-    when volatility decreases.
+    This strategy combines elements of a calendar spread and a vertical spread.
+    All strike combinations are evaluated.
 
     Args:
         data: DataFrame containing option chain data
