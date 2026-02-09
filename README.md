@@ -9,6 +9,8 @@ A fast, flexible backtesting library for options strategies in Python.
 
 Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* or *"What delta range produces the best results for covered calls?"* by generating comprehensive performance statistics from historical options data.
 
+📖 **[Full Documentation](https://michaelchu.github.io/optopsy/)** | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
+
 ## Features
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
