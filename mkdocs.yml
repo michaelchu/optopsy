@@ -5,29 +5,7 @@ repo_url: https://github.com/michaelchu/optopsy
 repo_name: michaelchu/optopsy
 
 theme:
-  name: material
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - content.code.annotate
+  name: mkdocs
 
 nav:
   - Home: index.md
@@ -45,7 +23,6 @@ nav:
   - Parameters: parameters.md
   - Examples: examples.md
   - API Reference: api-reference.md
-  - Contributing: contributing.md
 
 markdown_extensions:
   - admonition
@@ -78,10 +55,5 @@ plugins:
             members_order: source
             separate_signature: true
             show_signature_annotations: true
+            heading_level: 4
 
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/michaelchu/optopsy
-    - icon: fontawesome/brands/python
-      link: https://pypi.org/project/optopsy/

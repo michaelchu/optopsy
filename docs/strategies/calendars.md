@@ -4,7 +4,7 @@ Calendar spreads (also called time spreads or horizontal spreads) use options wi
 
 ## Long Call Calendar
 
-### Description
+#### Description
 Sell a near-term call and buy a longer-term call at the same strike. Profits from time decay and volatility expansion in the back month.
 
 **Composition:**
@@ -12,7 +12,7 @@ Sell a near-term call and buy a longer-term call at the same strike. Profits fro
 - Long 1 back-month call (longer expiration)
 - Both at the same strike
 
-### Example
+#### Example
 ```python
 import optopsy as op
 
@@ -26,7 +26,7 @@ results = op.long_call_calendar(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Neutral markets near the strike
 - Expecting volatility increase
 - Time decay plays
@@ -35,7 +35,7 @@ results = op.long_call_calendar(
 
 ## Short Call Calendar
 
-### Description
+#### Description
 Buy the near-term call, sell the longer-term call. Profits from significant movement away from strike.
 
 **Composition:**
@@ -43,7 +43,7 @@ Buy the near-term call, sell the longer-term call. Profits from significant move
 - Short 1 back-month call
 - Both at the same strike
 
-### Example
+#### Example
 ```python
 results = op.short_call_calendar(
     data,
@@ -58,7 +58,7 @@ results = op.short_call_calendar(
 
 ## Long Put Calendar
 
-### Description
+#### Description
 Similar to long call calendar but with puts. Profits from neutral price action at the strike.
 
 **Composition:**
@@ -66,7 +66,7 @@ Similar to long call calendar but with puts. Profits from neutral price action a
 - Long 1 back-month put
 - Both at the same strike
 
-### Example
+#### Example
 ```python
 results = op.long_put_calendar(data)
 ```
@@ -75,7 +75,7 @@ results = op.long_put_calendar(data)
 
 ## Short Put Calendar
 
-### Description
+#### Description
 Opposite of long put calendar. Profits from movement away from strike.
 
 **Composition:**
@@ -83,7 +83,7 @@ Opposite of long put calendar. Profits from movement away from strike.
 - Short 1 back-month put
 - Both at the same strike
 
-### Example
+#### Example
 ```python
 results = op.short_put_calendar(data)
 ```

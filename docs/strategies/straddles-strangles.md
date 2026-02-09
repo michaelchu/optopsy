@@ -4,24 +4,24 @@ Straddles and strangles are volatility-based strategies that combine calls and p
 
 ## Long Straddle
 
-### Description
+#### Description
 A long straddle consists of buying a call and a put at the **same strike**, typically at-the-money. This strategy profits from large price movements in either direction.
 
 **Composition:**
 - Long 1 call at strike X
 - Long 1 put at strike X
 
-### Market Outlook
+#### Market Outlook
 - **High Volatility Expected** - Anticipate a significant move up or down
 - Direction doesn't matter, only magnitude
 - Common before earnings announcements or major events
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Unlimited (in either direction)
 - **Maximum Loss**: Total premiums paid (if price stays at strike)
 - **Breakeven**: Strike ± total premium paid
 
-### Example
+#### Example
 
 ```python
 import optopsy as op
@@ -39,7 +39,7 @@ results = op.long_straddles(
 print(results)
 ```
 
-### Use Cases
+#### Use Cases
 - Earnings plays expecting big moves
 - Before Fed announcements or major economic data
 - When implied volatility is low but you expect an explosion
@@ -49,24 +49,24 @@ print(results)
 
 ## Short Straddle
 
-### Description
+#### Description
 A short straddle consists of selling a call and a put at the **same strike**. This strategy profits when the price stays near the strike at expiration.
 
 **Composition:**
 - Short 1 call at strike X
 - Short 1 put at strike X
 
-### Market Outlook
+#### Market Outlook
 - **Low Volatility Expected** - Price stays stable
 - Maximum profit if price is exactly at strike at expiration
 - Profits erode if price moves significantly in either direction
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Total premiums received
 - **Maximum Loss**: Unlimited (if price moves far from strike)
 - **Breakeven**: Strike ± total premium received
 
-### Example
+#### Example
 
 ```python
 results = op.short_straddles(
@@ -78,37 +78,37 @@ results = op.short_straddles(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - High implied volatility environments
 - After earnings when IV crush is expected
 - Range-bound markets
 - Income generation in low-volatility periods
 
-### ⚠️ Risk Warning
+#### ⚠️ Risk Warning
 Short straddles have unlimited risk in both directions. Consider iron butterflies for defined-risk alternatives.
 
 ---
 
 ## Long Strangle
 
-### Description
+#### Description
 A long strangle consists of buying an OTM call and an OTM put at **different strikes**. This is similar to a long straddle but cheaper with wider breakevens.
 
 **Composition:**
 - Long 1 OTM put at strike X
 - Long 1 OTM call at strike Y (Y > X)
 
-### Market Outlook
+#### Market Outlook
 - **High Volatility Expected** - Anticipate a large move
 - Lower cost than straddles but requires bigger move to profit
 - Better risk/reward than straddles for explosive moves
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Unlimited (in either direction)
 - **Maximum Loss**: Total premiums paid
 - **Breakeven**: Put strike - total premium, Call strike + total premium
 
-### Example
+#### Example
 
 ```python
 results = op.long_strangles(
@@ -119,7 +119,7 @@ results = op.long_strangles(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Lower-cost volatility plays
 - Before major events with unknown outcomes
 - When you expect a significant move but want to reduce cost
@@ -129,24 +129,24 @@ results = op.long_strangles(
 
 ## Short Strangle
 
-### Description
+#### Description
 A short strangle consists of selling an OTM call and an OTM put at **different strikes**. This provides a wider profit zone than a short straddle.
 
 **Composition:**
 - Short 1 OTM put at strike X
 - Short 1 OTM call at strike Y (Y > X)
 
-### Market Outlook
+#### Market Outlook
 - **Low to Moderate Volatility** - Price stays in a range
 - Wider profit zone than short straddles
 - More forgiving if price moves moderately
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Total premiums received
 - **Maximum Loss**: Unlimited (past short strikes)
 - **Breakeven**: Put strike - total premium, Call strike + total premium
 
-### Example
+#### Example
 
 ```python
 results = op.short_strangles(
@@ -158,13 +158,13 @@ results = op.short_strangles(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Income in range-bound markets
 - Higher probability of success than short straddles
 - After high IV events (post-earnings)
 - When you expect low volatility but want buffer
 
-### Management Tips
+#### Management Tips
 - Consider closing at 50% of max profit
 - Roll untested side if needed
 - Monitor position size carefully due to undefined risk
@@ -182,12 +182,12 @@ results = op.short_strangles(
 
 ## Greeks Considerations
 
-### For Long Straddles/Strangles
+#### For Long Straddles/Strangles
 - **Positive Vega** - Benefit from volatility increases
 - **Negative Theta** - Time decay works against you
 - **Trade**: Buy when IV is low, sell when IV spikes
 
-### For Short Straddles/Strangles
+#### For Short Straddles/Strangles
 - **Negative Vega** - Hurt by volatility increases
 - **Positive Theta** - Time decay works for you
 - **Trade**: Sell when IV is high, benefit from IV crush

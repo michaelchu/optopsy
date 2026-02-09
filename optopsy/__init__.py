@@ -58,6 +58,7 @@ from .strategies import (
     short_put_diagonal,
 )
 from .datafeeds import csv_data
+from .types import StrategyParams, CalendarStrategyParams
 
 __all__ = [
     "__version__",
@@ -97,4 +98,7 @@ __all__ = [
     "long_put_diagonal",
     "short_put_diagonal",
     "csv_data",
+    # Type definitions
+    "StrategyParams",
+    "CalendarStrategyParams",
 ]

@@ -4,7 +4,7 @@ Diagonal spreads combine elements of vertical spreads and calendar spreads, usin
 
 ## Long Call Diagonal
 
-### Description
+#### Description
 Buy a longer-term call at one strike and sell a shorter-term call at a different strike. Combines time decay and directional movement.
 
 **Composition:**
@@ -12,7 +12,7 @@ Buy a longer-term call at one strike and sell a shorter-term call at a different
 - Long 1 back-month call
 - Different strikes for each leg
 
-### Example
+#### Example
 ```python
 import optopsy as op
 
@@ -26,7 +26,7 @@ results = op.long_call_diagonal(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Bullish to neutral bias with income
 - More flexible than calendars
 - Adjustable directional exposure
@@ -35,7 +35,7 @@ results = op.long_call_diagonal(
 
 ## Short Call Diagonal
 
-### Description
+#### Description
 Opposite of long call diagonal. Buy near-term, sell longer-term at different strikes.
 
 **Composition:**
@@ -43,7 +43,7 @@ Opposite of long call diagonal. Buy near-term, sell longer-term at different str
 - Short 1 back-month call
 - Different strikes for each leg
 
-### Example
+#### Example
 ```python
 results = op.short_call_diagonal(data)
 ```
@@ -52,7 +52,7 @@ results = op.short_call_diagonal(data)
 
 ## Long Put Diagonal
 
-### Description
+#### Description
 Similar structure to call diagonals but using puts. Allows bearish to neutral positioning.
 
 **Composition:**
@@ -60,7 +60,7 @@ Similar structure to call diagonals but using puts. Allows bearish to neutral po
 - Long 1 back-month put
 - Different strikes for each leg
 
-### Example
+#### Example
 ```python
 results = op.long_put_diagonal(data)
 ```
@@ -69,7 +69,7 @@ results = op.long_put_diagonal(data)
 
 ## Short Put Diagonal
 
-### Description
+#### Description
 Opposite of long put diagonal with reversed expiration dates.
 
 **Composition:**
@@ -77,7 +77,7 @@ Opposite of long put diagonal with reversed expiration dates.
 - Short 1 back-month put
 - Different strikes for each leg
 
-### Example
+#### Example
 ```python
 results = op.short_put_diagonal(data)
 ```

@@ -4,7 +4,7 @@ All Optopsy strategies accept a common set of parameters for filtering, grouping
 
 ## Core Parameters
 
-### Entry and Exit Timing
+#### Entry and Exit Timing
 
 #### `max_entry_dte`
 **Type:** `int` | **Default:** `90`
@@ -38,7 +38,7 @@ results = op.long_calls(data, max_entry_dte=60, exit_dte=30)  # Exit at 30 DTE
 
 ---
 
-### Filtering Parameters
+#### Filtering Parameters
 
 #### `max_otm_pct`
 **Type:** `float` | **Default:** `0.5`
@@ -78,7 +78,7 @@ results = op.iron_condor(data, min_bid_ask=0.10)  # Require $0.10+ spread
 
 ---
 
-### Grouping and Aggregation
+#### Grouping and Aggregation
 
 #### `dte_interval`
 **Type:** `int` | **Default:** `7`
@@ -111,7 +111,7 @@ results = op.short_strangles(data, otm_pct_interval=0.10)  # 10% OTM buckets
 
 ---
 
-### Output Control
+#### Output Control
 
 #### `raw`
 **Type:** `bool` | **Default:** `False`
@@ -147,7 +147,7 @@ results = op.long_calls(data, drop_nan=False)  # Keep NaN values
 
 ## Greeks Parameters
 
-### Delta Filtering
+#### Delta Filtering
 
 #### `delta_min` / `delta_max`
 **Type:** `float` | **Default:** `None`
@@ -189,7 +189,7 @@ results = op.iron_condor(
 
 ## Slippage Parameters
 
-### `slippage`
+#### `slippage`
 **Type:** `str` | **Default:** `'mid'`
 
 Slippage model for fill price calculation.
@@ -208,7 +208,7 @@ results = op.long_calls(data, slippage='liquidity')
 
 ---
 
-### `fill_ratio` (Liquidity Mode Only)
+#### `fill_ratio` (Liquidity Mode Only)
 **Type:** `float` | **Default:** `0.5`
 
 Base fill ratio for liquidity-based slippage (0.0 = bid/ask, 1.0 = ask/bid).
@@ -228,7 +228,7 @@ results = op.iron_condor(
 
 ---
 
-### `reference_volume` (Liquidity Mode Only)
+#### `reference_volume` (Liquidity Mode Only)
 **Type:** `int` | **Default:** `1000`
 
 Volume threshold for determining liquid options in liquidity mode.
@@ -325,7 +325,7 @@ print(results.head())
 
 ## Default Values Reference
 
-### Standard Strategies
+#### Standard Strategies
 
 ```python
 default_kwargs = {
@@ -346,7 +346,7 @@ default_kwargs = {
 }
 ```
 
-### Calendar & Diagonal Strategies
+#### Calendar & Diagonal Strategies
 
 ```python
 calendar_default_kwargs = {

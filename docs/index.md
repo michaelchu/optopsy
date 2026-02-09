@@ -56,4 +56,4 @@ Contributions are welcome! See the [Contributing Guide](contributing.md) for det
 
 ## License
 
-Optopsy is released under the MIT License. See the [GitHub repository](https://github.com/michaelchu/optopsy) for more information.
+Optopsy is released under the GPL-3.0 License. See the [GitHub repository](https://github.com/michaelchu/optopsy) for more information.

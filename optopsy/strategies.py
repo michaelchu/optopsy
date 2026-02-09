@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Unpack
 import pandas as pd
 from .core import _calls, _puts, _process_strategy, _process_calendar_strategy
+from .types import StrategyParams, CalendarStrategyParams
 from .definitions import (
     single_strike_external_cols,
     single_strike_internal_cols,
@@ -71,7 +72,9 @@ class Side(Enum):
     short = -1
 
 
-def _singles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _singles(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """Process single-leg option strategies (calls or puts)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -83,7 +86,9 @@ def _singles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Data
     )
 
 
-def _straddles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _straddles(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """Process straddle strategies (call and put at same strike)."""
     params = {**default_kwargs, **kwargs}
 
@@ -105,7 +110,9 @@ def _straddles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Da
     )
 
 
-def _strangles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _strangles(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """Process strangle strategies (call and put at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -119,7 +126,9 @@ def _strangles(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Da
     )
 
 
-def _spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _spread(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """Process vertical spread strategies (call or put spreads at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -133,13 +142,13 @@ def _spread(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataF
     )
 
 
-def long_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate long call strategy statistics.
 
     Args:
         data: DataFrame containing option chain data
-        **kwargs: Optional strategy parameters (dte_interval, max_entry_dte, etc.)
+        **kwargs: Optional strategy parameters (see StrategyParams)
 
     Returns:
         DataFrame with long call strategy performance statistics
@@ -147,7 +156,7 @@ def long_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _singles(data, [(Side.long, _calls)], **kwargs)
 
 
-def long_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate long put strategy statistics.
 
@@ -161,7 +170,7 @@ def long_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _singles(data, [(Side.long, _puts)], **kwargs)
 
 
-def short_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate short call strategy statistics.
 
@@ -175,7 +184,7 @@ def short_calls(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _singles(data, [(Side.short, _calls)], **kwargs)
 
 
-def short_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate short put strategy statistics.
 
@@ -189,7 +198,9 @@ def short_puts(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _singles(data, [(Side.short, _puts)], **kwargs)
 
 
-def long_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_straddles(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long straddle strategy statistics (long call + long put at same strike).
 
@@ -203,7 +214,9 @@ def long_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _straddles(data, [(Side.long, _puts), (Side.long, _calls)], **kwargs)
 
 
-def short_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_straddles(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short straddle strategy statistics (short call + short put at same strike).
 
@@ -217,7 +230,9 @@ def short_straddles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _straddles(data, [(Side.short, _puts), (Side.short, _calls)], **kwargs)
 
 
-def long_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_strangles(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long strangle strategy statistics (long call + long put at different strikes).
 
@@ -231,7 +246,9 @@ def long_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _strangles(data, [(Side.long, _puts), (Side.long, _calls)], **kwargs)
 
 
-def short_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_strangles(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short strangle strategy statistics (short call + short put at different strikes).
 
@@ -245,7 +262,9 @@ def short_strangles(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _strangles(data, [(Side.short, _puts), (Side.short, _calls)], **kwargs)
 
 
-def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_call_spread(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long call spread (bull call spread) statistics.
 
@@ -259,7 +278,9 @@ def long_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _spread(data, [(Side.long, _calls), (Side.short, _calls)], **kwargs)
 
 
-def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_call_spread(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short call spread (bear call spread) statistics.
 
@@ -273,7 +294,9 @@ def short_call_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _spread(data, [(Side.short, _calls), (Side.long, _calls)], **kwargs)
 
 
-def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_put_spread(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long put spread (bear put spread) statistics.
 
@@ -287,7 +310,9 @@ def long_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     return _spread(data, [(Side.short, _puts), (Side.long, _puts)], **kwargs)
 
 
-def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_put_spread(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short put spread (bull put spread) statistics.
 
@@ -306,7 +331,9 @@ def short_put_spread(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 # =============================================================================
 
 
-def _butterfly(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.DataFrame:
+def _butterfly(
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """Process butterfly strategies (3 legs at different strikes)."""
     params = {**default_kwargs, **kwargs}
     return _process_strategy(
@@ -320,7 +347,9 @@ def _butterfly(data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any) -> pd.Da
     )
 
 
-def long_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_call_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long call butterfly strategy statistics.
 
@@ -350,7 +379,9 @@ def long_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_call_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short call butterfly strategy statistics.
 
@@ -380,7 +411,9 @@ def short_call_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def long_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_put_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long put butterfly strategy statistics.
 
@@ -410,7 +443,9 @@ def long_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_put_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short put butterfly strategy statistics.
 
@@ -446,7 +481,7 @@ def short_put_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 
 def _iron_condor(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
 ) -> pd.DataFrame:
     """Process iron condor strategies (4 legs at different strikes)."""
     params = {**default_kwargs, **kwargs}
@@ -462,7 +497,7 @@ def _iron_condor(
 
 
 def _iron_butterfly(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
 ) -> pd.DataFrame:
     """Process iron butterfly strategies (4 legs, middle legs share strike)."""
     params = {**default_kwargs, **kwargs}
@@ -477,7 +512,7 @@ def _iron_butterfly(
     )
 
 
-def iron_condor(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def iron_condor(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate iron condor strategy statistics.
 
@@ -509,7 +544,9 @@ def iron_condor(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def reverse_iron_condor(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def reverse_iron_condor(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate reverse iron condor strategy statistics.
 
@@ -541,7 +578,9 @@ def reverse_iron_condor(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def iron_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def iron_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate iron butterfly strategy statistics.
 
@@ -574,7 +613,9 @@ def iron_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def reverse_iron_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def reverse_iron_butterfly(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate reverse iron butterfly strategy statistics.
 
@@ -612,7 +653,7 @@ def reverse_iron_butterfly(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 
 def _covered_call(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Any
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
 ) -> pd.DataFrame:
     """
     Process covered call strategy.
@@ -633,7 +674,7 @@ def _covered_call(
     )
 
 
-def covered_call(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def covered_call(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
     """
     Generate covered call strategy statistics.
 
@@ -666,7 +707,9 @@ def covered_call(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def protective_put(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def protective_put(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate protective put (married put) strategy statistics.
 
@@ -707,7 +750,10 @@ def protective_put(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 
 def _calendar_spread(
-    data: pd.DataFrame, leg_def: List[Tuple], same_strike: bool = True, **kwargs: Any
+    data: pd.DataFrame,
+    leg_def: List[Tuple],
+    same_strike: bool = True,
+    **kwargs: Unpack[StrategyParams]
 ) -> pd.DataFrame:
     """
     Process calendar or diagonal spread strategies.
@@ -743,7 +789,9 @@ def _calendar_spread(
     )
 
 
-def long_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_call_calendar(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long call calendar spread strategy statistics.
 
@@ -773,7 +821,9 @@ def long_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_call_calendar(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short call calendar spread strategy statistics.
 
@@ -797,7 +847,9 @@ def short_call_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def long_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_put_calendar(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long put calendar spread strategy statistics.
 
@@ -821,7 +873,9 @@ def long_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_put_calendar(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short put calendar spread strategy statistics.
 
@@ -845,7 +899,9 @@ def short_put_calendar(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def long_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_call_diagonal(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long call diagonal spread strategy statistics.
 
@@ -869,7 +925,9 @@ def long_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_call_diagonal(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short call diagonal spread strategy statistics.
 
@@ -893,7 +951,9 @@ def short_call_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def long_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def long_put_diagonal(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate long put diagonal spread strategy statistics.
 
@@ -917,7 +977,9 @@ def long_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     )
 
 
-def short_put_diagonal(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def short_put_diagonal(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+) -> pd.DataFrame:
     """
     Generate short put diagonal spread strategy statistics.
 

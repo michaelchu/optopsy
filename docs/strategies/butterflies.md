@@ -4,7 +4,7 @@ Butterfly spreads are three-leg strategies designed to profit when the underlyin
 
 ## Long Call Butterfly
 
-### Description
+#### Description
 Profits when the underlying stays at the middle strike at expiration.
 
 **Composition:**
@@ -12,7 +12,7 @@ Profits when the underlying stays at the middle strike at expiration.
 - Short 2 calls at middle strike (body)
 - Long 1 call at upper strike (wing)
 
-### Example
+#### Example
 ```python
 import optopsy as op
 results = op.long_call_butterfly(data, max_entry_dte=45, exit_dte=21)
@@ -22,7 +22,7 @@ results = op.long_call_butterfly(data, max_entry_dte=45, exit_dte=21)
 
 ## Short Call Butterfly
 
-### Description
+#### Description
 Profits when the underlying moves away from the middle strike in either direction.
 
 **Composition:**
@@ -30,7 +30,7 @@ Profits when the underlying moves away from the middle strike in either directio
 - Long 2 calls at middle strike
 - Short 1 call at upper strike
 
-### Example
+#### Example
 ```python
 results = op.short_call_butterfly(data, max_entry_dte=30, exit_dte=7)
 ```
@@ -39,7 +39,7 @@ results = op.short_call_butterfly(data, max_entry_dte=30, exit_dte=7)
 
 ## Long Put Butterfly
 
-### Description
+#### Description
 Similar to long call butterfly but using puts. Profits at middle strike.
 
 **Composition:**
@@ -47,7 +47,7 @@ Similar to long call butterfly but using puts. Profits at middle strike.
 - Short 2 puts at middle strike (body)
 - Long 1 put at upper strike (wing)
 
-### Example
+#### Example
 ```python
 results = op.long_put_butterfly(data, max_entry_dte=45, exit_dte=21)
 ```
@@ -56,7 +56,7 @@ results = op.long_put_butterfly(data, max_entry_dte=45, exit_dte=21)
 
 ## Short Put Butterfly
 
-### Description
+#### Description
 Profits when the underlying moves significantly away from the middle strike.
 
 **Composition:**
@@ -64,7 +64,7 @@ Profits when the underlying moves significantly away from the middle strike.
 - Long 2 puts at middle strike
 - Short 1 put at upper strike
 
-### Example
+#### Example
 ```python
 results = op.short_put_butterfly(data, max_entry_dte=30, exit_dte=7)
 ```
