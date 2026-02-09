@@ -79,6 +79,8 @@ class CalendarStrategyParams(StrategyParams):
 All strategy functions now use `Unpack[StrategyParams]`:
 
 ```python
+from typing_extensions import Unpack
+
 def iron_condor(
     data: pd.DataFrame,
     **kwargs: Unpack[StrategyParams]
@@ -86,7 +88,7 @@ def iron_condor(
     ...
 ```
 
-This preserves backward compatibility while adding type information.
+This preserves backward compatibility while adding type information. Note that `Unpack` is imported from `typing_extensions` for compatibility with Python 3.8+.
 
 ## Exporting Types
 
