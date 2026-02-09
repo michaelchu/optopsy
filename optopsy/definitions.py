@@ -1,3 +1,17 @@
+"""
+Column Definitions for Strategy Output
+
+This module defines the column structures for different strategy types:
+- Single-leg strategies (calls, puts)
+- Double-leg strategies (spreads, straddles, strangles)
+- Triple-leg strategies (butterflies)
+- Quadruple-leg strategies (iron condors, iron butterflies)
+- Calendar and diagonal spreads (different expirations)
+
+Each strategy has internal columns (raw trade data) and external columns
+(for aggregated statistics output).
+"""
+
 from typing import List
 
 # columns of options after evaluation
