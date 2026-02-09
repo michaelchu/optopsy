@@ -4,19 +4,19 @@ Single-leg strategies involve buying or selling a single call or put option. The
 
 ## Long Calls
 
-### Description
+#### Description
 A long call gives you the right to buy the underlying at the strike price. This is a bullish strategy with unlimited profit potential and limited risk (the premium paid).
 
-### Market Outlook
+#### Market Outlook
 - **Bullish** - Expect significant upward price movement
 - Profits increase as the underlying rises above the strike + premium paid
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Unlimited (underlying price - strike - premium)
 - **Maximum Loss**: Premium paid (if underlying stays below strike)
 - **Breakeven**: Strike + premium paid
 
-### Example
+#### Example
 
 ```python
 import optopsy as op
@@ -34,7 +34,7 @@ results = op.long_calls(
 print(results)
 ```
 
-### Use Cases
+#### Use Cases
 - Betting on a strong rally
 - Lower-cost alternative to buying stock
 - Earnings plays expecting a positive surprise
@@ -44,19 +44,19 @@ print(results)
 
 ## Short Calls
 
-### Description
+#### Description
 A short call obligates you to sell the underlying at the strike if exercised. This is a bearish or neutral income strategy with limited profit and theoretically unlimited risk.
 
-### Market Outlook
+#### Market Outlook
 - **Bearish to Neutral** - Expect price to stay flat or decline
 - Profits if the underlying stays below the strike at expiration
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Premium received
 - **Maximum Loss**: Unlimited (underlying price - strike - premium)
 - **Breakeven**: Strike + premium received
 
-### Example
+#### Example
 
 ```python
 results = op.short_calls(
@@ -67,31 +67,31 @@ results = op.short_calls(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Generating income in neutral/bearish markets
 - Covered call strategies (with stock holdings)
 - High-probability income trades
 
-### ⚠️ Risk Warning
+#### ⚠️ Risk Warning
 Short naked calls have unlimited risk if the underlying rises significantly. Consider defined-risk alternatives like call spreads.
 
 ---
 
 ## Long Puts
 
-### Description
+#### Description
 A long put gives you the right to sell the underlying at the strike price. This is a bearish strategy with substantial profit potential and limited risk (the premium paid).
 
-### Market Outlook
+#### Market Outlook
 - **Bearish** - Expect significant downward price movement
 - Profits increase as the underlying falls below the strike - premium paid
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Strike - premium - 0 (if underlying goes to zero)
 - **Maximum Loss**: Premium paid (if underlying stays above strike)
 - **Breakeven**: Strike - premium paid
 
-### Example
+#### Example
 
 ```python
 results = op.long_puts(
@@ -102,7 +102,7 @@ results = op.long_puts(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Betting on a market decline
 - Portfolio hedging
 - Earnings plays expecting negative news
@@ -112,19 +112,19 @@ results = op.long_puts(
 
 ## Short Puts
 
-### Description
+#### Description
 A short put obligates you to buy the underlying at the strike if exercised. This is a bullish income strategy where you collect premium, hoping the option expires worthless.
 
-### Market Outlook
+#### Market Outlook
 - **Bullish to Neutral** - Expect price to stay flat or rise
 - Profits if the underlying stays above the strike at expiration
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Premium received
 - **Maximum Loss**: Strike - premium (if underlying goes to zero)
 - **Breakeven**: Strike - premium received
 
-### Example
+#### Example
 
 ```python
 results = op.short_puts(
@@ -136,13 +136,13 @@ results = op.short_puts(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Generating income in bullish markets
 - Getting "paid to wait" to buy stock at a lower price
 - High-probability credit strategies
 - Wheel strategy (sell puts, get assigned, sell calls)
 
-### Assignment Considerations
+#### Assignment Considerations
 If the option is in-the-money at expiration, you'll be obligated to buy shares at the strike price. Ensure you have capital or can close before expiration.
 
 ---

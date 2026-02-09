@@ -4,7 +4,7 @@ Four-leg strategies that combine credit spreads to create defined-risk, defined-
 
 ## Iron Condor
 
-### Description
+#### Description
 An iron condor combines a bull put spread and a bear call spread, creating a wide profit zone. This is one of the most popular credit strategies.
 
 **Composition:**
@@ -15,17 +15,17 @@ An iron condor combines a bull put spread and a bear call spread, creating a wid
 
 Where: A < B < C < D
 
-### Market Outlook
+#### Market Outlook
 - **Neutral** - Expect the underlying to stay between the short strikes
 - Profits if price stays in the range at expiration
 - Ideal for low-volatility, range-bound markets
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Net credit received
 - **Maximum Loss**: Width of spread - net credit
 - **Breakeven**: Short put strike - net credit, Short call strike + net credit
 
-### Example
+#### Example
 
 ```python
 import optopsy as op
@@ -44,7 +44,7 @@ results = op.iron_condor(
 print(results)
 ```
 
-### Use Cases
+#### Use Cases
 - Income generation in range-bound markets
 - After high IV events (post-earnings IV crush)
 - When you expect low volatility
@@ -60,7 +60,7 @@ print(results)
 
 ## Reverse Iron Condor
 
-### Description
+#### Description
 The opposite of an iron condor - this strategy profits from large price movements in either direction while defining risk.
 
 **Composition:**
@@ -71,17 +71,17 @@ The opposite of an iron condor - this strategy profits from large price movement
 
 Where: A < B < C < D
 
-### Market Outlook
+#### Market Outlook
 - **High Volatility Expected** - Anticipate breakout in either direction
 - Profits if price moves significantly beyond inner strikes
 - Defined-risk alternative to long straddles
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Width of spread - net debit
 - **Maximum Loss**: Net debit paid
 - **Breakeven**: Long put strike + debit, Long call strike - debit
 
-### Example
+#### Example
 
 ```python
 results = op.reverse_iron_condor(
@@ -92,7 +92,7 @@ results = op.reverse_iron_condor(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Before major events expecting big moves
 - Defined-risk volatility plays
 - When you expect a breakout but want limited loss
@@ -101,7 +101,7 @@ results = op.reverse_iron_condor(
 
 ## Iron Butterfly
 
-### Description
+#### Description
 An iron butterfly is similar to an iron condor but with the short strikes at the same price (ATM), creating a tighter profit zone with higher potential profit.
 
 **Composition:**
@@ -112,17 +112,17 @@ An iron butterfly is similar to an iron condor but with the short strikes at the
 
 Where: A < B < C
 
-### Market Outlook
+#### Market Outlook
 - **Very Neutral** - Expect price to stay at or very near current level
 - Maximum profit if price is exactly at middle strike at expiration
 - Higher reward but narrower profit zone than iron condor
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Net credit received (larger than iron condor)
 - **Maximum Loss**: Width of wing - net credit
 - **Breakeven**: Short strike ± net credit
 
-### Example
+#### Example
 
 ```python
 results = op.iron_butterfly(
@@ -134,7 +134,7 @@ results = op.iron_butterfly(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Expecting price to pin at a specific level
 - Around major strikes with high open interest
 - When you want higher credit than iron condors
@@ -149,7 +149,7 @@ results = op.iron_butterfly(
 
 ## Reverse Iron Butterfly
 
-### Description
+#### Description
 The opposite of an iron butterfly - profits from large moves away from the center strike.
 
 **Composition:**
@@ -160,17 +160,17 @@ The opposite of an iron butterfly - profits from large moves away from the cente
 
 Where: A < B < C
 
-### Market Outlook
+#### Market Outlook
 - **High Volatility** - Expect significant move from current price
 - Defined-risk alternative to long straddles
 - Lower cost and defined max loss
 
-### Profit/Loss
+#### Profit/Loss
 - **Maximum Profit**: Width of wing - net debit
 - **Maximum Loss**: Net debit paid
 - **Breakeven**: Long strike ± net debit
 
-### Example
+#### Example
 
 ```python
 results = op.reverse_iron_butterfly(
@@ -181,7 +181,7 @@ results = op.reverse_iron_butterfly(
 )
 ```
 
-### Use Cases
+#### Use Cases
 - Before major events (earnings, FDA decisions)
 - When you expect explosive moves
 - Defined-risk alternative to long straddles/strangles

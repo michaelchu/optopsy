@@ -41,3 +41,7 @@ MANIFEST
 *.swo
 
 /venv/
+.claude/
+
+# MkDocs build output
+/site/

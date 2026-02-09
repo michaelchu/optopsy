@@ -4,7 +4,7 @@ This page provides real-world examples of using Optopsy for options backtesting.
 
 ## Basic Examples
 
-### Simple Long Calls Backtest
+#### Simple Long Calls Backtest
 
 ```python
 import optopsy as op
@@ -18,7 +18,7 @@ results = op.long_calls(data)
 print(results.head())
 ```
 
-### Iron Condor with Custom Parameters
+#### Iron Condor with Custom Parameters
 
 ```python
 results = op.iron_condor(
@@ -36,7 +36,7 @@ print(best_dte)
 
 ## Advanced Examples
 
-### Delta-Neutral Iron Condors
+#### Delta-Neutral Iron Condors
 
 Target specific delta ranges for short strikes:
 
@@ -55,7 +55,7 @@ results = op.iron_condor(
 print(results.groupby('delta_range')['mean'].describe())
 ```
 
-### Earnings Straddle Strategy
+#### Earnings Straddle Strategy
 
 Backtest long straddles around earnings events:
 
@@ -86,7 +86,7 @@ results = op.long_straddles(
 print(results)
 ```
 
-### Time Decay Analysis
+#### Time Decay Analysis
 
 Compare different exit times for short strangles:
 
@@ -112,7 +112,7 @@ plt.title('Short Strangle Returns by Exit Time')
 plt.show()
 ```
 
-### Slippage Comparison
+#### Slippage Comparison
 
 Compare different slippage models:
 
@@ -138,7 +138,7 @@ for mode, avg_return in results_comparison.items():
 
 ## Data Analysis Examples
 
-### Raw Trade Data Analysis
+#### Raw Trade Data Analysis
 
 Get individual trades for custom analysis:
 
@@ -171,7 +171,7 @@ profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
 print(f"Profit Factor: {profit_factor:.2f}")
 ```
 
-### Monthly Performance
+#### Monthly Performance
 
 Analyze strategy performance by month:
 
@@ -190,7 +190,7 @@ monthly_perf = trades.groupby('month').agg({
 print(monthly_perf)
 ```
 
-### Strike Selection Analysis
+#### Strike Selection Analysis
 
 Analyze performance by OTM percentage:
 
@@ -308,7 +308,7 @@ print(metrics)
 
 ## Working with Different Data Sources
 
-### Historical Options Data Providers
+#### Historical Options Data Providers
 
 ```python
 # Example: Loading from different CSV formats
@@ -342,7 +342,7 @@ data = op.csv_data(
 
 ## Best Practices
 
-### 1. Always Use Filters
+#### 1. Always Use Filters
 
 ```python
 # Bad: No filtering
@@ -358,7 +358,7 @@ results = op.iron_condor(
 )
 ```
 
-### 2. Compare Apples to Apples
+#### 2. Compare Apples to Apples
 
 ```python
 # Use same parameters when comparing strategies
@@ -372,7 +372,7 @@ ic_results = op.iron_condor(data, **params)
 strangle_results = op.short_strangles(data, **params)
 ```
 
-### 3. Realistic Slippage
+#### 3. Realistic Slippage
 
 ```python
 # Use liquidity mode for realistic results

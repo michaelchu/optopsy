@@ -72,7 +72,25 @@ def _infer_date_cols(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
+def csv_data(
+    file_path: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    underlying_symbol: int = 0,
+    underlying_price: int = 1,
+    option_type: int = 2,
+    expiration: int = 3,
+    quote_date: int = 4,
+    strike: int = 5,
+    bid: int = 6,
+    ask: int = 7,
+    delta: Optional[int] = None,
+    gamma: Optional[int] = None,
+    theta: Optional[int] = None,
+    vega: Optional[int] = None,
+    volume: Optional[int] = None,
+    open_interest: Optional[int] = None,
+) -> pd.DataFrame:
     """
     Import option chain data from CSV files with standardized column names.
 
@@ -107,7 +125,24 @@ def csv_data(file_path: str, **kwargs: Any) -> pd.DataFrame:
                    or other data processing issues
 
     """
-    params = {**default_kwargs, **kwargs}
+    params = {
+        "start_date": start_date,
+        "end_date": end_date,
+        "underlying_symbol": underlying_symbol,
+        "underlying_price": underlying_price,
+        "option_type": option_type,
+        "expiration": expiration,
+        "quote_date": quote_date,
+        "strike": strike,
+        "bid": bid,
+        "ask": ask,
+        "delta": delta,
+        "gamma": gamma,
+        "theta": theta,
+        "vega": vega,
+        "volume": volume,
+        "open_interest": open_interest,
+    }
 
     # Required columns
     column_mapping: List[Tuple[Optional[int], str]] = [
