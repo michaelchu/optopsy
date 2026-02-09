@@ -44,6 +44,35 @@ markdown_extensions:
 
 plugins:
   - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: false
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 中文
+          build: true
+          nav_translations:
+            Home: 首页
+            Getting Started: 入门指南
+            Strategies: 策略
+            Overview: 概览
+            Single-Leg Strategies: 单腿策略
+            Straddles & Strangles: 跨式组合
+            Vertical Spreads: 垂直价差
+            Butterflies: 蝶式价差
+            Iron Condors & Iron Butterflies: 铁秃鹰和铁蝶式
+            Covered Strategies: 备兑策略
+            Calendar Spreads: 日历价差
+            Diagonal Spreads: 对角价差
+            Parameters: 参数
+            Examples: 示例
+            API Reference: API 参考
   - mkdocstrings:
       handlers:
         python:
