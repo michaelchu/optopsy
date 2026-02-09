@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Overview - Optopsy Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Overview</a>
+</li>
+                                    
+<li>
+    <a href="singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="straddles-strangles/" class="dropdown-item">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="spreads/" class="dropdown-item">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../api-reference/" class="nav-link">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../getting-started/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="singles/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#strategy-overview" class="nav-link">Strategy Overview</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#strategy-categories" class="nav-link">Strategy Categories</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quick-reference-table" class="nav-link">Quick Reference Table</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#strategy-selection-guide" class="nav-link">Strategy Selection Guide</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#common-parameters" class="nav-link">Common Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#next-steps" class="nav-link">Next Steps</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="strategy-overview">Strategy Overview<a class="headerlink" href="#strategy-overview" title="Permanent link">&para;</a></h1>
+<p>Optopsy includes 28 built-in options strategies covering single-leg, multi-leg, and time-based strategies.</p>
+<h2 id="strategy-categories">Strategy Categories<a class="headerlink" href="#strategy-categories" title="Permanent link">&para;</a></h2>
+<h3 id="single-leg-strategies-4">Single-Leg Strategies (4)<a class="headerlink" href="#single-leg-strategies-4" title="Permanent link">&para;</a></h3>
+<p>Basic directional plays with calls or puts.</p>
+<ul>
+<li><a href="singles/#long-calls">Long Calls</a> - Bullish directional bet</li>
+<li><a href="singles/#short-calls">Short Calls</a> - Bearish or neutral income</li>
+<li><a href="singles/#long-puts">Long Puts</a> - Bearish directional bet</li>
+<li><a href="singles/#short-puts">Short Puts</a> - Bullish income strategy</li>
+</ul>
+<p><a href="singles/">Learn more →</a></p>
+<h3 id="straddles-strangles-4">Straddles &amp; Strangles (4)<a class="headerlink" href="#straddles-strangles-4" title="Permanent link">&para;</a></h3>
+<p>Volatility-based strategies combining calls and puts.</p>
+<ul>
+<li><a href="straddles-strangles/#long-straddle">Long Straddle</a> - Profit from big moves</li>
+<li><a href="straddles-strangles/#short-straddle">Short Straddle</a> - Income from low volatility</li>
+<li><a href="straddles-strangles/#long-strangle">Long Strangle</a> - Lower-cost volatility play</li>
+<li><a href="straddles-strangles/#short-strangle">Short Strangle</a> - Wider profit zone income</li>
+</ul>
+<p><a href="straddles-strangles/">Learn more →</a></p>
+<h3 id="vertical-spreads-4">Vertical Spreads (4)<a class="headerlink" href="#vertical-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Limited-risk directional strategies.</p>
+<ul>
+<li><a href="spreads/#long-call-spread">Long Call Spread</a> - Bullish debit spread</li>
+<li><a href="spreads/#short-call-spread">Short Call Spread</a> - Bearish credit spread</li>
+<li><a href="spreads/#long-put-spread">Long Put Spread</a> - Bearish debit spread</li>
+<li><a href="spreads/#short-put-spread">Short Put Spread</a> - Bullish credit spread</li>
+</ul>
+<p><a href="spreads/">Learn more →</a></p>
+<h3 id="butterfly-spreads-4">Butterfly Spreads (4)<a class="headerlink" href="#butterfly-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Neutral strategies targeting specific price ranges.</p>
+<ul>
+<li><a href="butterflies/#long-call-butterfly">Long Call Butterfly</a> - Profit at middle strike</li>
+<li><a href="butterflies/#short-call-butterfly">Short Call Butterfly</a> - Profit from movement</li>
+<li><a href="butterflies/#long-put-butterfly">Long Put Butterfly</a> - Bearish butterfly</li>
+<li><a href="butterflies/#short-put-butterfly">Short Put Butterfly</a> - Inverse put butterfly</li>
+</ul>
+<p><a href="butterflies/">Learn more →</a></p>
+<h3 id="iron-strategies-4">Iron Strategies (4)<a class="headerlink" href="#iron-strategies-4" title="Permanent link">&para;</a></h3>
+<p>Four-leg strategies with defined risk.</p>
+<ul>
+<li><a href="iron-strategies/#iron-condor">Iron Condor</a> - Range-bound income</li>
+<li><a href="iron-strategies/#reverse-iron-condor">Reverse Iron Condor</a> - Breakout play</li>
+<li><a href="iron-strategies/#iron-butterfly">Iron Butterfly</a> - Tighter profit zone</li>
+<li><a href="iron-strategies/#reverse-iron-butterfly">Reverse Iron Butterfly</a> - Long volatility</li>
+</ul>
+<p><a href="iron-strategies/">Learn more →</a></p>
+<h3 id="covered-strategies-2">Covered Strategies (2)<a class="headerlink" href="#covered-strategies-2" title="Permanent link">&para;</a></h3>
+<p>Stock + option combinations (synthetic).</p>
+<ul>
+<li><a href="covered/#covered-call">Covered Call</a> - Income on stock holdings</li>
+<li><a href="covered/#protective-put">Protective Put</a> - Downside insurance</li>
+</ul>
+<p><a href="covered/">Learn more →</a></p>
+<h3 id="calendar-spreads-4">Calendar Spreads (4)<a class="headerlink" href="#calendar-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Same strike, different expirations.</p>
+<ul>
+<li><a href="calendars/#long-call-calendar">Long Call Calendar</a> - Time decay play</li>
+<li><a href="calendars/#short-call-calendar">Short Call Calendar</a> - Opposite calendar</li>
+<li><a href="calendars/#long-put-calendar">Long Put Calendar</a> - Bearish time spread</li>
+<li><a href="calendars/#short-put-calendar">Short Put Calendar</a> - Reverse put calendar</li>
+</ul>
+<p><a href="calendars/">Learn more →</a></p>
+<h3 id="diagonal-spreads-4">Diagonal Spreads (4)<a class="headerlink" href="#diagonal-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Different strikes and expirations.</p>
+<ul>
+<li><a href="diagonals/#long-call-diagonal">Long Call Diagonal</a> - Hybrid spread</li>
+<li><a href="diagonals/#short-call-diagonal">Short Call Diagonal</a> - Reverse call diagonal</li>
+<li><a href="diagonals/#long-put-diagonal">Long Put Diagonal</a> - Bearish diagonal</li>
+<li><a href="diagonals/#short-put-diagonal">Short Put Diagonal</a> - Bullish diagonal</li>
+</ul>
+<p><a href="diagonals/">Learn more →</a></p>
+<h2 id="quick-reference-table">Quick Reference Table<a class="headerlink" href="#quick-reference-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Legs</th>
+<th>Market View</th>
+<th>Max Profit</th>
+<th>Max Loss</th>
+<th>Example Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Call</td>
+<td>1</td>
+<td>Bullish</td>
+<td>Unlimited</td>
+<td>Premium paid</td>
+<td>Betting on rally</td>
+</tr>
+<tr>
+<td>Short Put</td>
+<td>1</td>
+<td>Bullish</td>
+<td>Premium received</td>
+<td>Substantial</td>
+<td>Income generation</td>
+</tr>
+<tr>
+<td>Iron Condor</td>
+<td>4</td>
+<td>Neutral</td>
+<td>Net credit</td>
+<td>Difference in strikes</td>
+<td>Range-bound markets</td>
+</tr>
+<tr>
+<td>Long Straddle</td>
+<td>2</td>
+<td>High volatility</td>
+<td>Unlimited</td>
+<td>Premiums paid</td>
+<td>Before earnings</td>
+</tr>
+<tr>
+<td>Call Butterfly</td>
+<td>3</td>
+<td>Neutral</td>
+<td>Width of wing</td>
+<td>Net debit</td>
+<td>Pinning at strike</td>
+</tr>
+<tr>
+<td>Call Calendar</td>
+<td>2</td>
+<td>Neutral</td>
+<td>Variable</td>
+<td>Net debit</td>
+<td>Time decay play</td>
+</tr>
+</tbody>
+</table>
+<h2 id="strategy-selection-guide">Strategy Selection Guide<a class="headerlink" href="#strategy-selection-guide" title="Permanent link">&para;</a></h2>
+<h3 id="if-you-think-the-market-will">If you think the market will...<a class="headerlink" href="#if-you-think-the-market-will" title="Permanent link">&para;</a></h3>
+<p><strong>Go Up Significantly</strong>
+- Long Calls
+- Long Call Spread</p>
+<p><strong>Go Down Significantly</strong>
+- Long Puts
+- Long Put Spread</p>
+<p><strong>Stay Flat</strong>
+- Short Straddle
+- Short Strangle
+- Iron Condor
+- Iron Butterfly</p>
+<p><strong>Move But Unsure Direction</strong>
+- Long Straddle
+- Long Strangle</p>
+<p><strong>Stay Near Current Price</strong>
+- Calendar Spreads
+- Butterflies</p>
+<h3 id="by-riskreward-profile">By Risk/Reward Profile<a class="headerlink" href="#by-riskreward-profile" title="Permanent link">&para;</a></h3>
+<p><strong>Limited Risk, Limited Reward</strong>
+- All spreads (vertical, butterfly, iron condor)</p>
+<p><strong>Limited Risk, Unlimited Reward</strong>
+- Long calls/puts
+- Long straddles/strangles</p>
+<p><strong>Substantial Risk, Limited Reward</strong>
+- Short calls/puts
+- Short straddles/strangles</p>
+<h2 id="common-parameters">Common Parameters<a class="headerlink" href="#common-parameters" title="Permanent link">&para;</a></h2>
+<p>All strategies accept these common parameters:</p>
+<ul>
+<li><code>max_entry_dte</code> - Maximum days to expiration at entry</li>
+<li><code>exit_dte</code> - Days to expiration at exit</li>
+<li><code>dte_interval</code> - Grouping interval for results</li>
+<li><code>max_otm_pct</code> - Maximum out-of-the-money percentage</li>
+<li><code>otm_pct_interval</code> - Grouping interval for OTM%</li>
+<li><code>min_bid_ask</code> - Minimum bid-ask spread filter</li>
+<li><code>raw</code> - Return raw trade data (default: aggregated stats)</li>
+</ul>
+<p>See the <a href="../parameters/">Parameters Guide</a> for complete details.</p>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Dive into specific <a href="#strategy-categories">strategy categories</a></li>
+<li>Learn about <a href="../parameters/">strategy parameters</a></li>
+<li>See <a href="../examples/">examples</a> of real backtests</li>
+<li>Check the <a href="../api-reference/">API Reference</a> for function signatures</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

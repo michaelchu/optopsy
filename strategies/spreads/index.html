@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Vertical Spreads - Optopsy Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../straddles-strangles/" class="dropdown-item">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../straddles-strangles/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../butterflies/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/spreads.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#vertical-spreads" class="nav-link">Vertical Spreads</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#long-call-spread" class="nav-link">Long Call Spread (Bull Call Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-call-spread" class="nav-link">Short Call Spread (Bear Call Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-put-spread" class="nav-link">Long Put Spread (Bear Put Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-put-spread" class="nav-link">Short Put Spread (Bull Put Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#comparison-table" class="nav-link">Comparison Table</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="vertical-spreads">Vertical Spreads<a class="headerlink" href="#vertical-spreads" title="Permanent link">&para;</a></h1>
+<p>Vertical spreads combine buying and selling options of the same type (both calls or both puts) with different strikes but the same expiration. These strategies offer defined risk and defined reward.</p>
+<h2 id="long-call-spread">Long Call Spread (Bull Call Spread)<a class="headerlink" href="#long-call-spread" title="Permanent link">&para;</a></h2>
+<h4 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h4>
+<p>A bullish strategy that buys a lower strike call and sells a higher strike call, reducing cost but capping upside.</p>
+<p><strong>Composition:</strong>
+- Long 1 call at lower strike X
+- Short 1 call at higher strike Y</p>
+<h4 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="short-call-spread">Short Call Spread (Bear Call Spread)<a class="headerlink" href="#short-call-spread" title="Permanent link">&para;</a></h2>
+<h4 id="description_1">Description<a class="headerlink" href="#description_1" title="Permanent link">&para;</a></h4>
+<p>A bearish credit strategy profiting when the underlying stays below the short strike.</p>
+<p><strong>Composition:</strong>
+- Short 1 call at lower strike X
+- Long 1 call at higher strike Y (protection)</p>
+<h4 id="example_1">Example<a class="headerlink" href="#example_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span> <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="long-put-spread">Long Put Spread (Bear Put Spread)<a class="headerlink" href="#long-put-spread" title="Permanent link">&para;</a></h2>
+<h4 id="description_2">Description<a class="headerlink" href="#description_2" title="Permanent link">&para;</a></h4>
+<p>A bearish strategy profiting from downward moves with defined risk.</p>
+<p><strong>Composition:</strong>
+- Short 1 put at lower strike X
+- Long 1 put at higher strike Y</p>
+<h4 id="example_2">Example<a class="headerlink" href="#example_2" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_put_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="short-put-spread">Short Put Spread (Bull Put Spread)<a class="headerlink" href="#short-put-spread" title="Permanent link">&para;</a></h2>
+<h4 id="description_3">Description<a class="headerlink" href="#description_3" title="Permanent link">&para;</a></h4>
+<p>A bullish credit strategy profiting when the underlying stays above the short strike.</p>
+<p><strong>Composition:</strong>
+- Long 1 put at lower strike X (protection)
+- Short 1 put at higher strike Y</p>
+<h4 id="example_3">Example<a class="headerlink" href="#example_3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_put_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span> <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="comparison-table">Comparison Table<a class="headerlink" href="#comparison-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Spread</th>
+<th>Direction</th>
+<th>Type</th>
+<th>Max Profit</th>
+<th>Max Loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Call</td>
+<td>Bullish</td>
+<td>Debit</td>
+<td>Width - debit</td>
+<td>Debit paid</td>
+</tr>
+<tr>
+<td>Short Call</td>
+<td>Bearish</td>
+<td>Credit</td>
+<td>Credit</td>
+<td>Width - credit</td>
+</tr>
+<tr>
+<td>Long Put</td>
+<td>Bearish</td>
+<td>Debit</td>
+<td>Width - debit</td>
+<td>Debit paid</td>
+</tr>
+<tr>
+<td>Short Put</td>
+<td>Bullish</td>
+<td>Credit</td>
+<td>Credit</td>
+<td>Width - credit</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Options Backtesting Library for Python">
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Optopsy Documentation</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="." class="nav-link active" aria-current="page">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="strategies/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="strategies/singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="strategies/straddles-strangles/" class="dropdown-item">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="strategies/spreads/" class="dropdown-item">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="strategies/butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="strategies/iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="strategies/covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="strategies/calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="strategies/diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="api-reference/" class="nav-link">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" class="nav-link disabled">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="getting-started/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/index.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#optopsy-documentation" class="nav-link">Optopsy Documentation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#what-is-optopsy" class="nav-link">What is Optopsy?</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#key-features" class="nav-link">Key Features</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quick-example" class="nav-link">Quick Example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#installation" class="nav-link">Installation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#getting-help" class="nav-link">Getting Help</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#contributing" class="nav-link">Contributing</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#license" class="nav-link">License</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="optopsy-documentation">Optopsy Documentation<a class="headerlink" href="#optopsy-documentation" title="Permanent link">&para;</a></h1>
+<p>A fast, flexible backtesting library for options strategies in Python.</p>
+<h2 id="what-is-optopsy">What is Optopsy?<a class="headerlink" href="#what-is-optopsy" title="Permanent link">&para;</a></h2>
+<p>Optopsy helps you answer questions like <em>"How do iron condors perform on SPX?"</em> or <em>"What delta range produces the best results for covered calls?"</em> by generating comprehensive performance statistics from historical options data.</p>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>28 Built-in Strategies</strong> - From simple calls/puts to iron condors, butterflies, calendars, and diagonals</li>
+<li><strong>Greeks Filtering</strong> - Filter options by delta to target specific probability ranges</li>
+<li><strong>Slippage Modeling</strong> - Realistic fills with mid, spread, or liquidity-based slippage</li>
+<li><strong>Flexible Grouping</strong> - Analyze results by DTE, OTM%, and delta intervals</li>
+<li><strong>Any Data Source</strong> - Works with any options data in CSV or DataFrame format</li>
+<li><strong>Pandas Native</strong> - Returns DataFrames that integrate with your existing workflow</li>
+</ul>
+<h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Load your options data</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Backtest an iron condor strategy</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+</code></pre></div>
+<p><strong>Requirements:</strong> Python 3.8+, Pandas 2.0+, NumPy 1.26+</p>
+<h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Check the <a href="getting-started/">Getting Started</a> guide for a detailed walkthrough</li>
+<li>Browse <a href="strategies/">Strategies</a> for available options strategies</li>
+<li>Review <a href="parameters/">Parameters</a> for configuration options</li>
+<li>See <a href="examples/">Examples</a> for common use cases</li>
+<li>View the <a href="api-reference/">API Reference</a> for complete function documentation</li>
+</ul>
+<h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
+<p>Contributions are welcome! See the <a href="contributing/">Contributing Guide</a> for details.</p>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>Optopsy is released under the GPL-3.0 License. See the <a href="https://github.com/michaelchu/optopsy">GitHub repository</a> for more information.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.6.1
+Build Date UTC : 2026-02-09 15:13:11.450964+00:00
+-->

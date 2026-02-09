@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Straddles & Strangles - Optopsy Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="../spreads/" class="dropdown-item">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../singles/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../spreads/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/straddles-strangles.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#straddles-strangles" class="nav-link">Straddles &amp; Strangles</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#long-straddle" class="nav-link">Long Straddle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-straddle" class="nav-link">Short Straddle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-strangle" class="nav-link">Long Strangle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-strangle" class="nav-link">Short Strangle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#strategy-comparison" class="nav-link">Strategy Comparison</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#greeks-considerations" class="nav-link">Greeks Considerations</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#example-iv-filtering" class="nav-link">Example: IV Filtering</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#risk-management" class="nav-link">Risk Management</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#next-steps" class="nav-link">Next Steps</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="straddles-strangles">Straddles &amp; Strangles<a class="headerlink" href="#straddles-strangles" title="Permanent link">&para;</a></h1>
+<p>Straddles and strangles are volatility-based strategies that combine calls and puts to profit from large price movements (long) or low volatility (short).</p>
+<h2 id="long-straddle">Long Straddle<a class="headerlink" href="#long-straddle" title="Permanent link">&para;</a></h2>
+<h4 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h4>
+<p>A long straddle consists of buying a call and a put at the <strong>same strike</strong>, typically at-the-money. This strategy profits from large price movements in either direction.</p>
+<p><strong>Composition:</strong>
+- Long 1 call at strike X
+- Long 1 put at strike X</p>
+<h4 id="market-outlook">Market Outlook<a class="headerlink" href="#market-outlook" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>High Volatility Expected</strong> - Anticipate a significant move up or down</li>
+<li>Direction doesn't matter, only magnitude</li>
+<li>Common before earnings announcements or major events</li>
+</ul>
+<h4 id="profitloss">Profit/Loss<a class="headerlink" href="#profitloss" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Maximum Profit</strong>: Unlimited (in either direction)</li>
+<li><strong>Maximum Loss</strong>: Total premiums paid (if price stays at strike)</li>
+<li><strong>Breakeven</strong>: Strike ± total premium paid</li>
+</ul>
+<h4 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Backtest long straddles</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_straddles</span><span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># Hold to expiration</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.05</span>  <span class="c1"># Near ATM</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Earnings plays expecting big moves</li>
+<li>Before Fed announcements or major economic data</li>
+<li>When implied volatility is low but you expect an explosion</li>
+<li>Binary events (FDA approvals, court rulings)</li>
+</ul>
+<hr />
+<h2 id="short-straddle">Short Straddle<a class="headerlink" href="#short-straddle" title="Permanent link">&para;</a></h2>
+<h4 id="description_1">Description<a class="headerlink" href="#description_1" title="Permanent link">&para;</a></h4>
+<p>A short straddle consists of selling a call and a put at the <strong>same strike</strong>. This strategy profits when the price stays near the strike at expiration.</p>
+<p><strong>Composition:</strong>
+- Short 1 call at strike X
+- Short 1 put at strike X</p>
+<h4 id="market-outlook_1">Market Outlook<a class="headerlink" href="#market-outlook_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Low Volatility Expected</strong> - Price stays stable</li>
+<li>Maximum profit if price is exactly at strike at expiration</li>
+<li>Profits erode if price moves significantly in either direction</li>
+</ul>
+<h4 id="profitloss_1">Profit/Loss<a class="headerlink" href="#profitloss_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Maximum Profit</strong>: Total premiums received</li>
+<li><strong>Maximum Loss</strong>: Unlimited (if price moves far from strike)</li>
+<li><strong>Breakeven</strong>: Strike ± total premium received</li>
+</ul>
+<h4 id="example_1">Example<a class="headerlink" href="#example_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_straddles</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>  <span class="c1"># ATM straddles</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.20</span>    <span class="c1"># Ensure liquid options</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="use-cases_1">Use Cases<a class="headerlink" href="#use-cases_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li>High implied volatility environments</li>
+<li>After earnings when IV crush is expected</li>
+<li>Range-bound markets</li>
+<li>Income generation in low-volatility periods</li>
+</ul>
+<h4 id="risk-warning">⚠️ Risk Warning<a class="headerlink" href="#risk-warning" title="Permanent link">&para;</a></h4>
+<p>Short straddles have unlimited risk in both directions. Consider iron butterflies for defined-risk alternatives.</p>
+<hr />
+<h2 id="long-strangle">Long Strangle<a class="headerlink" href="#long-strangle" title="Permanent link">&para;</a></h2>
+<h4 id="description_2">Description<a class="headerlink" href="#description_2" title="Permanent link">&para;</a></h4>
+<p>A long strangle consists of buying an OTM call and an OTM put at <strong>different strikes</strong>. This is similar to a long straddle but cheaper with wider breakevens.</p>
+<p><strong>Composition:</strong>
+- Long 1 OTM put at strike X
+- Long 1 OTM call at strike Y (Y &gt; X)</p>
+<h4 id="market-outlook_2">Market Outlook<a class="headerlink" href="#market-outlook_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>High Volatility Expected</strong> - Anticipate a large move</li>
+<li>Lower cost than straddles but requires bigger move to profit</li>
+<li>Better risk/reward than straddles for explosive moves</li>
+</ul>
+<h4 id="profitloss_2">Profit/Loss<a class="headerlink" href="#profitloss_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Maximum Profit</strong>: Unlimited (in either direction)</li>
+<li><strong>Maximum Loss</strong>: Total premiums paid</li>
+<li><strong>Breakeven</strong>: Put strike - total premium, Call strike + total premium</li>
+</ul>
+<h4 id="example_2">Example<a class="headerlink" href="#example_2" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_strangles</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span>  <span class="c1"># Wider strikes for lower cost</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="use-cases_2">Use Cases<a class="headerlink" href="#use-cases_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Lower-cost volatility plays</li>
+<li>Before major events with unknown outcomes</li>
+<li>When you expect a significant move but want to reduce cost</li>
+<li>Higher probability of profit than straddles on massive moves</li>
+</ul>
+<hr />
+<h2 id="short-strangle">Short Strangle<a class="headerlink" href="#short-strangle" title="Permanent link">&para;</a></h2>
+<h4 id="description_3">Description<a class="headerlink" href="#description_3" title="Permanent link">&para;</a></h4>
+<p>A short strangle consists of selling an OTM call and an OTM put at <strong>different strikes</strong>. This provides a wider profit zone than a short straddle.</p>
+<p><strong>Composition:</strong>
+- Short 1 OTM put at strike X
+- Short 1 OTM call at strike Y (Y &gt; X)</p>
+<h4 id="market-outlook_3">Market Outlook<a class="headerlink" href="#market-outlook_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Low to Moderate Volatility</strong> - Price stays in a range</li>
+<li>Wider profit zone than short straddles</li>
+<li>More forgiving if price moves moderately</li>
+</ul>
+<h4 id="profitloss_3">Profit/Loss<a class="headerlink" href="#profitloss_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Maximum Profit</strong>: Total premiums received</li>
+<li><strong>Maximum Loss</strong>: Unlimited (past short strikes)</li>
+<li><strong>Breakeven</strong>: Put strike - total premium, Call strike + total premium</li>
+</ul>
+<h4 id="example_3">Example<a class="headerlink" href="#example_3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>  <span class="c1"># Wide strikes for safer range</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="use-cases_3">Use Cases<a class="headerlink" href="#use-cases_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Income in range-bound markets</li>
+<li>Higher probability of success than short straddles</li>
+<li>After high IV events (post-earnings)</li>
+<li>When you expect low volatility but want buffer</li>
+</ul>
+<h4 id="management-tips">Management Tips<a class="headerlink" href="#management-tips" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Consider closing at 50% of max profit</li>
+<li>Roll untested side if needed</li>
+<li>Monitor position size carefully due to undefined risk</li>
+</ul>
+<hr />
+<h2 id="strategy-comparison">Strategy Comparison<a class="headerlink" href="#strategy-comparison" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Strikes</th>
+<th>Premium</th>
+<th>Profit Zone</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Straddle</td>
+<td>Same</td>
+<td>Higher cost</td>
+<td>Wide (any big move)</td>
+<td>Maximum volatility plays</td>
+</tr>
+<tr>
+<td>Long Strangle</td>
+<td>Different</td>
+<td>Lower cost</td>
+<td>Wider breakevens</td>
+<td>Lower-cost volatility</td>
+</tr>
+<tr>
+<td>Short Straddle</td>
+<td>Same</td>
+<td>Higher credit</td>
+<td>Narrow (at strike)</td>
+<td>Maximum income, low vol</td>
+</tr>
+<tr>
+<td>Short Strangle</td>
+<td>Different</td>
+<td>Lower credit</td>
+<td>Wider range</td>
+<td>Safer income, moderate vol</td>
+</tr>
+</tbody>
+</table>
+<h2 id="greeks-considerations">Greeks Considerations<a class="headerlink" href="#greeks-considerations" title="Permanent link">&para;</a></h2>
+<h4 id="for-long-straddlesstrangles">For Long Straddles/Strangles<a class="headerlink" href="#for-long-straddlesstrangles" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Positive Vega</strong> - Benefit from volatility increases</li>
+<li><strong>Negative Theta</strong> - Time decay works against you</li>
+<li><strong>Trade</strong>: Buy when IV is low, sell when IV spikes</li>
+</ul>
+<h4 id="for-short-straddlesstrangles">For Short Straddles/Strangles<a class="headerlink" href="#for-short-straddlesstrangles" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Negative Vega</strong> - Hurt by volatility increases</li>
+<li><strong>Positive Theta</strong> - Time decay works for you</li>
+<li><strong>Trade</strong>: Sell when IV is high, benefit from IV crush</li>
+</ul>
+<h2 id="example-iv-filtering">Example: IV Filtering<a class="headerlink" href="#example-iv-filtering" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Target high IV environments for short strangles</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="c1"># Filter for liquid, high IV options</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="risk-management">Risk Management<a class="headerlink" href="#risk-management" title="Permanent link">&para;</a></h2>
+<p><strong>For Long Positions:</strong>
+- Risk is limited to premiums paid
+- Consider exiting at 100% loss or 200%+ gain
+- Profits can be substantial on big moves</p>
+<p><strong>For Short Positions:</strong>
+- ⚠️ Risk is unlimited
+- Consider stop losses or conversion to iron condors/butterflies
+- Close early at 50-75% max profit
+- Position size conservatively (small % of account)</p>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Learn about <a href="../spreads/">Vertical Spreads</a> for defined-risk alternatives</li>
+<li>Explore <a href="../iron-strategies/">Iron Butterflies</a> for defined-risk volatility plays</li>
+<li>See more <a href="../../examples/">Examples</a> with IV analysis</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

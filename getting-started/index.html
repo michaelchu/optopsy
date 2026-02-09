@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Getting Started - Optopsy Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../strategies/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/straddles-strangles/" class="dropdown-item">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/spreads/" class="dropdown-item">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../api-reference/" class="nav-link">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href=".." class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../strategies/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/getting-started.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#getting-started" class="nav-link">Getting Started</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#installation" class="nav-link">Installation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#data-format" class="nav-link">Data Format</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#loading-data" class="nav-link">Loading Data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#running-your-first-backtest" class="nav-link">Running Your First Backtest</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#understanding-the-output" class="nav-link">Understanding the Output</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#next-steps" class="nav-link">Next Steps</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#common-issues" class="nav-link">Common Issues</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
+<p>This guide will walk you through setting up Optopsy and running your first backtest.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p>Install Optopsy using pip:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+</code></pre></div>
+<h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python 3.8 or higher</li>
+<li>Pandas 2.0 or higher</li>
+<li>NumPy 1.26 or higher</li>
+</ul>
+<h2 id="data-format">Data Format<a class="headerlink" href="#data-format" title="Permanent link">&para;</a></h2>
+<p>Optopsy requires historical options chain data with the following columns:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>underlying_symbol</code></td>
+<td>Ticker symbol</td>
+<td>SPX, SPY, QQQ</td>
+</tr>
+<tr>
+<td><code>underlying_price</code></td>
+<td>Stock/index price</td>
+<td>4500.00</td>
+</tr>
+<tr>
+<td><code>option_type</code></td>
+<td>Call or Put</td>
+<td>'c', 'p', 'call', 'put'</td>
+</tr>
+<tr>
+<td><code>expiration</code></td>
+<td>Option expiration date</td>
+<td>2023-01-20</td>
+</tr>
+<tr>
+<td><code>quote_date</code></td>
+<td>Date of the quote</td>
+<td>2023-01-01</td>
+</tr>
+<tr>
+<td><code>strike</code></td>
+<td>Strike price</td>
+<td>4500</td>
+</tr>
+<tr>
+<td><code>bid</code></td>
+<td>Bid price</td>
+<td>10.50</td>
+</tr>
+<tr>
+<td><code>ask</code></td>
+<td>Ask price</td>
+<td>11.00</td>
+</tr>
+</tbody>
+</table>
+<h3 id="optional-columns-for-greeks-filtering">Optional Columns for Greeks Filtering<a class="headerlink" href="#optional-columns-for-greeks-filtering" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>delta</code></td>
+<td>Option delta</td>
+</tr>
+<tr>
+<td><code>gamma</code></td>
+<td>Option gamma</td>
+</tr>
+<tr>
+<td><code>theta</code></td>
+<td>Option theta</td>
+</tr>
+<tr>
+<td><code>vega</code></td>
+<td>Option vega</td>
+</tr>
+<tr>
+<td><code>volume</code></td>
+<td>Trading volume</td>
+</tr>
+<tr>
+<td><code>open_interest</code></td>
+<td>Open interest</td>
+</tr>
+</tbody>
+</table>
+<h2 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h2>
+<h3 id="from-csv">From CSV<a class="headerlink" href="#from-csv" title="Permanent link">&para;</a></h3>
+<p>Use <code>csv_data()</code> to load options data from a CSV file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s1">&#39;options_data.csv&#39;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">underlying_symbol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>      <span class="c1"># Column index or name</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">underlying_price</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">option_type</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">expiration</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">quote_date</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">strike</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">bid</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">ask</span><span class="o">=</span><span class="mi">7</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">)</span>
+</code></pre></div>
+<p>The function accepts either:
+- <strong>Column indices</strong> (integers): Position of each column
+- <strong>Column names</strong> (strings): Header names from your CSV</p>
+<h3 id="from-dataframe">From DataFrame<a class="headerlink" href="#from-dataframe" title="Permanent link">&para;</a></h3>
+<p>If you already have a pandas DataFrame, ensure it has the required columns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Your existing DataFrame</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;options_data.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Rename columns to match Optopsy&#39;s expected format</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="s1">&#39;Symbol&#39;</span><span class="p">:</span> <span class="s1">&#39;underlying_symbol&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="s1">&#39;UnderlyingPrice&#39;</span><span class="p">:</span> <span class="s1">&#39;underlying_price&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;option_type&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="s1">&#39;Expiration&#39;</span><span class="p">:</span> <span class="s1">&#39;expiration&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="s1">&#39;QuoteDate&#39;</span><span class="p">:</span> <span class="s1">&#39;quote_date&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="s1">&#39;Strike&#39;</span><span class="p">:</span> <span class="s1">&#39;strike&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="s1">&#39;Bid&#39;</span><span class="p">:</span> <span class="s1">&#39;bid&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="s1">&#39;Ask&#39;</span><span class="p">:</span> <span class="s1">&#39;ask&#39;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="p">})</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="c1"># Now you can use it directly</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="running-your-first-backtest">Running Your First Backtest<a class="headerlink" href="#running-your-first-backtest" title="Permanent link">&para;</a></h2>
+<h3 id="example-long-calls">Example: Long Calls<a class="headerlink" href="#example-long-calls" title="Permanent link">&para;</a></h3>
+<p>Let's backtest a simple long call strategy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Load data</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_2023.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Run backtest with default parameters</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="example-with-custom-parameters">Example with Custom Parameters<a class="headerlink" href="#example-with-custom-parameters" title="Permanent link">&para;</a></h3>
+<p>Customize the backtest parameters:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>        <span class="c1"># Enter with 60 days to expiration</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>             <span class="c1"># Exit at 30 DTE</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">dte_interval</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>          <span class="c1"># Group results by 7-day intervals</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>        <span class="c1"># Maximum 20% out-of-the-money</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">otm_pct_interval</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># Group by 5% OTM intervals</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span>         <span class="c1"># Minimum $0.10 bid-ask spread</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="understanding-the-output">Understanding the Output<a class="headerlink" href="#understanding-the-output" title="Permanent link">&para;</a></h2>
+<h3 id="aggregated-results-default">Aggregated Results (Default)<a class="headerlink" href="#aggregated-results-default" title="Permanent link">&para;</a></h3>
+<p>By default, strategies return aggregated statistics grouped by DTE and OTM% ranges:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># [&#39;dte_range&#39;, &#39;otm_pct_range&#39;, &#39;count&#39;, &#39;mean&#39;, &#39;std&#39;, &#39;min&#39;, &#39;25%&#39;, &#39;50%&#39;, &#39;75%&#39;, &#39;max&#39;]</span>
+</code></pre></div>
+<p>Example output:</p>
+<table>
+<thead>
+<tr>
+<th>dte_range</th>
+<th>otm_pct_range</th>
+<th>count</th>
+<th>mean</th>
+<th>std</th>
+<th>min</th>
+<th>50%</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(0, 7]</td>
+<td>(0.0, 0.05]</td>
+<td>1250</td>
+<td>0.23</td>
+<td>0.45</td>
+<td>-1.0</td>
+<td>0.15</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>(0, 7]</td>
+<td>(0.05, 0.10]</td>
+<td>980</td>
+<td>0.18</td>
+<td>0.52</td>
+<td>-1.0</td>
+<td>0.10</td>
+<td>3.2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="raw-trade-data">Raw Trade Data<a class="headerlink" href="#raw-trade-data" title="Permanent link">&para;</a></h3>
+<p>Get individual trade details by setting <code>raw=True</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># [&#39;underlying_symbol&#39;, &#39;expiration&#39;, &#39;dte_entry&#39;, &#39;strike&#39;, &#39;entry&#39;, &#39;exit&#39;, &#39;pct_change&#39;, ...]</span>
+</code></pre></div>
+<p>This gives you every individual trade for custom analysis.</p>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Explore <a href="../strategies/">all 28 strategies</a></li>
+<li>Learn about <a href="../parameters/">strategy parameters</a></li>
+<li>See more <a href="../examples/">examples</a> with Greeks filtering and slippage</li>
+<li>Read the <a href="../api-reference/">API Reference</a> for detailed function documentation</li>
+</ul>
+<h2 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h2>
+<h3 id="date-format-errors">Date Format Errors<a class="headerlink" href="#date-format-errors" title="Permanent link">&para;</a></h3>
+<p>If you encounter date parsing errors, ensure your dates are in a standard format:
+- ISO format: <code>2023-01-20</code>
+- US format: <code>01/20/2023</code>
+- European format: <code>20/01/2023</code></p>
+<p>The <code>csv_data()</code> function will attempt to auto-detect date formats.</p>
+<h3 id="missing-columns">Missing Columns<a class="headerlink" href="#missing-columns" title="Permanent link">&para;</a></h3>
+<p>If you see a "KeyError" for a column, check that:
+1. The column exists in your data
+2. You've specified the correct column index or name in <code>csv_data()</code>
+3. Column names match exactly (case-sensitive)</p>
+<h3 id="empty-results">Empty Results<a class="headerlink" href="#empty-results" title="Permanent link">&para;</a></h3>
+<p>If your backtest returns no results:
+- Check your parameter ranges (DTE, OTM%, etc.)
+- Verify your data covers the time period you're testing
+- Ensure bid/ask spreads meet the <code>min_bid_ask</code> threshold</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

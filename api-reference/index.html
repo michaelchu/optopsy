@@ -1,0 +1,3718 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>API Reference - Optopsy Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Strategies</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../strategies/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/singles/" class="dropdown-item">Single-Leg Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/straddles-strangles/" class="dropdown-item">Straddles & Strangles</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/spreads/" class="dropdown-item">Vertical Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/butterflies/" class="dropdown-item">Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/iron-strategies/" class="dropdown-item">Iron Condors & Iron Butterflies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/covered/" class="dropdown-item">Covered Strategies</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/calendars/" class="dropdown-item">Calendar Spreads</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/diagonals/" class="dropdown-item">Diagonal Spreads</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../parameters/" class="nav-link">Parameters</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../examples/" class="nav-link">Examples</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">API Reference</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../examples/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/api-reference.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#api-reference" class="nav-link">API Reference</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#data-loading" class="nav-link">Data Loading</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#single-leg-strategies" class="nav-link">Single-Leg Strategies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#straddles-strangles" class="nav-link">Straddles &amp; Strangles</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#vertical-spreads" class="nav-link">Vertical Spreads</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#butterfly-spreads" class="nav-link">Butterfly Spreads</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#iron-strategies" class="nav-link">Iron Strategies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#covered-strategies" class="nav-link">Covered Strategies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#calendar-spreads" class="nav-link">Calendar Spreads</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#diagonal-spreads" class="nav-link">Diagonal Spreads</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#common-parameters" class="nav-link">Common Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#return-values" class="nav-link">Return Values</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#examples" class="nav-link">Examples</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#type-hints" class="nav-link">Type Hints</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<p>Complete API documentation for Optopsy functions.</p>
+<div class="admonition info">
+<p class="admonition-title">Common Parameters</p>
+<p>All strategy functions share common parameters. See the <a href="#common-parameters">Common Parameters</a> section below for detailed documentation of <code>max_entry_dte</code>, <code>exit_dte</code>, <code>max_otm_pct</code>, <code>min_bid_ask</code>, slippage settings, and more.</p>
+</div>
+<h2 id="data-loading">Data Loading<a class="headerlink" href="#data-loading" title="Permanent link">&para;</a></h2>
+<h4 id="csv_data">csv_data<a class="headerlink" href="#csv_data" title="Permanent link">&para;</a></h4>
+<p>Load options data from CSV file.</p>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.datafeeds.csv_data" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.datafeeds.csv_data</span>
+
+
+<a href="#optopsy.datafeeds.csv_data" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">csv_data</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">start_date</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">end_date</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">underlying_symbol</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">underlying_price</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">option_type</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">expiration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">quote_date</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">strike</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">bid</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">ask</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">delta</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">gamma</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">theta</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">vega</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">volume</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">open_interest</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Import option chain data from CSV files with standardized column names.</p>
+<p>Uses pandas DataFrame.read_csv function to import data from CSV files.
+Automatically generates standardized headers for library use.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>file_path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to CSV file</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>start_date</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional start date of dataset to consider (inclusive)</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>end_date</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional end date of dataset to consider (inclusive)</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>underlying_symbol</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing underlying symbol</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>underlying_price</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing underlying stock price</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>quote_date</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing quote date</p>
+              </div>
+            </td>
+            <td>
+                  <code>4</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>expiration</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing expiration date</p>
+              </div>
+            </td>
+            <td>
+                  <code>3</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>strike</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing strike price</p>
+              </div>
+            </td>
+            <td>
+                  <code>5</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>option_type</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing option type (call/put)</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bid</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing bid price</p>
+              </div>
+            </td>
+            <td>
+                  <code>6</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ask</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Column index containing ask price</p>
+              </div>
+            </td>
+            <td>
+                  <code>7</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>delta</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing delta Greek</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>gamma</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing gamma Greek</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>theta</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing theta Greek</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>vega</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing vega Greek</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>volume</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing trading volume (used by liquidity slippage)</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>open_interest</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional column index containing open interest (reserved for future use)</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with option chains and standardized column names</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If CSV file doesn't exist at specified path</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If CSV file is empty, has parsing errors, column mapping errors,
+       or other data processing issues</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="single-leg-strategies">Single-Leg Strategies<a class="headerlink" href="#single-leg-strategies" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All single-leg strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_calls">long_calls<a class="headerlink" href="#long_calls" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_calls" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_calls</span>
+
+
+<a href="#optopsy.strategies.long_calls" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_calls</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long call strategy statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters (see StrategyParams)</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long call strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_calls">short_calls<a class="headerlink" href="#short_calls" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_calls" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_calls</span>
+
+
+<a href="#optopsy.strategies.short_calls" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_calls</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short call strategy statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short call strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_puts">long_puts<a class="headerlink" href="#long_puts" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_puts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_puts</span>
+
+
+<a href="#optopsy.strategies.long_puts" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_puts</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long put strategy statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long put strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_puts">short_puts<a class="headerlink" href="#short_puts" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_puts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_puts</span>
+
+
+<a href="#optopsy.strategies.short_puts" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_puts</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short put strategy statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short put strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="straddles-strangles">Straddles &amp; Strangles<a class="headerlink" href="#straddles-strangles" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All straddle/strangle strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_straddles">long_straddles<a class="headerlink" href="#long_straddles" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_straddles" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_straddles</span>
+
+
+<a href="#optopsy.strategies.long_straddles" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_straddles</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long straddle strategy statistics (long call + long put at same strike).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long straddle strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_straddles">short_straddles<a class="headerlink" href="#short_straddles" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_straddles" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_straddles</span>
+
+
+<a href="#optopsy.strategies.short_straddles" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_straddles</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short straddle strategy statistics (short call + short put at same strike).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short straddle strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_strangles">long_strangles<a class="headerlink" href="#long_strangles" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_strangles" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_strangles</span>
+
+
+<a href="#optopsy.strategies.long_strangles" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_strangles</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long strangle strategy statistics (long call + long put at different strikes).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long strangle strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_strangles">short_strangles<a class="headerlink" href="#short_strangles" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_strangles" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_strangles</span>
+
+
+<a href="#optopsy.strategies.short_strangles" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short strangle strategy statistics (short call + short put at different strikes).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short strangle strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="vertical-spreads">Vertical Spreads<a class="headerlink" href="#vertical-spreads" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All vertical spread strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_call_spread">long_call_spread<a class="headerlink" href="#long_call_spread" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_call_spread" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_call_spread</span>
+
+
+<a href="#optopsy.strategies.long_call_spread" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_call_spread</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long call spread (bull call spread) statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long call spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_call_spread">short_call_spread<a class="headerlink" href="#short_call_spread" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_call_spread" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_call_spread</span>
+
+
+<a href="#optopsy.strategies.short_call_spread" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_call_spread</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short call spread (bear call spread) statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short call spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_put_spread">long_put_spread<a class="headerlink" href="#long_put_spread" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_put_spread" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_put_spread</span>
+
+
+<a href="#optopsy.strategies.long_put_spread" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_put_spread</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long put spread (bear put spread) statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long put spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_put_spread">short_put_spread<a class="headerlink" href="#short_put_spread" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_put_spread" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_put_spread</span>
+
+
+<a href="#optopsy.strategies.short_put_spread" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_put_spread</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short put spread (bull put spread) statistics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short put spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="butterfly-spreads">Butterfly Spreads<a class="headerlink" href="#butterfly-spreads" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All butterfly strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_call_butterfly">long_call_butterfly<a class="headerlink" href="#long_call_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_call_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_call_butterfly</span>
+
+
+<a href="#optopsy.strategies.long_call_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_call_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long call butterfly strategy statistics.</p>
+<p>A long call butterfly consists of:
+- Long 1 call at lower strike (wing)
+- Short 2 calls at middle strike (body)
+- Long 1 call at upper strike (wing)</p>
+<p>This is a neutral strategy that profits when the underlying stays near
+the middle strike at expiration. Maximum profit occurs at the middle strike.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long call butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_call_butterfly">short_call_butterfly<a class="headerlink" href="#short_call_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_call_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_call_butterfly</span>
+
+
+<a href="#optopsy.strategies.short_call_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_call_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short call butterfly strategy statistics.</p>
+<p>A short call butterfly consists of:
+- Short 1 call at lower strike (wing)
+- Long 2 calls at middle strike (body)
+- Short 1 call at upper strike (wing)</p>
+<p>This strategy profits when the underlying moves significantly away from
+the middle strike in either direction.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short call butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_put_butterfly">long_put_butterfly<a class="headerlink" href="#long_put_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_put_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_put_butterfly</span>
+
+
+<a href="#optopsy.strategies.long_put_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_put_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long put butterfly strategy statistics.</p>
+<p>A long put butterfly consists of:
+- Long 1 put at lower strike (wing)
+- Short 2 puts at middle strike (body)
+- Long 1 put at upper strike (wing)</p>
+<p>This is a neutral strategy that profits when the underlying stays near
+the middle strike at expiration. Maximum profit occurs at the middle strike.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long put butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_put_butterfly">short_put_butterfly<a class="headerlink" href="#short_put_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_put_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_put_butterfly</span>
+
+
+<a href="#optopsy.strategies.short_put_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_put_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short put butterfly strategy statistics.</p>
+<p>A short put butterfly consists of:
+- Short 1 put at lower strike (wing)
+- Long 2 puts at middle strike (body)
+- Short 1 put at upper strike (wing)</p>
+<p>This strategy profits when the underlying moves significantly away from
+the middle strike in either direction.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short put butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="iron-strategies">Iron Strategies<a class="headerlink" href="#iron-strategies" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All iron strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="iron_condor">iron_condor<a class="headerlink" href="#iron_condor" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.iron_condor" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.iron_condor</span>
+
+
+<a href="#optopsy.strategies.iron_condor" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate iron condor strategy statistics.</p>
+<p>An iron condor consists of:
+- Long 1 put at lowest strike (protection)
+- Short 1 put at lower-middle strike (income)
+- Short 1 call at upper-middle strike (income)
+- Long 1 call at highest strike (protection)</p>
+<p>This is a neutral income strategy that profits when the underlying stays
+between the two short strikes. Maximum profit is the net credit received.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with iron condor strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="reverse_iron_condor">reverse_iron_condor<a class="headerlink" href="#reverse_iron_condor" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.reverse_iron_condor" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.reverse_iron_condor</span>
+
+
+<a href="#optopsy.strategies.reverse_iron_condor" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">reverse_iron_condor</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate reverse iron condor strategy statistics.</p>
+<p>A reverse iron condor consists of:
+- Short 1 put at lowest strike
+- Long 1 put at lower-middle strike
+- Long 1 call at upper-middle strike
+- Short 1 call at highest strike</p>
+<p>This strategy profits when the underlying makes a significant move
+in either direction.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with reverse iron condor strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="iron_butterfly">iron_butterfly<a class="headerlink" href="#iron_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.iron_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.iron_butterfly</span>
+
+
+<a href="#optopsy.strategies.iron_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">iron_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate iron butterfly strategy statistics.</p>
+<p>An iron butterfly consists of:
+- Long 1 put at lowest strike (wing)
+- Short 1 put at middle strike (body)
+- Short 1 call at middle strike (body) - same strike as short put
+- Long 1 call at highest strike (wing)</p>
+<p>This is a neutral income strategy with higher profit potential than
+an iron condor, but a narrower profit zone. Maximum profit occurs
+when the underlying is exactly at the middle strike at expiration.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with iron butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="reverse_iron_butterfly">reverse_iron_butterfly<a class="headerlink" href="#reverse_iron_butterfly" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.reverse_iron_butterfly" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.reverse_iron_butterfly</span>
+
+
+<a href="#optopsy.strategies.reverse_iron_butterfly" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">reverse_iron_butterfly</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate reverse iron butterfly strategy statistics.</p>
+<p>A reverse iron butterfly consists of:
+- Short 1 put at lowest strike (wing)
+- Long 1 put at middle strike (body)
+- Long 1 call at middle strike (body) - same strike as long put
+- Short 1 call at highest strike (wing)</p>
+<p>This strategy profits when the underlying makes a significant move
+away from the middle strike in either direction.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with reverse iron butterfly strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="covered-strategies">Covered Strategies<a class="headerlink" href="#covered-strategies" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All covered strategies accept the same parameters. See <a href="#common-parameters">Common Parameters</a> for full documentation.</p>
+</div>
+<h4 id="covered_call">covered_call<a class="headerlink" href="#covered_call" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.covered_call" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.covered_call</span>
+
+
+<a href="#optopsy.strategies.covered_call" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">covered_call</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate covered call strategy statistics.</p>
+<p>A covered call consists of:
+- Long underlying position (simulated via long deep ITM call)
+- Short 1 call at higher strike</p>
+<p>This is an income strategy that profits from time decay on the short call
+while maintaining upside exposure up to the short strike. The long deep
+ITM call acts as a synthetic long stock position.</p>
+<p>Note: This implementation uses a synthetic approach with options only.
+For true covered call analysis with actual stock positions, additional
+data integration would be required.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with covered call strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="protective_put">protective_put<a class="headerlink" href="#protective_put" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.protective_put" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.protective_put</span>
+
+
+<a href="#optopsy.strategies.protective_put" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">protective_put</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate protective put (married put) strategy statistics.</p>
+<p>A protective put consists of:
+- Long underlying position (simulated via long deep ITM call)
+- Long 1 put at lower strike for protection</p>
+<p>This strategy provides downside protection while maintaining upside
+potential. The long deep ITM call acts as a synthetic long stock position.</p>
+<p>Note: This implementation uses a synthetic approach with options only.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with protective put strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="calendar-spreads">Calendar Spreads<a class="headerlink" href="#calendar-spreads" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Calendar spreads have additional timing parameters (<code>front_dte_min</code>, <code>front_dte_max</code>, <code>back_dte_min</code>, <code>back_dte_max</code>) in addition to common parameters. See <a href="#common-parameters">Common Parameters</a> and <a href="#calendardiagonal-parameters">Calendar/Diagonal Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_call_calendar">long_call_calendar<a class="headerlink" href="#long_call_calendar" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_call_calendar" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_call_calendar</span>
+
+
+<a href="#optopsy.strategies.long_call_calendar" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_call_calendar</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long call calendar spread strategy statistics.</p>
+<p>A long call calendar consists of:
+- Short 1 front-month call (near-term expiration)
+- Long 1 back-month call (longer-term expiration)
+- Both at the same strike</p>
+<p>This is a neutral strategy that profits from time decay differential
+between the two expirations. Maximum profit occurs when the underlying
+is at the strike price at front-month expiration.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters including:
+- front_dte_min: Minimum DTE for front leg (default: 20)
+- front_dte_max: Maximum DTE for front leg (default: 40)
+- back_dte_min: Minimum DTE for back leg (default: 50)
+- back_dte_max: Maximum DTE for back leg (default: 90)
+- exit_dte: Days before front expiration to exit (default: 7)</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long call calendar spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_call_calendar">short_call_calendar<a class="headerlink" href="#short_call_calendar" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_call_calendar" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_call_calendar</span>
+
+
+<a href="#optopsy.strategies.short_call_calendar" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_call_calendar</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short call calendar spread strategy statistics.</p>
+<p>A short call calendar consists of:
+- Long 1 front-month call (near-term expiration)
+- Short 1 back-month call (longer-term expiration)
+- Both at the same strike</p>
+<p>This strategy profits when the underlying moves significantly away
+from the strike price before front-month expiration.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short call calendar spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_put_calendar">long_put_calendar<a class="headerlink" href="#long_put_calendar" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_put_calendar" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_put_calendar</span>
+
+
+<a href="#optopsy.strategies.long_put_calendar" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_put_calendar</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long put calendar spread strategy statistics.</p>
+<p>A long put calendar consists of:
+- Short 1 front-month put (near-term expiration)
+- Long 1 back-month put (longer-term expiration)
+- Both at the same strike</p>
+<p>This is a neutral strategy that profits from time decay differential
+between the two expirations.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long put calendar spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_put_calendar">short_put_calendar<a class="headerlink" href="#short_put_calendar" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_put_calendar" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_put_calendar</span>
+
+
+<a href="#optopsy.strategies.short_put_calendar" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_put_calendar</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short put calendar spread strategy statistics.</p>
+<p>A short put calendar consists of:
+- Long 1 front-month put (near-term expiration)
+- Short 1 back-month put (longer-term expiration)
+- Both at the same strike</p>
+<p>This strategy profits when the underlying moves significantly away
+from the strike price before front-month expiration.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short put calendar spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="diagonal-spreads">Diagonal Spreads<a class="headerlink" href="#diagonal-spreads" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Diagonal spreads have additional timing parameters (<code>front_dte_min</code>, <code>front_dte_max</code>, <code>back_dte_min</code>, <code>back_dte_max</code>) in addition to common parameters. See <a href="#common-parameters">Common Parameters</a> and <a href="#calendardiagonal-parameters">Calendar/Diagonal Parameters</a> for full documentation.</p>
+</div>
+<h4 id="long_call_diagonal">long_call_diagonal<a class="headerlink" href="#long_call_diagonal" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_call_diagonal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_call_diagonal</span>
+
+
+<a href="#optopsy.strategies.long_call_diagonal" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_call_diagonal</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long call diagonal spread strategy statistics.</p>
+<p>A long call diagonal consists of:
+- Short 1 front-month call (near-term expiration)
+- Long 1 back-month call (longer-term expiration)
+- Different strikes for each leg</p>
+<p>This strategy combines elements of a calendar spread and a vertical spread.
+All strike combinations are evaluated.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long call diagonal spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_call_diagonal">short_call_diagonal<a class="headerlink" href="#short_call_diagonal" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_call_diagonal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_call_diagonal</span>
+
+
+<a href="#optopsy.strategies.short_call_diagonal" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_call_diagonal</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short call diagonal spread strategy statistics.</p>
+<p>A short call diagonal consists of:
+- Long 1 front-month call (near-term expiration)
+- Short 1 back-month call (longer-term expiration)
+- Different strikes for each leg</p>
+<p>This strategy combines elements of a calendar spread and a vertical spread.
+All strike combinations are evaluated.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short call diagonal spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="long_put_diagonal">long_put_diagonal<a class="headerlink" href="#long_put_diagonal" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.long_put_diagonal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.long_put_diagonal</span>
+
+
+<a href="#optopsy.strategies.long_put_diagonal" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">long_put_diagonal</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate long put diagonal spread strategy statistics.</p>
+<p>A long put diagonal consists of:
+- Short 1 front-month put (near-term expiration)
+- Long 1 back-month put (longer-term expiration)
+- Different strikes for each leg</p>
+<p>This strategy combines elements of a calendar spread and a vertical spread.
+All strike combinations are evaluated.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with long put diagonal spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><h4 id="short_put_diagonal">short_put_diagonal<a class="headerlink" href="#short_put_diagonal" title="Permanent link">&para;</a></h4>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="optopsy.strategies.short_put_diagonal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optopsy.strategies.short_put_diagonal</span>
+
+
+<a href="#optopsy.strategies.short_put_diagonal" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">short_put_diagonal</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Generate short put diagonal spread strategy statistics.</p>
+<p>A short put diagonal consists of:
+- Long 1 front-month put (near-term expiration)
+- Short 1 back-month put (longer-term expiration)
+- Different strikes for each leg</p>
+<p>This strategy combines elements of a calendar spread and a vertical spread.
+All strike combinations are evaluated.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>data</code>
+            </td>
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame containing option chain data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code><span title="typing.Unpack">Unpack</span>[<span title="optopsy.types.StrategyParams">StrategyParams</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional strategy parameters</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with short put diagonal spread strategy performance statistics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><hr />
+<h2 id="common-parameters">Common Parameters<a class="headerlink" href="#common-parameters" title="Permanent link">&para;</a></h2>
+<p>All strategy functions accept these common parameters:</p>
+<h4 id="timing-parameters">Timing Parameters<a class="headerlink" href="#timing-parameters" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>max_entry_dte</strong> (int, default=90): Maximum days to expiration at entry</li>
+<li><strong>exit_dte</strong> (int, default=0): Days to expiration at exit</li>
+<li><strong>dte_interval</strong> (int, default=7): Grouping interval for DTE ranges</li>
+</ul>
+<h4 id="filtering-parameters">Filtering Parameters<a class="headerlink" href="#filtering-parameters" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>max_otm_pct</strong> (float, default=0.5): Maximum out-of-the-money percentage</li>
+<li><strong>otm_pct_interval</strong> (float, default=0.05): Grouping interval for OTM ranges</li>
+<li><strong>min_bid_ask</strong> (float, default=0.05): Minimum bid-ask spread filter</li>
+</ul>
+<h4 id="greeks-parameters">Greeks Parameters<a class="headerlink" href="#greeks-parameters" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>delta_min</strong> (float, optional): Minimum delta filter</li>
+<li><strong>delta_max</strong> (float, optional): Maximum delta filter</li>
+<li><strong>delta_interval</strong> (float, optional): Grouping interval for delta ranges</li>
+</ul>
+<h4 id="slippage-parameters">Slippage Parameters<a class="headerlink" href="#slippage-parameters" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>slippage</strong> (str, default='mid'): Slippage mode - 'mid', 'spread', or 'liquidity'</li>
+<li><strong>fill_ratio</strong> (float, default=0.5): Fill ratio for liquidity mode (0.0-1.0)</li>
+<li><strong>reference_volume</strong> (int, default=1000): Volume threshold for liquid options</li>
+</ul>
+<h4 id="output-parameters">Output Parameters<a class="headerlink" href="#output-parameters" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>raw</strong> (bool, default=False): Return raw trade data instead of aggregated stats</li>
+<li><strong>drop_nan</strong> (bool, default=True): Drop rows with NaN values</li>
+</ul>
+<h4 id="calendardiagonal-parameters">Calendar/Diagonal Parameters<a class="headerlink" href="#calendardiagonal-parameters" title="Permanent link">&para;</a></h4>
+<p>These strategies have additional timing parameters:</p>
+<ul>
+<li><strong>front_dte_min</strong> (int, default=20): Minimum DTE for front leg</li>
+<li><strong>front_dte_max</strong> (int, default=40): Maximum DTE for front leg</li>
+<li><strong>back_dte_min</strong> (int, default=50): Minimum DTE for back leg</li>
+<li><strong>back_dte_max</strong> (int, default=90): Maximum DTE for back leg</li>
+</ul>
+<hr />
+<h2 id="return-values">Return Values<a class="headerlink" href="#return-values" title="Permanent link">&para;</a></h2>
+<h4 id="aggregated-results-default">Aggregated Results (default)<a class="headerlink" href="#aggregated-results-default" title="Permanent link">&para;</a></h4>
+<p>When <code>raw=False</code> (default), strategies return aggregated statistics:</p>
+<p><strong>Columns:</strong>
+- <code>dte_range</code>: DTE interval group
+- <code>otm_pct_range</code>: OTM percentage interval group
+- <code>count</code>: Number of trades in group
+- <code>mean</code>: Mean return
+- <code>std</code>: Standard deviation of returns
+- <code>min</code>: Minimum return
+- <code>25%</code>: 25th percentile
+- <code>50%</code>: Median return
+- <code>75%</code>: 75th percentile
+- <code>max</code>: Maximum return</p>
+<h4 id="raw-trade-data">Raw Trade Data<a class="headerlink" href="#raw-trade-data" title="Permanent link">&para;</a></h4>
+<p>When <code>raw=True</code>, strategies return individual trade details:</p>
+<p><strong>Columns (vary by strategy):</strong>
+- <code>underlying_symbol</code>: Ticker symbol
+- <code>expiration</code>: Option expiration date
+- <code>dte_entry</code>: Days to expiration at entry
+- <code>strike</code> / <code>strike_leg1</code>, <code>strike_leg2</code>, etc.: Strike prices
+- <code>entry</code>: Entry price/cost
+- <code>exit</code>: Exit price/proceeds
+- <code>pct_change</code>: Percentage return
+- Additional strategy-specific columns</p>
+<hr />
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<p>See the <a href="../examples/">Examples page</a> for detailed usage examples.</p>
+<h2 id="type-hints">Type Hints<a class="headerlink" href="#type-hints" title="Permanent link">&para;</a></h2>
+<p>All functions include full type hints with TypedDict for IDE autocomplete support:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Unpack</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">StrategyParams</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="n">StrategyParams</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="o">...</span>
+</code></pre></div>
+<h3 id="using-type-hints">Using Type Hints<a class="headerlink" href="#using-type-hints" title="Permanent link">&para;</a></h3>
+<p>Import <code>StrategyParams</code> or <code>CalendarStrategyParams</code> for better IDE support:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">StrategyParams</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Your IDE will now provide autocomplete for all parameters</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>      <span class="c1"># Type: int</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>           <span class="c1"># Type: int</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>  <span class="c1"># Type: Literal[&#39;mid&#39;, &#39;spread&#39;, &#39;liquidity&#39;]</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>        <span class="c1"># Type: float</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">)</span>
+</code></pre></div>
+<p>See <a href="https://github.com/michaelchu/optopsy/blob/master/TYPE_HINTS.md">TYPE_HINTS.md</a> for detailed documentation on using type hints with Optopsy.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
