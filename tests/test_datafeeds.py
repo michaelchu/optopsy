@@ -1,3 +1,5 @@
+"""Tests for CSV data import in :mod:`optopsy.datafeeds`."""
+
 import os
 from datetime import datetime
 import optopsy as op

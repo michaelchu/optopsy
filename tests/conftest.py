@@ -1,3 +1,9 @@
+"""Shared pytest fixtures providing sample option chain DataFrames.
+
+Each fixture constructs a minimal in-memory dataset with known bid/ask
+prices so that strategy outputs can be verified with exact expected values.
+"""
+
 import pytest
 import pandas as pd
 import datetime as datetime
@@ -5,6 +11,11 @@ import datetime as datetime
 
 @pytest.fixture(scope="module")
 def data():
+    """Basic two-strike option chain with entry and exit dates.
+
+    Strikes: 212.5, 215.0 — underlying moves from 213.93 to 220.
+    Puts become worthless at exit; calls retain value.
+    """
     exp_date = datetime.datetime(2018, 1, 31)
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [

@@ -1,3 +1,35 @@
+"""Public API for options strategy generation.
+
+This module exposes all 28 supported options strategies. Each public function
+accepts a DataFrame of option chain data (produced by :func:`optopsy.datafeeds.csv_data`)
+and optional keyword parameters that control filtering, grouping, and slippage.
+
+Strategy families:
+    - **Singles**: long/short calls and puts.
+    - **Straddles & Strangles**: paired call + put at same or different strikes.
+    - **Vertical Spreads**: bull/bear call and put spreads.
+    - **Butterflies**: 3-leg strategies with equal-width wings.
+    - **Iron Condors & Iron Butterflies**: 4-leg strategies combining puts and calls.
+    - **Covered Strategies**: covered calls and protective puts.
+    - **Calendar Spreads**: same strike, different expirations.
+    - **Diagonal Spreads**: different strikes and expirations.
+
+Common keyword arguments accepted by all strategies:
+    dte_interval (int): DTE bucket width for grouping (default: 7).
+    max_entry_dte (int): Maximum days-to-expiration at entry (default: 90).
+    exit_dte (int): Days-to-expiration at which to exit (default: 0).
+    otm_pct_interval (float): OTM percentage bucket width (default: 0.05).
+    max_otm_pct (float): Maximum OTM percentage to consider (default: 0.5).
+    min_bid_ask (float): Minimum bid/ask to filter worthless options (default: 0.05).
+    raw (bool): Return raw trade-level data instead of grouped statistics
+        (default: False).
+    drop_nan (bool): Drop rows with NaN statistics (default: True).
+    slippage (str): Fill-price model — ``"mid"``, ``"spread"``, or ``"liquidity"``
+        (default: ``"mid"``).
+    fill_ratio (float): Base fill ratio for liquidity mode, 0.0-1.0 (default: 0.5).
+    reference_volume (int): Volume threshold for liquid options (default: 1000).
+"""
+
 from typing import Any, Dict, List, Tuple
 import pandas as pd
 from .core import _calls, _puts, _process_strategy, _process_calendar_strategy

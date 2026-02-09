@@ -1,3 +1,5 @@
+"""Tests for parameter and DataFrame validation in :mod:`optopsy.checks`."""
+
 import pytest
 import optopsy.checks as op
 

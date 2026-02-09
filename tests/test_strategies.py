@@ -1,3 +1,5 @@
+"""Tests for all option strategy functions in :mod:`optopsy.strategies`."""
+
 from optopsy.strategies import *
 from optopsy.definitions import *
 import pytest

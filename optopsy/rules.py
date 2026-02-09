@@ -1,3 +1,13 @@
+"""Strike and expiration validation rules for multi-leg strategies.
+
+Each rule function receives a DataFrame of candidate multi-leg combinations and
+filters out rows that violate the strategy's structural constraints (e.g. strike
+ordering, equal-width butterfly wings, or calendar expiration ordering).
+
+Rules are applied inside :func:`optopsy.core._strategy_engine` after legs have
+been merged but before P&L is calculated.
+"""
+
 from typing import List, Tuple
 import pandas as pd
 

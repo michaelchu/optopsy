@@ -1,3 +1,5 @@
+"""Tests for strike validation rules in :mod:`optopsy.rules`."""
+
 from optopsy.strategies import Side
 from optopsy.core import _calls
 from optopsy.rules import _rule_non_overlapping_strike

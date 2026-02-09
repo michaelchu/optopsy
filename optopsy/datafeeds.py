@@ -1,3 +1,17 @@
+"""CSV data import and column standardisation for option chain data.
+
+This module provides :func:`csv_data`, the primary way to load historical
+option chain data into a pandas DataFrame with the standardised column names
+that the rest of the library expects.
+
+Expected input CSV columns (position-mapped by index):
+    underlying_symbol, underlying_price, option_type, expiration,
+    quote_date, strike, bid, ask.
+
+Optional columns (Greeks and liquidity) can also be mapped by providing
+their column indices.
+"""
+
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from .core import _trim, _ltrim, _rtrim
@@ -28,7 +42,16 @@ default_kwargs: Dict[str, Any] = {
 def _trim_dates(
     data: pd.DataFrame, start_date: Optional[str], end_date: Optional[str]
 ) -> pd.DataFrame:
-    """Filter dataframe by date range."""
+    """Filter DataFrame rows to an optional start/end date window on the expiration column.
+
+    Args:
+        data: DataFrame with an ``expiration`` datetime column.
+        start_date: Inclusive lower bound, or ``None`` for no lower bound.
+        end_date: Inclusive upper bound, or ``None`` for no upper bound.
+
+    Returns:
+        Filtered DataFrame.
+    """
     if start_date is not None and end_date is not None:
         return _trim(data, "expiration", start_date, end_date)
     elif start_date is None and end_date is not None:
@@ -42,7 +65,17 @@ def _trim_dates(
 def _trim_cols(
     data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
 ) -> pd.DataFrame:
-    """Select only the columns specified in the mapping."""
+    """Select only the columns whose indices appear in *column_mapping*.
+
+    Args:
+        data: Raw DataFrame from ``pd.read_csv``.
+        column_mapping: List of ``(column_index, label)`` pairs.  Entries
+            where the index is ``None`` (optional columns not provided by
+            the user) are skipped.
+
+    Returns:
+        DataFrame with only the selected columns (by positional index).
+    """
     cols = [c for c, _ in column_mapping if c is not None]
     return data.iloc[:, cols]
 
@@ -50,14 +83,27 @@ def _trim_cols(
 def _standardize_cols(
     data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
 ) -> pd.DataFrame:
-    """Rename columns to standardized names."""
+    """Rename CSV columns from their original names to the standardised names
+    expected by the rest of the library (e.g. ``"bid"``, ``"ask"``).
+
+    Args:
+        data: Raw DataFrame from ``pd.read_csv``.
+        column_mapping: List of ``(column_index, standard_label)`` pairs.
+
+    Returns:
+        DataFrame with renamed columns.
+    """
     col_names = list(data.columns)
     cols = {col_names[idx]: label for idx, label in column_mapping if idx is not None}
     return data.rename(columns=cols)
 
 
 def _infer_date_cols(data: pd.DataFrame) -> pd.DataFrame:
-    """Convert date columns to datetime format."""
+    """Convert ``expiration`` and ``quote_date`` columns to ``datetime64``.
+
+    Handles both pandas < 2.0 (where ``infer_datetime_format`` improves
+    performance) and pandas >= 2.0 (where strict inference is the default).
+    """
     # infer_datetime_format was deprecated in pandas 2.0 and removed in 3.0
     # For pandas < 2.0, use infer_datetime_format=True for better performance
     # For pandas >= 2.0, the strict inference is now default behavior

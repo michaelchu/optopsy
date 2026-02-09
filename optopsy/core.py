@@ -1,3 +1,25 @@
+"""Strategy execution engine and data processing pipeline.
+
+This module contains the core logic that powers every strategy exposed by
+:mod:`optopsy.strategies`.  The main entry points are:
+
+- :func:`_process_strategy` — orchestrates the standard (same-expiration)
+  strategy pipeline: validate, evaluate options, build multi-leg positions,
+  calculate P&L, and format output.
+- :func:`_process_calendar_strategy` — orchestrates calendar and diagonal
+  spread pipelines that span multiple expirations.
+
+Key internal helpers:
+
+- :func:`_evaluate_all_options` — filters and categorises raw option chains
+  by DTE, OTM percentage, delta, and bid/ask thresholds.
+- :func:`_strategy_engine` — constructs single- or multi-leg positions via
+  pandas merges on shared columns, applies strike-validation rules, and
+  computes profit/loss.
+- :func:`_calculate_fill_price` — models trade slippage using mid-point,
+  full-spread, or liquidity-adjusted pricing.
+"""
+
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
@@ -20,17 +42,30 @@ def _calculate_fill_price(
     """
     Calculate fill price based on slippage model.
 
+    The fill price is computed as an offset from the midpoint::
+
+        fill = mid ± (half_spread × ratio)
+
+    where *ratio* depends on the slippage mode:
+
+    - ``"mid"``       — ratio is 0; fill at midpoint (no slippage).
+    - ``"spread"``    — ratio is 1.0; fill at the full ask (long) or bid (short).
+    - ``"liquidity"`` — ratio scales between *fill_ratio* and 1.0 based on
+      how liquid the option is (``volume / reference_volume``).  Illiquid
+      options receive worse fills (ratio closer to 1.0).
+
     Args:
-        bid: Series of bid prices
-        ask: Series of ask prices
-        side_value: 1 for long (buying), -1 for short (selling)
-        slippage: Slippage mode - "mid", "spread", or "liquidity"
-        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
-        volume: Optional series of volume data for liquidity-based slippage
-        reference_volume: Volume threshold for "liquid" option
+        bid: Series of bid prices.
+        ask: Series of ask prices.
+        side_value: 1 for long (buying), -1 for short (selling).
+        slippage: Slippage mode — ``"mid"``, ``"spread"``, or ``"liquidity"``.
+        fill_ratio: Base fill ratio for liquidity mode (0.0–1.0).
+        volume: Optional series of volume data for liquidity-based slippage.
+        reference_volume: Volume threshold above which an option is considered
+            fully liquid (liquidity_score capped at 1.0).
 
     Returns:
-        Series of fill prices adjusted for slippage
+        Series of fill prices adjusted for slippage.
     """
     mid = (bid + ask) / 2
     half_spread = (ask - bid) / 2
@@ -39,18 +74,20 @@ def _calculate_fill_price(
         return mid
 
     if slippage == "spread":
+        # Worst-case fill: long buys at ask, short sells at bid.
         ratio = 1.0
     else:  # liquidity
         if volume is None:
             ratio = fill_ratio
         else:
-            # Higher fill ratio for illiquid options
+            # liquidity_score ranges from 0 (illiquid) to 1 (fully liquid).
+            # ratio = fill_ratio when fully liquid, approaches 1.0 when illiquid.
             liquidity_score = (volume / reference_volume).clip(upper=1.0)
             ratio = fill_ratio + (1 - fill_ratio) * (1 - liquidity_score)
 
-    if side_value == 1:  # long - buying at higher price
+    if side_value == 1:  # long — buying at higher price (mid + slippage)
         return mid + (half_spread * ratio)
-    else:  # short - selling at lower price
+    else:  # short — selling at lower price (mid - slippage)
         return mid - (half_spread * ratio)
 
 
@@ -80,12 +117,21 @@ def _get(data: pd.DataFrame, col: str, val: Any) -> pd.DataFrame:
 
 
 def _remove_min_bid_ask(data: pd.DataFrame, min_bid_ask: float) -> pd.DataFrame:
-    """Remove options with bid or ask prices below minimum threshold."""
+    """Remove options with bid or ask prices below minimum threshold.
+
+    Filters out worthless or near-worthless options that would be
+    unrealistic to trade.
+    """
     return data.loc[(data["bid"] > min_bid_ask) & (data["ask"] > min_bid_ask)]
 
 
 def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
-    """Keep evaluated options where entry DTE is greater than exit DTE."""
+    """Keep only options where entry DTE is strictly greater than exit DTE.
+
+    After merging entry and exit quotes, some rows may have the same or
+    reversed DTE relationship (e.g. exit date is after entry date).  This
+    filter ensures we only keep valid forward-in-time positions.
+    """
     return data.loc[
         (data["dte_exit"] <= data["dte_entry"])
         & (data["dte_entry"] != data["dte_exit"])
@@ -95,7 +141,11 @@ def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
 def _cut_options_by_dte(
     data: pd.DataFrame, dte_interval: int, max_entry_dte: int
 ) -> pd.DataFrame:
-    """Categorize options into DTE intervals for grouping."""
+    """Bin options into DTE intervals using ``pd.cut``.
+
+    Adds a ``dte_range`` column whose values are ``pd.Interval`` objects
+    (e.g. ``(7, 14]``) used as group-by keys in the aggregated output.
+    """
     dte_intervals = list(range(0, max_entry_dte, dte_interval))
     data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
     return data
@@ -104,7 +154,12 @@ def _cut_options_by_dte(
 def _cut_options_by_otm(
     data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float
 ) -> pd.DataFrame:
-    """Categorize options into out-of-the-money percentage intervals."""
+    """Bin options into OTM-percentage intervals using ``pd.cut``.
+
+    Adds an ``otm_pct_range`` column whose values are ``pd.Interval``
+    objects used as group-by keys in the aggregated output.  The range
+    spans from ``-max_otm_pct_interval`` to ``+max_otm_pct_interval``.
+    """
     # consider using np.linspace in future
     otm_pct_intervals = [
         round(i, 2)
@@ -172,7 +227,13 @@ def _cut_options_by_delta(
 def _group_by_intervals(
     data: pd.DataFrame, cols: List[str], drop_na: bool
 ) -> pd.DataFrame:
-    """Group options by intervals and calculate descriptive statistics."""
+    """Group options by interval columns and compute descriptive statistics.
+
+    Groups the DataFrame by the given columns (typically DTE-range and
+    OTM-percentage-range bins) and runs ``pandas.DataFrame.describe()``
+    on the ``pct_change`` column to produce count, mean, std, min,
+    25%, 50%, 75%, and max.
+    """
     # this is a bottleneck, try to optimize
     # Use observed=True to only return groups with actual data (avoids pandas 3.0
     # issue where observed=False returns all category combinations as empty rows)
@@ -292,7 +353,12 @@ def _puts(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
-    """Calculate out-of-the-money percentage for each option."""
+    """Calculate out-of-the-money percentage for each option.
+
+    OTM percentage is defined as ``(strike - underlying_price) / strike``.
+    Positive values indicate OTM calls or ITM puts; negative values
+    indicate ITM calls or OTM puts.
+    """
     return data.assign(
         otm_pct=lambda r: round((r["strike"] - r["underlying_price"]) / r["strike"], 2)
     )
@@ -311,9 +377,24 @@ def _apply_ratios(
     reference_volume: int = 1000,
 ) -> pd.DataFrame:
     """
-    Apply position ratios (long/short multipliers) and quantities to entry and exit prices.
+    Apply position ratios (long/short multipliers) and quantities to entry/exit prices.
 
-    When slippage is enabled, recalculates fill prices from bid/ask based on position side.
+    For each leg the multiplier is ``side_value × quantity``.  When slippage
+    is enabled (not ``"mid"``), fill prices are recalculated from bid/ask
+    columns using :func:`_calculate_fill_price` before applying the multiplier.
+
+    Args:
+        data: DataFrame with entry/exit prices for each leg
+            (columns like ``entry_leg1``, ``bid_entry_leg1``, etc.).
+        leg_def: List of tuples ``(Side, filter_fn[, quantity])`` defining
+            each leg's direction and optional quantity (default 1).
+        slippage: Slippage model — ``"mid"``, ``"spread"``, or ``"liquidity"``.
+        fill_ratio: Base fill ratio for liquidity mode (0.0–1.0).
+        reference_volume: Volume threshold for liquid options.
+
+    Returns:
+        DataFrame with multiplied entry/exit prices reflecting position
+        direction and size.
     """
     data = data.copy()
     for idx in range(1, len(leg_def) + 1):
@@ -385,7 +466,16 @@ def _assign_profit(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
 ) -> pd.DataFrame:
-    """Calculate total profit/loss and percentage change for multi-leg strategies."""
+    """Calculate total profit/loss and percentage change for multi-leg strategies.
+
+    After applying position ratios via :func:`_apply_ratios`, this sums all
+    leg entry costs into ``total_entry_cost`` and all leg exit proceeds into
+    ``total_exit_proceeds``, then computes::
+
+        pct_change = (total_exit_proceeds - total_entry_cost) / |total_entry_cost|
+
+    Returns NaN when the absolute entry cost is zero.
+    """
     data = _apply_ratios(data, leg_def, slippage, fill_ratio, reference_volume)
 
     # determine all entry and exit columns
@@ -409,7 +499,11 @@ def _assign_profit(
 def _rename_leg_columns(
     data: pd.DataFrame, leg_idx: int, join_on: List[str]
 ) -> pd.DataFrame:
-    """Rename columns with leg suffix, excluding join columns."""
+    """Rename non-join columns with a ``_legN`` suffix.
+
+    Join columns are left unchanged so they can serve as merge keys
+    during the multi-leg inner join in :func:`_strategy_engine`.
+    """
     rename_map = {
         col: f"{col}_leg{leg_idx}" for col in data.columns if col not in join_on
     }
@@ -426,31 +520,50 @@ def _strategy_engine(
     reference_volume: int = 1000,
 ) -> pd.DataFrame:
     """
-    Core strategy execution engine that constructs single or multi-leg option strategies.
+    Core strategy execution engine that constructs single- or multi-leg option strategies.
+
+    For **single-leg** strategies the function simply applies slippage-adjusted
+    fill prices and computes pct_change directly.
+
+    For **multi-leg** strategies the process is:
+
+    1. Filter the evaluated-options DataFrame once per leg using the leg's
+       option-type filter (calls or puts).
+    2. Rename each leg's non-join columns with a ``_legN`` suffix so they
+       don't collide during merging.
+    3. Sequentially inner-join all legs on shared ``join_on`` columns
+       (e.g. underlying_symbol, expiration, dte_entry).  The inner join
+       ensures that only strike/date combinations present in *all* legs
+       survive — producing every valid combination.
+    4. Apply structural validation rules (strike ordering, equal-width
+       wings, etc.) to discard invalid combinations.
+    5. Compute per-leg costs via :func:`_apply_ratios` and aggregate into
+       total_entry_cost, total_exit_proceeds, and pct_change via
+       :func:`_assign_profit`.
 
     Args:
-        data: DataFrame containing evaluated option data
-        leg_def: List of tuples defining strategy legs (side, filter_function)
-        join_on: Columns to join on for multi-leg strategies
-        rules: Optional filtering rules to apply after joining legs
-        slippage: Slippage mode - "mid", "spread", or "liquidity"
-        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
-        reference_volume: Volume threshold for liquid options
+        data: DataFrame containing evaluated option data.
+        leg_def: List of tuples ``(Side, filter_fn[, quantity])`` defining
+            each leg.
+        join_on: Columns to join on for multi-leg strategies.
+        rules: Optional filtering rule applied after merging legs.
+        slippage: Slippage mode — ``"mid"``, ``"spread"``, or ``"liquidity"``.
+        fill_ratio: Base fill ratio for liquidity mode (0.0–1.0).
+        reference_volume: Volume threshold for liquid options.
 
     Returns:
-        DataFrame with constructed strategy and calculated profit/loss
+        DataFrame with constructed strategy and calculated profit/loss.
     """
+    # --- Single-leg fast path ---
     if len(leg_def) == 1:
         side = leg_def[0][0]
         has_bid_ask = "bid_entry" in data.columns and "ask_entry" in data.columns
 
         if has_bid_ask and slippage != "mid":
             data = data.copy()  # Avoid modifying original DataFrame
-            # Calculate fill prices with slippage
             volume_entry = (
                 data.get("volume_entry") if "volume_entry" in data.columns else None
             )
-
             data["entry"] = _calculate_fill_price(
                 data["bid_entry"],
                 data["ask_entry"],
@@ -460,7 +573,7 @@ def _strategy_engine(
                 volume_entry,
                 reference_volume,
             )
-            # Exit: reverse the side (closing the position)
+            # Exit reverses the side (closing the position)
             volume_exit = (
                 data.get("volume_exit") if "volume_exit" in data.columns else None
             )
@@ -481,23 +594,29 @@ def _strategy_engine(
         )
         return leg_def[0][1](data)
 
+    # --- Multi-leg path ---
+
     def _rule_func(
         d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]
     ) -> pd.DataFrame:
+        """Apply structural validation rule if one is provided."""
         return d if r is None else r(d, ld)
 
-    # Pre-rename columns for each leg to avoid suffix issues with 3+ legs
+    # Step 1-2: Filter by option type and rename columns with _legN suffixes.
+    # Pre-renaming avoids ambiguous suffix conflicts when merging 3+ legs.
     partials = [
         _rename_leg_columns(leg[1](data).copy(), idx, join_on or [])
         for idx, leg in enumerate(leg_def, start=1)
     ]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    # Merge all legs sequentially
+    # Step 3: Sequentially inner-join all legs on shared columns.
+    # Each merge produces every valid strike combination for that pair of legs.
     result = partials[0]
     for partial in partials[1:]:
         result = pd.merge(result, partial, on=join_on, how="inner")
 
+    # Step 4-5: Validate strike constraints, then compute P&L.
     return result.pipe(_rule_func, rules, leg_def).pipe(
         _assign_profit, leg_def, suffixes, slippage, fill_ratio, reference_volume
     )
@@ -505,14 +624,26 @@ def _strategy_engine(
 
 def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
-    Main entry point for processing option strategies.
+    Main entry point for processing same-expiration option strategies.
+
+    Orchestrates the full pipeline: validate inputs → evaluate options
+    (filter by DTE, OTM%, delta, bid/ask) → build multi-leg positions
+    via :func:`_strategy_engine` → format as raw trades or grouped
+    statistics.
 
     Args:
-        data: DataFrame containing raw option chain data
-        **context: Dictionary containing strategy parameters, leg definitions, and formatting options
+        data: DataFrame containing raw option chain data.
+        **context: Strategy context dictionary with keys:
+
+            - ``params`` — user parameters merged with defaults.
+            - ``leg_def`` — list of ``(Side, filter_fn[, qty])`` tuples.
+            - ``internal_cols`` — columns for raw output.
+            - ``external_cols`` — grouping columns for aggregated output.
+            - ``join_on`` (optional) — merge keys for multi-leg joins.
+            - ``rules`` (optional) — strike-validation rule function.
 
     Returns:
-        DataFrame with processed strategy results
+        DataFrame with processed strategy results (raw or aggregated).
     """
     _run_checks(context["params"], data)
 

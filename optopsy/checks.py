@@ -1,3 +1,15 @@
+"""Input validation for strategy parameters and option chain DataFrames.
+
+This module validates that user-supplied parameters (DTE ranges, OTM percentages,
+slippage settings, etc.) and input DataFrames conform to the expected types and
+value ranges before any processing begins.
+
+Validation entry points:
+    :func:`_run_checks` — for standard (same-expiration) strategies.
+    :func:`_run_calendar_checks` — for calendar/diagonal spread strategies,
+    which have additional front/back DTE range constraints.
+"""
+
 from typing import Any, Callable, Dict, Optional, Tuple
 import pandas as pd
 

@@ -1,6 +1,36 @@
+"""Column definitions for strategy DataFrames at each pipeline stage.
+
+The pipeline produces two kinds of output:
+
+**Internal columns** (``*_internal_cols``)
+    Used when ``raw=True``.  These are the trade-level columns that appear in
+    the raw (unaggregated) output.  They contain per-position details such as
+    individual leg strikes, entry/exit costs, and percentage change.
+
+**External columns** (``*_external_cols``)
+    Used when ``raw=False`` (default).  These are the grouping columns for
+    the aggregated statistics output produced by ``pandas.DataFrame.describe()``.
+    They define the DTE-range and OTM-percentage-range buckets that rows are
+    grouped into.
+
+Column sets are defined per leg count:
+
+- ``single_strike_*``      — 1-leg strategies (long/short calls or puts).
+- ``straddle_*``           — 2-leg same-strike (straddle) strategies.
+- ``double_strike_*``      — 2-leg different-strike strategies (spreads, strangles).
+- ``triple_strike_*``      — 3-leg strategies (butterflies).
+- ``quadruple_strike_*``   — 4-leg strategies (iron condors, iron butterflies).
+- ``calendar_spread_*``    — 2-leg same-strike, different-expiration strategies.
+- ``diagonal_spread_*``    — 2-leg different-strike, different-expiration strategies.
+"""
+
 from typing import List
 
-# columns of options after evaluation
+# Columns present after _evaluate_options() merges entry and exit quotes.
+# These are the intermediate columns before legs are joined into strategies.
+#   dte_entry        — days to expiration on the entry quote date
+#   otm_pct_entry    — out-of-the-money percentage at entry: (strike - price) / strike
+#   entry / exit     — fill prices (midpoint by default, adjusted by slippage model)
 evaluated_cols: List[str] = [
     "underlying_symbol",
     "option_type",
@@ -18,7 +48,9 @@ evaluated_cols: List[str] = [
     "exit",
 ]
 
-# columns of dataframe after generating strategy
+# --- Raw output columns (trade-level, returned when raw=True) ---
+
+# 1-leg strategies (long/short single calls or puts)
 single_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry",
@@ -32,6 +64,7 @@ single_strike_internal_cols: List[str] = [
 ]
 
 
+# 2-leg same-strike strategies (straddles: call + put at identical strike)
 straddle_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry",
@@ -46,6 +79,7 @@ straddle_internal_cols: List[str] = [
 ]
 
 
+# 2-leg different-strike strategies (vertical spreads, strangles, covered calls)
 double_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
@@ -60,6 +94,7 @@ double_strike_internal_cols: List[str] = [
     "pct_change",
 ]
 
+# 3-leg strategies (butterflies: two wings + body)
 triple_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
@@ -77,6 +112,7 @@ triple_strike_internal_cols: List[str] = [
     "pct_change",
 ]
 
+# 4-leg strategies (iron condors, iron butterflies)
 quadruple_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry_leg1",
@@ -96,7 +132,10 @@ quadruple_strike_internal_cols: List[str] = [
     "pct_change",
 ]
 
-# base columns of dataframe after aggregation(minus the calculated columns)
+# --- Aggregated output grouping columns (returned when raw=False) ---
+# These columns define the group-by keys for pandas describe() statistics.
+# The describe_cols (count, mean, std, min, 25%, 50%, 75%, max) are appended
+# automatically by _group_by_intervals().
 single_strike_external_cols: List[str] = ["dte_range", "otm_pct_range"]
 double_strike_external_cols: List[str] = [
     "dte_range",
