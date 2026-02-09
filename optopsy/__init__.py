@@ -12,7 +12,7 @@ Typical usage::
     results = op.long_call_spread(data, max_entry_dte=60)
 """
 
-__version__ = "2.0.3"
+__version__ = "2.2.0"
 
 from .strategies import (
     long_calls,
