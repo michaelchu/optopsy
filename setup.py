@@ -21,5 +21,5 @@ setup(
     ],
     python_requires=">=3.8",
     packages=["optopsy"],
-    install_requires=["pandas", "numpy"],
+    install_requires=["pandas", "numpy", "typing_extensions>=4.0.0"],
 )

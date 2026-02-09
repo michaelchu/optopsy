@@ -1,5 +1,7 @@
-from typing import Any, Dict, List, Tuple, Unpack
+from typing import Any, Dict, List, Tuple
+
 import pandas as pd
+from typing_extensions import Unpack
 from .core import _calls, _puts, _process_strategy, _process_calendar_strategy
 from .types import StrategyParams, CalendarStrategyParams
 from .definitions import (

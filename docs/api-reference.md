@@ -278,8 +278,8 @@ See the [Examples page](examples.md) for detailed usage examples.
 All functions include full type hints with TypedDict for IDE autocomplete support:
 
 ```python
-from typing import Unpack
 import pandas as pd
+from typing_extensions import Unpack
 from optopsy import StrategyParams
 
 def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
