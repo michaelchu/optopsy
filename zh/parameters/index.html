@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>参数 - Optopsy Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../" class="nav-link">首页</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">入门指南</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">策略</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../strategies/" class="dropdown-item">概览</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/singles/" class="dropdown-item">单腿策略</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/straddles-strangles/" class="dropdown-item">跨式组合</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/spreads/" class="dropdown-item">垂直价差</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/butterflies/" class="dropdown-item">蝶式价差</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/iron-strategies/" class="dropdown-item">铁秃鹰和铁蝶式</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/covered/" class="dropdown-item">备兑策略</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/calendars/" class="dropdown-item">日历价差</a>
+</li>
+                                    
+<li>
+    <a href="../strategies/diagonals/" class="dropdown-item">对角价差</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">参数</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../examples/" class="nav-link">示例</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../api-reference/" class="nav-link">API 参考</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../strategies/diagonals/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../examples/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/parameters.zh.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">策略参数</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">核心参数</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#greeks" class="nav-link">Greeks 参数</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_7" class="nav-link">滑点参数</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#calendar-diagonal" class="nav-link">Calendar &amp; Diagonal 参数</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_8" class="nav-link">完整示例</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_9" class="nav-link">默认值参考</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_11" class="nav-link">下一步</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">策略参数<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>所有 Optopsy 策略都接受一组通用参数,用于过滤、分组和输出格式化。本指南涵盖所有可用参数及其用法。</p>
+<h2 id="_2">核心参数<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h4 id="_3">进场和出场时机<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<h4 id="max_entry_dte"><code>max_entry_dte</code><a class="headerlink" href="#max_entry_dte" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>90</code></p>
+<p>策略进场时的最大到期天数。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>  <span class="c1"># 在 45 DTE 或更少时进场</span>
+</code></pre></div>
+<p><strong>使用场景:</strong>
+- <code>max_entry_dte=30</code> - 短期交易
+- <code>max_entry_dte=60</code> - 中期交易
+- <code>max_entry_dte=90</code> - 长期持仓</p>
+<hr />
+<h4 id="exit_dte"><code>exit_dte</code><a class="headerlink" href="#exit_dte" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>0</code></p>
+<p>策略出场时的到期天数。使用 <code>0</code> 持有至到期。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># 在 30 DTE 时出场</span>
+</code></pre></div>
+<p><strong>使用场景:</strong>
+- <code>exit_dte=0</code> - 持有至到期
+- <code>exit_dte=21</code> - 到期前 3 周出场
+- <code>exit_dte=7</code> - 到期前 1 周出场</p>
+<hr />
+<h4 id="_4">过滤参数<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<h4 id="max_otm_pct"><code>max_otm_pct</code><a class="headerlink" href="#max_otm_pct" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>0.5</code></p>
+<p>期权选择的最大虚值百分比。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span><span class="p">)</span>  <span class="c1"># 最大 20% OTM</span>
+</code></pre></div>
+<p><strong>示例:</strong>
+- <code>0.05</code> - 接近平值期权(最大 5% OTM)
+- <code>0.20</code> - 适度虚值(最大 20% OTM)
+- <code>0.50</code> - 宽范围(最大 50% OTM)</p>
+<p><strong>计算方法:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 对于 calls: (strike - underlying_price) / underlying_price</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># 对于 puts: (underlying_price - strike) / underlying_price</span>
+</code></pre></div></p>
+<hr />
+<h4 id="min_bid_ask"><code>min_bid_ask</code><a class="headerlink" href="#min_bid_ask" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>0.05</code></p>
+<p>期权流动性所需的最小买卖价差。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span><span class="p">)</span>  <span class="c1"># 要求 $0.10+ 价差</span>
+</code></pre></div>
+<p><strong>使用场景:</strong>
+- <code>0.05</code> - 流动性较低的标的
+- <code>0.10</code> - 标准流动性要求
+- <code>0.20</code> - 高流动性要求(SPX、SPY)</p>
+<hr />
+<h4 id="_5">分组和聚合<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<h4 id="dte_interval"><code>dte_interval</code><a class="headerlink" href="#dte_interval" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>7</code></p>
+<p>按 DTE 范围分组结果的间隔。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dte_interval</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>  <span class="c1"># 按 14 天桶分组</span>
+</code></pre></div>
+<p><strong>示例:</strong>
+- <code>7</code> - 每周分组: (0,7], (7,14], (14,21], ...
+- <code>14</code> - 双周分组: (0,14], (14,28], ...
+- <code>30</code> - 每月分组: (0,30], (30,60], ...</p>
+<hr />
+<h4 id="otm_pct_interval"><code>otm_pct_interval</code><a class="headerlink" href="#otm_pct_interval" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>0.05</code></p>
+<p>按 OTM 百分比范围分组结果的间隔。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">otm_pct_interval</span><span class="o">=</span><span class="mf">0.10</span><span class="p">)</span>  <span class="c1"># 10% OTM 桶</span>
+</code></pre></div>
+<p><strong>示例:</strong>
+- <code>0.05</code> - 细粒度: (0.0, 0.05], (0.05, 0.10], ...
+- <code>0.10</code> - 粗粒度桶: (0.0, 0.10], (0.10, 0.20], ...</p>
+<hr />
+<h4 id="_6">输出控制<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<h4 id="raw"><code>raw</code><a class="headerlink" href="#raw" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>bool</code> | <strong>默认值:</strong> <code>False</code></p>
+<p>返回原始交易数据而不是聚合统计。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 聚合统计(默认)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># 输出: [&#39;dte_range&#39;, &#39;otm_pct_range&#39;, &#39;count&#39;, &#39;mean&#39;, &#39;std&#39;, ...]</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># 原始交易数据</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">trades</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># 输出: [&#39;expiration&#39;, &#39;strike_leg1&#39;, &#39;strike_leg2&#39;, &#39;entry&#39;, &#39;exit&#39;, &#39;pct_change&#39;, ...]</span>
+</code></pre></div>
+<p><strong>使用场景:</strong>
+- <code>raw=False</code> - 性能统计、回测结果
+- <code>raw=True</code> - 自定义分析、详细检查、调试</p>
+<hr />
+<h4 id="drop_nan"><code>drop_nan</code><a class="headerlink" href="#drop_nan" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>bool</code> | <strong>默认值:</strong> <code>True</code></p>
+<p>删除结果中包含 NaN 值的行。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">drop_nan</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 保留 NaN 值</span>
+</code></pre></div>
+<hr />
+<h2 id="greeks">Greeks 参数<a class="headerlink" href="#greeks" title="Permanent link">&para;</a></h2>
+<h4 id="delta">Delta 过滤<a class="headerlink" href="#delta" title="Permanent link">&para;</a></h4>
+<h4 id="delta_min-delta_max"><code>delta_min</code> / <code>delta_max</code><a class="headerlink" href="#delta_min-delta_max" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>None</code></p>
+<p>按 delta 范围过滤期权。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 目标 30-delta 期权</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">delta_min</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">delta_max</span><span class="o">=</span><span class="mf">0.35</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>常见 Delta 范围:</strong>
+- <code>0.15-0.20</code> - 1 个标准差 OTM(约 15-20% 概率 ITM)
+- <code>0.25-0.35</code> - 信用价差常用
+- <code>0.40-0.50</code> - 接近平值期权
+- <code>0.50+</code> - 实值期权</p>
+<p><strong>注意:</strong> 需要数据中包含 <code>delta</code> 列。</p>
+<hr />
+<h4 id="delta_interval"><code>delta_interval</code><a class="headerlink" href="#delta_interval" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>None</code></p>
+<p>按 delta 范围分组结果。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.10</span>  <span class="c1"># 分组为: (0.0,0.1], (0.1,0.2], 等</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="_7">滑点参数<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h4 id="slippage"><code>slippage</code><a class="headerlink" href="#slippage" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>str</code> | <strong>默认值:</strong> <code>'mid'</code></p>
+<p>成交价格计算的滑点模型。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>选项:</strong></p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>描述</th>
+<th>买入成交</th>
+<th>卖出成交</th>
+<th>最适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>'mid'</code></td>
+<td>买卖价之间的中间价</td>
+<td>(bid+ask)/2</td>
+<td>(bid+ask)/2</td>
+<td>理想/乐观</td>
+</tr>
+<tr>
+<td><code>'spread'</code></td>
+<td>最差情况价差</td>
+<td>Ask</td>
+<td>Bid</td>
+<td>保守</td>
+</tr>
+<tr>
+<td><code>'liquidity'</code></td>
+<td>基于成交量的动态</td>
+<td>动态</td>
+<td>动态</td>
+<td>现实</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h4 id="fill_ratio-liquidity"><code>fill_ratio</code> (仅限 Liquidity 模式)<a class="headerlink" href="#fill_ratio-liquidity" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>float</code> | <strong>默认值:</strong> <code>0.5</code></p>
+<p>基于流动性滑点的基础成交比率(0.0 = bid/ask, 1.0 = ask/bid)。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.3</span>  <span class="c1"># 更保守的成交(通过价差的 30%)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>示例:</strong>
+- <code>0.0</code> - 最差情况(以 ask 买入,以 bid 卖出)
+- <code>0.5</code> - 中点(默认)
+- <code>1.0</code> - 最佳情况(以 bid 买入,以 ask 卖出 - 不现实)</p>
+<hr />
+<h4 id="reference_volume-liquidity"><code>reference_volume</code> (仅限 Liquidity 模式)<a class="headerlink" href="#reference_volume-liquidity" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>1000</code></p>
+<p>流动性模式下确定流动期权的成交量阈值。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">5000</span>  <span class="c1"># SPX 的更高阈值</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>指南:</strong>
+- <code>500-1000</code> - 流动性较低的标的
+- <code>1000-2000</code> - 标准流动性(默认)
+- <code>5000+</code> - 高流动性(SPX、SPY、QQQ)</p>
+<p><strong>注意:</strong> 需要数据中包含 <code>volume</code> 或 <code>open_interest</code> 列。</p>
+<hr />
+<h2 id="calendar-diagonal">Calendar &amp; Diagonal 参数<a class="headerlink" href="#calendar-diagonal" title="Permanent link">&para;</a></h2>
+<p>Calendar 和 diagonal 价差使用不同的时间参数:</p>
+<h4 id="front_dte_min-front_dte_max"><code>front_dte_min</code> / <code>front_dte_max</code><a class="headerlink" href="#front_dte_min-front_dte_max" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>20</code> / <code>40</code></p>
+<p>前月腿的 DTE 范围。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_calendar</span><span class="p">(</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">front_dte_min</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">front_dte_max</span><span class="o">=</span><span class="mi">35</span>  <span class="c1"># 前月腿在 25-35 DTE 之间</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h4 id="back_dte_min-back_dte_max"><code>back_dte_min</code> / <code>back_dte_max</code><a class="headerlink" href="#back_dte_min-back_dte_max" title="Permanent link">&para;</a></h4>
+<p><strong>类型:</strong> <code>int</code> | <strong>默认值:</strong> <code>50</code> / <code>90</code></p>
+<p>后月腿的 DTE 范围。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_diagonal</span><span class="p">(</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">back_dte_min</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">back_dte_max</span><span class="o">=</span><span class="mi">120</span>  <span class="c1"># 后月腿在 60-120 DTE 之间</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="_8">完整示例<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<p>组合多个参数:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="c1"># 时机</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="c1"># 过滤</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>    <span class="n">delta_min</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>    <span class="n">delta_max</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>
+<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>
+<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>    <span class="c1"># 分组</span>
+<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>    <span class="n">dte_interval</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a>    <span class="n">otm_pct_interval</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>
+<a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a>    <span class="c1"># 滑点</span>
+<a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+<a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a>
+<a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a>    <span class="c1"># 输出</span>
+<a id="__codelineno-16-28" name="__codelineno-16-28" href="#__codelineno-16-28"></a>    <span class="n">raw</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-16-29" name="__codelineno-16-29" href="#__codelineno-16-29"></a>    <span class="n">drop_nan</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-16-30" name="__codelineno-16-30" href="#__codelineno-16-30"></a><span class="p">)</span>
+<a id="__codelineno-16-31" name="__codelineno-16-31" href="#__codelineno-16-31"></a>
+<a id="__codelineno-16-32" name="__codelineno-16-32" href="#__codelineno-16-32"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="_9">默认值参考<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h4 id="_10">标准策略<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">default_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="s2">&quot;dte_interval&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="s2">&quot;max_entry_dte&quot;</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="s2">&quot;exit_dte&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="s2">&quot;otm_pct_interval&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="s2">&quot;max_otm_pct&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="s2">&quot;min_bid_ask&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>    <span class="s2">&quot;drop_nan&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    <span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    <span class="s2">&quot;delta_min&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>    <span class="s2">&quot;delta_max&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>    <span class="s2">&quot;delta_interval&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>    <span class="s2">&quot;slippage&quot;</span><span class="p">:</span> <span class="s2">&quot;mid&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>    <span class="s2">&quot;fill_ratio&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>    <span class="s2">&quot;reference_volume&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a><span class="p">}</span>
+</code></pre></div>
+<h4 id="calendar-diagonal_1">Calendar &amp; Diagonal 策略<a class="headerlink" href="#calendar-diagonal_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">calendar_default_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="s2">&quot;front_dte_min&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="s2">&quot;front_dte_max&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="s2">&quot;back_dte_min&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="s2">&quot;back_dte_max&quot;</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="s2">&quot;exit_dte&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="s2">&quot;dte_interval&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    <span class="s2">&quot;otm_pct_interval&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    <span class="s2">&quot;max_otm_pct&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>    <span class="s2">&quot;min_bid_ask&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>    <span class="s2">&quot;drop_nan&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    <span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>    <span class="s2">&quot;slippage&quot;</span><span class="p">:</span> <span class="s2">&quot;mid&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    <span class="s2">&quot;fill_ratio&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>    <span class="s2">&quot;reference_volume&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="_11">下一步<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<ul>
+<li>查看 <a href="../examples/">示例</a> 了解实际参数使用</li>
+<li>探索 <a href="../strategies/">策略</a> 了解特定策略的考虑因素</li>
+<li>查阅 <a href="../api-reference/">API 参考</a> 了解函数签名</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

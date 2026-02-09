@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>垂直价差 - Optopsy Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../" class="nav-link">首页</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">入门指南</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">策略</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">概览</a>
+</li>
+                                    
+<li>
+    <a href="../singles/" class="dropdown-item">单腿策略</a>
+</li>
+                                    
+<li>
+    <a href="../straddles-strangles/" class="dropdown-item">跨式组合</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">垂直价差</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">蝶式价差</a>
+</li>
+                                    
+<li>
+    <a href="../iron-strategies/" class="dropdown-item">铁秃鹰和铁蝶式</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">备兑策略</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">日历价差</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">对角价差</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">参数</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">示例</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API 参考</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../straddles-strangles/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../butterflies/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/spreads.zh.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">垂直价差</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#long-call-spread" class="nav-link">Long Call Spread (Bull Call Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-call-spread" class="nav-link">Short Call Spread (Bear Call Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-put-spread" class="nav-link">Long Put Spread (Bear Put Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-put-spread" class="nav-link">Short Put Spread (Bull Put Spread)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_10" class="nav-link">比较表</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">垂直价差<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>垂直价差结合买入和卖出相同类型的期权(都是 calls 或都是 puts),行权价不同但到期日相同。这些策略提供有限风险和有限回报。</p>
+<h2 id="long-call-spread">Long Call Spread (Bull Call Spread)<a class="headerlink" href="#long-call-spread" title="Permanent link">&para;</a></h2>
+<h4 id="_2">描述<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>一种看涨策略,买入较低行权价的 call 并卖出较高行权价的 call,降低成本但限制上行空间。</p>
+<p><strong>组成:</strong>
+- Long 1 个 call,行权价为较低的 X
+- Short 1 个 call,行权价为较高的 Y</p>
+<h4 id="_3">示例<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="short-call-spread">Short Call Spread (Bear Call Spread)<a class="headerlink" href="#short-call-spread" title="Permanent link">&para;</a></h2>
+<h4 id="_4">描述<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<p>一种看跌的信用策略,当标的资产保持在空头行权价以下时获利。</p>
+<p><strong>组成:</strong>
+- Short 1 个 call,行权价为较低的 X
+- Long 1 个 call,行权价为较高的 Y(保护)</p>
+<h4 id="_5">示例<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span> <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="long-put-spread">Long Put Spread (Bear Put Spread)<a class="headerlink" href="#long-put-spread" title="Permanent link">&para;</a></h2>
+<h4 id="_6">描述<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<p>一种看跌策略,从向下移动中获利,风险有限。</p>
+<p><strong>组成:</strong>
+- Short 1 个 put,行权价为较低的 X
+- Long 1 个 put,行权价为较高的 Y</p>
+<h4 id="_7">示例<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_put_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="short-put-spread">Short Put Spread (Bull Put Spread)<a class="headerlink" href="#short-put-spread" title="Permanent link">&para;</a></h2>
+<h4 id="_8">描述<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h4>
+<p>一种看涨的信用策略,当标的资产保持在空头行权价以上时获利。</p>
+<p><strong>组成:</strong>
+- Long 1 个 put,行权价为较低的 X(保护)
+- Short 1 个 put,行权价为较高的 Y</p>
+<h4 id="_9">示例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_put_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span> <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="_10">比较表<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>价差</th>
+<th>方向</th>
+<th>类型</th>
+<th>最大盈利</th>
+<th>最大损失</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Call</td>
+<td>看涨</td>
+<td>借记</td>
+<td>宽度 - 借记</td>
+<td>支付的借记</td>
+</tr>
+<tr>
+<td>Short Call</td>
+<td>看跌</td>
+<td>信用</td>
+<td>信用</td>
+<td>宽度 - 信用</td>
+</tr>
+<tr>
+<td>Long Put</td>
+<td>看跌</td>
+<td>借记</td>
+<td>宽度 - 借记</td>
+<td>支付的借记</td>
+</tr>
+<tr>
+<td>Short Put</td>
+<td>看涨</td>
+<td>信用</td>
+<td>信用</td>
+<td>宽度 - 信用</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

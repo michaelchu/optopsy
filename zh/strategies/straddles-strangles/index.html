@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>跨式组合 - Optopsy Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../" class="nav-link">首页</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">入门指南</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">策略</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">概览</a>
+</li>
+                                    
+<li>
+    <a href="../singles/" class="dropdown-item">单腿策略</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">跨式组合</a>
+</li>
+                                    
+<li>
+    <a href="../spreads/" class="dropdown-item">垂直价差</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">蝶式价差</a>
+</li>
+                                    
+<li>
+    <a href="../iron-strategies/" class="dropdown-item">铁秃鹰和铁蝶式</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">备兑策略</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">日历价差</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">对角价差</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">参数</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">示例</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API 参考</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../singles/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../spreads/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/straddles-strangles.zh.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#straddles-strangles" class="nav-link">Straddles &amp; Strangles</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#long-straddle" class="nav-link">Long Straddle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-straddle" class="nav-link">Short Straddle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-strangle" class="nav-link">Long Strangle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-strangle" class="nav-link">Short Strangle</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_23" class="nav-link">策略比较</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#greeks" class="nav-link">Greeks 考虑</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#iv" class="nav-link">示例: IV 过滤</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_24" class="nav-link">风险管理</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_25" class="nav-link">下一步</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="straddles-strangles">Straddles &amp; Strangles<a class="headerlink" href="#straddles-strangles" title="Permanent link">&para;</a></h1>
+<p>Straddles 和 strangles 是基于波动率的策略,结合 calls 和 puts 以从大幅价格波动(long)或低波动率(short)中获利。</p>
+<h2 id="long-straddle">Long Straddle<a class="headerlink" href="#long-straddle" title="Permanent link">&para;</a></h2>
+<h4 id="_1">描述<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h4>
+<p>Long straddle 由在<strong>相同行权价</strong>买入一个 call 和一个 put 组成,通常在平值。该策略从任一方向的大幅价格波动中获利。</p>
+<p><strong>组成:</strong>
+- Long 1 个 call,行权价为 X
+- Long 1 个 put,行权价为 X</p>
+<h4 id="_2">市场观点<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>预期高波动率</strong> - 预期大幅上涨或下跌</li>
+<li>方向无关紧要,只在乎幅度</li>
+<li>在财报公告或重大事件之前常见</li>
+</ul>
+<h4 id="_3">盈亏<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 无限(任一方向)</li>
+<li><strong>最大损失</strong>: 支付的总权利金(如果价格保持在行权价)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 ± 支付的总权利金</li>
+</ul>
+<h4 id="_4">示例<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 回测 long straddles</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_straddles</span><span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># 持有至到期</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.05</span>  <span class="c1"># 接近 ATM</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="_5">使用场景<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<ul>
+<li>预期大幅波动的财报交易</li>
+<li>在美联储公告或重大经济数据发布前</li>
+<li>当隐含波动率低但您预期爆发时</li>
+<li>二元事件(FDA 批准、法院裁决)</li>
+</ul>
+<hr />
+<h2 id="short-straddle">Short Straddle<a class="headerlink" href="#short-straddle" title="Permanent link">&para;</a></h2>
+<h4 id="_6">描述<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<p>Short straddle 由在<strong>相同行权价</strong>卖出一个 call 和一个 put 组成。该策略在价格在到期时保持在行权价附近时获利。</p>
+<p><strong>组成:</strong>
+- Short 1 个 call,行权价为 X
+- Short 1 个 put,行权价为 X</p>
+<h4 id="_7">市场观点<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>预期低波动率</strong> - 价格保持稳定</li>
+<li>如果价格在到期时恰好在行权价则最大盈利</li>
+<li>如果价格在任一方向大幅移动,利润会侵蚀</li>
+</ul>
+<h4 id="_8">盈亏<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的总权利金</li>
+<li><strong>最大损失</strong>: 无限(如果价格远离行权价)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 ± 收到的总权利金</li>
+</ul>
+<h4 id="_9">示例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_straddles</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>  <span class="c1"># ATM straddles</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.20</span>    <span class="c1"># 确保流动期权</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_10">使用场景<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<ul>
+<li>高隐含波动率环境</li>
+<li>财报后预期 IV 挤压</li>
+<li>区间震荡市场</li>
+<li>低波动率期间的收益创造</li>
+</ul>
+<h4 id="_11">⚠️ 风险警告<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h4>
+<p>Short straddles 在两个方向都有无限风险。考虑使用 iron butterflies 作为有限风险的替代方案。</p>
+<hr />
+<h2 id="long-strangle">Long Strangle<a class="headerlink" href="#long-strangle" title="Permanent link">&para;</a></h2>
+<h4 id="_12">描述<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
+<p>Long strangle 由买入虚值 call 和虚值 put 在<strong>不同行权价</strong>组成。这类似于 long straddle,但成本更低,盈亏平衡点更宽。</p>
+<p><strong>组成:</strong>
+- Long 1 个虚值 put,行权价为 X
+- Long 1 个虚值 call,行权价为 Y(Y &gt; X)</p>
+<h4 id="_13">市场观点<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>预期高波动率</strong> - 预期大幅波动</li>
+<li>成本低于 straddles,但需要更大的波动才能获利</li>
+<li>对于爆炸性波动,风险/回报比 straddles 更好</li>
+</ul>
+<h4 id="_14">盈亏<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 无限(任一方向)</li>
+<li><strong>最大损失</strong>: 支付的总权利金</li>
+<li><strong>盈亏平衡点</strong>: Put 行权价 - 总权利金, Call 行权价 + 总权利金</li>
+</ul>
+<h4 id="_15">示例<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_strangles</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span>  <span class="c1"># 更宽的行权价以降低成本</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_16">使用场景<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
+<ul>
+<li>成本更低的波动率交易</li>
+<li>在结果未知的重大事件之前</li>
+<li>当您预期大幅波动但想降低成本时</li>
+<li>在大规模波动时比 straddles 有更高的盈利概率</li>
+</ul>
+<hr />
+<h2 id="short-strangle">Short Strangle<a class="headerlink" href="#short-strangle" title="Permanent link">&para;</a></h2>
+<h4 id="_17">描述<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
+<p>Short strangle 由卖出虚值 call 和虚值 put 在<strong>不同行权价</strong>组成。这提供了比 short straddle 更宽的盈利区间。</p>
+<p><strong>组成:</strong>
+- Short 1 个虚值 put,行权价为 X
+- Short 1 个虚值 call,行权价为 Y(Y &gt; X)</p>
+<h4 id="_18">市场观点<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>低至中等波动率</strong> - 价格保持在区间内</li>
+<li>盈利区间比 short straddles 更宽</li>
+<li>如果价格适度移动更宽容</li>
+</ul>
+<h4 id="_19">盈亏<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的总权利金</li>
+<li><strong>最大损失</strong>: 无限(超过空头行权价)</li>
+<li><strong>盈亏平衡点</strong>: Put 行权价 - 总权利金, Call 行权价 + 总权利金</li>
+</ul>
+<h4 id="_20">示例<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>  <span class="c1"># 宽行权价以获得更安全的区间</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_21">使用场景<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在区间震荡市场中的收益</li>
+<li>比 short straddles 有更高的成功概率</li>
+<li>高 IV 事件后(财报后)</li>
+<li>当您预期低波动率但想要缓冲时</li>
+</ul>
+<h4 id="_22">管理技巧<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h4>
+<ul>
+<li>考虑在最大盈利的 50% 时平仓</li>
+<li>如果需要,滚动未测试的一侧</li>
+<li>由于未定义风险,仔细监控头寸规模</li>
+</ul>
+<hr />
+<h2 id="_23">策略比较<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>行权价</th>
+<th>权利金</th>
+<th>盈利区间</th>
+<th>最佳用于</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Straddle</td>
+<td>相同</td>
+<td>成本较高</td>
+<td>宽(任何大幅波动)</td>
+<td>最大波动率交易</td>
+</tr>
+<tr>
+<td>Long Strangle</td>
+<td>不同</td>
+<td>成本较低</td>
+<td>更宽的盈亏平衡点</td>
+<td>成本更低的波动率</td>
+</tr>
+<tr>
+<td>Short Straddle</td>
+<td>相同</td>
+<td>信用较高</td>
+<td>窄(在行权价)</td>
+<td>最大收益,低波动率</td>
+</tr>
+<tr>
+<td>Short Strangle</td>
+<td>不同</td>
+<td>信用较低</td>
+<td>更宽的区间</td>
+<td>更安全的收益,中等波动率</td>
+</tr>
+</tbody>
+</table>
+<h2 id="greeks">Greeks 考虑<a class="headerlink" href="#greeks" title="Permanent link">&para;</a></h2>
+<h4 id="long-straddlesstrangles">对于 Long Straddles/Strangles<a class="headerlink" href="#long-straddlesstrangles" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>正 Vega</strong> - 从波动率增加中受益</li>
+<li><strong>负 Theta</strong> - 时间衰减对您不利</li>
+<li><strong>交易</strong>: 在 IV 低时买入,在 IV 飙升时卖出</li>
+</ul>
+<h4 id="short-straddlesstrangles">对于 Short Straddles/Strangles<a class="headerlink" href="#short-straddlesstrangles" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>负 Vega</strong> - 受波动率增加伤害</li>
+<li><strong>正 Theta</strong> - 时间衰减对您有利</li>
+<li><strong>交易</strong>: 在 IV 高时卖出,从 IV 挤压中受益</li>
+</ul>
+<h2 id="iv">示例: IV 过滤<a class="headerlink" href="#iv" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 针对 short strangles 的高 IV 环境</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="c1"># 过滤流动、高 IV 期权</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="_24">风险管理<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h2>
+<p><strong>对于 Long 头寸:</strong>
+- 风险限于支付的权利金
+- 考虑在 100% 损失或 200%+ 收益时退出
+- 大幅波动时利润可能相当可观</p>
+<p><strong>对于 Short 头寸:</strong>
+- ⚠️ 风险是无限的
+- 考虑止损或转换为 iron condors/butterflies
+- 在最大盈利的 50-75% 时提前平仓
+- 保守地确定头寸规模(账户的小百分比)</p>
+<h2 id="_25">下一步<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h2>
+<ul>
+<li>了解 <a href="../spreads/">垂直价差</a> 以获得有限风险的替代方案</li>
+<li>探索 <a href="../iron-strategies/">Iron Butterflies</a> 以获得有限风险的波动率交易</li>
+<li>查看包含 IV 分析的更多 <a href="../../examples/">示例</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

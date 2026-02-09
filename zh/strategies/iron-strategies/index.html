@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>铁秃鹰和铁蝶式 - Optopsy Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../" class="nav-link">首页</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">入门指南</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">策略</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">概览</a>
+</li>
+                                    
+<li>
+    <a href="../singles/" class="dropdown-item">单腿策略</a>
+</li>
+                                    
+<li>
+    <a href="../straddles-strangles/" class="dropdown-item">跨式组合</a>
+</li>
+                                    
+<li>
+    <a href="../spreads/" class="dropdown-item">垂直价差</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">蝶式价差</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">铁秃鹰和铁蝶式</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">备兑策略</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">日历价差</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">对角价差</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">参数</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">示例</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API 参考</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../butterflies/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../covered/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/iron-strategies.zh.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#iron-condors-iron-butterflies" class="nav-link">Iron Condors &amp; Iron Butterflies</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#iron-condor" class="nav-link">Iron Condor</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#reverse-iron-condor" class="nav-link">Reverse Iron Condor</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#iron-butterfly" class="nav-link">Iron Butterfly</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#reverse-iron-butterfly" class="nav-link">Reverse Iron Butterfly</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_22" class="nav-link">策略比较</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#iron-condor-vs-iron-butterfly" class="nav-link">Iron Condor vs Iron Butterfly</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#delta-iron-condors" class="nav-link">高级示例: Delta 中性 Iron Condors</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_23" class="nav-link">风险管理最佳实践</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#greeks" class="nav-link">Greeks 分析</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_27" class="nav-link">要避免的常见错误</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_28" class="nav-link">下一步</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="iron-condors-iron-butterflies">Iron Condors &amp; Iron Butterflies<a class="headerlink" href="#iron-condors-iron-butterflies" title="Permanent link">&para;</a></h1>
+<p>四腿策略,结合信用价差以创建有限风险、有限回报的头寸。这些是中性至区间震荡市场的热门收益策略。</p>
+<h2 id="iron-condor">Iron Condor<a class="headerlink" href="#iron-condor" title="Permanent link">&para;</a></h2>
+<h4 id="_1">描述<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h4>
+<p>Iron condor 结合 bull put spread 和 bear call spread,创建一个宽盈利区间。这是最受欢迎的信用策略之一。</p>
+<p><strong>组成:</strong>
+- Long 1 个 put,行权价为 A(保护)
+- Short 1 个 put,行权价为 B(收益)
+- Short 1 个 call,行权价为 C(收益)
+- Long 1 个 call,行权价为 D(保护)</p>
+<p>其中: A &lt; B &lt; C &lt; D</p>
+<h4 id="_2">市场观点<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>中性</strong> - 预期标的资产保持在空头行权价之间</li>
+<li>如果价格在到期时保持在区间内则获利</li>
+<li>适合低波动率、区间震荡市场</li>
+</ul>
+<h4 id="_3">盈亏<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的净信用</li>
+<li><strong>最大损失</strong>: 价差宽度 - 净信用</li>
+<li><strong>盈亏平衡点</strong>: Short put 行权价 - 净信用, Short call 行权价 + 净信用</li>
+</ul>
+<h4 id="_4">示例<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 回测 iron condors</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span>  <span class="c1"># 宽翼以提高概率</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="_5">使用场景<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在区间震荡市场中创收</li>
+<li>高 IV 事件后(财报后 IV 挤压)</li>
+<li>当您预期低波动率时</li>
+<li>每月收益策略(45 DTE 进场,21 DTE 出场)</li>
+</ul>
+<h3 id="_6">管理指南<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>止盈</strong>: 在最大盈利的 50% 时平仓</li>
+<li><strong>止损</strong>: 在收到信用的 200% 或 21 DTE 时平仓</li>
+<li><strong>滚动</strong>: 如果受到挑战,滚动未测试的一侧</li>
+<li><strong>盈利区间</strong>: 通常 60-70% 的盈利概率</li>
+</ul>
+<hr />
+<h2 id="reverse-iron-condor">Reverse Iron Condor<a class="headerlink" href="#reverse-iron-condor" title="Permanent link">&para;</a></h2>
+<h4 id="_7">描述<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<p>Iron condor 的相反 - 该策略从任一方向的大幅价格波动中获利,同时定义风险。</p>
+<p><strong>组成:</strong>
+- Short 1 个 put,行权价为 A
+- Long 1 个 put,行权价为 B
+- Long 1 个 call,行权价为 C
+- Short 1 个 call,行权价为 D</p>
+<p>其中: A &lt; B &lt; C &lt; D</p>
+<h4 id="_8">市场观点<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>预期高波动率</strong> - 预期任一方向的突破</li>
+<li>如果价格大幅超出内侧行权价则获利</li>
+<li>Long straddles 的有限风险替代方案</li>
+</ul>
+<h4 id="_9">盈亏<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 价差宽度 - 净借记</li>
+<li><strong>最大损失</strong>: 支付的净借记</li>
+<li><strong>盈亏平衡点</strong>: Long put 行权价 + 借记, Long call 行权价 - 借记</li>
+</ul>
+<h4 id="_10">示例<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">reverse_iron_condor</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.25</span>  <span class="c1"># 为突破移动设置</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_11">使用场景<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在预期大幅波动的重大事件之前</li>
+<li>有限风险的波动率交易</li>
+<li>当您预期突破但想要有限损失时</li>
+</ul>
+<hr />
+<h2 id="iron-butterfly">Iron Butterfly<a class="headerlink" href="#iron-butterfly" title="Permanent link">&para;</a></h2>
+<h4 id="_12">描述<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
+<p>Iron butterfly 类似于 iron condor,但空头行权价在相同价格(ATM),创建更紧的盈利区间和更高的潜在盈利。</p>
+<p><strong>组成:</strong>
+- Long 1 个 put,行权价为 A(翼)
+- Short 1 个 put,行权价为 B(身体)
+- Short 1 个 call,行权价为 B(身体) - <strong>与 short put 相同</strong>
+- Long 1 个 call,行权价为 C(翼)</p>
+<p>其中: A &lt; B &lt; C</p>
+<h4 id="_13">市场观点<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>非常中性</strong> - 预期价格保持在当前水平或非常接近</li>
+<li>如果价格在到期时恰好在中间行权价则最大盈利</li>
+<li>比 iron condor 回报更高但盈利区间更窄</li>
+</ul>
+<h4 id="_14">盈亏<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的净信用(大于 iron condor)</li>
+<li><strong>最大损失</strong>: 翼宽度 - 净信用</li>
+<li><strong>盈亏平衡点</strong>: Short 行权价 ± 净信用</li>
+</ul>
+<h4 id="_15">示例<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_butterfly</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>  <span class="c1"># ATM 身体以获得最大信用</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_16">使用场景<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
+<ul>
+<li>预期价格锁定在特定水平</li>
+<li>在具有高持仓量的主要行权价周围</li>
+<li>当您想要比 iron condors 更高的信用时</li>
+<li>比 iron condors 概率更低但回报更高</li>
+</ul>
+<h3 id="pin">Pin 风险<a class="headerlink" href="#pin" title="Permanent link">&para;</a></h3>
+<ul>
+<li>股票价格往往锁定在具有高持仓量的行权价</li>
+<li>Iron butterflies 从这种锁定效应中受益</li>
+<li>仔细监控到期周的价格行为</li>
+</ul>
+<hr />
+<h2 id="reverse-iron-butterfly">Reverse Iron Butterfly<a class="headerlink" href="#reverse-iron-butterfly" title="Permanent link">&para;</a></h2>
+<h4 id="_17">描述<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
+<p>Iron butterfly 的相反 - 从远离中心行权价的大幅波动中获利。</p>
+<p><strong>组成:</strong>
+- Short 1 个 put,行权价为 A(翼)
+- Long 1 个 put,行权价为 B(身体)
+- Long 1 个 call,行权价为 B(身体) - <strong>与 long put 相同</strong>
+- Short 1 个 call,行权价为 C(翼)</p>
+<p>其中: A &lt; B &lt; C</p>
+<h4 id="_18">市场观点<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>高波动率</strong> - 预期从当前价格大幅移动</li>
+<li>Long straddles 的有限风险替代方案</li>
+<li>成本更低且最大损失有限</li>
+</ul>
+<h4 id="_19">盈亏<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 翼宽度 - 净借记</li>
+<li><strong>最大损失</strong>: 支付的净借记</li>
+<li><strong>盈亏平衡点</strong>: Long 行权价 ± 净借记</li>
+</ul>
+<h4 id="_20">示例<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">reverse_iron_butterfly</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.10</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_21">使用场景<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在重大事件之前(财报、FDA 决定)</li>
+<li>当您预期爆炸性波动时</li>
+<li>Long straddles/strangles 的有限风险替代方案</li>
+</ul>
+<hr />
+<h2 id="_22">策略比较<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>盈利区间</th>
+<th>最大盈利</th>
+<th>最大损失</th>
+<th>最佳用于</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Iron Condor</td>
+<td>宽区间</td>
+<td>中等信用</td>
+<td>有限</td>
+<td>区间震荡收益</td>
+</tr>
+<tr>
+<td>Reverse IC</td>
+<td>区间外</td>
+<td>有限</td>
+<td>净借记</td>
+<td>突破交易</td>
+</tr>
+<tr>
+<td>Iron Butterfly</td>
+<td>窄(在 ATM)</td>
+<td>更高信用</td>
+<td>有限</td>
+<td>锁定行权价</td>
+</tr>
+<tr>
+<td>Reverse Iron Butterfly</td>
+<td>远离 ATM</td>
+<td>有限</td>
+<td>净借记</td>
+<td>波动率爆发</td>
+</tr>
+</tbody>
+</table>
+<h2 id="iron-condor-vs-iron-butterfly">Iron Condor vs Iron Butterfly<a class="headerlink" href="#iron-condor-vs-iron-butterfly" title="Permanent link">&para;</a></h2>
+<p><strong>Iron Condor:</strong>
+- ✅ 更宽的盈利区间(60-70% 概率)
+- ✅ 如果价格移动更宽容
+- ❌ 收到的信用较低
+- <strong>使用时机</strong>: 对区间有中等信心</p>
+<p><strong>Iron Butterfly:</strong>
+- ✅ 更高的信用(2-3 倍)
+- ❌ 更窄的盈利区间(40-50% 概率)
+- ❌ 对价格移动不太宽容
+- <strong>使用时机</strong>: 对锁定有高度信心</p>
+<h2 id="delta-iron-condors">高级示例: Delta 中性 Iron Condors<a class="headerlink" href="#delta-iron-condors" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 目标 delta 中性定位</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="c1"># 空头行权价的目标特定 delta</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">delta_min</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>  <span class="c1"># ~15-20 delta 空头行权价</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">delta_max</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="_23">风险管理最佳实践<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h2>
+<h3 id="_24">进场检查清单<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 45 DTE 或更少(最佳 theta 衰减)</li>
+<li>[ ] 信用 &gt; 价差宽度的 1/3</li>
+<li>[ ] 盈利概率 &gt; 60%</li>
+<li>[ ] 流动行权价(紧密的买卖价差)</li>
+<li>[ ] 确定的头寸规模(每笔交易 &lt; 账户的 5%)</li>
+</ul>
+<h3 id="_25">管理规则<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>止盈</strong>: 在最大盈利的 50% 时平仓(21 DTE)</li>
+<li><strong>止损</strong>: 在信用的 200-300% 或盈亏平衡时平仓</li>
+<li><strong>滚动</strong>: 如果早期受到挑战,向下/向上滚动未测试的一侧</li>
+<li><strong>到期</strong>: 避免持有至到期(pin 风险)</li>
+</ol>
+<h3 id="_26">头寸规模<a class="headerlink" href="#_26" title="Permanent link">&para;</a></h3>
+<ul>
+<li>每笔交易风险不超过 2-5%</li>
+<li>Iron condors: 宽度决定每个合约的风险</li>
+<li>示例: $5 宽价差收取 $2 信用 = 每个 IC 最大风险 $300</li>
+</ul>
+<h2 id="greeks">Greeks 分析<a class="headerlink" href="#greeks" title="Permanent link">&para;</a></h2>
+<h3 id="iron-condor-greeks">Iron Condor Greeks<a class="headerlink" href="#iron-condor-greeks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Theta</strong>: 正(时间衰减帮助您)</li>
+<li><strong>Vega</strong>: 负(希望波动率降低)</li>
+<li><strong>Delta</strong>: 接近零(中性头寸)</li>
+<li><strong>Gamma</strong>: 负(如果价格移动,头寸对您不利)</li>
+</ul>
+<p><strong>最佳条件:</strong>
+- 高 IV → 在 IV 升高时卖出
+- 波动率降低 → IV 挤压有利于头寸
+- 时间流逝 → Theta 衰减增加盈利</p>
+<h2 id="_27">要避免的常见错误<a class="headerlink" href="#_27" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>持有时间过长</strong>: 在 50% 盈利时退出,不要贪心</li>
+<li><strong>错误的 IV 环境</strong>: 不要在 IV 低时卖出</li>
+<li><strong>太窄</strong>: 确保空头行权价之间有足够的缓冲</li>
+<li><strong>忽略调整</strong>: 如果价格威胁行权价,制定计划</li>
+<li><strong>过度规模</strong>: 尊重每个头寸的最大损失</li>
+</ol>
+<h2 id="_28">下一步<a class="headerlink" href="#_28" title="Permanent link">&para;</a></h2>
+<ul>
+<li>了解 <a href="../butterflies/">蝶式价差</a> 以获得三腿替代方案</li>
+<li>探索 <a href="../calendars/">日历价差</a> 以获得基于时间的策略</li>
+<li>查看包含风险管理的更多 <a href="../../examples/">示例</a></li>
+<li>查阅 <a href="../../parameters/">参数</a> 进行优化</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="Michael Chu">
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>单腿策略 - Optopsy Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../">Optopsy Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../" class="nav-link">首页</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../getting-started/" class="nav-link">入门指南</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">策略</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">概览</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">单腿策略</a>
+</li>
+                                    
+<li>
+    <a href="../straddles-strangles/" class="dropdown-item">跨式组合</a>
+</li>
+                                    
+<li>
+    <a href="../spreads/" class="dropdown-item">垂直价差</a>
+</li>
+                                    
+<li>
+    <a href="../butterflies/" class="dropdown-item">蝶式价差</a>
+</li>
+                                    
+<li>
+    <a href="../iron-strategies/" class="dropdown-item">铁秃鹰和铁蝶式</a>
+</li>
+                                    
+<li>
+    <a href="../covered/" class="dropdown-item">备兑策略</a>
+</li>
+                                    
+<li>
+    <a href="../calendars/" class="dropdown-item">日历价差</a>
+</li>
+                                    
+<li>
+    <a href="../diagonals/" class="dropdown-item">对角价差</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../parameters/" class="nav-link">参数</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../examples/" class="nav-link">示例</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../api-reference/" class="nav-link">API 参考</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../straddles-strangles/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/michaelchu/optopsy/edit/master/docs/strategies/singles.zh.md" class="nav-link">Edit on michaelchu/optopsy
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">单腿策略</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#long-calls" class="nav-link">Long Calls</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-calls" class="nav-link">Short Calls</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#long-puts" class="nav-link">Long Puts</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#short-puts" class="nav-link">Short Puts</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#greeks" class="nav-link">Greeks 过滤</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_24" class="nav-link">滑点模型</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_25" class="nav-link">比较表</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_26" class="nav-link">下一步</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">单腿策略<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>单腿策略涉及买入或卖出单个 call 或 put 期权。这些是最简单的期权策略,是更复杂的多腿策略的基础。</p>
+<h2 id="long-calls">Long Calls<a class="headerlink" href="#long-calls" title="Permanent link">&para;</a></h2>
+<h4 id="_2">描述<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>Long call 赋予您以行权价买入标的资产的权利。这是一种看涨策略,具有无限的盈利潜力和有限的风险(支付的权利金)。</p>
+<h4 id="_3">市场观点<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>看涨</strong> - 预期价格大幅上涨</li>
+<li>随着标的资产价格超过行权价 + 支付的权利金,利润增加</li>
+</ul>
+<h4 id="_4">盈亏<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 无限(标的资产价格 - 行权价 - 权利金)</li>
+<li><strong>最大损失</strong>: 支付的权利金(如果标的资产保持在行权价以下)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 + 支付的权利金</li>
+</ul>
+<h4 id="_5">示例<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 回测 30-60 DTE 范围的 long calls</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.10</span>  <span class="c1"># 略微虚值的 calls</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="_6">使用场景<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
+<ul>
+<li>押注强劲上涨</li>
+<li>买入股票的低成本替代方案</li>
+<li>预期正面消息的财报交易</li>
+<li>突破交易</li>
+</ul>
+<hr />
+<h2 id="short-calls">Short Calls<a class="headerlink" href="#short-calls" title="Permanent link">&para;</a></h2>
+<h4 id="_7">描述<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<p>Short call 在被行权时有义务以行权价卖出标的资产。这是一种看跌或中性的收益策略,具有有限的盈利和理论上无限的风险。</p>
+<h4 id="_8">市场观点<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>看跌至中性</strong> - 预期价格保持平稳或下跌</li>
+<li>如果标的资产在到期时保持在行权价以下则获利</li>
+</ul>
+<h4 id="_9">盈亏<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的权利金</li>
+<li><strong>最大损失</strong>: 无限(标的资产价格 - 行权价 - 权利金)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 + 收到的权利金</li>
+</ul>
+<h4 id="_10">示例<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_calls</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># 持有至到期</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.30</span>  <span class="c1"># 卖出虚值 calls 以获得收益</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_11">使用场景<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在中性/看跌市场中创收</li>
+<li>备兑 call 策略(持有股票)</li>
+<li>高概率收益交易</li>
+</ul>
+<h4 id="_12">⚠️ 风险警告<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
+<p>裸空 call 在标的资产大幅上涨时具有无限风险。考虑使用有限风险的替代方案,如 call 价差。</p>
+<hr />
+<h2 id="long-puts">Long Puts<a class="headerlink" href="#long-puts" title="Permanent link">&para;</a></h2>
+<h4 id="_13">描述<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
+<p>Long put 赋予您以行权价卖出标的资产的权利。这是一种看跌策略,具有可观的盈利潜力和有限的风险(支付的权利金)。</p>
+<h4 id="_14">市场观点<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>看跌</strong> - 预期价格大幅下跌</li>
+<li>随着标的资产价格跌破行权价 - 支付的权利金,利润增加</li>
+</ul>
+<h4 id="_15">盈亏<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 行权价 - 权利金 - 0(如果标的资产归零)</li>
+<li><strong>最大损失</strong>: 支付的权利金(如果标的资产保持在行权价以上)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 - 支付的权利金</li>
+</ul>
+<h4 id="_16">示例<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_puts</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.15</span>  <span class="c1"># 中度虚值 puts</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_17">使用场景<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
+<ul>
+<li>押注市场下跌</li>
+<li>投资组合对冲</li>
+<li>预期负面消息的财报交易</li>
+<li>突破下行交易</li>
+</ul>
+<hr />
+<h2 id="short-puts">Short Puts<a class="headerlink" href="#short-puts" title="Permanent link">&para;</a></h2>
+<h4 id="_18">描述<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h4>
+<p>Short put 在被行权时有义务以行权价买入标的资产。这是一种看涨的收益策略,您收取权利金,希望期权到期时失效。</p>
+<h4 id="_19">市场观点<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>看涨至中性</strong> - 预期价格保持平稳或上涨</li>
+<li>如果标的资产在到期时保持在行权价以上则获利</li>
+</ul>
+<h4 id="_20">盈亏<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>最大盈利</strong>: 收到的权利金</li>
+<li><strong>最大损失</strong>: 行权价 - 权利金(如果标的资产归零)</li>
+<li><strong>盈亏平衡点</strong>: 行权价 - 收到的权利金</li>
+</ul>
+<h4 id="_21">示例<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">max_otm_pct</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>  <span class="c1"># 20% OTM 以获得更安全的权利金</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
+</code></pre></div>
+<h4 id="_22">使用场景<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h4>
+<ul>
+<li>在看涨市场中创收</li>
+<li>以更低价格买入股票时"获得报酬等待"</li>
+<li>高概率信用策略</li>
+<li>Wheel 策略(卖出 puts,被分配,卖出 calls)</li>
+</ul>
+<h4 id="_23">分配考虑<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h4>
+<p>如果期权在到期时处于实值状态,您将有义务以行权价买入股票。确保您有资金或可以在到期前平仓。</p>
+<hr />
+<h2 id="greeks">Greeks 过滤<a class="headerlink" href="#greeks" title="Permanent link">&para;</a></h2>
+<p>所有单腿策略都支持 delta 过滤以定位特定的概率范围:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 目标 0.30 delta 期权(大约 30% 概率 ITM)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">delta_min</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">delta_max</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.05</span>  <span class="c1"># 按 delta 范围分组结果</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="_24">滑点模型<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h2>
+<p>配置现实的成交价格:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># 使用基于流动性的滑点</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>  <span class="c1"># 价差的 50%</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">1000</span>  <span class="c1"># 流动期权的最小成交量</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">)</span>
+</code></pre></div>
+<p>可用的滑点模式:
+- <code>'mid'</code> - 以中间价成交 (bid+ask)/2(默认)
+- <code>'spread'</code> - 以 ask 买入,以 bid 卖出(最差情况)
+- <code>'liquidity'</code> - 基于成交量/持仓量的动态成交</p>
+<h2 id="_25">比较表<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>方向</th>
+<th>最大盈利</th>
+<th>最大损失</th>
+<th>最佳时机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Call</td>
+<td>看涨</td>
+<td>无限</td>
+<td>权利金</td>
+<td>预期上涨</td>
+</tr>
+<tr>
+<td>Short Call</td>
+<td>看跌/中性</td>
+<td>权利金</td>
+<td>无限</td>
+<td>预期下跌/平稳</td>
+</tr>
+<tr>
+<td>Long Put</td>
+<td>看跌</td>
+<td>可观</td>
+<td>权利金</td>
+<td>预期下跌</td>
+</tr>
+<tr>
+<td>Short Put</td>
+<td>看涨/中性</td>
+<td>权利金</td>
+<td>可观</td>
+<td>预期上涨/平稳</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_26">下一步<a class="headerlink" href="#_26" title="Permanent link">&para;</a></h2>
+<ul>
+<li>了解 <a href="../straddles-strangles/">Straddles &amp; Strangles</a></li>
+<li>探索 <a href="../spreads/">垂直价差</a> 以获得有限风险的替代方案</li>
+<li>查看更多 <a href="../../examples/">示例</a></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
