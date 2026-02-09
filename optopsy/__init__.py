@@ -1,4 +1,24 @@
-__version__ = "2.0.3"
+"""
+Optopsy - Options Backtesting Library
+
+Optopsy is a Python library for backtesting options trading strategies using
+historical options chain data. It provides:
+
+- 28 built-in options strategies (singles, spreads, butterflies, condors, calendars)
+- Flexible filtering by DTE, OTM%, bid-ask spread, and option Greeks
+- Configurable slippage models (mid, spread, liquidity-based)
+- Statistical analysis with aggregated performance metrics
+- Raw trade data export for custom analysis
+
+Example:
+    >>> import optopsy as op
+    >>> data = op.csv_data('./SPX_2018.csv')
+    >>> results = op.long_calls(data, max_entry_dte=60, exit_dte=30)
+
+For detailed documentation, visit: https://github.com/michaelchu/optopsy
+"""
+
+__version__ = "2.2.0"
 
 from .strategies import (
     long_calls,

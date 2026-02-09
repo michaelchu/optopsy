@@ -1,0 +1,87 @@
+site_name: Optopsy Documentation
+site_description: Options Backtesting Library for Python
+site_author: Michael Chu
+repo_url: https://github.com/michaelchu/optopsy
+repo_name: michaelchu/optopsy
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Strategies:
+      - Overview: strategies.md
+      - Single-Leg Strategies: strategies/singles.md
+      - Straddles & Strangles: strategies/straddles-strangles.md
+      - Vertical Spreads: strategies/spreads.md
+      - Butterflies: strategies/butterflies.md
+      - Iron Condors & Iron Butterflies: strategies/iron-strategies.md
+      - Covered Strategies: strategies/covered.md
+      - Calendar Spreads: strategies/calendars.md
+      - Diagonal Spreads: strategies/diagonals.md
+  - Parameters: parameters.md
+  - Examples: examples.md
+  - API Reference: api-reference.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      permalink: true
+  - tables
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/michaelchu/optopsy
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/optopsy/
