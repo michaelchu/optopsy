@@ -1,4 +1,4 @@
-# Optopsy Documentation
+# Optopsy
 
 A fast, flexible backtesting library for options strategies in Python.
 
