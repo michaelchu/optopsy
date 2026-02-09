@@ -18,7 +18,7 @@ Example:
 For detailed documentation, visit: https://github.com/michaelchu/optopsy
 """
 
-__version__ = "2.0.3"
+__version__ = "2.2.0"
 
 from .strategies import (
     long_calls,
