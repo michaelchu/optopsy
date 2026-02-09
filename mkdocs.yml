@@ -5,7 +5,19 @@ repo_url: https://github.com/michaelchu/optopsy
 repo_name: michaelchu/optopsy
 
 theme:
-  name: mkdocs
+  name: material
+  palette:
+    scheme: default
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - toc.follow
+    - search.suggest
+    - search.highlight
 
 nav:
   - Home: index.md
@@ -47,7 +59,7 @@ plugins:
   - i18n:
       docs_structure: suffix
       fallback_to_default: true
-      reconfigure_material: false
+      reconfigure_material: true
       reconfigure_search: true
       languages:
         - locale: en
