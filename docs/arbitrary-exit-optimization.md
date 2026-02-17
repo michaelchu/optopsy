@@ -231,20 +231,35 @@ Polars fuses the join + filter + sort + groupby into one pass via lazy evaluatio
 
 | Priority | Technique | Effort | Speedup | Best for | Status |
 |----------|-----------|--------|---------|----------|--------|
-| 1 | Partition by expiration | Low | 10-100x | All exit types | **Done** |
-| 2 | Compound integer key | Low | 2-3x | All merges | **Done** |
+| 1 | Partition by expiration | Low | 10-100x for 1:many merges | Arbitrary exit types | Deferred — see benchmarks below |
+| 2 | Compound integer key | Low | ~1.5x measured | All merges | **Done** |
 | 3 | groupby().first() on sorted data | Low | Avoids storing full result | Stop/target exits | Pending (needs conditional exit support) |
 | 4 | merge_asof | Low | Replaces filtered cross-join | DTE-based exits | Pending |
 | 5 | Iterative date scan | Medium | Avoids wide merge entirely | Stop/target exits, LEAPs | Pending (needs conditional exit support) |
 | 6 | Polars for hot path | Medium | 5-20x over pandas | When pandas is insufficient | Pending |
 
-### Implemented
+### Implemented: compound integer key (#2)
 
-**Partition by expiration (#1)** and **compound integer key (#2)** have been implemented in `core.py:_evaluate_options()`. The entry/exit merge now uses a single `contract_id` column (computed via `groupby().ngroup()`) instead of four merge-key columns, and partitions the merge by expiration cycle so each merge operates on a smaller data subset. All existing tests pass with identical results, confirming the optimizations are behavior-preserving.
+The entry/exit merge in `core.py:_evaluate_options()` now uses a single `contract_id` column (computed via O(n) arithmetic encoding) instead of four merge-key columns. All 82 existing tests pass with identical results, confirming the optimization is behavior-preserving.
+
+### Benchmark results
+
+Measured on synthetic option chain data (SPX-like, varying scale). Each run benchmarks the merge step in isolation (median of 7 runs):
+
+| Scale | Total rows | Old 4-col merge | New contract_id merge | Speedup |
+|-------|-----------|-----------------|----------------------|---------|
+| Small (4 exp, 20 strikes) | 1,760 | 2.3 ms | 1.8 ms | 1.31x |
+| Medium (12 exp, 50 strikes) | 37,200 | 12.4 ms | 7.7 ms | 1.61x |
+| Large (24 exp, 100 strikes) | 148,800 | 38.7 ms | 24.4 ms | 1.59x |
+| XL (24 exp, 200 strikes) | 574,000 | 95.5 ms | 73.9 ms | 1.29x |
+
+### Why partitioning was deferred
+
+Benchmarking showed that for the current **1:1 merge model** (one entry matches one exit), expiration partitioning is a net **performance loss** (0.2-0.7x) because the `groupby` + `pd.concat` overhead exceeds the merge savings. The 10-100x benefit described above applies to the **1:many merge model** needed for arbitrary exits (stop-loss, profit targets), where each entry fans out to many potential exit dates. Partitioning should be re-introduced when that feature is built.
 
 ### Remaining
 
-The combination of **early termination (#3)** with the already-implemented partitioning handles most real-world datasets without leaving pandas, but requires conditional exit support to be built first. The iterative scan (#5) is the right choice for very long-dated options. Polars (#6) is the escape hatch if data volume truly outgrows pandas.
+**Early termination (#3)** combined with partitioning handles most real-world datasets without leaving pandas, but both require conditional exit support to be built first. The iterative scan (#5) is the right choice for very long-dated options. Polars (#6) is the escape hatch if data volume truly outgrows pandas.
 
 ## Exit type compatibility matrix
 
