@@ -120,39 +120,64 @@ def _cut_options_by_otm(
     return data
 
 
-def _apply_entry_signal(data: pd.DataFrame, signal_func: Callable) -> pd.DataFrame:
+def _extract_price_data(data: pd.DataFrame) -> pd.DataFrame:
     """
-    Apply an entry signal filter to restrict which quote_dates are valid for entry.
+    Extract unique underlying price per (symbol, quote_date), sorted chronologically.
 
-    The signal function receives a DataFrame with one row per unique
-    (underlying_symbol, quote_date) containing the underlying_price,
-    sorted chronologically. It returns a boolean Series indicating
-    which dates are valid entries.
+    Used to provide signal functions with a clean price time series for
+    computing indicators like RSI or SMA.
 
     Args:
         data: DataFrame containing option data (may have multiple rows per quote_date)
-        signal_func: Callable that takes a DataFrame with columns
-                     (underlying_symbol, quote_date, underlying_price)
-                     and returns a boolean Series
 
     Returns:
-        Filtered DataFrame containing only rows on valid entry dates
+        DataFrame with one row per (underlying_symbol, quote_date) containing
+        underlying_price, sorted by symbol and date
     """
-    # Extract unique underlying price per (symbol, quote_date)
-    price_data = (
+    return (
         data[["underlying_symbol", "quote_date", "underlying_price"]]
         .drop_duplicates(["underlying_symbol", "quote_date"])
         .sort_values(["underlying_symbol", "quote_date"])
         .reset_index(drop=True)
     )
 
-    # Compute signal
+
+def _get_signal_valid_dates(
+    price_data: pd.DataFrame, signal_func: Callable
+) -> pd.DataFrame:
+    """
+    Run a signal function on price data and return valid (symbol, quote_date) pairs.
+
+    Args:
+        price_data: DataFrame with columns (underlying_symbol, quote_date, underlying_price)
+        signal_func: Callable that takes price_data and returns a boolean Series
+
+    Returns:
+        DataFrame with (underlying_symbol, quote_date) rows where signal is True
+    """
     mask = signal_func(price_data)
+    return price_data.loc[mask, ["underlying_symbol", "quote_date"]]
 
-    # Get valid (symbol, quote_date) pairs
-    valid_dates = price_data.loc[mask, ["underlying_symbol", "quote_date"]]
 
-    # Filter data to only include valid entry dates
+def _apply_signal_filter(
+    data: pd.DataFrame,
+    valid_dates: pd.DataFrame,
+    date_col: str = "quote_date",
+) -> pd.DataFrame:
+    """
+    Filter data to only include rows matching valid (symbol, date) pairs.
+
+    Args:
+        data: DataFrame to filter
+        valid_dates: DataFrame with (underlying_symbol, quote_date) of valid dates
+        date_col: Name of the date column in data to match against (default: quote_date)
+
+    Returns:
+        Filtered DataFrame
+    """
+    if date_col != "quote_date":
+        valid_dates = valid_dates.rename(columns={"quote_date": date_col})
+        return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
     return data.merge(valid_dates, on=["underlying_symbol", "quote_date"], how="inner")
 
 
@@ -246,6 +271,14 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     delta_min = kwargs.get("delta_min")
     delta_max = kwargs.get("delta_max")
 
+    # Extract price history for signal computation (before entry/exit split)
+    # so that indicators like RSI have full date coverage for both signals
+    entry_signal = kwargs.get("entry_signal")
+    exit_signal = kwargs.get("exit_signal")
+    price_data = None
+    if entry_signal is not None or exit_signal is not None:
+        price_data = _extract_price_data(data)
+
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
     entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
@@ -255,12 +288,17 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
         entries = _filter_by_delta(entries, delta_min, delta_max)
 
     # Apply entry signal filtering (only to entries, exits are unaffected)
-    entry_signal = kwargs.get("entry_signal")
     if entry_signal is not None:
-        entries = _apply_entry_signal(entries, entry_signal)
+        valid_entry_dates = _get_signal_valid_dates(price_data, entry_signal)
+        entries = _apply_signal_filter(entries, valid_entry_dates)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
     exits = _get(data, "dte", kwargs["exit_dte"])
+
+    # Apply exit signal filtering (only to exits, entries are unaffected)
+    if exit_signal is not None:
+        valid_exit_dates = _get_signal_valid_dates(price_data, exit_signal)
+        exits = _apply_signal_filter(exits, valid_exit_dates)
 
     # Determine merge columns
     merge_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
@@ -575,6 +613,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             delta_max=context["params"].get("delta_max"),
             delta_interval=context["params"].get("delta_interval"),
             entry_signal=context["params"].get("entry_signal"),
+            exit_signal=context["params"].get("exit_signal"),
         )
         .pipe(
             _strategy_engine,
@@ -961,6 +1000,22 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
 
     # Find exit prices
     merged = _find_calendar_exit_prices(merged, data, params["exit_dte"], same_strike)
+
+    if merged.empty:
+        return _format_calendar_output(
+            merged,
+            params,
+            context["internal_cols"],
+            context["external_cols"],
+            same_strike,
+        )
+
+    # Apply exit signal filtering to calendar/diagonal spreads
+    exit_signal = params.get("exit_signal")
+    if exit_signal is not None and not merged.empty:
+        price_data = _extract_price_data(data)
+        valid_exit_dates = _get_signal_valid_dates(price_data, exit_signal)
+        merged = _apply_signal_filter(merged, valid_exit_dates, date_col="exit_date")
 
     if merged.empty:
         return _format_calendar_output(

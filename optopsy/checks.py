@@ -262,8 +262,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "front_dte_max": _check_positive_integer,
     "back_dte_min": _check_positive_integer,
     "back_dte_max": _check_positive_integer,
-    # Entry signal
+    # Signal filtering
     "entry_signal": _check_entry_signal,
+    "exit_signal": _check_entry_signal,
     # Slippage parameters
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,

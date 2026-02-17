@@ -1,4 +1,4 @@
-"""Tests for entry signal filtering functionality."""
+"""Tests for entry and exit signal filtering functionality."""
 
 import datetime
 import numpy as np
@@ -455,3 +455,163 @@ class TestEntrySignalIntegration:
         )
 
         pd.testing.assert_frame_equal(results_combined, results_thu)
+
+
+# ============================================================================
+# Integration tests: exit_signal with strategy functions
+# ============================================================================
+
+
+class TestExitSignalIntegration:
+    def test_exit_signal_filters_exits(self, option_data_entry_exit):
+        """exit_signal should filter which exit dates are valid."""
+        # Without signal
+        results_all = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            raw=True,
+        )
+
+        # With exit signal that matches the exit date (Saturday Feb 3 -> dayofweek=5)
+        # The expiration date 2018-02-03 is a Saturday
+        results_sat = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=day_of_week(5),  # Saturday
+            raw=True,
+        )
+
+        # Saturday matches the exit date, so results should be the same
+        assert len(results_sat) == len(results_all)
+
+    def test_exit_signal_no_match_returns_empty(self, option_data_entry_exit):
+        """exit_signal that matches nothing should return empty DataFrame."""
+        # The exit date (2018-02-03) is Saturday. Filter for Monday exits only.
+        results = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=day_of_week(0),  # Monday only
+            raw=True,
+        )
+        assert len(results) == 0
+
+    def test_always_true_exit_signal_same_as_no_signal(self, option_data_entry_exit):
+        """An exit_signal that always returns True should give same results as no signal."""
+        always_true = lambda data: pd.Series(True, index=data.index)
+
+        results_no_signal = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            raw=True,
+        )
+
+        results_true_signal = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=always_true,
+            raw=True,
+        )
+
+        pd.testing.assert_frame_equal(results_no_signal, results_true_signal)
+
+    def test_entry_and_exit_signals_combined(self, option_data_entry_exit):
+        """entry_signal and exit_signal should both be applied independently."""
+        always_true = lambda data: pd.Series(True, index=data.index)
+
+        # Entry on Thursday only, exit any time
+        results_entry_only = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            entry_signal=day_of_week(3),  # Thursday
+            raw=True,
+        )
+
+        # Entry on Thursday, exit signal always true (no additional filtering)
+        results_both = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            entry_signal=day_of_week(3),
+            exit_signal=always_true,
+            raw=True,
+        )
+
+        pd.testing.assert_frame_equal(results_entry_only, results_both)
+
+    def test_exit_signal_with_short_puts(self, option_data_entry_exit):
+        """exit_signal should work with short put strategies."""
+        always_true = lambda data: pd.Series(True, index=data.index)
+
+        results_no_signal = short_puts(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            raw=True,
+        )
+
+        results_with_signal = short_puts(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=always_true,
+            raw=True,
+        )
+
+        pd.testing.assert_frame_equal(results_no_signal, results_with_signal)
+
+    def test_invalid_exit_signal_raises(self, option_data_entry_exit):
+        """Non-callable exit_signal should raise ValueError."""
+        with pytest.raises(ValueError, match="exit_signal"):
+            long_calls(
+                option_data_entry_exit,
+                max_entry_dte=90,
+                exit_dte=0,
+                exit_signal="not_a_callable",
+                raw=True,
+            )
+
+    def test_exit_signal_price_based(self, option_data_entry_exit):
+        """exit_signal based on price threshold should filter correctly."""
+        # Exit only when underlying price > 215
+        # Exit date has underlying_price=220, so this should pass
+        price_above_215 = lambda data: data["underlying_price"] > 215
+
+        results = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=price_above_215,
+            raw=True,
+        )
+
+        results_all = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            raw=True,
+        )
+
+        # Exit price is 220 > 215, so all trades should pass
+        pd.testing.assert_frame_equal(results, results_all)
+
+    def test_exit_signal_price_based_filters_out(self, option_data_entry_exit):
+        """exit_signal with price condition that fails should filter trades."""
+        # Exit only when underlying price > 225
+        # Exit date has underlying_price=220, so this should filter everything
+        price_above_225 = lambda data: data["underlying_price"] > 225
+
+        results = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_signal=price_above_225,
+            raw=True,
+        )
+
+        assert len(results) == 0
