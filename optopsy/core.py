@@ -247,6 +247,47 @@ def _group_by_intervals(
     return grouped_dataset
 
 
+def _get_exits(
+    data: pd.DataFrame, exit_dte: int, exit_dte_tolerance: int = 0
+) -> pd.DataFrame:
+    """
+    Get exit rows from option data, optionally using tolerance-based DTE matching.
+
+    When tolerance is 0 (default), only rows with exactly the target exit_dte are
+    returned. When tolerance > 0, rows within [max(0, exit_dte - tolerance),
+    exit_dte + tolerance] are considered, and for each contract the row with DTE
+    closest to exit_dte is selected.
+
+    Args:
+        data: DataFrame containing option data with 'dte' column
+        exit_dte: Target DTE for exit
+        exit_dte_tolerance: Maximum allowed deviation from exit_dte (default 0)
+
+    Returns:
+        DataFrame of exit rows
+    """
+    if exit_dte_tolerance == 0:
+        return _get(data, "dte", exit_dte)
+
+    lower = max(0, exit_dte - exit_dte_tolerance)
+    upper = exit_dte + exit_dte_tolerance
+    candidates = _trim(data, "dte", lower, upper)
+
+    if candidates.empty:
+        return candidates
+
+    # For each contract, pick the row with DTE closest to exit_dte
+    contract_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
+    candidates = candidates.copy()
+    candidates["_dte_diff"] = (candidates["dte"] - exit_dte).abs()
+    exits = (
+        candidates.sort_values("_dte_diff")
+        .drop_duplicates(subset=contract_cols, keep="first")
+        .drop(columns=["_dte_diff"])
+    )
+    return exits
+
+
 def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
     Evaluate options by filtering, merging entry and exit data, and calculating costs.
@@ -293,7 +334,7 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
         entries = _apply_signal_filter(entries, valid_entry_dates)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
-    exits = _get(data, "dte", kwargs["exit_dte"])
+    exits = _get_exits(data, kwargs["exit_dte"], kwargs.get("exit_dte_tolerance", 0))
 
     # Apply exit signal filtering (only to exits, entries are unaffected)
     if exit_signal is not None:
@@ -606,6 +647,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             dte_interval=context["params"]["dte_interval"],
             max_entry_dte=context["params"]["max_entry_dte"],
             exit_dte=context["params"]["exit_dte"],
+            exit_dte_tolerance=context["params"].get("exit_dte_tolerance", 0),
             otm_pct_interval=context["params"]["otm_pct_interval"],
             max_otm_pct=context["params"]["max_otm_pct"],
             min_bid_ask=context["params"]["min_bid_ask"],
@@ -785,7 +827,11 @@ def _get_exit_leg_subset(
 
 
 def _find_calendar_exit_prices(
-    merged: pd.DataFrame, data: pd.DataFrame, exit_dte: int, same_strike: bool
+    merged: pd.DataFrame,
+    data: pd.DataFrame,
+    exit_dte: int,
+    same_strike: bool,
+    exit_dte_tolerance: int = 0,
 ) -> pd.DataFrame:
     """
     Find exit prices for calendar/diagonal spread positions.
@@ -795,6 +841,7 @@ def _find_calendar_exit_prices(
         data: Original DataFrame with all option data (with DTE assigned)
         exit_dte: Days before front expiration to exit
         same_strike: True for calendar spreads, False for diagonal
+        exit_dte_tolerance: Maximum days of deviation from target exit date (default 0)
 
     Returns:
         DataFrame with exit prices merged in, or empty DataFrame if no exit data
@@ -804,9 +851,46 @@ def _find_calendar_exit_prices(
     # calendar spread management: close before the short-dated option expires.
     merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
 
-    # Filter data for exit prices
-    exit_dates = merged["exit_date"].unique()
-    exit_data = data[data["quote_date"].isin(exit_dates)]
+    if exit_dte_tolerance == 0:
+        # Exact date matching (original behavior)
+        exit_dates = merged["exit_date"].unique()
+        exit_data = data[data["quote_date"].isin(exit_dates)]
+    else:
+        # Tolerance-based matching: look for quote_dates near the target exit_date
+        tolerance_td = pd.Timedelta(days=exit_dte_tolerance)
+        all_exit_dates = merged["exit_date"].unique()
+
+        # Collect candidate exit data within tolerance of any target exit_date
+        masks = []
+        for target_date in all_exit_dates:
+            masks.append(
+                (data["quote_date"] >= target_date - tolerance_td)
+                & (data["quote_date"] <= target_date + tolerance_td)
+            )
+        if masks:
+            combined_mask = masks[0]
+            for m in masks[1:]:
+                combined_mask = combined_mask | m
+            exit_data = data[combined_mask]
+        else:
+            exit_data = data.iloc[:0]
+
+        if not exit_data.empty:
+            # For each position, find the closest available quote_date to the
+            # target exit_date. We do this by snapping each position's exit_date
+            # to the nearest available quote_date within tolerance.
+            available_dates = exit_data["quote_date"].unique()
+            date_map = {}
+            for target_date in all_exit_dates:
+                diffs = abs(available_dates - target_date)
+                min_idx = diffs.argmin()
+                if diffs[min_idx] <= tolerance_td:
+                    date_map[target_date] = available_dates[min_idx]
+            # Remap exit_date to the closest available date
+            merged["exit_date"] = merged["exit_date"].map(lambda d: date_map.get(d, d))
+            # Now filter exit_data to only the dates we're actually using
+            used_dates = set(date_map.values())
+            exit_data = exit_data[exit_data["quote_date"].isin(used_dates)]
 
     if exit_data.empty:
         return merged.iloc[:0]
@@ -999,7 +1083,13 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         )
 
     # Find exit prices
-    merged = _find_calendar_exit_prices(merged, data, params["exit_dte"], same_strike)
+    merged = _find_calendar_exit_prices(
+        merged,
+        data,
+        params["exit_dte"],
+        same_strike,
+        params.get("exit_dte_tolerance", 0),
+    )
 
     if merged.empty:
         return _format_calendar_output(

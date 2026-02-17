@@ -14,6 +14,7 @@ class StrategyParams(TypedDict, total=False):
     # Timing parameters
     max_entry_dte: int
     exit_dte: int
+    exit_dte_tolerance: int
     dte_interval: int
 
     # Filtering parameters

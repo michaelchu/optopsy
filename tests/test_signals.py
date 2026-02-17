@@ -615,3 +615,209 @@ class TestExitSignalIntegration:
         )
 
         assert len(results) == 0
+
+
+# ============================================================================
+# Tests for exit_dte_tolerance
+# ============================================================================
+
+
+@pytest.fixture
+def sparse_exit_data():
+    """
+    Option data where exact exit DTE=0 (expiration day) data is missing,
+    but DTE=1 data exists. Tests that exit_dte_tolerance can find nearby exits.
+
+    Entry: 2018-01-03, underlying=213.93, DTE=28
+    Missing: 2018-01-31 (expiration day, DTE=0)
+    Available: 2018-01-30 (DTE=1)
+    """
+    entry_date = datetime.datetime(2018, 1, 3)
+    exp_date = datetime.datetime(2018, 1, 31)
+    near_exit_date = datetime.datetime(2018, 1, 30)  # DTE=1
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+
+    d = [
+        # Entry day (DTE=28)
+        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "put", exp_date, entry_date, 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp_date, entry_date, 215.0, 7.10, 7.20],
+        # Near-exit day (DTE=1, one day before expiration)
+        # No DTE=0 data exists!
+        ["SPX", 219.50, "call", exp_date, near_exit_date, 212.5, 7.20, 7.30],
+        ["SPX", 219.50, "call", exp_date, near_exit_date, 215.0, 4.80, 4.90],
+        ["SPX", 219.50, "put", exp_date, near_exit_date, 212.5, 0.15, 0.25],
+        ["SPX", 219.50, "put", exp_date, near_exit_date, 215.0, 0.30, 0.40],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture
+def multi_exit_dte_data():
+    """
+    Option data with multiple possible exit DTEs for testing closest-match logic.
+
+    Entry: 2018-01-03, DTE=28
+    Available exits: DTE=3 (2018-01-28), DTE=1 (2018-01-30), DTE=0 not available
+    With exit_dte=0, tolerance=3 should pick DTE=1 (closest to 0).
+    """
+    entry_date = datetime.datetime(2018, 1, 3)
+    exp_date = datetime.datetime(2018, 1, 31)
+    exit_dte3 = datetime.datetime(2018, 1, 28)  # DTE=3
+    exit_dte1 = datetime.datetime(2018, 1, 30)  # DTE=1
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+
+    d = [
+        # Entry (DTE=28)
+        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "put", exp_date, entry_date, 212.5, 5.70, 5.80],
+        # Exit at DTE=3
+        ["SPX", 218.00, "call", exp_date, exit_dte3, 212.5, 5.90, 6.00],
+        ["SPX", 218.00, "put", exp_date, exit_dte3, 212.5, 0.40, 0.50],
+        # Exit at DTE=1 (closer to target of 0)
+        ["SPX", 219.50, "call", exp_date, exit_dte1, 212.5, 7.20, 7.30],
+        ["SPX", 219.50, "put", exp_date, exit_dte1, 212.5, 0.15, 0.25],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+class TestExitDteTolerance:
+    def test_zero_tolerance_is_default(self, option_data_entry_exit):
+        """Default tolerance=0 should behave identically to original behavior."""
+        results_default = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            raw=True,
+        )
+
+        results_explicit = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=0,
+            raw=True,
+        )
+
+        pd.testing.assert_frame_equal(results_default, results_explicit)
+
+    def test_exact_dte_missing_zero_tolerance_returns_empty(self, sparse_exit_data):
+        """Without tolerance, missing exact exit DTE should return no results."""
+        results = long_calls(
+            sparse_exit_data,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=0,
+            raw=True,
+        )
+        assert len(results) == 0
+
+    def test_tolerance_finds_nearby_exit(self, sparse_exit_data):
+        """With tolerance, should find nearby DTE when exact is missing."""
+        results = long_calls(
+            sparse_exit_data,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=1,
+            raw=True,
+        )
+        # DTE=1 data exists and is within tolerance
+        assert len(results) > 0
+
+    def test_tolerance_picks_closest_dte(self, multi_exit_dte_data):
+        """With multiple DTEs in range, should pick closest to target."""
+        results = long_calls(
+            multi_exit_dte_data,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=3,
+            raw=True,
+        )
+        assert len(results) > 0
+        # The exit price should come from DTE=1 (underlying 219.50),
+        # not DTE=3 (underlying 218.00)
+        row = results.iloc[0]
+        # exit mid price for 212.5 call at DTE=1 = (7.20+7.30)/2 = 7.25
+        assert round(row["exit"], 2) == 7.25
+
+    def test_tolerance_insufficient_still_empty(self, sparse_exit_data):
+        """Tolerance that's too small should still return empty."""
+        # Exact DTE=5 is missing, DTE=1 exists but is 4 away
+        results = long_calls(
+            sparse_exit_data,
+            max_entry_dte=90,
+            exit_dte=5,
+            exit_dte_tolerance=1,  # DTE 4-6, but only DTE=1 exists
+            raw=True,
+        )
+        assert len(results) == 0
+
+    def test_tolerance_with_exit_signal(self, sparse_exit_data):
+        """exit_dte_tolerance should work alongside exit_signal."""
+        always_true = lambda data: pd.Series(True, index=data.index)
+
+        results = long_calls(
+            sparse_exit_data,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=1,
+            exit_signal=always_true,
+            raw=True,
+        )
+        assert len(results) > 0
+
+    def test_tolerance_with_entry_signal(self, sparse_exit_data):
+        """exit_dte_tolerance should work alongside entry_signal."""
+        always_true = lambda data: pd.Series(True, index=data.index)
+
+        results = long_calls(
+            sparse_exit_data,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=1,
+            entry_signal=always_true,
+            raw=True,
+        )
+        assert len(results) > 0
+
+    def test_tolerance_exact_match_preferred(self, option_data_entry_exit):
+        """When exact DTE exists, tolerance shouldn't change results."""
+        results_exact = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=0,
+            raw=True,
+        )
+
+        results_tolerant = long_calls(
+            option_data_entry_exit,
+            max_entry_dte=90,
+            exit_dte=0,
+            exit_dte_tolerance=5,
+            raw=True,
+        )
+
+        # Same number of results and same exit prices (exact match wins)
+        pd.testing.assert_frame_equal(results_exact, results_tolerant)

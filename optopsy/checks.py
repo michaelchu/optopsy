@@ -247,6 +247,7 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "dte_interval": _check_positive_integer,
     "max_entry_dte": _check_positive_integer,
     "exit_dte": _check_positive_integer_inclusive,
+    "exit_dte_tolerance": _check_positive_integer_inclusive,
     "otm_pct_interval": _check_positive_float,
     "max_otm_pct": _check_positive_float,
     "min_bid_ask": _check_positive_float,
