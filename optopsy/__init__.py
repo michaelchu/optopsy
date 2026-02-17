@@ -59,6 +59,15 @@ from .strategies import (
 )
 from .datafeeds import csv_data
 from .types import StrategyParams, CalendarStrategyParams
+from .signals import (
+    rsi_below,
+    rsi_above,
+    day_of_week,
+    sma_below,
+    sma_above,
+    and_signals,
+    or_signals,
+)
 
 __all__ = [
     "__version__",
@@ -101,4 +110,12 @@ __all__ = [
     # Type definitions
     "StrategyParams",
     "CalendarStrategyParams",
+    # Signal functions
+    "rsi_below",
+    "rsi_above",
+    "day_of_week",
+    "sma_below",
+    "sma_above",
+    "and_signals",
+    "or_signals",
 ]

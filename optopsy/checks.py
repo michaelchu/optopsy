@@ -27,9 +27,9 @@ optional_liquidity_types: Dict[str, Tuple[str, ...]] = {
 }
 
 
-def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+def _run_common_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     """
-    Run all validation checks on parameters and data.
+    Run parameter validation and data type checks shared by all strategies.
 
     Args:
         params: Dictionary of strategy parameters
@@ -43,13 +43,27 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
             param_checks[k](k, v)
     _check_data_types(data)
 
-    # Check for delta column if delta filtering/grouping is enabled
-    if _requires_delta(params):
-        _check_greek_column(data, "delta")
-
     # Check for volume column if liquidity slippage is enabled
     if _requires_volume(params):
         _check_volume_column(data)
+
+
+def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+    """
+    Run all validation checks on parameters and data.
+
+    Args:
+        params: Dictionary of strategy parameters
+        data: DataFrame containing option chain data
+
+    Raises:
+        ValueError: If any validation check fails
+    """
+    _run_common_checks(params, data)
+
+    # Check for delta column if delta filtering/grouping is enabled
+    if _requires_delta(params):
+        _check_greek_column(data, "delta")
 
 
 def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
@@ -63,10 +77,7 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     Raises:
         ValueError: If any validation check fails
     """
-    for k, v in params.items():
-        if k in param_checks and v is not None:
-            param_checks[k](k, v)
-    _check_data_types(data)
+    _run_common_checks(params, data)
 
     # Validate DTE range ordering
     front_dte_min = params.get("front_dte_min")
@@ -95,10 +106,6 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
                 f"front_dte_max ({front_dte_max}) must be < "
                 f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
             )
-
-    # Check for volume column if liquidity slippage is enabled
-    if _requires_volume(params):
-        _check_volume_column(data)
 
 
 def _check_positive_integer(key: str, value: Any) -> None:
@@ -155,6 +162,12 @@ def _check_fill_ratio(key: str, value: Any) -> None:
     """Validate that value is a float between 0 and 1."""
     if not isinstance(value, (int, float)) or not 0 <= value <= 1:
         raise ValueError(f"Invalid setting for {key}, must be a number between 0 and 1")
+
+
+def _check_callable_or_none(key: str, value: Any) -> None:
+    """Validate that value is a callable or None."""
+    if value is not None and not callable(value):
+        raise ValueError(f"Invalid setting for {key}, must be a callable or None")
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
@@ -241,6 +254,7 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "dte_interval": _check_positive_integer,
     "max_entry_dte": _check_positive_integer,
     "exit_dte": _check_positive_integer_inclusive,
+    "exit_dte_tolerance": _check_positive_integer_inclusive,
     "otm_pct_interval": _check_positive_float,
     "max_otm_pct": _check_positive_float,
     "min_bid_ask": _check_positive_float,
@@ -256,6 +270,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "front_dte_max": _check_positive_integer,
     "back_dte_min": _check_positive_integer,
     "back_dte_max": _check_positive_integer,
+    # Signal filtering
+    "entry_signal": _check_callable_or_none,
+    "exit_signal": _check_callable_or_none,
     # Slippage parameters
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,
