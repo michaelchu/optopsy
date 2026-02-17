@@ -42,6 +42,8 @@ default_kwargs: Dict[str, Any] = {
     "delta_max": None,
     # Greeks grouping (optional)
     "delta_interval": None,
+    # Entry signal filtering (optional)
+    "entry_signal": None,
     # Slippage settings
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
@@ -60,6 +62,8 @@ calendar_default_kwargs: Dict[str, Any] = {
     "min_bid_ask": 0.05,
     "drop_nan": True,
     "raw": False,
+    # Entry signal filtering (optional)
+    "entry_signal": None,
     # Slippage settings
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)

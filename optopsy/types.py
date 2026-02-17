@@ -1,6 +1,8 @@
 """Type definitions for Optopsy strategy parameters."""
 
-from typing import Literal, Optional, TypedDict
+from typing import Callable, Literal, Optional, TypedDict
+
+import pandas as pd
 
 
 class StrategyParams(TypedDict, total=False):
@@ -25,6 +27,9 @@ class StrategyParams(TypedDict, total=False):
 
     # Greeks grouping (optional)
     delta_interval: Optional[float]
+
+    # Entry signal filtering (optional)
+    entry_signal: Optional[Callable[[pd.DataFrame], "pd.Series[bool]"]]
 
     # Slippage settings
     slippage: Literal["mid", "spread", "liquidity"]

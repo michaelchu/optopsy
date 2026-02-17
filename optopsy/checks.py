@@ -157,6 +157,12 @@ def _check_fill_ratio(key: str, value: Any) -> None:
         raise ValueError(f"Invalid setting for {key}, must be a number between 0 and 1")
 
 
+def _check_entry_signal(key: str, value: Any) -> None:
+    """Validate that value is a callable or None."""
+    if value is not None and not callable(value):
+        raise ValueError(f"Invalid setting for {key}, must be a callable or None")
+
+
 def _check_data_types(data: pd.DataFrame) -> None:
     """
     Validate that DataFrame has required columns with correct data types.
@@ -256,6 +262,8 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "front_dte_max": _check_positive_integer,
     "back_dte_min": _check_positive_integer,
     "back_dte_max": _check_positive_integer,
+    # Entry signal
+    "entry_signal": _check_entry_signal,
     # Slippage parameters
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,

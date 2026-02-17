@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import pandas as pd
 import numpy as np
 from .definitions import evaluated_cols, describe_cols
@@ -120,6 +120,42 @@ def _cut_options_by_otm(
     return data
 
 
+def _apply_entry_signal(data: pd.DataFrame, signal_func: Callable) -> pd.DataFrame:
+    """
+    Apply an entry signal filter to restrict which quote_dates are valid for entry.
+
+    The signal function receives a DataFrame with one row per unique
+    (underlying_symbol, quote_date) containing the underlying_price,
+    sorted chronologically. It returns a boolean Series indicating
+    which dates are valid entries.
+
+    Args:
+        data: DataFrame containing option data (may have multiple rows per quote_date)
+        signal_func: Callable that takes a DataFrame with columns
+                     (underlying_symbol, quote_date, underlying_price)
+                     and returns a boolean Series
+
+    Returns:
+        Filtered DataFrame containing only rows on valid entry dates
+    """
+    # Extract unique underlying price per (symbol, quote_date)
+    price_data = (
+        data[["underlying_symbol", "quote_date", "underlying_price"]]
+        .drop_duplicates(["underlying_symbol", "quote_date"])
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+
+    # Compute signal
+    mask = signal_func(price_data)
+
+    # Get valid (symbol, quote_date) pairs
+    valid_dates = price_data.loc[mask, ["underlying_symbol", "quote_date"]]
+
+    # Filter data to only include valid entry dates
+    return data.merge(valid_dates, on=["underlying_symbol", "quote_date"], how="inner")
+
+
 def _filter_by_delta(
     data: pd.DataFrame, delta_min: Optional[float], delta_max: Optional[float]
 ) -> pd.DataFrame:
@@ -217,6 +253,11 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     # Apply delta filtering only to entries (not exits) - delta changes over time
     if has_delta and (delta_min is not None or delta_max is not None):
         entries = _filter_by_delta(entries, delta_min, delta_max)
+
+    # Apply entry signal filtering (only to entries, exits are unaffected)
+    entry_signal = kwargs.get("entry_signal")
+    if entry_signal is not None:
+        entries = _apply_entry_signal(entries, entry_signal)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
     exits = _get(data, "dte", kwargs["exit_dte"])
@@ -533,6 +574,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             delta_min=context["params"].get("delta_min"),
             delta_max=context["params"].get("delta_max"),
             delta_interval=context["params"].get("delta_interval"),
+            entry_signal=context["params"].get("entry_signal"),
         )
         .pipe(
             _strategy_engine,
@@ -890,6 +932,23 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     # Apply expiration ordering rule
     if rules is not None:
         merged = rules(merged, leg_def)
+
+    # Apply entry signal filtering to calendar/diagonal spreads
+    entry_signal = params.get("entry_signal")
+    if entry_signal is not None and not merged.empty:
+        # Extract unique underlying price per (symbol, quote_date)
+        price_data = (
+            merged[["underlying_symbol", "quote_date", "underlying_price_entry"]]
+            .rename(columns={"underlying_price_entry": "underlying_price"})
+            .drop_duplicates(["underlying_symbol", "quote_date"])
+            .sort_values(["underlying_symbol", "quote_date"])
+            .reset_index(drop=True)
+        )
+        mask = entry_signal(price_data)
+        valid_dates = price_data.loc[mask, ["underlying_symbol", "quote_date"]]
+        merged = merged.merge(
+            valid_dates, on=["underlying_symbol", "quote_date"], how="inner"
+        )
 
     if merged.empty:
         return _format_calendar_output(
