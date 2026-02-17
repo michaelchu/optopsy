@@ -22,6 +22,12 @@ from optopsy.strategies import long_calls, short_puts, long_call_calendar
 
 
 @pytest.fixture
+def always_true_signal():
+    """Signal function that always returns True (passes all dates)."""
+    return lambda data: pd.Series(True, index=data.index)
+
+
+@pytest.fixture
 def price_data():
     """Simple underlying price data for testing signal functions."""
     dates = pd.date_range("2018-01-01", periods=30, freq="B")
@@ -317,23 +323,21 @@ class TestSMASignals:
 
 
 class TestSignalCombinators:
-    def test_and_signals(self, price_data):
+    def test_and_signals(self, price_data, always_true_signal):
         """and_signals should require all signals to be True."""
-        always_true = lambda data: pd.Series(True, index=data.index)
         always_false = lambda data: pd.Series(False, index=data.index)
 
-        result = and_signals(always_true, always_true)(price_data)
+        result = and_signals(always_true_signal, always_true_signal)(price_data)
         assert result.all()
 
-        result = and_signals(always_true, always_false)(price_data)
+        result = and_signals(always_true_signal, always_false)(price_data)
         assert not result.any()
 
-    def test_or_signals(self, price_data):
+    def test_or_signals(self, price_data, always_true_signal):
         """or_signals should require at least one signal to be True."""
-        always_true = lambda data: pd.Series(True, index=data.index)
         always_false = lambda data: pd.Series(False, index=data.index)
 
-        result = or_signals(always_true, always_false)(price_data)
+        result = or_signals(always_true_signal, always_false)(price_data)
         assert result.all()
 
         result = or_signals(always_false, always_false)(price_data)
@@ -388,10 +392,10 @@ class TestEntrySignalIntegration:
         )
         assert len(results) == 0
 
-    def test_always_true_signal_same_as_no_signal(self, option_data_entry_exit):
+    def test_always_true_signal_same_as_no_signal(
+        self, option_data_entry_exit, always_true_signal
+    ):
         """A signal that always returns True should give same results as no signal."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         results_no_signal = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -403,7 +407,7 @@ class TestEntrySignalIntegration:
             option_data_entry_exit,
             max_entry_dte=90,
             exit_dte=0,
-            entry_signal=always_true,
+            entry_signal=always_true_signal,
             raw=True,
         )
 
@@ -432,11 +436,12 @@ class TestEntrySignalIntegration:
                 raw=True,
             )
 
-    def test_combined_signal_integration(self, option_data_entry_exit):
+    def test_combined_signal_integration(
+        self, option_data_entry_exit, always_true_signal
+    ):
         """Combined signals should work end-to-end with strategies."""
         # Combine Thursday + always True (effectively just Thursday)
-        always_true = lambda data: pd.Series(True, index=data.index)
-        combined = and_signals(day_of_week(3), always_true)
+        combined = and_signals(day_of_week(3), always_true_signal)
 
         results_combined = long_calls(
             option_data_entry_exit,
@@ -498,10 +503,10 @@ class TestExitSignalIntegration:
         )
         assert len(results) == 0
 
-    def test_always_true_exit_signal_same_as_no_signal(self, option_data_entry_exit):
+    def test_always_true_exit_signal_same_as_no_signal(
+        self, option_data_entry_exit, always_true_signal
+    ):
         """An exit_signal that always returns True should give same results as no signal."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         results_no_signal = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -513,16 +518,16 @@ class TestExitSignalIntegration:
             option_data_entry_exit,
             max_entry_dte=90,
             exit_dte=0,
-            exit_signal=always_true,
+            exit_signal=always_true_signal,
             raw=True,
         )
 
         pd.testing.assert_frame_equal(results_no_signal, results_true_signal)
 
-    def test_entry_and_exit_signals_combined(self, option_data_entry_exit):
+    def test_entry_and_exit_signals_combined(
+        self, option_data_entry_exit, always_true_signal
+    ):
         """entry_signal and exit_signal should both be applied independently."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         # Entry on Thursday only, exit any time
         results_entry_only = long_calls(
             option_data_entry_exit,
@@ -538,16 +543,16 @@ class TestExitSignalIntegration:
             max_entry_dte=90,
             exit_dte=0,
             entry_signal=day_of_week(3),
-            exit_signal=always_true,
+            exit_signal=always_true_signal,
             raw=True,
         )
 
         pd.testing.assert_frame_equal(results_entry_only, results_both)
 
-    def test_exit_signal_with_short_puts(self, option_data_entry_exit):
+    def test_exit_signal_with_short_puts(
+        self, option_data_entry_exit, always_true_signal
+    ):
         """exit_signal should work with short put strategies."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         results_no_signal = short_puts(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -559,7 +564,7 @@ class TestExitSignalIntegration:
             option_data_entry_exit,
             max_entry_dte=90,
             exit_dte=0,
-            exit_signal=always_true,
+            exit_signal=always_true_signal,
             raw=True,
         )
 
@@ -773,30 +778,26 @@ class TestExitDteTolerance:
         )
         assert len(results) == 0
 
-    def test_tolerance_with_exit_signal(self, sparse_exit_data):
+    def test_tolerance_with_exit_signal(self, sparse_exit_data, always_true_signal):
         """exit_dte_tolerance should work alongside exit_signal."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         results = long_calls(
             sparse_exit_data,
             max_entry_dte=90,
             exit_dte=0,
             exit_dte_tolerance=1,
-            exit_signal=always_true,
+            exit_signal=always_true_signal,
             raw=True,
         )
         assert len(results) > 0
 
-    def test_tolerance_with_entry_signal(self, sparse_exit_data):
+    def test_tolerance_with_entry_signal(self, sparse_exit_data, always_true_signal):
         """exit_dte_tolerance should work alongside entry_signal."""
-        always_true = lambda data: pd.Series(True, index=data.index)
-
         results = long_calls(
             sparse_exit_data,
             max_entry_dte=90,
             exit_dte=0,
             exit_dte_tolerance=1,
-            entry_signal=always_true,
+            entry_signal=always_true_signal,
             raw=True,
         )
         assert len(results) > 0

@@ -24,7 +24,7 @@ Example:
     ... )
 """
 
-from typing import Callable, List
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -59,6 +59,35 @@ def _compute_rsi(prices: pd.Series, period: int) -> pd.Series:
     return rsi
 
 
+def _per_symbol_signal(
+    indicator_fn: Callable[[pd.Series], pd.Series],
+    compare_fn: Callable[[pd.Series, pd.Series], "pd.Series[bool]"],
+) -> SignalFunc:
+    """
+    Build a signal that computes an indicator per symbol and applies a comparison.
+
+    This is the shared skeleton behind RSI, SMA, and similar per-symbol signals.
+
+    Args:
+        indicator_fn: Takes a price Series, returns an indicator Series
+        compare_fn: Takes (prices, indicator), returns a boolean Series
+
+    Returns:
+        Signal function
+    """
+
+    def signal(data: pd.DataFrame) -> "pd.Series[bool]":
+        result = pd.Series(False, index=data.index)
+        for symbol in data["underlying_symbol"].unique():
+            mask = data["underlying_symbol"] == symbol
+            prices = data.loc[mask, "underlying_price"]
+            indicator = indicator_fn(prices)
+            result.loc[mask] = compare_fn(prices, indicator)
+        return result
+
+    return signal
+
+
 def rsi_below(period: int = 14, threshold: float = 30) -> SignalFunc:
     """
     Create a signal that is True when RSI is below a threshold (oversold).
@@ -70,17 +99,10 @@ def rsi_below(period: int = 14, threshold: float = 30) -> SignalFunc:
     Returns:
         Signal function
     """
-
-    def signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        result = pd.Series(False, index=data.index)
-        for symbol in data["underlying_symbol"].unique():
-            mask = data["underlying_symbol"] == symbol
-            prices = data.loc[mask, "underlying_price"]
-            rsi = _compute_rsi(prices, period)
-            result.loc[mask] = rsi < threshold
-        return result
-
-    return signal
+    return _per_symbol_signal(
+        lambda p: _compute_rsi(p, period),
+        lambda _prices, rsi: rsi < threshold,
+    )
 
 
 def rsi_above(period: int = 14, threshold: float = 70) -> SignalFunc:
@@ -94,17 +116,10 @@ def rsi_above(period: int = 14, threshold: float = 70) -> SignalFunc:
     Returns:
         Signal function
     """
-
-    def signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        result = pd.Series(False, index=data.index)
-        for symbol in data["underlying_symbol"].unique():
-            mask = data["underlying_symbol"] == symbol
-            prices = data.loc[mask, "underlying_price"]
-            rsi = _compute_rsi(prices, period)
-            result.loc[mask] = rsi > threshold
-        return result
-
-    return signal
+    return _per_symbol_signal(
+        lambda p: _compute_rsi(p, period),
+        lambda _prices, rsi: rsi > threshold,
+    )
 
 
 def day_of_week(*days: int) -> SignalFunc:
@@ -137,17 +152,10 @@ def sma_below(period: int = 20) -> SignalFunc:
     Returns:
         Signal function
     """
-
-    def signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        result = pd.Series(False, index=data.index)
-        for symbol in data["underlying_symbol"].unique():
-            mask = data["underlying_symbol"] == symbol
-            prices = data.loc[mask, "underlying_price"]
-            sma = prices.rolling(window=period, min_periods=period).mean()
-            result.loc[mask] = prices < sma
-        return result
-
-    return signal
+    return _per_symbol_signal(
+        lambda p: p.rolling(window=period, min_periods=period).mean(),
+        lambda prices, sma: prices < sma,
+    )
 
 
 def sma_above(period: int = 20) -> SignalFunc:
@@ -161,17 +169,10 @@ def sma_above(period: int = 20) -> SignalFunc:
     Returns:
         Signal function
     """
-
-    def signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        result = pd.Series(False, index=data.index)
-        for symbol in data["underlying_symbol"].unique():
-            mask = data["underlying_symbol"] == symbol
-            prices = data.loc[mask, "underlying_price"]
-            sma = prices.rolling(window=period, min_periods=period).mean()
-            result.loc[mask] = prices > sma
-        return result
-
-    return signal
+    return _per_symbol_signal(
+        lambda p: p.rolling(window=period, min_periods=period).mean(),
+        lambda prices, sma: prices > sma,
+    )
 
 
 def and_signals(*signals: SignalFunc) -> SignalFunc:

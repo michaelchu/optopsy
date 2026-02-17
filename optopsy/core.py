@@ -177,8 +177,7 @@ def _apply_signal_filter(
     """
     if date_col != "quote_date":
         valid_dates = valid_dates.rename(columns={"quote_date": date_col})
-        return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
-    return data.merge(valid_dates, on=["underlying_symbol", "quote_date"], how="inner")
+    return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
 
 
 def _filter_by_delta(
@@ -851,46 +850,29 @@ def _find_calendar_exit_prices(
     # calendar spread management: close before the short-dated option expires.
     merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
 
+    all_exit_dates = merged["exit_date"].unique()
+
     if exit_dte_tolerance == 0:
         # Exact date matching (original behavior)
-        exit_dates = merged["exit_date"].unique()
-        exit_data = data[data["quote_date"].isin(exit_dates)]
+        exit_data = data[data["quote_date"].isin(all_exit_dates)]
     else:
-        # Tolerance-based matching: look for quote_dates near the target exit_date
+        # Tolerance-based matching: snap each target exit_date to the
+        # closest available quote_date within tolerance.
         tolerance_td = pd.Timedelta(days=exit_dte_tolerance)
-        all_exit_dates = merged["exit_date"].unique()
+        available_dates = np.sort(data["quote_date"].unique())
 
-        # Collect candidate exit data within tolerance of any target exit_date
-        masks = []
+        date_map = {}
         for target_date in all_exit_dates:
-            masks.append(
-                (data["quote_date"] >= target_date - tolerance_td)
-                & (data["quote_date"] <= target_date + tolerance_td)
-            )
-        if masks:
-            combined_mask = masks[0]
-            for m in masks[1:]:
-                combined_mask = combined_mask | m
-            exit_data = data[combined_mask]
-        else:
-            exit_data = data.iloc[:0]
+            diffs = np.abs(available_dates - target_date)
+            min_idx = diffs.argmin()
+            if diffs[min_idx] <= tolerance_td:
+                date_map[target_date] = available_dates[min_idx]
 
-        if not exit_data.empty:
-            # For each position, find the closest available quote_date to the
-            # target exit_date. We do this by snapping each position's exit_date
-            # to the nearest available quote_date within tolerance.
-            available_dates = exit_data["quote_date"].unique()
-            date_map = {}
-            for target_date in all_exit_dates:
-                diffs = abs(available_dates - target_date)
-                min_idx = diffs.argmin()
-                if diffs[min_idx] <= tolerance_td:
-                    date_map[target_date] = available_dates[min_idx]
-            # Remap exit_date to the closest available date
-            merged["exit_date"] = merged["exit_date"].map(lambda d: date_map.get(d, d))
-            # Now filter exit_data to only the dates we're actually using
-            used_dates = set(date_map.values())
-            exit_data = exit_data[exit_data["quote_date"].isin(used_dates)]
+        if not date_map:
+            return merged.iloc[:0]
+
+        merged["exit_date"] = merged["exit_date"].map(lambda d: date_map.get(d, d))
+        exit_data = data[data["quote_date"].isin(date_map.values())]
 
     if exit_data.empty:
         return merged.iloc[:0]
@@ -1020,6 +1002,13 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     leg_def = context["leg_def"]
     same_strike = context.get("same_strike", True)
     rules = context.get("rules")
+    internal_cols = context["internal_cols"]
+    external_cols = context["external_cols"]
+
+    def _fmt(df: pd.DataFrame) -> pd.DataFrame:
+        return _format_calendar_output(
+            df, params, internal_cols, external_cols, same_strike
+        )
 
     # Work with a copy to avoid modifying input
     data = data.copy()
@@ -1059,28 +1048,14 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     # Apply entry signal filtering to calendar/diagonal spreads
     entry_signal = params.get("entry_signal")
     if entry_signal is not None and not merged.empty:
-        # Extract unique underlying price per (symbol, quote_date)
-        price_data = (
-            merged[["underlying_symbol", "quote_date", "underlying_price_entry"]]
-            .rename(columns={"underlying_price_entry": "underlying_price"})
-            .drop_duplicates(["underlying_symbol", "quote_date"])
-            .sort_values(["underlying_symbol", "quote_date"])
-            .reset_index(drop=True)
+        price_data = _extract_price_data(
+            merged.rename(columns={"underlying_price_entry": "underlying_price"})
         )
-        mask = entry_signal(price_data)
-        valid_dates = price_data.loc[mask, ["underlying_symbol", "quote_date"]]
-        merged = merged.merge(
-            valid_dates, on=["underlying_symbol", "quote_date"], how="inner"
-        )
+        valid_dates = _get_signal_valid_dates(price_data, entry_signal)
+        merged = _apply_signal_filter(merged, valid_dates)
 
     if merged.empty:
-        return _format_calendar_output(
-            merged,
-            params,
-            context["internal_cols"],
-            context["external_cols"],
-            same_strike,
-        )
+        return _fmt(merged)
 
     # Find exit prices
     merged = _find_calendar_exit_prices(
@@ -1092,13 +1067,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     )
 
     if merged.empty:
-        return _format_calendar_output(
-            merged,
-            params,
-            context["internal_cols"],
-            context["external_cols"],
-            same_strike,
-        )
+        return _fmt(merged)
 
     # Apply exit signal filtering to calendar/diagonal spreads
     exit_signal = params.get("exit_signal")
@@ -1108,13 +1077,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         merged = _apply_signal_filter(merged, valid_exit_dates, date_col="exit_date")
 
     if merged.empty:
-        return _format_calendar_output(
-            merged,
-            params,
-            context["internal_cols"],
-            context["external_cols"],
-            same_strike,
-        )
+        return _fmt(merged)
 
     # Calculate P&L
     merged = _calculate_calendar_pnl(
@@ -1125,9 +1088,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params.get("reference_volume", 1000),
     )
 
-    return _format_calendar_output(
-        merged, params, context["internal_cols"], context["external_cols"], same_strike
-    )
+    return _fmt(merged)
 
 
 def _format_calendar_output(
