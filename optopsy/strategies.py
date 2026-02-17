@@ -32,6 +32,7 @@ default_kwargs: Dict[str, Any] = {
     "dte_interval": 7,
     "max_entry_dte": 90,
     "exit_dte": 0,
+    "exit_dte_tolerance": 0,
     "otm_pct_interval": 0.05,
     "max_otm_pct": 0.5,
     "min_bid_ask": 0.05,
@@ -42,28 +43,25 @@ default_kwargs: Dict[str, Any] = {
     "delta_max": None,
     # Greeks grouping (optional)
     "delta_interval": None,
+    # Signal filtering (optional)
+    "entry_signal": None,
+    "exit_signal": None,
     # Slippage settings
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
     "reference_volume": 1000,  # Volume threshold for liquid options
 }
 
+# Calendar strategies share most defaults but don't use delta or max_entry_dte,
+# and override exit_dte with a different default.
+_calendar_only_keys = {"max_entry_dte", "delta_min", "delta_max", "delta_interval"}
 calendar_default_kwargs: Dict[str, Any] = {
+    **{k: v for k, v in default_kwargs.items() if k not in _calendar_only_keys},
     "front_dte_min": 20,
     "front_dte_max": 40,
     "back_dte_min": 50,
     "back_dte_max": 90,
     "exit_dte": 7,
-    "dte_interval": 7,
-    "otm_pct_interval": 0.05,
-    "max_otm_pct": 0.5,
-    "min_bid_ask": 0.05,
-    "drop_nan": True,
-    "raw": False,
-    # Slippage settings
-    "slippage": "mid",  # "mid", "spread", or "liquidity"
-    "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
-    "reference_volume": 1000,  # Volume threshold for liquid options
 }
 
 
