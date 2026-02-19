@@ -1,7 +1,14 @@
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 # .env takes priority over shell env so there's no conflict with
 # unrelated exports (e.g. work credentials in .zshrc).
@@ -49,6 +56,28 @@ async def on_chat_start():
             f"Using model: `{model}` (set `OPTOPSY_MODEL` env var to change)"
         )
     ).send()
+
+
+@cl.on_chat_resume
+async def on_chat_resume(thread: cl.types.ThreadDict):
+    """Restore agent state when a WebSocket reconnects to an existing thread.
+
+    Without this handler Chainlit falls back to on_chat_start, which creates a
+    fresh session and sends the welcome message again mid-conversation.
+    """
+    model = os.environ.get("OPTOPSY_MODEL", "gpt-4o-mini")
+    agent = OptopsyAgent(model=model)
+
+    # Rebuild message history from the persisted thread
+    messages: list[dict] = []
+    for step in thread.get("steps", []):
+        if step.get("type") == "user_message":
+            messages.append({"role": "user", "content": step.get("output", "")})
+        elif step.get("type") == "assistant_message":
+            messages.append({"role": "assistant", "content": step.get("output", "")})
+
+    cl.user_session.set("agent", agent)
+    cl.user_session.set("messages", messages)
 
 
 @cl.on_message

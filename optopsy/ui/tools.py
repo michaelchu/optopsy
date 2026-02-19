@@ -211,6 +211,46 @@ CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is
 
 STRATEGY_NAMES = sorted(STRATEGIES.keys())
 
+# Maps strategy name -> required option_type for data fetching.
+# "call"/"put" means only that type is needed; None means both are needed.
+STRATEGY_OPTION_TYPE: dict[str, str | None] = {
+    "long_calls": "call",
+    "short_calls": "call",
+    "long_call_spread": "call",
+    "short_call_spread": "call",
+    "long_call_butterfly": "call",
+    "short_call_butterfly": "call",
+    "long_call_calendar": "call",
+    "short_call_calendar": "call",
+    "long_call_diagonal": "call",
+    "short_call_diagonal": "call",
+    "covered_call": "call",
+    "long_puts": "put",
+    "short_puts": "put",
+    "long_put_spread": "put",
+    "short_put_spread": "put",
+    "long_put_butterfly": "put",
+    "short_put_butterfly": "put",
+    "long_put_calendar": "put",
+    "short_put_calendar": "put",
+    "long_put_diagonal": "put",
+    "short_put_diagonal": "put",
+    "long_straddles": None,
+    "short_straddles": None,
+    "long_strangles": None,
+    "short_strangles": None,
+    "iron_condor": None,
+    "reverse_iron_condor": None,
+    "iron_butterfly": None,
+    "reverse_iron_butterfly": None,
+    "protective_put": None,
+}
+
+
+def get_required_option_type(strategy_name: str) -> str | None:
+    """Return 'call', 'put', or None (both) for a given strategy name."""
+    return STRATEGY_OPTION_TYPE.get(strategy_name)
+
 
 def get_tool_schemas() -> list[dict]:
     """Return OpenAI-compatible tool schemas for all optopsy functions."""

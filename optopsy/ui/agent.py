@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Any
 
@@ -19,23 +20,37 @@ You help users:
 ## Workflow
 - If a data provider is available (e.g. `fetch_eodhd_options`), use it to fetch data for a ticker. \
 This loads the data directly into memory — no file step needed.
+- When fetching data, ALWAYS provide both `start_date` and `end_date`. This enables chunked \
+fetching which retrieves complete datasets for large date ranges. If the user doesn't specify \
+dates, pick a reasonable 3-month window ending today.
 - Alternatively, use `list_data_files` and `load_csv_data` to load from local CSV files.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
 - Only tools that appear in your tool list are available. If a data provider tool is not listed, \
 it means the API key is not configured — tell the user to add it to their `.env` file.
 
-## Available Strategies
-Single-leg: long_calls, long_puts, short_calls, short_puts
-Straddles: long_straddles, short_straddles
-Strangles: long_strangles, short_strangles
-Vertical spreads: long_call_spread, short_call_spread, long_put_spread, short_put_spread
-Butterflies: long_call_butterfly, short_call_butterfly, long_put_butterfly, short_put_butterfly
-Iron condors: iron_condor, reverse_iron_condor
-Iron butterflies: iron_butterfly, reverse_iron_butterfly
-Covered: covered_call, protective_put
-Calendars: long_call_calendar, short_call_calendar, long_put_calendar, short_put_calendar
-Diagonals: long_call_diagonal, short_call_diagonal, long_put_diagonal, short_put_diagonal
+## Available Strategies and Option Type Filtering
+
+When fetching data with `fetch_eodhd_options`, ALWAYS pass the `option_type` parameter based on \
+the strategy the user wants to run. This halves the data volume and speeds up fetching significantly.
+
+**Calls only** (pass `option_type: "call"`):
+long_calls, short_calls, long_call_spread, short_call_spread, \
+long_call_butterfly, short_call_butterfly, long_call_calendar, short_call_calendar, \
+long_call_diagonal, short_call_diagonal, covered_call
+
+**Puts only** (pass `option_type: "put"`):
+long_puts, short_puts, long_put_spread, short_put_spread, \
+long_put_butterfly, short_put_butterfly, long_put_calendar, short_put_calendar, \
+long_put_diagonal, short_put_diagonal
+
+**Both calls and puts** (omit `option_type`):
+long_straddles, short_straddles, long_strangles, short_strangles, \
+iron_condor, reverse_iron_condor, iron_butterfly, reverse_iron_butterfly, protective_put
+
+IMPORTANT: If the user mentions a specific strategy, always filter by option_type during fetch. \
+If comparing multiple strategies that need different types, omit the filter. \
+If the user hasn't specified a strategy yet, omit the filter.
 
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
@@ -197,7 +212,15 @@ class OptopsyAgent:
                 except json.JSONDecodeError:
                     args = {}
 
-                result = execute_tool(func_name, args, self.dataset)
+                # Run tool in a thread so the event loop stays alive
+                # (keeps WebSocket heartbeats flowing during long fetches).
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    lambda fn=func_name, a=args, ds=self.dataset: execute_tool(
+                        fn, a, ds
+                    ),
+                )
                 self.dataset = result.dataset
 
                 # Show the rich version to the user in the UI
