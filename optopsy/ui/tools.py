@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 from typing import Any
 
 import pandas as pd
@@ -237,8 +236,8 @@ def get_tool_schemas() -> list[dict]:
             "function": {
                 "name": "load_csv_data",
                 "description": (
-                    "Load option chain data from a CSV file that has already been "
-                    "uploaded. The file must contain columns for: underlying_symbol, "
+                    "Load option chain data from a CSV file in the data directory. "
+                    "The file must contain columns for: underlying_symbol, "
                     "underlying_price, option_type (c/p), expiration, quote_date, "
                     "strike, bid, ask. Optional: delta, gamma, theta, vega, volume."
                 ),
@@ -247,7 +246,7 @@ def get_tool_schemas() -> list[dict]:
                     "properties": {
                         "filename": {
                             "type": "string",
-                            "description": "Name of the uploaded CSV file to load",
+                            "description": "Name of the CSV file to load from the data directory",
                         },
                         "start_date": {
                             "type": "string",
@@ -264,13 +263,13 @@ def get_tool_schemas() -> list[dict]:
         }
     )
 
-    # list_uploaded_files tool
+    # list_data_files tool
     tools.append(
         {
             "type": "function",
             "function": {
-                "name": "list_uploaded_files",
-                "description": "List all CSV files that have been uploaded and are available for loading.",
+                "name": "list_data_files",
+                "description": "List all CSV files in the data directory that are available for loading.",
                 "parameters": {"type": "object", "properties": {}, "required": []},
             },
         }
@@ -314,14 +313,6 @@ def ensure_data_dir():
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
-def save_uploaded_file(src_path: str, filename: str) -> str:
-    """Copy an uploaded file into the data directory. Returns destination path."""
-    ensure_data_dir()
-    dest = os.path.join(DATA_DIR, filename)
-    shutil.copy2(src_path, dest)
-    return dest
-
-
 def execute_tool(
     tool_name: str, arguments: dict[str, Any], dataset: pd.DataFrame | None
 ) -> tuple[str, pd.DataFrame | None]:
@@ -356,11 +347,11 @@ def execute_tool(
         except Exception as e:
             return f"Error loading '{filename}': {e}", dataset
 
-    if tool_name == "list_uploaded_files":
+    if tool_name == "list_data_files":
         ensure_data_dir()
         files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
         if not files:
-            return "No CSV files uploaded yet. Please upload a file first.", dataset
+            return "No CSV files found in the data directory.", dataset
         return f"Available files: {files}", dataset
 
     if tool_name == "preview_data":
