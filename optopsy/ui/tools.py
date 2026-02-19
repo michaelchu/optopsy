@@ -474,9 +474,13 @@ def execute_tool(
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:
+                params_used = {
+                    k: v for k, v in arguments.items() if k != "strategy_name"
+                }
                 return ToolResult(
-                    f"{strategy_name} returned no results. "
-                    "Try relaxing filters (increase max_entry_dte or max_otm_pct).",
+                    f"{strategy_name} returned no results with parameters: "
+                    f"{params_used or 'defaults'}. "
+                    "Report this to the user and let them decide next steps.",
                     dataset,
                 )
             is_raw = arguments.get("raw", False)

@@ -52,6 +52,12 @@ IMPORTANT: If the user mentions a specific strategy, always filter by option_typ
 If comparing multiple strategies that need different types, omit the filter. \
 If the user hasn't specified a strategy yet, omit the filter.
 
+## Expiration Type Filtering
+
+`fetch_eodhd_options` defaults to `expiration_type: "monthly"` which filters out weekly options. \
+This significantly reduces data volume. Only pass `expiration_type: "weekly"` if the user \
+explicitly asks for weekly expirations.
+
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
 - exit_dte: DTE at exit (default 0, i.e. hold to expiration)
@@ -107,7 +113,10 @@ Positive pct_change = profit, negative = loss.
 
 ## Guidelines
 - Always load data before running strategies.
-- If a strategy returns empty results, suggest relaxing filters (increase max_entry_dte or max_otm_pct).
+- **IMPORTANT — empty strategy results**: If `run_strategy` returns no results, do NOT automatically retry \
+with relaxed parameters. Instead, tell the user the strategy returned no results with the parameters used, \
+and *suggest* they could try relaxing filters (e.g. increase max_entry_dte or max_otm_pct). Let the user \
+decide — never retry more than once on your own, and never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \

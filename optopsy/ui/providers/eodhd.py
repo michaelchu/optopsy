@@ -20,7 +20,7 @@ _TIMEOUT = 60
 _MAX_RETRIES = 2
 _FIELDS = (
     "underlying_symbol,type,exp_date,tradetime,strike,bid,ask,"
-    "last,volume,delta,gamma,theta,vega,open_interest,midpoint"
+    "last,volume,delta,gamma,theta,vega,open_interest,midpoint,expiration_type"
 )
 
 _COLUMN_MAP = {
@@ -77,6 +77,7 @@ class EODHDProvider(DataProvider):
                 start_date=arguments.get("start_date"),
                 end_date=arguments.get("end_date"),
                 option_type=arguments.get("option_type"),
+                expiration_type=arguments.get("expiration_type", "monthly"),
             )
         if tool_name == "fetch_eodhd_stock_prices":
             return self._fetch_stock_prices(
@@ -164,6 +165,7 @@ class EODHDProvider(DataProvider):
         start_date: str | None = None,
         end_date: str | None = None,
         option_type: str | None = None,
+        expiration_type: str = "monthly",
     ) -> tuple[str, pd.DataFrame | None]:
         api_key = self._get_api_key()
         if not api_key:
@@ -189,6 +191,15 @@ class EODHDProvider(DataProvider):
         # Adaptive pagination: fetch up to the offset cap, then advance the
         # start cursor past the last returned tradetime and fetch again.
         # This maximises rows per request and minimises total API calls.
+        _log.info(
+            "EODHD fetch: symbol=%s, option_type=%s, expiration_type=%s, "
+            "dates=%s to %s",
+            symbol.upper(),
+            option_type or "all",
+            expiration_type or "all",
+            start_date or "start",
+            end_date or "today",
+        )
         window = 1
         while True:
             _log.info(
@@ -229,6 +240,24 @@ class EODHDProvider(DataProvider):
         df = pd.DataFrame(all_rows)
         df = df.rename(columns=_COLUMN_MAP)
         df = df.drop_duplicates()
+
+        # Filter by expiration type (weekly/monthly) — no server-side filter
+        # exists, so we do it client-side.
+        if expiration_type and "expiration_type" in df.columns:
+            before = len(df)
+            df = df[df["expiration_type"].str.lower() == expiration_type.lower()]
+            _log.info(
+                "Filtered to %s expirations: %s → %s rows",
+                expiration_type,
+                f"{before:,}",
+                f"{len(df):,}",
+            )
+            if df.empty:
+                return (
+                    f"No {expiration_type} options found for {symbol.upper()}. "
+                    f"Try a different expiration_type (e.g. 'weekly').",
+                    None,
+                )
 
         df["option_type"] = df["option_type"].str.lower().str[0]
 
@@ -388,6 +417,11 @@ class EODHDProvider(DataProvider):
                             "type": "string",
                             "enum": ["call", "put"],
                             "description": "Filter by option type. Omit for both.",
+                        },
+                        "expiration_type": {
+                            "type": "string",
+                            "enum": ["monthly", "weekly"],
+                            "description": "Filter by expiration cycle. Defaults to 'monthly'. Use 'weekly' for weekly expirations.",
                         },
                     },
                     "required": ["symbol"],
