@@ -18,7 +18,7 @@ async def on_chat_start():
 
     # Detect configured data providers
     providers = []
-    if os.environ.get("EODHD_API_KEY"):
+    if os.environ.get("EODHD_API_TOKEN"):
         providers.append("EODHD")
 
     provider_line = ""
@@ -27,7 +27,7 @@ async def on_chat_start():
     else:
         provider_line = (
             "No data providers configured. "
-            "Set `EODHD_API_KEY` in your `.env` file to enable live data.\n"
+            "Set `EODHD_API_TOKEN` in your `.env` file to enable live data.\n"
         )
 
     await cl.Message(
