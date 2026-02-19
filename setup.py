@@ -20,7 +20,7 @@ setup(
         "Programming Language :: Python :: 3.12",
     ],
     python_requires=">=3.8",
-    packages=["optopsy", "optopsy.ui"],
+    packages=["optopsy", "optopsy.ui", "optopsy.ui.providers"],
     install_requires=["pandas", "numpy", "typing_extensions>=4.0.0"],
     extras_require={
         "ui": [
@@ -28,6 +28,7 @@ setup(
             "litellm>=1.0.0",
             "python-dotenv>=1.0.0",
             "requests>=2.28.0",
+            "yfinance>=0.2.0",
             "tabulate>=0.9.0",
         ],
     },

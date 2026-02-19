@@ -1,12 +1,17 @@
 import os
+from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+# .env takes priority over shell env so there's no conflict with
+# unrelated exports (e.g. work credentials in .zshrc).
+_env_path = find_dotenv() or str(Path(__file__).resolve().parent.parent.parent / ".env")
+load_dotenv(_env_path, override=True)
 
 import chainlit as cl
 
 from optopsy.ui.agent import OptopsyAgent
+from optopsy.ui.providers import get_provider_names
 
 
 @cl.on_chat_start
@@ -17,9 +22,7 @@ async def on_chat_start():
     cl.user_session.set("messages", [])
 
     # Detect configured data providers
-    providers = []
-    if os.environ.get("EODHD_API_KEY"):
-        providers.append("EODHD")
+    providers = get_provider_names()
 
     provider_line = ""
     if providers:
@@ -27,7 +30,7 @@ async def on_chat_start():
     else:
         provider_line = (
             "No data providers configured. "
-            "Set `EODHD_API_KEY` in your `.env` file to enable live data.\n"
+            "Add API keys to your `.env` file to enable live data.\n"
         )
 
     await cl.Message(

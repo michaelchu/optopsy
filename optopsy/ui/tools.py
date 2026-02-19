@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Any
 
@@ -6,7 +5,7 @@ import pandas as pd
 
 import optopsy as op
 
-from .providers import eodhd_available, fetch_eodhd_options, get_eodhd_tool_schema
+from .providers import get_all_provider_tool_schemas, get_provider_for_tool
 
 DATA_DIR = os.path.join(os.getcwd(), "optopsy_data")
 
@@ -208,94 +207,86 @@ STRATEGIES = {
 }
 
 
-def _build_strategy_tool(name: str, description: str, is_calendar: bool) -> dict:
-    params = dict(STRATEGY_PARAMS_SCHEMA)
-    if is_calendar:
-        params.update(CALENDAR_EXTRA_PARAMS)
+CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is_cal}
 
-    return {
-        "type": "function",
-        "function": {
-            "name": name,
-            "description": description,
-            "parameters": {
-                "type": "object",
-                "properties": params,
-                "required": [],
-            },
-        },
-    }
+STRATEGY_NAMES = sorted(STRATEGIES.keys())
 
 
 def get_tool_schemas() -> list[dict]:
     """Return OpenAI-compatible tool schemas for all optopsy functions."""
-    tools = []
-
-    # csv_data tool for loading data
-    tools.append(
+    tools = [
         {
             "type": "function",
             "function": {
                 "name": "load_csv_data",
                 "description": (
-                    "Load option chain data from a CSV file in the data directory. "
-                    "The file must contain columns for: underlying_symbol, "
-                    "underlying_price, option_type (c/p), expiration, quote_date, "
-                    "strike, bid, ask. Optional: delta, gamma, theta, vega, volume."
+                    "Load option chain data from a CSV file in the data directory."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "filename": {
                             "type": "string",
-                            "description": "Name of the CSV file to load from the data directory",
+                            "description": "CSV filename to load",
                         },
                         "start_date": {
                             "type": "string",
-                            "description": "Optional start date filter (YYYY-MM-DD)",
+                            "description": "Start date filter (YYYY-MM-DD)",
                         },
                         "end_date": {
                             "type": "string",
-                            "description": "Optional end date filter (YYYY-MM-DD)",
+                            "description": "End date filter (YYYY-MM-DD)",
                         },
                     },
                     "required": ["filename"],
                 },
             },
-        }
-    )
-
-    # list_data_files tool
-    tools.append(
+        },
         {
             "type": "function",
             "function": {
                 "name": "list_data_files",
-                "description": "List all CSV files in the data directory that are available for loading.",
+                "description": "List available CSV files in the data directory.",
                 "parameters": {"type": "object", "properties": {}, "required": []},
             },
-        }
-    )
-
-    # preview_data tool
-    tools.append(
+        },
         {
             "type": "function",
             "function": {
                 "name": "preview_data",
-                "description": "Show a preview of the currently loaded dataset — column names, shape, date range, and sample rows.",
+                "description": "Show shape, columns, date range, and sample rows of the loaded dataset.",
                 "parameters": {"type": "object", "properties": {}, "required": []},
             },
-        }
-    )
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_strategy",
+                "description": (
+                    "Run an options strategy backtest on the loaded dataset. "
+                    "Strategies: " + ", ".join(STRATEGY_NAMES) + ". "
+                    "Calendar/diagonal strategies also accept front_dte_min, "
+                    "front_dte_max, back_dte_min, back_dte_max."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "strategy_name": {
+                            "type": "string",
+                            "enum": STRATEGY_NAMES,
+                            "description": "Name of the strategy to run",
+                        },
+                        **STRATEGY_PARAMS_SCHEMA,
+                        **CALENDAR_EXTRA_PARAMS,
+                    },
+                    "required": ["strategy_name"],
+                },
+            },
+        },
+    ]
 
     # Data provider tools (only added when API keys are configured)
-    if eodhd_available():
-        tools.append(get_eodhd_tool_schema())
-
-    # Strategy tools
-    for name, (_, description, is_calendar) in STRATEGIES.items():
-        tools.append(_build_strategy_tool(name, description, is_calendar))
+    tools.extend(get_all_provider_tool_schemas())
 
     return tools
 
@@ -360,19 +351,20 @@ def execute_tool(
             return "No CSV files found in the data directory.", dataset
         return f"Available files: {files}", dataset
 
-    if tool_name == "fetch_eodhd_options":
+    # Generic data-provider dispatch
+    provider = get_provider_for_tool(tool_name)
+    if provider is not None:
         try:
-            summary, df = fetch_eodhd_options(
-                symbol=arguments["symbol"],
-                start_date=arguments.get("start_date"),
-                end_date=arguments.get("end_date"),
-                option_type=arguments.get("option_type"),
-            )
+            summary, df = provider.execute(tool_name, arguments)
             if df is not None:
+                # Stock-price tools display data but don't replace the active dataset
+                if "stock" in tool_name:
+                    summary += f"\n\n{_df_to_markdown(df)}"
+                    return summary, dataset
                 return summary, df
             return summary, dataset
         except Exception as e:
-            return f"Error fetching EODHD data: {e}", dataset
+            return f"Error running {tool_name}: {e}", dataset
 
     if tool_name == "preview_data":
         if dataset is None:
@@ -386,30 +378,37 @@ def execute_tool(
         )
         return info, dataset
 
-    # Strategy execution
-    if tool_name in STRATEGIES:
-        if dataset is None:
+    if tool_name == "run_strategy":
+        strategy_name = arguments.pop("strategy_name", None)
+        if not strategy_name or strategy_name not in STRATEGIES:
             return (
-                "No dataset loaded. Please load a CSV file first with load_csv_data.",
+                f"Unknown strategy '{strategy_name}'. "
+                f"Available: {', '.join(STRATEGY_NAMES)}",
                 dataset,
             )
-        func, _, _ = STRATEGIES[tool_name]
+        if dataset is None:
+            return "No dataset loaded. Load data first.", dataset
+        func, _, _ = STRATEGIES[strategy_name]
+        # Strip calendar params for non-calendar strategies
+        if strategy_name not in CALENDAR_STRATEGIES:
+            for key in CALENDAR_EXTRA_PARAMS:
+                arguments.pop(key, None)
         try:
             result = func(dataset, **arguments)
             if result.empty:
                 return (
-                    f"{tool_name} returned no results with the given parameters. "
-                    "Try relaxing the filters (e.g. increase max_entry_dte or max_otm_pct).",
+                    f"{strategy_name} returned no results. "
+                    "Try relaxing filters (increase max_entry_dte or max_otm_pct).",
                     dataset,
                 )
             is_raw = arguments.get("raw", False)
             mode = "raw trades" if is_raw else "aggregated stats"
             summary = (
-                f"**{tool_name}** — {len(result)} {mode}\n\n"
+                f"**{strategy_name}** — {len(result)} {mode}\n\n"
                 f"{_df_to_markdown(result)}"
             )
             return summary, dataset
         except Exception as e:
-            return f"Error running {tool_name}: {e}", dataset
+            return f"Error running {strategy_name}: {e}", dataset
 
     return f"Unknown tool: {tool_name}", dataset
