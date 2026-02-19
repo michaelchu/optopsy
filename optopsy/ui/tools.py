@@ -358,7 +358,9 @@ def execute_tool(
     """
     if tool_name == "load_csv_data":
         filename = arguments["filename"]
-        filepath = os.path.join(DATA_DIR, filename)
+        filepath = os.path.realpath(os.path.join(DATA_DIR, filename))
+        if not filepath.startswith(os.path.realpath(DATA_DIR)):
+            return ToolResult("Access denied: path outside data directory.", dataset)
         if not os.path.exists(filepath):
             available = os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else []
             return ToolResult(
@@ -410,7 +412,7 @@ def execute_tool(
         return ToolResult(summary, dataset, display)
 
     if tool_name == "run_strategy":
-        strategy_name = arguments.pop("strategy_name", None)
+        strategy_name = arguments.get("strategy_name")
         if not strategy_name or strategy_name not in STRATEGIES:
             return ToolResult(
                 f"Unknown strategy '{strategy_name}'. "
@@ -420,12 +422,15 @@ def execute_tool(
         if dataset is None:
             return ToolResult("No dataset loaded. Load data first.", dataset)
         func, _, _ = STRATEGIES[strategy_name]
-        # Strip calendar params for non-calendar strategies
-        if strategy_name not in CALENDAR_STRATEGIES:
-            for key in CALENDAR_EXTRA_PARAMS:
-                arguments.pop(key, None)
+        # Build a clean kwargs dict without mutating the original arguments
+        strat_kwargs = {
+            k: v
+            for k, v in arguments.items()
+            if k != "strategy_name"
+            and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
+        }
         try:
-            result = func(dataset, **arguments)
+            result = func(dataset, **strat_kwargs)
             if result.empty:
                 return ToolResult(
                     f"{strategy_name} returned no results. "

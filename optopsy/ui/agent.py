@@ -101,6 +101,9 @@ and consistency (lower std is better).
 """
 
 
+_MAX_TOOL_ITERATIONS = 15
+
+
 class OptopsyAgent:
     def __init__(self, model: str = "gpt-4o-mini"):
         self.model = model
@@ -123,7 +126,7 @@ class OptopsyAgent:
         """
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
-        while True:
+        for _iteration in range(_MAX_TOOL_ITERATIONS):
             # -- tool-calling turns: non-streaming for simplicity --
             try:
                 response = await litellm.acompletion(
@@ -136,6 +139,15 @@ class OptopsyAgent:
                 raise RuntimeError(
                     "No API key configured. Add your LLM provider key "
                     "(e.g. `OPENAI_API_KEY`) to a `.env` file in this directory."
+                )
+            except litellm.RateLimitError:
+                raise RuntimeError(
+                    "LLM rate limit exceeded. Wait a moment and try again, "
+                    "or switch to a model with higher rate limits."
+                )
+            except (litellm.ServiceUnavailableError, litellm.APIConnectionError):
+                raise RuntimeError(
+                    "LLM service is temporarily unavailable. Please try again shortly."
                 )
 
             choice = response.choices[0]
@@ -195,3 +207,9 @@ class OptopsyAgent:
                         "content": result.llm_summary,
                     }
                 )
+
+        # If we exhausted the iteration limit, return what we have
+        raise RuntimeError(
+            f"Agent exceeded {_MAX_TOOL_ITERATIONS} tool-calling iterations. "
+            "This likely indicates a loop — please simplify your request."
+        )

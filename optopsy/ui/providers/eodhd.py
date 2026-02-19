@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from datetime import timedelta
 from typing import Any
@@ -35,6 +36,15 @@ _COLUMN_MAP = {
 }
 
 
+def _safe_raise_for_status(resp: requests.Response) -> None:
+    """Like resp.raise_for_status() but strips api_token from the error URL."""
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as exc:
+        sanitized = re.sub(r"api_token=[^&\s]+", "api_token=***", str(exc))
+        raise requests.HTTPError(sanitized, response=resp) from None
+
+
 class EODHDProvider(DataProvider):
 
     @property
@@ -67,7 +77,7 @@ class EODHDProvider(DataProvider):
                 start_date=arguments.get("start_date"),
                 end_date=arguments.get("end_date"),
             )
-        raise ValueError(f"Unknown tool: {tool_name}")
+        return f"Unknown tool: {tool_name}", None
 
     # -- private helpers --
 
@@ -76,13 +86,17 @@ class EODHDProvider(DataProvider):
 
     @staticmethod
     def _request_with_retry(url: str, params: dict) -> requests.Response:
+        last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):
             try:
                 return requests.get(url, params=params, timeout=_TIMEOUT)
-            except (requests.ConnectionError, requests.Timeout):
+            except requests.RequestException as exc:
+                last_exc = exc
                 if attempt == _MAX_RETRIES:
                     raise
                 time.sleep(2**attempt)
+        # Unreachable, but keeps mypy happy
+        raise last_exc  # type: ignore[misc]
 
     def _fetch_options(
         self,
@@ -126,7 +140,7 @@ class EODHDProvider(DataProvider):
             if resp.status_code == 422:
                 # API rejects large offsets — return what we collected so far
                 break
-            resp.raise_for_status()
+            _safe_raise_for_status(resp)
 
             data = resp.json()
             rows = data.get("data", [])
@@ -213,6 +227,14 @@ class EODHDProvider(DataProvider):
         df = df[[c for c in keep if c in df.columns]]
 
         df = df.dropna(subset=["underlying_price"])
+
+        if df.empty:
+            return (
+                f"Fetched options for {symbol.upper()} from EODHD but could not "
+                "resolve underlying stock prices (yfinance lookup failed). "
+                "Try a different date range or check the ticker symbol.",
+                None,
+            )
 
         summary = (
             f"Fetched {len(df)} options records for {symbol.upper()} from EODHD. "
