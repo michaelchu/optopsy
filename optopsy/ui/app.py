@@ -1,5 +1,9 @@
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import chainlit as cl
 
 from optopsy.ui.agent import OptopsyAgent
@@ -12,18 +16,33 @@ async def on_chat_start():
     cl.user_session.set("agent", agent)
     cl.user_session.set("messages", [])
 
+    # Detect configured data providers
+    providers = []
+    if os.environ.get("EODHD_API_KEY"):
+        providers.append("EODHD")
+
+    provider_line = ""
+    if providers:
+        provider_line = f"Data providers: {', '.join(providers)}\n"
+    else:
+        provider_line = (
+            "No data providers configured. "
+            "Set `EODHD_API_KEY` in your `.env` file to enable live data.\n"
+        )
+
     await cl.Message(
         content=(
             "Welcome to **Optopsy Chat** — your options strategy backtesting assistant.\n\n"
             "**Getting started:**\n"
-            "1. Ask me to list available data files\n"
-            "2. Load a file and preview it\n"
-            "3. Run any of 28 options strategies — just describe what you want in plain English\n\n"
+            "1. Fetch options data or load an existing file\n"
+            "2. Preview the data\n"
+            "3. Run any of 28 options strategies — just describe what you want\n\n"
             "**Example prompts:**\n"
-            '- *"What files are available?"*\n'
+            '- *"Fetch AAPL options data from the last 6 months"*\n'
             '- *"Load my file and show me what\'s in it"*\n'
             '- *"Run a long call spread with 60 DTE entry"*\n'
             '- *"Compare iron condors vs iron butterflies"*\n\n'
+            f"{provider_line}"
             f"Using model: `{model}` (set `OPTOPSY_MODEL` env var to change)"
         )
     ).send()

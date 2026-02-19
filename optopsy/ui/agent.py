@@ -6,19 +6,24 @@ import pandas as pd
 
 from .tools import execute_tool, get_tool_schemas
 
+litellm.suppress_debug_info = True
+
 SYSTEM_PROMPT = """\
 You are an options strategy backtesting assistant powered by the optopsy library.
 
 You help users:
-1. Load option chain data from CSV files in the data directory
+1. Fetch or load option chain data
 2. Run backtests on 28 different options strategies
 3. Interpret results and explain strategy performance
 
 ## Workflow
-- Use `list_data_files` to see what CSV files are available in the data directory.
-- Use `load_csv_data` to load a file into memory.
+- If a data provider is available (e.g. `fetch_eodhd_options`), use it to fetch data for a ticker. \
+This loads the data directly into memory — no file step needed.
+- Alternatively, use `list_data_files` and `load_csv_data` to load from local CSV files.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
+- Only tools that appear in your tool list are available. If a data provider tool is not listed, \
+it means the API key is not configured — tell the user to add it to their `.env` file.
 
 ## Available Strategies
 Single-leg: long_calls, long_puts, short_calls, short_puts
@@ -115,12 +120,18 @@ class OptopsyAgent:
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
         while True:
-            response = await litellm.acompletion(
-                model=self.model,
-                messages=full_messages,
-                tools=self.tools,
-                tool_choice="auto",
-            )
+            try:
+                response = await litellm.acompletion(
+                    model=self.model,
+                    messages=full_messages,
+                    tools=self.tools,
+                    tool_choice="auto",
+                )
+            except litellm.AuthenticationError:
+                raise RuntimeError(
+                    "No API key configured. Add your LLM provider key "
+                    "(e.g. `OPENAI_API_KEY`) to a `.env` file in this directory."
+                )
 
             choice = response.choices[0]
             assistant_msg = choice.message

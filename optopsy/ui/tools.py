@@ -6,6 +6,8 @@ import pandas as pd
 
 import optopsy as op
 
+from .providers import eodhd_available, fetch_eodhd_options, get_eodhd_tool_schema
+
 DATA_DIR = os.path.join(os.getcwd(), "optopsy_data")
 
 STRATEGY_PARAMS_SCHEMA = {
@@ -287,6 +289,10 @@ def get_tool_schemas() -> list[dict]:
         }
     )
 
+    # Data provider tools (only added when API keys are configured)
+    if eodhd_available():
+        tools.append(get_eodhd_tool_schema())
+
     # Strategy tools
     for name, (_, description, is_calendar) in STRATEGIES.items():
         tools.append(_build_strategy_tool(name, description, is_calendar))
@@ -353,6 +359,20 @@ def execute_tool(
         if not files:
             return "No CSV files found in the data directory.", dataset
         return f"Available files: {files}", dataset
+
+    if tool_name == "fetch_eodhd_options":
+        try:
+            summary, df = fetch_eodhd_options(
+                symbol=arguments["symbol"],
+                start_date=arguments.get("start_date"),
+                end_date=arguments.get("end_date"),
+                option_type=arguments.get("option_type"),
+            )
+            if df is not None:
+                return summary, df
+            return summary, dataset
+        except Exception as e:
+            return f"Error fetching EODHD data: {e}", dataset
 
     if tool_name == "preview_data":
         if dataset is None:
