@@ -310,20 +310,58 @@ def ensure_data_dir():
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
+class ToolResult:
+    """Holds separate outputs for the LLM context and the user-facing UI.
+
+    ``llm_summary`` is a short string sent to the LLM so it can reason about
+    what happened without blowing up the token budget.
+    ``user_display`` is the richer version (with full tables) shown in the UI.
+    """
+
+    __slots__ = ("llm_summary", "user_display", "dataset")
+
+    def __init__(
+        self,
+        llm_summary: str,
+        dataset: pd.DataFrame | None,
+        user_display: str | None = None,
+    ):
+        self.llm_summary = llm_summary
+        self.user_display = user_display or llm_summary
+        self.dataset = dataset
+
+
+def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
+    """Return a compact text summary of a DataFrame for the LLM."""
+    lines = [
+        f"{label}: {len(df)} rows, {len(df.columns)} columns",
+        f"Columns: {list(df.columns)}",
+    ]
+    if "quote_date" in df.columns:
+        lines.append(
+            f"Date range: {df['quote_date'].min().date()} to {df['quote_date'].max().date()}"
+        )
+    if "underlying_symbol" in df.columns:
+        lines.append(f"Symbols: {df['underlying_symbol'].unique().tolist()}")
+    return "\n".join(lines)
+
+
 def execute_tool(
     tool_name: str, arguments: dict[str, Any], dataset: pd.DataFrame | None
-) -> tuple[str, pd.DataFrame | None]:
+) -> ToolResult:
     """
-    Execute a tool call and return (result_text, updated_dataset).
+    Execute a tool call and return a ToolResult.
 
-    The dataset is the currently loaded DataFrame (or None if nothing loaded yet).
+    The ToolResult contains a concise ``llm_summary`` (sent to the LLM) and a
+    richer ``user_display`` (shown in the chat UI).  The ``dataset`` field
+    carries the currently-active DataFrame forward.
     """
     if tool_name == "load_csv_data":
         filename = arguments["filename"]
         filepath = os.path.join(DATA_DIR, filename)
         if not os.path.exists(filepath):
             available = os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else []
-            return (
+            return ToolResult(
                 f"File '{filename}' not found. Available files: {available}",
                 dataset,
             )
@@ -334,22 +372,18 @@ def execute_tool(
             kwargs["end_date"] = arguments["end_date"]
         try:
             df = op.csv_data(filepath, **kwargs)
-            summary = (
-                f"Loaded '{filename}': {len(df)} rows, "
-                f"columns: {list(df.columns)}, "
-                f"date range: {df['quote_date'].min()} to {df['quote_date'].max()}, "
-                f"symbols: {df['underlying_symbol'].unique().tolist()}"
-            )
-            return summary, df
+            summary = _df_summary(df, f"Loaded '{filename}'")
+            display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
+            return ToolResult(summary, df, display)
         except Exception as e:
-            return f"Error loading '{filename}': {e}", dataset
+            return ToolResult(f"Error loading '{filename}': {e}", dataset)
 
     if tool_name == "list_data_files":
         ensure_data_dir()
         files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
         if not files:
-            return "No CSV files found in the data directory.", dataset
-        return f"Available files: {files}", dataset
+            return ToolResult("No CSV files found in the data directory.", dataset)
+        return ToolResult(f"Available files: {files}", dataset)
 
     # Generic data-provider dispatch
     provider = get_provider_for_tool(tool_name)
@@ -357,37 +391,34 @@ def execute_tool(
         try:
             summary, df = provider.execute(tool_name, arguments)
             if df is not None:
-                # Stock-price tools display data but don't replace the active dataset
                 if "stock" in tool_name:
-                    summary += f"\n\n{_df_to_markdown(df)}"
-                    return summary, dataset
-                return summary, df
-            return summary, dataset
+                    display = f"{summary}\n\n{_df_to_markdown(df)}"
+                    return ToolResult(summary, dataset, display)
+                display = (
+                    f"{summary}\n\nFirst 5 rows:\n" f"{_df_to_markdown(df.head())}"
+                )
+                return ToolResult(summary, df, display)
+            return ToolResult(summary, dataset)
         except Exception as e:
-            return f"Error running {tool_name}: {e}", dataset
+            return ToolResult(f"Error running {tool_name}: {e}", dataset)
 
     if tool_name == "preview_data":
         if dataset is None:
-            return "No dataset loaded. Use load_csv_data first.", dataset
-        info = (
-            f"Shape: {dataset.shape}\n"
-            f"Columns: {list(dataset.columns)}\n"
-            f"Date range: {dataset['quote_date'].min()} to {dataset['quote_date'].max()}\n"
-            f"Symbols: {dataset['underlying_symbol'].unique().tolist()}\n\n"
-            f"First 5 rows:\n{_df_to_markdown(dataset.head())}"
-        )
-        return info, dataset
+            return ToolResult("No dataset loaded. Use load_csv_data first.", dataset)
+        summary = _df_summary(dataset)
+        display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(dataset.head())}"
+        return ToolResult(summary, dataset, display)
 
     if tool_name == "run_strategy":
         strategy_name = arguments.pop("strategy_name", None)
         if not strategy_name or strategy_name not in STRATEGIES:
-            return (
+            return ToolResult(
                 f"Unknown strategy '{strategy_name}'. "
                 f"Available: {', '.join(STRATEGY_NAMES)}",
                 dataset,
             )
         if dataset is None:
-            return "No dataset loaded. Load data first.", dataset
+            return ToolResult("No dataset loaded. Load data first.", dataset)
         func, _, _ = STRATEGIES[strategy_name]
         # Strip calendar params for non-calendar strategies
         if strategy_name not in CALENDAR_STRATEGIES:
@@ -396,19 +427,21 @@ def execute_tool(
         try:
             result = func(dataset, **arguments)
             if result.empty:
-                return (
+                return ToolResult(
                     f"{strategy_name} returned no results. "
                     "Try relaxing filters (increase max_entry_dte or max_otm_pct).",
                     dataset,
                 )
             is_raw = arguments.get("raw", False)
             mode = "raw trades" if is_raw else "aggregated stats"
-            summary = (
-                f"**{strategy_name}** — {len(result)} {mode}\n\n"
-                f"{_df_to_markdown(result)}"
-            )
-            return summary, dataset
+            table = _df_to_markdown(result)
+            display = f"**{strategy_name}** — {len(result)} {mode}\n\n{table}"
+            # LLM gets the full table for strategy results so it can interpret
+            # the numbers, but capped at 20 rows to stay within token budget.
+            llm_table = _df_to_markdown(result, max_rows=20)
+            llm_summary = f"{strategy_name} — {len(result)} {mode}\n\n{llm_table}"
+            return ToolResult(llm_summary, dataset, display)
         except Exception as e:
-            return f"Error running {strategy_name}: {e}", dataset
+            return ToolResult(f"Error running {strategy_name}: {e}", dataset)
 
-    return f"Unknown tool: {tool_name}", dataset
+    return ToolResult(f"Unknown tool: {tool_name}", dataset)

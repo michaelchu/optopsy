@@ -4,7 +4,7 @@ from typing import Any
 import litellm
 import pandas as pd
 
-from .tools import execute_tool, get_tool_schemas
+from .tools import ToolResult, execute_tool, get_tool_schemas
 
 litellm.suppress_debug_info = True
 
@@ -108,18 +108,23 @@ class OptopsyAgent:
         self.dataset: pd.DataFrame | None = None
 
     async def chat(
-        self, messages: list[dict[str, Any]], on_tool_call=None
+        self,
+        messages: list[dict[str, Any]],
+        on_tool_call=None,
+        on_token=None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """
         Run the agent loop: send messages to LLM, execute any tool calls,
         and return (final_response_text, updated_messages).
 
-        on_tool_call is an optional async callback(tool_name, arguments, result)
-        for the UI to display tool execution steps.
+        on_tool_call: async callback(tool_name, arguments, result) — UI step display.
+        on_token: async callback(token_str) — called for each streamed token on
+                  the *final* response (the one shown to the user).
         """
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
         while True:
+            # -- tool-calling turns: non-streaming for simplicity --
             try:
                 response = await litellm.acompletion(
                     model=self.model,
@@ -155,10 +160,17 @@ class OptopsyAgent:
                 ]
             full_messages.append(msg_dict)
 
-            # If no tool calls, we're done
+            # If no tool calls, this is the final answer.
             if not assistant_msg.tool_calls:
-                # Return only the user-facing messages (strip system prompt)
-                return assistant_msg.content or "", full_messages[1:]
+                # If we already got the full response above (non-streamed
+                # intermediate turns that happened to be the last one), just
+                # emit the content token-by-token for the UI.
+                content = assistant_msg.content or ""
+                if on_token and content:
+                    # Emit in small chunks so the UI feels responsive
+                    for i in range(0, len(content), 4):
+                        await on_token(content[i : i + 4])
+                return content, full_messages[1:]
 
             # Execute each tool call
             for tc in assistant_msg.tool_calls:
@@ -168,15 +180,18 @@ class OptopsyAgent:
                 except json.JSONDecodeError:
                     args = {}
 
-                result_text, self.dataset = execute_tool(func_name, args, self.dataset)
+                result = execute_tool(func_name, args, self.dataset)
+                self.dataset = result.dataset
 
+                # Show the rich version to the user in the UI
                 if on_tool_call:
-                    await on_tool_call(func_name, args, result_text)
+                    await on_tool_call(func_name, args, result.user_display)
 
+                # Send only the concise summary to the LLM
                 full_messages.append(
                     {
                         "role": "tool",
                         "tool_call_id": tc.id,
-                        "content": result_text,
+                        "content": result.llm_summary,
                     }
                 )

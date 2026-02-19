@@ -58,19 +58,24 @@ async def on_message(message: cl.Message):
 
     messages.append({"role": "user", "content": message.content})
 
-    # Callback to show tool calls as steps in the UI
+    # Show tool calls as expandable steps with a loading indicator
     async def on_tool_call(tool_name, arguments, result):
         async with cl.Step(name=tool_name, type="tool") as step:
             step.input = str(arguments)
             step.output = result
 
+    # Stream the final LLM response token-by-token
     response_msg = cl.Message(content="")
     await response_msg.send()
 
+    async def on_token(token: str):
+        await response_msg.stream_token(token)
+
     try:
         result_text, updated_messages = await agent.chat(
-            messages, on_tool_call=on_tool_call
+            messages, on_tool_call=on_tool_call, on_token=on_token
         )
+        # Finalize the streamed message
         response_msg.content = result_text
         await response_msg.update()
         cl.user_session.set("messages", updated_messages)

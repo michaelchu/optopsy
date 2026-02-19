@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import timedelta
 from typing import Any
 
@@ -10,6 +11,9 @@ from .base import DataProvider
 
 _BASE_URL = "https://eodhd.com/api/mp/unicornbay"
 _PAGE_LIMIT = 1000
+_MAX_OFFSET = 10000  # EODHD rejects offsets beyond ~10K
+_TIMEOUT = 60
+_MAX_RETRIES = 2
 _FIELDS = (
     "underlying_symbol,type,exp_date,tradetime,strike,bid,ask,"
     "last,volume,delta,gamma,theta,vega,open_interest,midpoint"
@@ -70,6 +74,16 @@ class EODHDProvider(DataProvider):
     def _get_api_key(self) -> str | None:
         return os.environ.get(self.env_key)
 
+    @staticmethod
+    def _request_with_retry(url: str, params: dict) -> requests.Response:
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                return requests.get(url, params=params, timeout=_TIMEOUT)
+            except (requests.ConnectionError, requests.Timeout):
+                if attempt == _MAX_RETRIES:
+                    raise
+                time.sleep(2**attempt)
+
     def _fetch_options(
         self,
         symbol: str,
@@ -100,14 +114,18 @@ class EODHDProvider(DataProvider):
         all_rows: list[dict] = []
         url = f"{_BASE_URL}/options/eod"
 
+        offset = 0
         while True:
-            resp = requests.get(url, params=params, timeout=30)
+            resp = self._request_with_retry(url, params)
             if resp.status_code == 401:
                 return "EODHD API key is invalid or expired.", None
             if resp.status_code == 403:
                 return "EODHD API access denied. Check your subscription plan.", None
             if resp.status_code == 429:
                 return "EODHD rate limit exceeded. Try again later.", None
+            if resp.status_code == 422:
+                # API rejects large offsets — return what we collected so far
+                break
             resp.raise_for_status()
 
             data = resp.json()
@@ -122,6 +140,11 @@ class EODHDProvider(DataProvider):
             next_url = data.get("links", {}).get("next")
             if not next_url:
                 break
+
+            offset += _PAGE_LIMIT
+            if offset >= _MAX_OFFSET:
+                break
+
             url = next_url
             params = {"api_token": api_key}
 
@@ -219,7 +242,7 @@ class EODHDProvider(DataProvider):
             params["to"] = end_date
 
         url = f"https://eodhd.com/api/eod/{symbol.upper()}.US"
-        resp = requests.get(url, params=params, timeout=30)
+        resp = self._request_with_retry(url, params)
 
         if resp.status_code == 401:
             return "EODHD API key is invalid or expired.", None
