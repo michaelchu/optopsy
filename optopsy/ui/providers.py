@@ -30,7 +30,7 @@ EODHD_COLUMN_MAP = {
 
 
 def _get_eodhd_key() -> str | None:
-    return os.environ.get("EODHD_API_TOKEN")
+    return os.environ.get("EODHD_API_KEY")
 
 
 def eodhd_available() -> bool:
@@ -46,7 +46,7 @@ def fetch_eodhd_options(
     """Fetch historical EOD options data from EODHD marketplace API."""
     api_key = _get_eodhd_key()
     if not api_key:
-        return "EODHD_API_TOKEN not configured. Add it to your .env file.", None
+        return "EODHD_API_KEY not configured. Add it to your .env file.", None
 
     params: dict[str, Any] = {
         "api_token": api_key,
