@@ -20,7 +20,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
 
-## 🤖 AI Chat UI ✨ NEW
+## 🤖 AI Chat UI ✨ NEW (Beta)
 
 Optopsy now includes an AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language — no code required.
 
