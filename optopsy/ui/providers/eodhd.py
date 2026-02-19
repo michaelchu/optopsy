@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -9,6 +10,8 @@ import requests
 import yfinance as yf
 
 from .base import DataProvider
+
+_log = logging.getLogger(__name__)
 
 _BASE_URL = "https://eodhd.com/api/mp/unicornbay"
 _PAGE_LIMIT = 1000
@@ -60,6 +63,10 @@ class EODHDProvider(DataProvider):
 
     def get_tool_names(self) -> list[str]:
         return ["fetch_eodhd_options", "fetch_eodhd_stock_prices"]
+
+    def replaces_dataset(self, tool_name: str) -> bool:
+        # Stock price lookups are display-only; options data replaces the dataset.
+        return tool_name != "fetch_eodhd_stock_prices"
 
     def execute(
         self, tool_name: str, arguments: dict[str, Any]
@@ -151,12 +158,9 @@ class EODHDProvider(DataProvider):
                 attrs = row.get("attributes", row)
                 all_rows.append(attrs)
 
-            next_url = data.get("links", {}).get("next")
-            if not next_url:
-                break
-
             offset += _PAGE_LIMIT
-            if offset >= _MAX_OFFSET:
+            next_url = data.get("links", {}).get("next")
+            if not next_url or offset >= _MAX_OFFSET:
                 break
 
             url = next_url
@@ -208,8 +212,10 @@ class EODHDProvider(DataProvider):
                 ).dt.tz_localize(None)
                 df = df.merge(price_map, on="quote_date", how="left")
             else:
+                _log.warning("yfinance returned no data for %s", symbol.upper())
                 df["underlying_price"] = pd.NA
-        except Exception:
+        except Exception as exc:
+            _log.warning("yfinance price lookup failed for %s: %s", symbol.upper(), exc)
             df["underlying_price"] = pd.NA
 
         keep = [
@@ -272,7 +278,7 @@ class EODHDProvider(DataProvider):
             return "EODHD API access denied. Check your subscription plan.", None
         if resp.status_code == 429:
             return "EODHD rate limit exceeded. Try again later.", None
-        resp.raise_for_status()
+        _safe_raise_for_status(resp)
 
         data = resp.json()
         if not data:

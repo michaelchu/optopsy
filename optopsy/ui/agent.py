@@ -123,6 +123,11 @@ class OptopsyAgent:
         on_tool_call: async callback(tool_name, arguments, result) — UI step display.
         on_token: async callback(token_str) — called for each streamed token on
                   the *final* response (the one shown to the user).
+
+        Note: The system prompt is prepended on every LLM call so context is
+        maintained across tool-calling iterations.  This is intentional but
+        means token usage grows with conversation length.  For very long
+        sessions consider adding history summarization before calling chat().
         """
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 

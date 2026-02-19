@@ -57,9 +57,12 @@ Important conventions
   Prefix with the provider name, e.g. ``fetch_polygon_options``.
 - ``execute()`` returns ``(summary_str, DataFrame | None)``.
   Returning a DataFrame replaces the user's active dataset (used for
-  backtesting). Return None for display-only tools (e.g. stock prices)
-  — the caller in tools.py uses ``"stock" in tool_name`` to decide
-  whether the DataFrame replaces the active dataset or is just displayed.
+  backtesting). Return None for display-only tools (e.g. stock prices).
+- Override ``replaces_dataset(tool_name)`` to control which tools
+  replace the active dataset vs. just displaying data.  The default
+  returns True, meaning all tools that return a DataFrame will replace
+  the active dataset.  Override it to return False for display-only
+  tools like stock price lookups.
 - ``is_available()`` has a default implementation that checks
   ``os.environ.get(self.env_key)``. Override it if your provider needs
   more complex availability logic (e.g. multiple keys).
@@ -124,6 +127,14 @@ class DataProvider(ABC):
         Must exactly match the ``name`` values in ``get_tool_schemas()``.
         """
         ...
+
+    def replaces_dataset(self, tool_name: str) -> bool:
+        """Return True if this tool's DataFrame should replace the active dataset.
+
+        Override to return False for display-only tools (e.g. stock price
+        lookups) whose DataFrame should be shown but not used for backtesting.
+        """
+        return True
 
     @abstractmethod
     def execute(

@@ -7,7 +7,7 @@ import optopsy as op
 
 from .providers import get_all_provider_tool_schemas, get_provider_for_tool
 
-DATA_DIR = os.path.join(os.getcwd(), "optopsy_data")
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "data")
 
 STRATEGY_PARAMS_SCHEMA = {
     "max_entry_dte": {
@@ -393,7 +393,9 @@ def execute_tool(
         try:
             summary, df = provider.execute(tool_name, arguments)
             if df is not None:
-                if "stock" in tool_name:
+                if not provider.replaces_dataset(tool_name):
+                    # Display-only tool (e.g. stock prices) — show but keep
+                    # the current active dataset unchanged.
                     display = f"{summary}\n\n{_df_to_markdown(df)}"
                     return ToolResult(summary, dataset, display)
                 display = (
@@ -449,4 +451,7 @@ def execute_tool(
         except Exception as e:
             return ToolResult(f"Error running {strategy_name}: {e}", dataset)
 
-    return ToolResult(f"Unknown tool: {tool_name}", dataset)
+    available = ["load_csv_data", "list_data_files", "preview_data", "run_strategy"]
+    return ToolResult(
+        f"Unknown tool: {tool_name}. Available: {', '.join(available)}", dataset
+    )
