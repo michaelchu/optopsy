@@ -43,5 +43,15 @@ MANIFEST
 /venv/
 .claude/
 
+# Environment variables
+.env
+
+# Chainlit
+.chainlit/
+chainlit.md
+
+# Optopsy data uploads
+optopsy_data/
+
 # MkDocs build output
 /site/
