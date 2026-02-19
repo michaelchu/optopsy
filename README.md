@@ -20,13 +20,47 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
 
+## 🤖 AI Chat UI ✨ NEW
+
+Optopsy now includes an AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language — no code required.
+
+**What it does:**
+- Fetches historical options data via the [EODHD US Stock Options Data API (1.0.0)](https://eodhd.com/financial-apis/options-data-api) (API key required)
+- Runs any of the 28 built-in strategies via conversational prompts
+- Explains results and compares strategies side by side
+- Works with any OpenAI-compatible LLM (GPT-4o, Claude, Llama, etc. via [LiteLLM](https://github.com/BerriAI/litellm))
+
+**Install and run:**
+
+```bash
+pip install optopsy
+```
+
+Create a `.env` file with your API keys (see `.env.example`):
+
+```
+OPENAI_API_KEY=sk-...
+EODHD_API_KEY=...
+```
+
+Then launch:
+
+```bash
+optopsy-chat
+```
+
+**Example prompts:**
+- *"Fetch AAPL options from the last 3 months and run a short put spread"*
+- *"Compare iron condors vs iron butterflies on SPY"*
+- *"Show me covered call performance with 30-delta entries"*
+
 ## Installation
 
 ```bash
 pip install optopsy
 ```
 
-**Requirements:** Python 3.8+, Pandas 2.0+, NumPy 1.26+
+**Requirements:** Python 3.10+, Pandas 2.0+, NumPy 1.26+
 
 ## Quick Start
 
@@ -291,6 +325,7 @@ results = op.short_strangles(df)
 
 Optopsy works with any historical options data. Some sources:
 
+- [EODHD US Stock Options Data API (1.0.0)](https://eodhd.com/financial-apis/options-data-api) - Built-in integration via the chat UI (API key required)
 - [HistoricalOptionData.com](https://historicaloptiondata.com/) - Free samples available
 - [CBOE DataShop](https://datashop.cboe.com/) - Official exchange data
 - [Polygon.io](https://polygon.io/) - Options data API
