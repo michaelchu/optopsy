@@ -46,6 +46,8 @@ default_kwargs: Dict[str, Any] = {
     # Signal filtering (optional)
     "entry_signal": None,
     "exit_signal": None,
+    # External stock data for signal computation (optional)
+    "stock_data": None,
     # Slippage settings
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)

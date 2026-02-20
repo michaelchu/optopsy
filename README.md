@@ -14,6 +14,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 ## Features
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via pandas-ta
 - **Greeks Filtering** - Filter options by delta to target specific probability ranges
 - **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
 - **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
@@ -73,7 +74,7 @@ pip install optopsy
 pip install optopsy[ui]
 ```
 
-**Requirements:** Python 3.10+, Pandas 2.0+, NumPy 1.26+
+**Requirements:** Python 3.12–3.13, Pandas 2.0+, NumPy 1.26+
 
 ## Quick Start
 
@@ -179,6 +180,45 @@ results = op.long_call_calendar(
 # Diagonal spread: different strikes and expirations
 results = op.long_call_diagonal(data, raw=True)
 ```
+
+## Entry Signals
+
+Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta):
+
+```python
+from optopsy import long_calls, rsi_below, sustained, signal, day_of_week
+
+# Enter only when RSI(14) is below 30
+results = long_calls(data, entry_signal=rsi_below(14, 30))
+
+# Require RSI below 30 for 5 consecutive days
+results = long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
+
+# Compose signals with & and |
+sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))  # Oversold + Thursday
+results = long_calls(data, entry_signal=sig)
+```
+
+### Available Signals
+
+| Category | Signals |
+|----------|---------|
+| **RSI** | `rsi_below`, `rsi_above` |
+| **SMA** | `sma_below`, `sma_above` |
+| **MACD** | `macd_cross_above`, `macd_cross_below` |
+| **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` |
+| **EMA Crossover** | `ema_cross_above`, `ema_cross_below` |
+| **ATR Volatility** | `atr_above`, `atr_below` |
+| **Calendar** | `day_of_week` |
+
+### Combinators
+
+| Function | Description |
+|----------|-------------|
+| `sustained(signal, days=5)` | Require signal True for N consecutive bars |
+| `and_signals(sig1, sig2, ...)` | All signals must be True |
+| `or_signals(sig1, sig2, ...)` | At least one signal must be True |
+| `Signal` class with `&` / `\|` | Fluent operator chaining |
 
 ## Greeks Support
 

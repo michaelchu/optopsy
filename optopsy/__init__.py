@@ -67,6 +67,17 @@ from .signals import (
     sma_above,
     and_signals,
     or_signals,
+    macd_cross_above,
+    macd_cross_below,
+    bb_above_upper,
+    bb_below_lower,
+    ema_cross_above,
+    ema_cross_below,
+    atr_above,
+    atr_below,
+    sustained,
+    Signal,
+    signal,
 )
 
 __all__ = [
@@ -118,4 +129,15 @@ __all__ = [
     "sma_above",
     "and_signals",
     "or_signals",
+    "macd_cross_above",
+    "macd_cross_below",
+    "bb_above_upper",
+    "bb_below_lower",
+    "ema_cross_above",
+    "ema_cross_below",
+    "atr_above",
+    "atr_below",
+    "sustained",
+    "Signal",
+    "signal",
 ]
