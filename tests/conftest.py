@@ -190,6 +190,66 @@ def data_with_volume():
     return pd.DataFrame(data=d, columns=cols)
 
 
+@pytest.fixture
+def option_data_entry_exit():
+    """
+    Option data with clear entry and exit dates for testing signal filtering.
+    Entry date: 2018-01-04 (Thursday) with DTE=30
+    Exit date: 2018-02-02 (expiration, DTE=0)
+
+    Also includes 2018-01-03 (Wednesday) as an entry date that should be
+    filtered out by day_of_week(3) (Thursday only).
+    """
+    entry_wed = datetime.datetime(2018, 1, 3)  # Wednesday
+    entry_thu = datetime.datetime(2018, 1, 4)  # Thursday
+    exp_date = datetime.datetime(2018, 2, 3)
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+
+    d = [
+        # Wednesday entry
+        ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20],
+        # Thursday entry
+        ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65],
+        ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20],
+        ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60],
+        ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00],
+        # Exit (expiration)
+        ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55],
+        ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05],
+        ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05],
+        ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture
+def stock_data_spx():
+    """Stock data matching the option_data_entry_exit fixture prices."""
+    entry_wed = datetime.datetime(2018, 1, 3)
+    entry_thu = datetime.datetime(2018, 1, 4)
+    exp_date = datetime.datetime(2018, 2, 3)
+    return pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"] * 3,
+            "quote_date": [entry_wed, entry_thu, exp_date],
+            "close": [213.93, 214.50, 220.0],
+        }
+    )
+
+
 @pytest.fixture(scope="module")
 def calendar_data():
     """

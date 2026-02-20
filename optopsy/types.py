@@ -33,6 +33,13 @@ class StrategyParams(TypedDict, total=False):
     entry_signal: Optional[Callable[[pd.DataFrame], "pd.Series[bool]"]]
     exit_signal: Optional[Callable[[pd.DataFrame], "pd.Series[bool]"]]
 
+    # External stock data for signal computation (optional).
+    # When provided, signals receive this OHLCV DataFrame instead of
+    # extracting prices from the option chain. Expected columns:
+    # underlying_symbol, quote_date, and at least close (or underlying_price).
+    # Optional OHLCV columns: open, high, low, volume.
+    stock_data: Optional[pd.DataFrame]
+
     # Slippage settings
     slippage: Literal["mid", "spread", "liquidity"]
     fill_ratio: float

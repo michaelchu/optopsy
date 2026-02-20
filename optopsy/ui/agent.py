@@ -111,6 +111,65 @@ A debit strategy (you pay to enter) has negative total_entry_cost. \
 A credit strategy (you receive premium) has positive total_entry_cost. \
 Positive pct_change = profit, negative = loss.
 
+## Entry Signals
+
+The `run_strategy` tool accepts an optional `entry_signal` parameter that filters which \
+dates are eligible for trade entry based on technical analysis of the underlying price history. \
+Only one signal can be specified per run; combine signals via the Python API for advanced use.
+
+**Momentum / Crossover** (event-based — fires on the crossover bar only):
+- `macd_cross_above` — MACD line crosses above signal line; bullish momentum just emerged (~50 bar warmup)
+- `macd_cross_below` — MACD line crosses below signal line; bearish momentum just emerged (~50 bar warmup)
+- `ema_cross_above_10_50` — EMA(10) crosses above EMA(50); short-term bullish (~50 bar warmup)
+- `ema_cross_below_10_50` — EMA(10) crosses below EMA(50); short-term bearish
+- `ema_cross_above_20_200` — Golden cross; long-term bullish trend confirmation (~200 bar warmup)
+- `ema_cross_below_20_200` — Death cross; long-term bearish trend confirmation
+
+**Mean Reversion / Extremes** (state-based — True on any bar in that condition):
+- `rsi_below_30` — RSI(14) < 30; oversold, potential bounce
+- `rsi_below_20` — RSI(14) < 20; extreme oversold
+- `rsi_above_70` — RSI(14) > 70; overbought, potential reversal
+- `rsi_above_80` — RSI(14) > 80; extreme overbought
+- `bb_below_lower` — Price below lower Bollinger Band(20, 2σ); oversold / mean-reversion setup
+- `bb_above_upper` — Price above upper Bollinger Band(20, 2σ); overbought / breakout
+
+**Trend Filter** (state-based):
+- `sma_above_20` — Price above 20-day SMA; short-term uptrend
+- `sma_below_20` — Price below 20-day SMA; short-term downtrend
+- `sma_above_50` — Price above 50-day SMA; medium-term uptrend
+- `sma_below_50` — Price below 50-day SMA; medium-term downtrend
+
+**Volatility Regime** (state-based; uses real OHLCV data from yfinance when available):
+- `atr_above_high_vol` — ATR > 1.5× median ATR; elevated volatility environment
+- `atr_below_low_vol` — ATR < 0.75× median ATR; calm / low volatility environment
+
+**Calendar / Day Filter**:
+- `day_of_week_monday` — Enter only on Mondays
+- `day_of_week_thursday` — Enter only on Thursdays
+- `day_of_week_friday` — Enter only on Fridays
+
+**⚠ Warmup requirement**: Crossover signals (MACD, EMA) need sufficient price history to compute. \
+MACD needs ~50 bars; EMA(200) needs 200 bars. If the dataset is too short, these signals return no \
+valid dates — use state-based signals (RSI, SMA) instead for shorter datasets.
+
+**`entry_signal_days`** (optional integer): Requires the chosen signal to be True for N consecutive \
+trading days before entering. Works with **any** signal. Omit for default (single-bar) behavior. \
+Example: `entry_signal="rsi_below_30"` + `entry_signal_days=5` means "RSI below 30 for 5+ days in a row".
+
+**Signal data source**: When a signal is used, the system automatically fetches OHLCV stock data from \
+yfinance for proper indicator computation (including ATR with real high/low prices). This is done \
+transparently — no extra parameters needed. If yfinance is unavailable, signals fall back to using \
+the underlying price from the options data.
+
+**Typical use-cases**:
+- "Only sell puts when the market is oversold" → `rsi_below_30`
+- "Buy calls only when momentum is bullish" → `macd_cross_above`
+- "Enter iron condors only in low-vol environments" → `atr_below_low_vol`
+- "Sell covered calls only when trending up" → `sma_above_50`
+- "Enter strangles only on Thursday expirations" → `day_of_week_thursday`
+- "RSI below 30 for more than 5 days" → `entry_signal="rsi_below_30"`, `entry_signal_days=5`
+- "SMA below 50 for 10 days" → `entry_signal="sma_below_50"`, `entry_signal_days=10`
+
 ## Guidelines
 - Always load data before running strategies.
 - **IMPORTANT — no unnecessary re-fetching**: Do not re-fetch data for the same symbol and date range that \
