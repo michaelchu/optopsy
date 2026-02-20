@@ -67,7 +67,12 @@ _INTERIOR_GAP_THRESHOLD = 5
 
 def _parse_date(value: str | None) -> date | None:
     """Parse a YYYY-MM-DD string to a date, or return None."""
-    return datetime.strptime(value, "%Y-%m-%d").date() if value else None
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def _coerce_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
@@ -277,8 +282,12 @@ class EODHDProvider(DataProvider):
         if end_dt and end_dt > cached_max:
             gaps.append((str(cached_max + timedelta(days=1)), str(end_dt)))
         elif end_dt is None:
-            # No end date — fetch from day after cache max onward
-            gaps.append((str(cached_max + timedelta(days=1)), None))
+            # No end date — open-ended fetch starting from the later of
+            # the day after the cache max or the requested start date.
+            gap_start_date = cached_max + timedelta(days=1)
+            if start_dt:
+                gap_start_date = max(gap_start_date, start_dt)
+            gaps.append((str(gap_start_date), None))
 
         return gaps
 
@@ -435,9 +444,12 @@ class EODHDProvider(DataProvider):
                     break
 
                 last_tradetime = max(r.get("tradetime", "") for r in rows)
-                if not last_tradetime:
+                if not last_tradetime or len(last_tradetime) < 10:
                     break
-                next_start = _parse_date(last_tradetime[:10]) + timedelta(days=1)
+                next_start = _parse_date(last_tradetime[:10])
+                if next_start is None:
+                    break
+                next_start = next_start + timedelta(days=1)
                 if gap_end and next_start > _parse_date(gap_end):
                     break
                 base_params["filter[tradetime_from]"] = str(next_start)
@@ -512,7 +524,7 @@ class EODHDProvider(DataProvider):
                 )
 
         if option_type and "option_type" in df.columns:
-            ot = option_type.lower()[0]
+            ot = option_type.lower()[:1]
             df = df[df["option_type"].str.lower().str[0] == ot]
             if df.empty:
                 return df, f"No {option_type} options found for {symbol}."

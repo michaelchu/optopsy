@@ -21,7 +21,11 @@ class ParquetCache:
         self._cache_dir = cache_dir
 
     def _path(self, category: str, symbol: str) -> str:
-        return os.path.join(self._cache_dir, category, f"{symbol.upper()}.parquet")
+        safe_category = os.path.basename(category)
+        safe_symbol = os.path.basename(symbol)
+        return os.path.join(
+            self._cache_dir, safe_category, f"{safe_symbol.upper()}.parquet"
+        )
 
     def read(self, category: str, symbol: str) -> pd.DataFrame | None:
         path = self._path(category, symbol)
