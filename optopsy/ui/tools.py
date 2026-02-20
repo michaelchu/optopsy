@@ -263,7 +263,11 @@ SIGNAL_REGISTRY: dict[str, Any] = {
         kw.get("period", 14), kw.get("multiplier", 0.75)
     ),
     # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
-    "day_of_week": lambda **kw: _signals.day_of_week(*kw.get("days", [4])),
+    "day_of_week": lambda **kw: (
+        lambda days_param: _signals.day_of_week(
+            *(days_param if isinstance(days_param, list) else [days_param])
+        )
+    )(kw.get("days", [4])),
 }
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
