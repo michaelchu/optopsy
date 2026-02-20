@@ -24,6 +24,8 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 Optopsy now includes an AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language — no code required.
 
+![AI Chat UI](docs/images/chat-ui.png)
+
 **What it does:**
 - Fetches historical options data via the [EODHD US Stock Options Data API (1.0.0)](https://eodhd.com/financial-apis/options-data-api) (API key required)
 - Runs any of the 28 built-in strategies via conversational prompts
@@ -33,14 +35,21 @@ Optopsy now includes an AI-powered chat interface that lets you fetch data, run 
 **Install and run:**
 
 ```bash
-pip install optopsy
+pip install optopsy[ui]
 ```
 
 Create a `.env` file with your API keys (see `.env.example`):
 
 ```
-OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-...   # or OPENAI_API_KEY for OpenAI models
 EODHD_API_KEY=...
+```
+
+Defaults to Claude Haiku 4.5 for its low cost and generous rate limits. To use a different model, set `OPTOPSY_MODEL` and the matching API key:
+
+```
+OPTOPSY_MODEL=gpt-4o
+OPENAI_API_KEY=sk-...
 ```
 
 Then launch:
@@ -57,7 +66,11 @@ optopsy-chat
 ## Installation
 
 ```bash
+# Core library only
 pip install optopsy
+
+# With AI Chat UI
+pip install optopsy[ui]
 ```
 
 **Requirements:** Python 3.10+, Pandas 2.0+, NumPy 1.26+
@@ -343,7 +356,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 # Development setup
 git clone https://github.com/michaelchu/optopsy.git
 cd optopsy
-pip install -e .
+pip install -e ".[ui]"
 
 # Run tests
 pytest tests/ -v

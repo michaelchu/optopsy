@@ -23,18 +23,22 @@ setup(
     install_requires=[
         "pandas",
         "numpy",
-        "pyarrow>=14.0.0",
         "typing_extensions>=4.0.0",
-        "chainlit>=1.0.0,<3.0.0",
-        "litellm>=1.0.0,<3.0.0",
-        "python-dotenv>=1.0.0,<2.0.0",
-        "requests>=2.28.0,<3.0.0",
-        "yfinance>=0.2.0,<1.0.0",
         "tabulate>=0.9.0,<1.0.0",
     ],
+    extras_require={
+        "ui": [
+            "pyarrow>=14.0.0",
+            "chainlit>=1.0.0,<3.0.0",
+            "litellm>=1.0.0,<3.0.0",
+            "python-dotenv>=1.0.0,<2.0.0",
+            "requests>=2.28.0,<3.0.0",
+            "yfinance>=0.2.0,<1.0.0",
+        ],
+    },
     entry_points={
         "console_scripts": [
-            "optopsy-chat=optopsy.ui.app:main",
+            "optopsy-chat=optopsy.ui.app:main [ui]",
         ],
     },
 )
