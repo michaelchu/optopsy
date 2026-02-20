@@ -1,17 +1,27 @@
 from typing import Any
 
 from .base import DataProvider
-from .eodhd import EODHDProvider
 
-# Add new providers here. That's the only change needed.
-ALL_PROVIDERS: list[DataProvider] = [
-    EODHDProvider(),
-]
+# Providers are lazily imported to avoid requiring UI extras (requests,
+# pyarrow, etc.) when only the core library is installed.
+_ALL_PROVIDERS: list[DataProvider] | None = None
+
+
+def _load_providers() -> list[DataProvider]:
+    global _ALL_PROVIDERS
+    if _ALL_PROVIDERS is None:
+        try:
+            from .eodhd import EODHDProvider
+
+            _ALL_PROVIDERS = [EODHDProvider()]
+        except ImportError:
+            _ALL_PROVIDERS = []
+    return _ALL_PROVIDERS
 
 
 def get_available_providers() -> list[DataProvider]:
     """Return only providers whose API keys are configured."""
-    return [p for p in ALL_PROVIDERS if p.is_available()]
+    return [p for p in _load_providers() if p.is_available()]
 
 
 def get_provider_names() -> list[str]:
