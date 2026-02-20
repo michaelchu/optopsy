@@ -183,7 +183,7 @@ results = op.long_call_diagonal(data, raw=True)
 
 ## Entry Signals
 
-Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta):
+Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta). All 28 strategies accept optional `entry_signal`, `exit_signal`, and `stock_data` parameters.
 
 ```python
 from optopsy import long_calls, rsi_below, sustained, signal, day_of_week
@@ -201,15 +201,15 @@ results = long_calls(data, entry_signal=sig)
 
 ### Available Signals
 
-| Category | Signals |
-|----------|---------|
-| **RSI** | `rsi_below`, `rsi_above` |
-| **SMA** | `sma_below`, `sma_above` |
-| **MACD** | `macd_cross_above`, `macd_cross_below` |
-| **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` |
-| **EMA Crossover** | `ema_cross_above`, `ema_cross_below` |
-| **ATR Volatility** | `atr_above`, `atr_below` |
-| **Calendar** | `day_of_week` |
+| Category | Signals | Default Parameters |
+|----------|---------|-------------------|
+| **RSI** | `rsi_below`, `rsi_above` | `period=14`, `threshold=30` / `70` |
+| **SMA** | `sma_below`, `sma_above` | `period=20` |
+| **MACD** | `macd_cross_above`, `macd_cross_below` | `fast=12`, `slow=26`, `signal_period=9` |
+| **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` | `length=20`, `std=2.0` |
+| **EMA Crossover** | `ema_cross_above`, `ema_cross_below` | `fast=10`, `slow=50` |
+| **ATR Volatility** | `atr_above`, `atr_below` | `period=14`, `multiplier=1.5` / `0.75` |
+| **Calendar** | `day_of_week` | Days: `0`=Mon ... `4`=Fri |
 
 ### Combinators
 
@@ -219,6 +219,148 @@ results = long_calls(data, entry_signal=sig)
 | `and_signals(sig1, sig2, ...)` | All signals must be True |
 | `or_signals(sig1, sig2, ...)` | At least one signal must be True |
 | `Signal` class with `&` / `\|` | Fluent operator chaining |
+
+### Signal Examples
+
+**RSI — enter on oversold, exit on overbought:**
+
+```python
+import optopsy as op
+from optopsy import rsi_below, rsi_above
+
+results = op.long_calls(
+    data,
+    entry_signal=rsi_below(period=14, threshold=30),
+    exit_signal=rsi_above(period=14, threshold=70),
+)
+```
+
+**SMA — trend filter (only enter when price is above its 50-day moving average):**
+
+```python
+from optopsy import sma_above
+
+results = op.short_puts(data, entry_signal=sma_above(period=50))
+```
+
+**MACD — enter on bullish crossover:**
+
+```python
+from optopsy import macd_cross_above
+
+results = op.long_call_spread(data, entry_signal=macd_cross_above(fast=12, slow=26, signal_period=9))
+```
+
+**Bollinger Bands — mean reversion when price dips below the lower band:**
+
+```python
+from optopsy import bb_below_lower
+
+results = op.long_puts(data, entry_signal=bb_below_lower(length=20, std=2.0))
+```
+
+**EMA Crossover — golden cross (fast EMA crosses above slow EMA):**
+
+```python
+from optopsy import ema_cross_above
+
+results = op.long_calls(data, entry_signal=ema_cross_above(fast=10, slow=50))
+```
+
+**ATR — only sell premium in low-volatility regimes:**
+
+```python
+from optopsy import atr_below
+
+results = op.iron_condor(data, entry_signal=atr_below(period=14, multiplier=0.75))
+```
+
+**Calendar — restrict entries to specific days of the week:**
+
+```python
+from optopsy import day_of_week
+
+# Enter only on Mondays and Fridays
+results = op.short_straddles(data, entry_signal=day_of_week(0, 4))
+```
+
+### Combining Multiple Signals
+
+Use the `Signal` class with `&` (AND) and `|` (OR) operators, or the functional `and_signals` / `or_signals` helpers:
+
+```python
+from optopsy import signal, rsi_below, sma_above, atr_below, day_of_week
+from optopsy import and_signals, or_signals
+
+# Fluent API: oversold + uptrend + low volatility
+entry = signal(rsi_below(14, 30)) & signal(sma_above(50)) & signal(atr_below(14, 0.75))
+results = op.long_calls(data, entry_signal=entry)
+
+# Functional API: same logic
+entry = and_signals(rsi_below(14, 30), sma_above(50), atr_below(14, 0.75))
+results = op.long_calls(data, entry_signal=entry)
+
+# OR: enter when EITHER condition fires
+from optopsy import macd_cross_above, bb_below_lower
+entry = or_signals(macd_cross_above(), bb_below_lower())
+results = op.long_call_spread(data, entry_signal=entry)
+```
+
+### Sustained Signals
+
+Require a condition to persist for multiple consecutive days before triggering:
+
+```python
+from optopsy import sustained, rsi_below, bb_below_lower
+
+# RSI must stay below 30 for 5 straight days
+results = op.long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
+
+# Bollinger Band breach sustained for 3 days
+results = op.long_puts(data, entry_signal=sustained(bb_below_lower(20, 2.0), days=3))
+```
+
+### Using Stock OHLCV Data
+
+By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially ATR, which benefits from real high/low data), pass a separate stock OHLCV DataFrame via the `stock_data` parameter:
+
+```python
+import pandas as pd
+import optopsy as op
+from optopsy import atr_above, ema_cross_above, signal
+
+# Load OHLCV stock data (must have: underlying_symbol, quote_date, close;
+# optional: open, high, low, volume)
+stock_df = pd.read_csv("SPX_daily_ohlcv.csv", parse_dates=["quote_date"])
+
+# ATR uses real high/low for true range when stock_data is provided
+entry = signal(atr_above(period=14, multiplier=1.5)) & signal(ema_cross_above(10, 50))
+results = op.long_straddles(
+    data,
+    entry_signal=entry,
+    stock_data=stock_df,
+)
+```
+
+### Custom Signal Functions
+
+Any function matching the signature `(pd.DataFrame) -> pd.Series[bool]` can be used as a signal:
+
+```python
+import optopsy as op
+
+# Custom: only enter when underlying price is above 4000
+def price_above_4000(data):
+    return data["underlying_price"] > 4000
+
+results = op.iron_condor(data, entry_signal=price_above_4000)
+
+# Combine custom signals with built-in ones
+from optopsy import signal, rsi_below
+
+entry = signal(price_above_4000) & signal(rsi_below(14, 30))
+results = op.long_calls(data, entry_signal=entry)
+```
 
 ## Greeks Support
 
