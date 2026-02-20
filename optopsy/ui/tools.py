@@ -236,15 +236,22 @@ def _normalize_days_param(days):
 
     Raises:
         TypeError: If days is neither an int nor a list, or if list contains non-integers.
-        ValueError: If days is an empty list.
+        ValueError: If days is an empty list or contains out-of-range values (not 0-6).
     """
     if isinstance(days, list):
         if not days:
             raise ValueError("days parameter cannot be an empty list")
         if not all(isinstance(day, int) for day in days):
             raise TypeError("all elements in days list must be integers")
+        invalid_days = [d for d in days if d < 0 or d > 6]
+        if invalid_days:
+            raise ValueError(
+                f"day values must be 0-6 (Monday-Sunday), got invalid values: {invalid_days}"
+            )
         return days
     elif isinstance(days, int):
+        if days < 0 or days > 6:
+            raise ValueError(f"day value must be 0-6 (Monday-Sunday), got {days}")
         return [days]
     else:
         raise TypeError(
