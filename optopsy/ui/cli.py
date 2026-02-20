@@ -67,11 +67,19 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- run ---
     run_parser = subparsers.add_parser("run", help="Launch the chat UI (default)")
-    run_parser.add_argument("--host", default=None, help="Host to bind (default: 127.0.0.1)")
-    run_parser.add_argument("--port", type=int, default=None, help="Port to bind (default: 8000)")
-    run_parser.add_argument("--headless", action="store_true", help="Don't open browser on start")
+    run_parser.add_argument(
+        "--host", default=None, help="Host to bind (default: 127.0.0.1)"
+    )
+    run_parser.add_argument(
+        "--port", type=int, default=None, help="Port to bind (default: 8000)"
+    )
+    run_parser.add_argument(
+        "--headless", action="store_true", help="Don't open browser on start"
+    )
     run_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    run_parser.add_argument("-w", "--watch", action="store_true", help="Reload on file changes")
+    run_parser.add_argument(
+        "-w", "--watch", action="store_true", help="Reload on file changes"
+    )
     run_parser.set_defaults(func=_cmd_run)
 
     # --- cache ---

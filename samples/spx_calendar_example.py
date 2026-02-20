@@ -52,8 +52,10 @@ def run_strategy():
     # Short front-month call, long back-month call at same strike
     long_call_calendar = op.long_call_calendar(spx_data, **calendar_params).round(2)
     print("\n1. Long Call Calendar")
-    print(f"   (front DTE: {calendar_params['front_dte_min']}-{calendar_params['front_dte_max']}, "
-          f"back DTE: {calendar_params['back_dte_min']}-{calendar_params['back_dte_max']})")
+    print(
+        f"   (front DTE: {calendar_params['front_dte_min']}-{calendar_params['front_dte_max']}, "
+        f"back DTE: {calendar_params['back_dte_min']}-{calendar_params['back_dte_max']})"
+    )
     print("-" * 50)
     if long_call_calendar.empty:
         print("   No trades matched the criteria with this sample data.")
