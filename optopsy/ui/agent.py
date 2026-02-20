@@ -52,8 +52,11 @@ iron_condor, reverse_iron_condor, iron_butterfly, reverse_iron_butterfly, protec
 ## Expiration Type Filtering
 
 `fetch_eodhd_options` defaults to `expiration_type: "monthly"` which filters out weekly options. \
-This significantly reduces data volume. Only pass `expiration_type: "weekly"` if the user \
-explicitly asks for weekly expirations.
+This significantly reduces data volume. Pass `expiration_type: "weekly"` when:
+1. The user explicitly asks for weekly options/expirations
+2. The user requests short DTE strategies (max_entry_dte ≤ 14 or mentions DTE ≤ 14) — monthly \
+expirations are ~30 days apart so short-DTE entries need weekly data to find matches
+3. The user mentions "weeklies", "weekly options", "0DTE", or similar terms
 
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
