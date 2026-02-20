@@ -117,12 +117,18 @@ Positive pct_change = profit, negative = loss.
 has already been fetched. Data is cached locally with intelligent gap detection — if you need a wider date \
 range, the system will only fetch the missing dates. However, do not expand the date range on your own; \
 only do so if the user explicitly requests different dates.
-- **Empty strategy results**: If `run_strategy` returns no results, use `preview_data` to inspect the \
-loaded dataset — check available DTE ranges, strike distributions, option types, and date coverage. Then \
-intelligently adjust parameters based on what the data actually contains (e.g. if max DTE in the data is 45, \
-don't set max_entry_dte to 90). Retry up to 10 times, changing one or two parameters each attempt. Explain \
-your reasoning to the user each time. After 10 failed attempts, report what you tried and suggest the user \
-try a different strategy, date range, or expiration type. Never re-fetch data just because a strategy was empty.
+- **Non-empty results = success**: If `run_strategy` returns ANY rows (even just 1), that is a successful \
+result. Present it to the user immediately — do NOT re-run the strategy to try to get "more" or "better" \
+results. Only retry when the result is completely empty (0 rows).
+- **Empty strategy results (0 rows only)**: If `run_strategy` returns no results, use `preview_data` to \
+inspect the loaded dataset — check available DTE ranges, strike distributions, option types, and date \
+coverage. **Critical**: if `preview_data` shows only 1 unique quote_date, STOP immediately — backtesting \
+requires multiple quote dates to build entry/exit pairs. Tell the user the data is too sparse and suggest \
+fetching a wider date range or using monthly expirations. Otherwise, intelligently adjust parameters based \
+on what the data actually contains (e.g. if max DTE in the data is 45, don't set max_entry_dte to 90). \
+Retry up to 10 times, changing one or two parameters each attempt. Explain your reasoning to the user each \
+time. After 10 failed attempts, report what you tried and suggest the user try a different strategy, date \
+range, or expiration type. Never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
@@ -133,9 +139,51 @@ and consistency (lower std is better).
 
 _MAX_TOOL_ITERATIONS = 15
 
+# Tool results longer than this (in chars) get truncated in older messages
+# to keep token usage manageable across many iterations.
+_COMPACT_THRESHOLD = 300
+
+
+def _compact_history(messages: list[dict[str, Any]]) -> None:
+    """Truncate old tool results and assistant reasoning in-place.
+
+    Called at the start of each iteration (after the first) so previous
+    tool outputs — which the LLM has already processed — don't bloat every
+    subsequent API call.  Only the *last* tool result and assistant message
+    are left intact so the LLM has full context for its next decision.
+    """
+    # Find indices of all tool-result messages (excluding the last batch)
+    tool_indices = [
+        i for i, m in enumerate(messages) if m.get("role") == "tool"
+    ]
+    # Find indices of all assistant messages with tool_calls (intermediate turns)
+    assistant_tc_indices = [
+        i
+        for i, m in enumerate(messages)
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    ]
+
+    # Keep the last batch of tool results intact (messages after the last
+    # assistant-with-tool-calls message).
+    last_assistant_tc = assistant_tc_indices[-1] if assistant_tc_indices else -1
+    old_tool_indices = [i for i in tool_indices if i < last_assistant_tc]
+    old_assistant_indices = assistant_tc_indices[:-1] if len(assistant_tc_indices) > 1 else []
+
+    for i in old_tool_indices:
+        content = messages[i].get("content", "")
+        if len(content) > _COMPACT_THRESHOLD:
+            # Keep just the first line (e.g. "long_calls — 37 aggregated stats")
+            first_line = content.split("\n", 1)[0]
+            messages[i]["content"] = first_line + " [truncated]"
+
+    for i in old_assistant_indices:
+        content = messages[i].get("content", "")
+        if len(content) > _COMPACT_THRESHOLD:
+            messages[i]["content"] = content[:_COMPACT_THRESHOLD] + "… [truncated]"
+
 
 class OptopsyAgent:
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str = "anthropic/claude-haiku-4-5-20251001"):
         self.model = model
         self.tools = get_tool_schemas()
         self.dataset: pd.DataFrame | None = None
@@ -166,6 +214,10 @@ class OptopsyAgent:
             # pause briefly on subsequent ones to avoid rate-limiting.
             if _iteration > 0:
                 await asyncio.sleep(1)
+                # Compact previous tool results and assistant reasoning to
+                # reduce token usage.  The LLM has already seen these — it
+                # only needs a short reminder of what happened.
+                _compact_history(full_messages)
 
             # -- tool-calling turns: non-streaming for simplicity --
             try:

@@ -23,7 +23,7 @@ from optopsy.ui.providers import get_provider_names
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = os.environ.get("OPTOPSY_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
     agent = OptopsyAgent(model=model)
     cl.user_session.set("agent", agent)
     cl.user_session.set("messages", [])
@@ -65,7 +65,7 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
     Without this handler Chainlit falls back to on_chat_start, which creates a
     fresh session and sends the welcome message again mid-conversation.
     """
-    model = os.environ.get("OPTOPSY_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
     agent = OptopsyAgent(model=model)
 
     # Rebuild message history from the persisted thread
