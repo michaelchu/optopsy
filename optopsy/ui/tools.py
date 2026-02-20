@@ -378,11 +378,51 @@ def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
         f"Columns: {list(df.columns)}",
     ]
     if "quote_date" in df.columns:
+        unique_dates = df["quote_date"].nunique()
         lines.append(
-            f"Date range: {df['quote_date'].min().date()} to {df['quote_date'].max().date()}"
+            f"Date range: {df['quote_date'].min().date()} to {df['quote_date'].max().date()} "
+            f"({unique_dates} unique quote dates)"
         )
+        if unique_dates < 2:
+            lines.append(
+                "WARNING: Only 1 unique quote_date — backtesting requires multiple "
+                "quote dates to build entry/exit pairs. Strategies will return no results."
+            )
+    if "expiration" in df.columns:
+        lines.append(f"Unique expirations: {df['expiration'].nunique()}")
     if "underlying_symbol" in df.columns:
         lines.append(f"Symbols: {df['underlying_symbol'].unique().tolist()}")
+    return "\n".join(lines)
+
+
+def _strategy_llm_summary(df: pd.DataFrame, strategy_name: str, mode: str) -> str:
+    """Build a compact LLM summary for strategy results.
+
+    Instead of sending a 20-row markdown table, send key stats so the LLM
+    can interpret results without burning tokens.  The user already sees
+    the full table via user_display.
+    """
+    lines = [f"{strategy_name} — {len(df)} {mode}"]
+
+    if "pct_change" in df.columns:
+        pct = df["pct_change"]
+        lines.append(
+            f"pct_change: mean={pct.mean():.4f}, std={pct.std():.4f}, "
+            f"min={pct.min():.4f}, max={pct.max():.4f}"
+        )
+    if "dte_entry" in df.columns:
+        lines.append(f"DTE range: {df['dte_entry'].min()} to {df['dte_entry'].max()}")
+    if "strike" in df.columns:
+        lines.append(
+            f"Strike range: {df['strike'].min():.0f} to {df['strike'].max():.0f}"
+        )
+    if mode == "aggregated stats" and "count" in df.columns:
+        lines.append(f"Buckets with positive mean: {(df['mean'] > 0).sum()}/{len(df)}")
+
+    lines.append(
+        "STOP — results are ready. DO NOT call run_strategy again. "
+        "Present these results to the user and explain the key takeaways."
+    )
     return "\n".join(lines)
 
 
@@ -479,18 +519,16 @@ def execute_tool(
                 }
                 return ToolResult(
                     f"{strategy_name} returned no results with parameters: "
-                    f"{params_used or 'defaults'}. "
-                    "Report this to the user and let them decide next steps.",
+                    f"{params_used or 'defaults'}.",
                     dataset,
                 )
             is_raw = arguments.get("raw", False)
             mode = "raw trades" if is_raw else "aggregated stats"
             table = _df_to_markdown(result)
             display = f"**{strategy_name}** — {len(result)} {mode}\n\n{table}"
-            # LLM gets the full table for strategy results so it can interpret
-            # the numbers, but capped at 20 rows to stay within token budget.
-            llm_table = _df_to_markdown(result, max_rows=20)
-            llm_summary = f"{strategy_name} — {len(result)} {mode}\n\n{llm_table}"
+            # LLM gets a compact summary instead of a full table to save tokens.
+            # The user already sees the full table via user_display.
+            llm_summary = _strategy_llm_summary(result, strategy_name, mode)
             return ToolResult(llm_summary, dataset, display)
         except Exception as e:
             return ToolResult(f"Error running {strategy_name}: {e}", dataset)

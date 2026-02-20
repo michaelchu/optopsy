@@ -20,9 +20,9 @@ You help users:
 ## Workflow
 - If a data provider is available (e.g. `fetch_eodhd_options`), use it to fetch data for a ticker. \
 This loads the data directly into memory — no file step needed.
-- When fetching data, ALWAYS provide both `start_date` and `end_date`. This enables chunked \
-fetching which retrieves complete datasets for large date ranges. If the user doesn't specify \
-dates, pick a reasonable 3-month window ending today.
+- When fetching data, ALWAYS provide both `start_date` and `end_date`. If the user doesn't specify \
+dates, pick a reasonable 3-month window ending today. Always respect the user's requested date range \
+exactly — never widen or extend it.
 - Alternatively, use `list_data_files` and `load_csv_data` to load from local CSV files.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
@@ -31,8 +31,9 @@ it means the API key is not configured — tell the user to add it to their `.en
 
 ## Available Strategies and Option Type Filtering
 
-When fetching data with `fetch_eodhd_options`, ALWAYS pass the `option_type` parameter based on \
-the strategy the user wants to run. This halves the data volume and speeds up fetching significantly.
+Data fetched from EODHD is cached locally (both calls and puts together). The `option_type` \
+parameter on `fetch_eodhd_options` filters the returned DataFrame client-side — it does NOT \
+affect what is fetched from the API. Pass it to limit the data to what the strategy needs:
 
 **Calls only** (pass `option_type: "call"`):
 long_calls, short_calls, long_call_spread, short_call_spread, \
@@ -48,15 +49,14 @@ long_put_diagonal, short_put_diagonal
 long_straddles, short_straddles, long_strangles, short_strangles, \
 iron_condor, reverse_iron_condor, iron_butterfly, reverse_iron_butterfly, protective_put
 
-IMPORTANT: If the user mentions a specific strategy, always filter by option_type during fetch. \
-If comparing multiple strategies that need different types, omit the filter. \
-If the user hasn't specified a strategy yet, omit the filter.
-
 ## Expiration Type Filtering
 
 `fetch_eodhd_options` defaults to `expiration_type: "monthly"` which filters out weekly options. \
-This significantly reduces data volume. Only pass `expiration_type: "weekly"` if the user \
-explicitly asks for weekly expirations.
+This significantly reduces data volume. Pass `expiration_type: "weekly"` when:
+1. The user explicitly asks for weekly options/expirations
+2. The user requests short DTE strategies (max_entry_dte ≤ 14 or mentions DTE ≤ 14) — monthly \
+expirations are ~30 days apart so short-DTE entries need weekly data to find matches
+3. The user mentions "weeklies", "weekly options", "0DTE", or similar terms
 
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
@@ -113,10 +113,22 @@ Positive pct_change = profit, negative = loss.
 
 ## Guidelines
 - Always load data before running strategies.
-- **IMPORTANT — empty strategy results**: If `run_strategy` returns no results, do NOT automatically retry \
-with relaxed parameters. Instead, tell the user the strategy returned no results with the parameters used, \
-and *suggest* they could try relaxing filters (e.g. increase max_entry_dte or max_otm_pct). Let the user \
-decide — never retry more than once on your own, and never re-fetch data just because a strategy was empty.
+- **IMPORTANT — no unnecessary re-fetching**: Do not re-fetch data for the same symbol and date range that \
+has already been fetched. Data is cached locally with intelligent gap detection — if you need a wider date \
+range, the system will only fetch the missing dates. However, do not expand the date range on your own; \
+only do so if the user explicitly requests different dates.
+- **Non-empty results = success**: If `run_strategy` returns ANY rows (even just 1), that is a successful \
+result. Present it to the user immediately — do NOT re-run the strategy to try to get "more" or "better" \
+results. Only retry when the result is completely empty (0 rows).
+- **Empty strategy results (0 rows only)**: If `run_strategy` returns no results, use `preview_data` to \
+inspect the loaded dataset — check available DTE ranges, strike distributions, option types, and date \
+coverage. **Critical**: if `preview_data` shows only 1 unique quote_date, STOP immediately — backtesting \
+requires multiple quote dates to build entry/exit pairs. Tell the user the data is too sparse and suggest \
+fetching a wider date range or using monthly expirations. Otherwise, intelligently adjust parameters based \
+on what the data actually contains (e.g. if max DTE in the data is 45, don't set max_entry_dte to 90). \
+Retry up to 10 times, changing one or two parameters each attempt. Explain your reasoning to the user each \
+time. After 10 failed attempts, report what you tried and suggest the user try a different strategy, date \
+range, or expiration type. Never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
@@ -127,9 +139,51 @@ and consistency (lower std is better).
 
 _MAX_TOOL_ITERATIONS = 15
 
+# Tool results longer than this (in chars) get truncated in older messages
+# to keep token usage manageable across many iterations.
+_COMPACT_THRESHOLD = 300
+
+
+def _compact_history(messages: list[dict[str, Any]]) -> None:
+    """Truncate old tool results and assistant reasoning in-place.
+
+    Called at the start of each iteration (after the first) so previous
+    tool outputs — which the LLM has already processed — don't bloat every
+    subsequent API call.  Only the *last* tool result and assistant message
+    are left intact so the LLM has full context for its next decision.
+    """
+    # Find indices of all tool-result messages (excluding the last batch)
+    tool_indices = [i for i, m in enumerate(messages) if m.get("role") == "tool"]
+    # Find indices of all assistant messages with tool_calls (intermediate turns)
+    assistant_tc_indices = [
+        i
+        for i, m in enumerate(messages)
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    ]
+
+    # Keep the last batch of tool results intact (messages after the last
+    # assistant-with-tool-calls message).
+    last_assistant_tc = assistant_tc_indices[-1] if assistant_tc_indices else -1
+    old_tool_indices = [i for i in tool_indices if i < last_assistant_tc]
+    old_assistant_indices = (
+        assistant_tc_indices[:-1] if len(assistant_tc_indices) > 1 else []
+    )
+
+    for i in old_tool_indices:
+        content = messages[i].get("content", "")
+        if len(content) > _COMPACT_THRESHOLD:
+            # Keep just the first line (e.g. "long_calls — 37 aggregated stats")
+            first_line = content.split("\n", 1)[0]
+            messages[i]["content"] = first_line + " [truncated]"
+
+    for i in old_assistant_indices:
+        content = messages[i].get("content", "")
+        if len(content) > _COMPACT_THRESHOLD:
+            messages[i]["content"] = content[:_COMPACT_THRESHOLD] + "… [truncated]"
+
 
 class OptopsyAgent:
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str = "anthropic/claude-haiku-4-5-20251001"):
         self.model = model
         self.tools = get_tool_schemas()
         self.dataset: pd.DataFrame | None = None
@@ -156,6 +210,15 @@ class OptopsyAgent:
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
+            # Throttle LLM calls: skip delay on the first iteration,
+            # pause briefly on subsequent ones to avoid rate-limiting.
+            if _iteration > 0:
+                await asyncio.sleep(1)
+                # Compact previous tool results and assistant reasoning to
+                # reduce token usage.  The LLM has already seen these — it
+                # only needs a short reminder of what happened.
+                _compact_history(full_messages)
+
             # -- tool-calling turns: non-streaming for simplicity --
             try:
                 response = await litellm.acompletion(
