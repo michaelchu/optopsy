@@ -116,11 +116,12 @@ Positive pct_change = profit, negative = loss.
 - **IMPORTANT — no re-fetching**: Once a `fetch_eodhd_options` or `fetch_eodhd_stock_prices` call succeeds, \
 do NOT call it again for the same symbol unless the user explicitly asks for different dates. Data is cached \
 locally — calling fetch again with a wider range wastes API calls. Never expand the date range on your own.
-- **Empty strategy results**: If `run_strategy` returns no results, retry up to 2 times with relaxed \
-parameters before asking the user. Use your judgement on what to relax — try increasing `max_entry_dte` \
-(e.g. 90 → 180), increasing `max_otm_pct` (e.g. 0.5 → 1.0), or loosening `min_bid_ask`. Tell the user \
-what you changed each time. After 2 failed retries, report the results and suggest the user try a different \
-strategy or date range. Never re-fetch data just because a strategy was empty.
+- **Empty strategy results**: If `run_strategy` returns no results, use `preview_data` to inspect the \
+loaded dataset — check available DTE ranges, strike distributions, option types, and date coverage. Then \
+intelligently adjust parameters based on what the data actually contains (e.g. if max DTE in the data is 45, \
+don't set max_entry_dte to 90). Retry up to 5 times, changing one or two parameters each attempt. Explain \
+your reasoning to the user each time. After 5 failed attempts, report what you tried and suggest the user \
+try a different strategy, date range, or expiration type. Never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
