@@ -113,14 +113,15 @@ Positive pct_change = profit, negative = loss.
 
 ## Guidelines
 - Always load data before running strategies.
-- **IMPORTANT — no re-fetching**: Once a `fetch_eodhd_options` or `fetch_eodhd_stock_prices` call succeeds, \
-do NOT call it again for the same symbol unless the user explicitly asks for different dates. Data is cached \
-locally — calling fetch again with a wider range wastes API calls. Never expand the date range on your own.
+- **IMPORTANT — no unnecessary re-fetching**: Do not re-fetch data for the same symbol and date range that \
+has already been fetched. Data is cached locally with intelligent gap detection — if you need a wider date \
+range, the system will only fetch the missing dates. However, do not expand the date range on your own; \
+only do so if the user explicitly requests different dates.
 - **Empty strategy results**: If `run_strategy` returns no results, use `preview_data` to inspect the \
 loaded dataset — check available DTE ranges, strike distributions, option types, and date coverage. Then \
 intelligently adjust parameters based on what the data actually contains (e.g. if max DTE in the data is 45, \
-don't set max_entry_dte to 90). Retry up to 5 times, changing one or two parameters each attempt. Explain \
-your reasoning to the user each time. After 5 failed attempts, report what you tried and suggest the user \
+don't set max_entry_dte to 90). Retry up to 10 times, changing one or two parameters each attempt. Explain \
+your reasoning to the user each time. After 10 failed attempts, report what you tried and suggest the user \
 try a different strategy, date range, or expiration type. Never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
@@ -161,6 +162,11 @@ class OptopsyAgent:
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
+            # Throttle LLM calls: skip delay on the first iteration,
+            # pause briefly on subsequent ones to avoid rate-limiting.
+            if _iteration > 0:
+                await asyncio.sleep(1)
+
             # -- tool-calling turns: non-streaming for simplicity --
             try:
                 response = await litellm.acompletion(
