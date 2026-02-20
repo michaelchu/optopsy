@@ -133,7 +133,7 @@ history. Only one signal per side (entry/exit) can be specified per run.
 | `ema_cross_below` | event | fast=10, slow=50 | Bearish EMA cross; warmup = slow bars |
 | `atr_above` | state | period=14, multiplier=1.5 | ATR > multiplier × median; elevated vol |
 | `atr_below` | state | period=14, multiplier=0.75 | ATR < multiplier × median; calm/low vol |
-| `day_of_week` | calendar | days=[4] | Fri by default; pass days=[0..6] for others |
+| `day_of_week` | calendar | days=[4] | Fri by default; pass days=[0..4] for others (Mon-Fri) |
 
 **State-based** signals are True on every bar meeting the condition. \
 **Event-based** signals fire only on the crossover bar — use `entry_signal_days` to require persistence.
