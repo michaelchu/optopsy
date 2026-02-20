@@ -16,8 +16,11 @@ source venv/bin/activate
 All commands below assume the virtual environment is activated.
 
 ```bash
-# Install in development mode
+# Install in development mode (core only)
 pip install -e .
+
+# Install with UI/chat extras
+pip install -e ".[ui]"
 
 # Run all tests
 pytest tests/ -v
@@ -78,3 +81,58 @@ class Side(Enum):
 ```
 
 Leg definitions use tuples: `(Side.long, _calls, quantity)` where quantity defaults to 1.
+
+## AI Chat UI (`optopsy/ui/`)
+
+An AI-powered chat interface for interactive options backtesting, built on Chainlit + LiteLLM.
+
+### Running
+
+```bash
+# Install with UI extras
+pip install -e ".[ui]"
+
+# Launch (opens browser)
+optopsy-chat
+
+# With options
+optopsy-chat run --port 9000 --headless --debug
+
+# Cache management
+optopsy-chat cache size          # show disk usage
+optopsy-chat cache clear         # clear all cached data
+optopsy-chat cache clear SPY     # clear specific symbol
+```
+
+### Configuration
+
+Environment variables (set in `.env` or shell):
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | LLM provider API key (default provider) |
+| `OPENAI_API_KEY` | Alternative LLM provider |
+| `OPTOPSY_MODEL` | Override model (LiteLLM format, default: `anthropic/claude-haiku-4-5-20251001`) |
+| `EODHD_API_KEY` | Enable EODHD data provider for live options/stock data |
+
+### Module Structure
+
+- **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run` and `cache` subcommands. Lazy imports so cache commands skip Chainlit startup.
+- **`app.py`** — Chainlit web app. Handlers for `on_chat_start`, `on_chat_resume`, `on_message`. Delegates to `OptopsyAgent`.
+- **`agent.py`** — `OptopsyAgent` class. Tool-calling loop over LiteLLM with streaming, message compaction (`_COMPACT_THRESHOLD = 300`), and max `_MAX_TOOL_ITERATIONS = 15`.
+- **`tools.py`** — Tool registry. Core tools: `load_csv_data`, `list_data_files`, `preview_data`, `run_strategy` (all 28 strategies). Provider tools registered dynamically.
+
+### Data Providers (`optopsy/ui/providers/`)
+
+Pluggable provider system for fetching market data.
+
+- **`base.py`** — Abstract `DataProvider` interface. Requires `name`, `env_key`, `get_tool_schemas()`, `execute(tool_name, arguments)`.
+- **`eodhd.py`** — `EODHDProvider`. Fetches options chains and stock prices from EODHD API. Smart caching with gap detection (re-fetches only missing date ranges, interior gap threshold: 5 calendar days).
+- **`cache.py`** — `ParquetCache`. File-based cache at `~/.optopsy/cache/{category}/{SYMBOL}.parquet`. Methods: `read()`, `write()`, `merge_and_save()`, `clear()`, `size()`, `total_size_bytes()`. No TTL — historical data is immutable.
+
+### Adding a New Data Provider
+
+1. Subclass `DataProvider` in `providers/`
+2. Implement `name`, `env_key`, `get_tool_schemas()`, `get_tool_names()`, `execute()`
+3. Register in `providers/__init__.py`
+4. Provider is auto-detected if its `env_key` is set
