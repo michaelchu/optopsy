@@ -1,6 +1,80 @@
+import numpy as np
 import pytest
 import pandas as pd
 import datetime as datetime
+
+
+def make_stock_data(
+    symbol: str = "SPX",
+    start: str = "2017-06-01",
+    periods: int = 200,
+    freq: str = "B",
+    base_price: float = 200.0,
+    daily_returns: list[float] | None = None,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Factory that produces yfinance-shaped OHLCV DataFrames for testing.
+
+    Contract matches ``_fetch_stock_data_for_signals`` normalisation:
+    - Columns: underlying_symbol, quote_date, open, high, low, close, volume
+    - quote_date is timezone-naive datetime64
+    - Business-day frequency by default
+    - Deterministic: uses ``daily_returns`` if provided, else a seeded random walk
+
+    Args:
+        symbol: Underlying symbol (default "SPX")
+        start: First bar date (default "2017-06-01")
+        periods: Number of bars (default 200)
+        freq: Pandas frequency string (default "B" for business days)
+        base_price: Starting close price (default 200.0)
+        daily_returns: Explicit list of fractional returns per bar.  If None
+            a seeded random walk is used.  Length must equal ``periods - 1``.
+        seed: Random seed for the random walk (default 42)
+
+    Returns:
+        DataFrame with columns [underlying_symbol, quote_date, open, high,
+        low, close, volume], one row per bar, sorted by date.
+    """
+    dates = pd.date_range(start, periods=periods, freq=freq)
+
+    if daily_returns is not None:
+        assert (
+            len(daily_returns) == periods - 1
+        ), f"daily_returns length {len(daily_returns)} != periods-1 ({periods - 1})"
+        closes = [base_price]
+        for r in daily_returns:
+            closes.append(closes[-1] * (1 + r))
+    else:
+        rng = np.random.default_rng(seed)
+        returns = rng.normal(0, 0.005, size=periods - 1)
+        closes = [base_price]
+        for r in returns:
+            closes.append(closes[-1] * (1 + r))
+
+    closes = np.array(closes)
+    # open = previous close (first bar: open == close)
+    opens = np.empty_like(closes)
+    opens[0] = closes[0]
+    opens[1:] = closes[:-1]
+
+    # Realistic high/low: jitter above/below max/min of open/close
+    rng_hl = np.random.default_rng(seed + 1)
+    jitter = rng_hl.uniform(0.001, 0.005, size=periods) * closes
+    highs = np.maximum(opens, closes) + jitter
+    lows = np.minimum(opens, closes) - jitter
+
+    return pd.DataFrame(
+        {
+            "underlying_symbol": symbol,
+            "quote_date": dates,
+            "open": np.round(opens, 2),
+            "high": np.round(highs, 2),
+            "low": np.round(lows, 2),
+            "close": np.round(closes, 2),
+            "volume": 1_000_000,
+        }
+    )
 
 
 @pytest.fixture(scope="module")
@@ -318,3 +392,141 @@ def calendar_data():
         ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 4.30, 4.40],
     ]
     return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture
+def stock_data_long_history():
+    """
+    200-bar OHLCV stock data with a designed price pattern:
+    - Bars 0–80:   decline from 220 → ~180  (RSI drops below 30)
+    - Bars 80–140:  flat around 180           (RSI neutral, price < SMA-20)
+    - Bars 140–199: recovery from 180 → ~225  (SMA crossover, RSI > 70 near end)
+
+    Suitable for SMA(20), RSI(14), ATR(14) indicator warmup.
+    """
+    # Build daily_returns that produce the desired pattern
+    n = 200
+    rets: list[float] = []
+    # Phase 1: decline (80 bars)
+    for _ in range(80):
+        rets.append(-0.003)
+    # Phase 2: flat (60 bars)
+    for _ in range(60):
+        rets.append(0.0001)
+    # Phase 3: recovery (59 bars)
+    for _ in range(59):
+        rets.append(0.004)
+    assert len(rets) == n - 1
+    return make_stock_data(
+        symbol="SPX",
+        start="2017-06-01",
+        periods=n,
+        daily_returns=rets,
+        base_price=220.0,
+    )
+
+
+@pytest.fixture
+def option_data_with_stock(stock_data_long_history):
+    """
+    Option chain whose entry/exit dates overlap with stock_data_long_history.
+
+    Picks 4 entry dates from the stock data (2 during decline where SMA signal
+    is False, 2 during recovery where SMA signal is True) and 1 exit date
+    near the end.
+
+    Expiration is set to the exit date so DTE=0 at exit.
+    """
+    sd = stock_data_long_history
+    dates = sd["quote_date"].values
+
+    # Pick dates by index into the stock data
+    entry_decline_1 = pd.Timestamp(dates[30])  # deep in decline
+    entry_decline_2 = pd.Timestamp(dates[50])  # still declining
+    entry_recovery_1 = pd.Timestamp(dates[160])  # recovery phase
+    entry_recovery_2 = pd.Timestamp(dates[170])  # recovery phase
+    exit_date = pd.Timestamp(dates[195])  # near end
+
+    # Read underlying prices at those dates
+    price_map = dict(zip(sd["quote_date"], sd["close"]))
+
+    exp_date = exit_date  # DTE = 0 at exit
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+
+    rows = []
+    entry_dates = [
+        entry_decline_1,
+        entry_decline_2,
+        entry_recovery_1,
+        entry_recovery_2,
+    ]
+    for ed in entry_dates:
+        price = price_map[ed]
+        # Calls at strikes: price-5, price, price+5
+        for offset in [-5, 0, 5]:
+            strike = round(price + offset, 0)
+            # Rough premiums based on moneyness
+            if offset < 0:  # ITM call
+                bid, ask = 7.0, 7.10
+            elif offset == 0:  # ATM call
+                bid, ask = 3.5, 3.60
+            else:  # OTM call
+                bid, ask = 1.0, 1.10
+            rows.append(["SPX", price, "call", exp_date, ed, strike, bid, ask])
+        # Puts at same strikes
+        for offset in [-5, 0, 5]:
+            strike = round(price + offset, 0)
+            if offset > 0:  # ITM put
+                bid, ask = 7.0, 7.10
+            elif offset == 0:  # ATM put
+                bid, ask = 3.5, 3.60
+            else:  # OTM put
+                bid, ask = 1.0, 1.10
+            rows.append(["SPX", price, "put", exp_date, ed, strike, bid, ask])
+
+    # Exit date — need matching options at the exit date for all entered strikes
+    exit_price = price_map[exit_date]
+    for ed in entry_dates:
+        entry_price = price_map[ed]
+        for offset in [-5, 0, 5]:
+            strike = round(entry_price + offset, 0)
+            # Calls at expiration: intrinsic value only
+            call_intrinsic = max(exit_price - strike, 0)
+            rows.append(
+                [
+                    "SPX",
+                    exit_price,
+                    "call",
+                    exp_date,
+                    exit_date,
+                    strike,
+                    round(call_intrinsic, 2),
+                    round(call_intrinsic + 0.05, 2),
+                ]
+            )
+            # Puts at expiration
+            put_intrinsic = max(strike - exit_price, 0)
+            rows.append(
+                [
+                    "SPX",
+                    exit_price,
+                    "put",
+                    exp_date,
+                    exit_date,
+                    strike,
+                    round(put_intrinsic, 2),
+                    round(put_intrinsic + 0.05, 2),
+                ]
+            )
+
+    return pd.DataFrame(data=rows, columns=cols)

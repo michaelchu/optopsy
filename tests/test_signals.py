@@ -1461,3 +1461,220 @@ class TestStockData:
         from optopsy.checks import _check_stock_data
 
         _check_stock_data("stock_data", None)  # no exception
+
+
+# ============================================================================
+# E2E integration tests: real TA signal + stock_data → core engine → output
+# ============================================================================
+
+
+class TestTASignalE2E:
+    """
+    End-to-end tests that exercise the full pipeline:
+    real pandas_ta signal + OHLCV stock_data → _resolve_signal_data →
+    _get_signal_valid_dates → _apply_signal_filter → strategy output.
+
+    These tests use ``stock_data_long_history`` (200-bar OHLCV) and
+    ``option_data_with_stock`` (option chain with entry dates during both
+    the decline and recovery phases of the stock data).
+    """
+
+    def test_sma_entry_signal_filters_entries(
+        self, option_data_with_stock, stock_data_long_history
+    ):
+        """sma_above(20) entry signal should only keep entries where price > SMA(20).
+
+        The stock data has 4 entry dates: 2 during decline (SMA False) and
+        2 during recovery (SMA True).  With sma_above(20), only recovery
+        entries should produce trades.
+        """
+        # Run without signal — all 4 entry dates produce trades
+        results_all = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            raw=True,
+        )
+        assert len(results_all) > 0
+
+        # Run with SMA entry signal + stock_data
+        results_sma = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=sma_above(20),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+
+        # Fewer results because decline entries are filtered out
+        assert len(results_sma) > 0
+        assert len(results_sma) < len(results_all)
+
+        # Cross-validate: compute sma_above(20) directly on stock_data
+        sd = stock_data_long_history.copy()
+        sd["underlying_price"] = sd["close"]
+        sma_mask = sma_above(20)(sd)
+        valid_prices = set(sd.loc[sma_mask, "close"].round(2))
+
+        # Every entry price in strategy output must be from a valid SMA date
+        entry_prices = set(results_sma["underlying_price_entry"].unique())
+        assert entry_prices.issubset(
+            valid_prices
+        ), f"Found entries at non-signal prices: {entry_prices - valid_prices}"
+
+    def test_rsi_entry_signal_with_stock_data(
+        self, option_data_with_stock, stock_data_long_history
+    ):
+        """rsi_below(14, 30) entry signal should only keep entries where RSI < 30.
+
+        In the stock data, RSI < 30 during the decline phase (bars 30, 50)
+        but not during recovery (bars 160, 170).
+        """
+        results = short_puts(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=rsi_below(14, 30),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+
+        assert len(results) > 0
+
+        # Verify: all entries should be on dates where RSI < 30
+        sd = stock_data_long_history.copy()
+        sd["underlying_price"] = sd["close"]
+        rsi_mask = rsi_below(14, 30)(sd)
+        valid_prices = set(sd.loc[rsi_mask, "close"].round(2))
+
+        entry_prices = set(results["underlying_price_entry"].unique())
+        assert entry_prices.issubset(valid_prices)
+
+        # Recovery-phase prices (bars 160, 170) should NOT appear
+        recovery_prices = set(
+            stock_data_long_history.iloc[[160, 170]]["close"].round(2)
+        )
+        assert entry_prices.isdisjoint(
+            recovery_prices
+        ), "Recovery-phase entries should be filtered out by RSI < 30"
+
+    def test_ta_exit_signal_filters_exits(
+        self, option_data_with_stock, stock_data_long_history
+    ):
+        """rsi_above(14, 70) exit signal should only keep exits where RSI > 70.
+
+        The exit date (bar 195) has RSI >> 70 during recovery, so exits
+        should be preserved.
+        """
+        # Baseline — all trades
+        results_all = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            raw=True,
+        )
+
+        # With exit signal
+        results_exit = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            exit_signal=rsi_above(14, 70),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+
+        # RSI > 70 at bar 195 (exit date), so results should match baseline
+        assert len(results_exit) == len(results_all)
+
+    def test_entry_and_exit_signals_both_filter(
+        self, option_data_with_stock, stock_data_long_history
+    ):
+        """Combined entry + exit signals should both filter independently.
+
+        entry_signal=sma_above(20) filters to recovery entries only.
+        exit_signal=rsi_above(14, 70) keeps exits where RSI > 70.
+        """
+        results = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=sma_above(20),
+            exit_signal=rsi_above(14, 70),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+
+        assert len(results) > 0
+
+        # Verify entry prices are SMA-valid
+        sd = stock_data_long_history.copy()
+        sd["underlying_price"] = sd["close"]
+        sma_valid_prices = set(sd.loc[sma_above(20)(sd), "close"].round(2))
+        entry_prices = set(results["underlying_price_entry"].unique())
+        assert entry_prices.issubset(sma_valid_prices)
+
+    def test_sustained_ta_signal_with_stock_data(
+        self, option_data_with_stock, stock_data_long_history
+    ):
+        """sustained(rsi_below(14, 30), days=3) should require 3+ consecutive RSI < 30.
+
+        Bars 30 and 50 are deep in a long decline so the sustained signal
+        should fire there.  Bars 160 and 170 are in recovery (RSI >> 70)
+        so they must not appear.
+        """
+        results = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=sustained(rsi_below(14, 30), days=3),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+
+        assert len(results) > 0
+
+        # Verify no recovery-phase entry prices
+        sd = stock_data_long_history
+        recovery_prices = set(sd.iloc[[160, 170]]["close"].round(2))
+        entry_prices = set(results["underlying_price_entry"].unique())
+        assert entry_prices.isdisjoint(recovery_prices)
+
+        # Verify all entry prices are from sustained-valid dates
+        sd_copy = sd.copy()
+        sd_copy["underlying_price"] = sd_copy["close"]
+        sustained_mask = sustained(rsi_below(14, 30), days=3)(sd_copy)
+        valid_prices = set(sd_copy.loc[sustained_mask, "close"].round(2))
+        assert entry_prices.issubset(valid_prices)
+
+    def test_atr_signal_uses_real_ohlcv(self, stock_data_long_history):
+        """ATR signal should use real high/low from stock_data when available.
+
+        Runs atr_above on the full OHLCV stock_data and on a close-only
+        version. The results should differ because close-only ATR
+        approximates true range as |close_t - close_{t-1}| while real ATR
+        uses max(H-L, |H-prevC|, |L-prevC|).
+        """
+        sd = stock_data_long_history.copy()
+        sd["underlying_price"] = sd["close"]
+
+        # Full OHLCV ATR
+        sig = atr_above(period=14, multiplier=1.0)
+        ohlcv_result = sig(sd)
+
+        # Close-only ATR (drop high/low)
+        close_only = sd.drop(columns=["high", "low"])
+        close_result = sig(close_only)
+
+        # Both should produce boolean Series of same length
+        assert len(ohlcv_result) == len(close_result)
+        assert ohlcv_result.dtype == bool
+        assert close_result.dtype == bool
+
+        # Results should differ on at least some bars because
+        # real high/low add intraday range that close-to-close misses
+        assert not ohlcv_result.equals(close_result), (
+            "OHLCV ATR and close-only ATR should differ — "
+            "real high/low data is not being used"
+        )
