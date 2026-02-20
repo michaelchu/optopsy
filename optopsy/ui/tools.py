@@ -224,35 +224,32 @@ STRATEGY_NAMES = sorted(STRATEGIES.keys())
 # Factories are called at execution time to avoid shared state between runs.
 
 SIGNAL_REGISTRY: dict[str, Any] = {
-    "rsi_below_30": lambda: _signals.rsi_below(14, 30),
-    "rsi_below_20": lambda: _signals.rsi_below(14, 20),
-    "rsi_above_70": lambda: _signals.rsi_above(14, 70),
-    "rsi_above_80": lambda: _signals.rsi_above(14, 80),
-    "sma_below_20": lambda: _signals.sma_below(20),
-    "sma_above_20": lambda: _signals.sma_above(20),
-    "sma_below_50": lambda: _signals.sma_below(50),
-    "sma_above_50": lambda: _signals.sma_above(50),
-    "macd_cross_above": lambda: _signals.macd_cross_above(),
-    "macd_cross_below": lambda: _signals.macd_cross_below(),
-    "bb_above_upper": lambda: _signals.bb_above_upper(),
-    "bb_below_lower": lambda: _signals.bb_below_lower(),
-    "ema_cross_above_10_50": lambda: _signals.ema_cross_above(10, 50),
-    "ema_cross_below_10_50": lambda: _signals.ema_cross_below(10, 50),
-    "ema_cross_above_20_200": lambda: _signals.ema_cross_above(20, 200),
-    "ema_cross_below_20_200": lambda: _signals.ema_cross_below(20, 200),
-    "atr_above_high_vol": lambda: _signals.atr_above(14, 1.5),
-    "atr_below_low_vol": lambda: _signals.atr_below(14, 0.75),
-    "day_of_week_monday": lambda: _signals.day_of_week(0),
-    "day_of_week_thursday": lambda: _signals.day_of_week(3),
-    "day_of_week_friday": lambda: _signals.day_of_week(4),
+    # RSI — defaults: period=14, threshold=30 (below) / 70 (above)
+    "rsi_below": lambda **kw: _signals.rsi_below(kw.get("period", 14), kw.get("threshold", 30)),
+    "rsi_above": lambda **kw: _signals.rsi_above(kw.get("period", 14), kw.get("threshold", 70)),
+    # SMA — default: period=50
+    "sma_below": lambda **kw: _signals.sma_below(kw.get("period", 50)),
+    "sma_above": lambda **kw: _signals.sma_above(kw.get("period", 50)),
+    # MACD — defaults: fast=12, slow=26, signal_period=9
+    "macd_cross_above": lambda **kw: _signals.macd_cross_above(kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)),
+    "macd_cross_below": lambda **kw: _signals.macd_cross_below(kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)),
+    # Bollinger Bands — defaults: length=20, std=2.0
+    "bb_above_upper": lambda **kw: _signals.bb_above_upper(kw.get("length", 20), kw.get("std", 2.0)),
+    "bb_below_lower": lambda **kw: _signals.bb_below_lower(kw.get("length", 20), kw.get("std", 2.0)),
+    # EMA crossover — defaults: fast=10, slow=50
+    "ema_cross_above": lambda **kw: _signals.ema_cross_above(kw.get("fast", 10), kw.get("slow", 50)),
+    "ema_cross_below": lambda **kw: _signals.ema_cross_below(kw.get("fast", 10), kw.get("slow", 50)),
+    # ATR volatility regime — defaults: period=14, multiplier=1.5 (above) / 0.75 (below)
+    "atr_above": lambda **kw: _signals.atr_above(kw.get("period", 14), kw.get("multiplier", 1.5)),
+    "atr_below": lambda **kw: _signals.atr_below(kw.get("period", 14), kw.get("multiplier", 0.75)),
+    # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
+    "day_of_week": lambda **kw: _signals.day_of_week(*kw.get("days", [4])),
 }
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
-_DATE_ONLY_SIGNALS = frozenset(
-    k for k in SIGNAL_REGISTRY if k.startswith("day_of_week")
-)
+_DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
 
 # Maps strategy name -> required option_type for data fetching.
 # "call"/"put" means only that type is needed; None means both are needed.
@@ -365,26 +362,35 @@ def get_tool_schemas() -> list[dict]:
                             "description": (
                                 "Optional TA signal that gates entry. Only enters trades on "
                                 "dates where the signal is True for the underlying symbol. "
-                                "Momentum: macd_cross_above, macd_cross_below, "
-                                "ema_cross_above_10_50, ema_cross_below_10_50, "
-                                "ema_cross_above_20_200, ema_cross_below_20_200. "
-                                "Mean-reversion: rsi_below_30, rsi_below_20, rsi_above_70, "
-                                "rsi_above_80, bb_below_lower, bb_above_upper. "
-                                "Trend filter: sma_above_20, sma_below_20, sma_above_50, sma_below_50. "
-                                "Volatility: atr_above_high_vol (ATR > 1.5× median), "
-                                "atr_below_low_vol (ATR < 0.75× median). "
-                                "Calendar: day_of_week_monday, day_of_week_thursday, day_of_week_friday."
+                                "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
+                                "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
+                                "bb_below_lower, bb_above_upper. "
+                                "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
+                                "Volatility: atr_above (default ATR > 1.5× median), atr_below (default ATR < 0.75× median). "
+                                "Calendar: day_of_week (default Friday). "
+                                "Use entry_signal_params to override defaults."
+                            ),
+                        },
+                        "entry_signal_params": {
+                            "type": "object",
+                            "description": (
+                                "Optional parameters for entry_signal. Keys by signal type: "
+                                "rsi_below/rsi_above → {period: int, threshold: float}; "
+                                "sma_below/sma_above → {period: int}; "
+                                "macd_cross_above/macd_cross_below → {fast: int, slow: int, signal_period: int}; "
+                                "bb_above_upper/bb_below_lower → {length: int, std: float}; "
+                                "ema_cross_above/ema_cross_below → {fast: int, slow: int}; "
+                                "atr_above/atr_below → {period: int, multiplier: float}; "
+                                "day_of_week → {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
                             ),
                         },
                         "entry_signal_days": {
                             "type": "integer",
                             "minimum": 1,
                             "description": (
-                                "Optional: require the entry_signal condition to hold for this "
-                                "many consecutive trading days before entering. For example, "
-                                "entry_signal='rsi_below_30' with entry_signal_days=5 means "
-                                "'RSI below 30 for 5+ consecutive days'. Works with any signal. "
-                                "Omit or set to 1 for no sustained requirement (default behavior)."
+                                "Optional: require the entry_signal to be True for this many consecutive "
+                                "trading days before entering. Works with any signal. "
+                                "Omit or set to 1 for single-bar behavior (default)."
                             ),
                         },
                         "exit_signal": {
@@ -392,8 +398,13 @@ def get_tool_schemas() -> list[dict]:
                             "enum": SIGNAL_NAMES,
                             "description": (
                                 "Optional TA signal that gates exit. Only exits trades on "
-                                "dates where the signal is True for the underlying symbol. "
-                                "Uses the same signal names as entry_signal."
+                                "dates where the signal is True. Same signal names as entry_signal."
+                            ),
+                        },
+                        "exit_signal_params": {
+                            "type": "object",
+                            "description": (
+                                "Optional parameters for exit_signal. Same keys as entry_signal_params."
                             ),
                         },
                         "exit_signal_days": {
@@ -667,8 +678,10 @@ def execute_tool(
         _signal_keys = {
             "strategy_name",
             "entry_signal",
+            "entry_signal_params",
             "entry_signal_days",
             "exit_signal",
+            "exit_signal_params",
             "exit_signal_days",
         }
         strat_kwargs = {
@@ -686,7 +699,8 @@ def execute_tool(
                     f"Available: {', '.join(SIGNAL_NAMES)}",
                     dataset,
                 )
-            sig = SIGNAL_REGISTRY[entry_signal_name]()
+            entry_params = arguments.get("entry_signal_params") or {}
+            sig = SIGNAL_REGISTRY[entry_signal_name](**entry_params)
             # Wrap with sustained() if entry_signal_days is provided
             try:
                 days = int(arguments.get("entry_signal_days", 0))
@@ -704,7 +718,8 @@ def execute_tool(
                     f"Available: {', '.join(SIGNAL_NAMES)}",
                     dataset,
                 )
-            exit_sig = SIGNAL_REGISTRY[exit_signal_name]()
+            exit_params = arguments.get("exit_signal_params") or {}
+            exit_sig = SIGNAL_REGISTRY[exit_signal_name](**exit_params)
             try:
                 exit_days = int(arguments.get("exit_signal_days", 0))
             except (TypeError, ValueError):
