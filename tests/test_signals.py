@@ -1474,30 +1474,67 @@ class TestTASignalE2E:
     real pandas_ta signal + OHLCV stock_data → _resolve_signal_data →
     _get_signal_valid_dates → _apply_signal_filter → strategy output.
 
-    These tests use ``stock_data_long_history`` (200-bar OHLCV) and
-    ``option_data_with_stock`` (option chain with entry dates during both
-    the decline and recovery phases of the stock data).
+    These tests use ``stock_data_long_history`` (200-bar OHLCV with a
+    mid-decline bounce) and ``option_data_with_stock`` (option chain with
+    fixed strikes 195/200/205, 4 entry dates across decline/recovery phases,
+    and 2 expirations: exp-A at bar 100 (RSI≈14) and exp-B at bar 195
+    (RSI≈100)).
+
+    Key entry-bar properties:
+      bar 30:  RSI=0,    sma_above=False, rsi_below=True,  sustained(3)=True
+      bar 53:  RSI≈29.8, sma_above=False, rsi_below=True,  sustained(3)=False
+      bar 160: RSI≈99.8, sma_above=True,  rsi_below=False, atr_ohlcv=True,  atr_close=False
+      bar 170: RSI≈99.9, sma_above=True,  rsi_below=False, atr_ohlcv=True,  atr_close=True
+
+    Decline entries (30, 53) match both exps → 3 calls × 2 exps = 6 each.
+    Recovery entries (160, 170) are after exp-A → 3 calls × 1 exp = 3 each.
+    Baseline: 6 + 6 + 3 + 3 = 18 call rows.
+
+    Assertions use ``quote_date_entry`` for date-level verification,
+    ``expiration`` for exit-level verification, and exact row counts.
     """
+
+    def _entry_dates(self, stock_data_long_history):
+        """Return the 4 entry dates used by option_data_with_stock."""
+        dates = stock_data_long_history["quote_date"].values
+        return {
+            "decline": {
+                pd.Timestamp(dates[30]),
+                pd.Timestamp(dates[53]),
+            },
+            "recovery": {
+                pd.Timestamp(dates[160]),
+                pd.Timestamp(dates[170]),
+            },
+        }
+
+    def _exp_dates(self, stock_data_long_history):
+        """Return the 2 expiration dates used by option_data_with_stock."""
+        dates = stock_data_long_history["quote_date"].values
+        return {
+            "A": pd.Timestamp(dates[100]),  # RSI≈14, rsi_above(14,70)=False
+            "B": pd.Timestamp(dates[195]),  # RSI≈100, rsi_above(14,70)=True
+        }
 
     def test_sma_entry_signal_filters_entries(
         self, option_data_with_stock, stock_data_long_history
     ):
-        """sma_above(20) entry signal should only keep entries where price > SMA(20).
+        """sma_above(20) entry signal should only keep recovery-phase entries.
 
-        The stock data has 4 entry dates: 2 during decline (SMA False) and
-        2 during recovery (SMA True).  With sma_above(20), only recovery
-        entries should produce trades.
+        Stock data has 4 entry dates: 2 during decline (SMA False) and
+        2 during recovery (SMA True).  Only recovery dates should survive.
+        Baseline 18 → filtered 6 (recovery entries × exp-B only × 3 strikes).
         """
-        # Run without signal — all 4 entry dates produce trades
+        ed = self._entry_dates(stock_data_long_history)
+
         results_all = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
             exit_dte=0,
             raw=True,
         )
-        assert len(results_all) > 0
+        assert len(results_all) == 18
 
-        # Run with SMA entry signal + stock_data
         results_sma = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -1506,31 +1543,22 @@ class TestTASignalE2E:
             stock_data=stock_data_long_history,
             raw=True,
         )
+        assert len(results_sma) == 6
 
-        # Fewer results because decline entries are filtered out
-        assert len(results_sma) > 0
-        assert len(results_sma) < len(results_all)
-
-        # Cross-validate: compute sma_above(20) directly on stock_data
-        sd = stock_data_long_history.copy()
-        sd["underlying_price"] = sd["close"]
-        sma_mask = sma_above(20)(sd)
-        valid_prices = set(sd.loc[sma_mask, "close"].round(2))
-
-        # Every entry price in strategy output must be from a valid SMA date
-        entry_prices = set(results_sma["underlying_price_entry"].unique())
-        assert entry_prices.issubset(
-            valid_prices
-        ), f"Found entries at non-signal prices: {entry_prices - valid_prices}"
+        actual_dates = set(results_sma["quote_date_entry"].unique())
+        assert actual_dates == ed["recovery"]
+        assert actual_dates.isdisjoint(ed["decline"])
 
     def test_rsi_entry_signal_with_stock_data(
         self, option_data_with_stock, stock_data_long_history
     ):
-        """rsi_below(14, 30) entry signal should only keep entries where RSI < 30.
+        """rsi_below(14, 30) entry signal should only keep decline-phase entries.
 
-        In the stock data, RSI < 30 during the decline phase (bars 30, 50)
-        but not during recovery (bars 160, 170).
+        RSI < 30 during decline (bars 30, 53) but not during recovery
+        (bars 160, 170).  Decline entries match both exps → 12 rows.
         """
+        ed = self._entry_dates(stock_data_long_history)
+
         results = short_puts(
             option_data_with_stock,
             max_entry_dte=365,
@@ -1539,43 +1567,31 @@ class TestTASignalE2E:
             stock_data=stock_data_long_history,
             raw=True,
         )
+        assert len(results) == 12
 
-        assert len(results) > 0
-
-        # Verify: all entries should be on dates where RSI < 30
-        sd = stock_data_long_history.copy()
-        sd["underlying_price"] = sd["close"]
-        rsi_mask = rsi_below(14, 30)(sd)
-        valid_prices = set(sd.loc[rsi_mask, "close"].round(2))
-
-        entry_prices = set(results["underlying_price_entry"].unique())
-        assert entry_prices.issubset(valid_prices)
-
-        # Recovery-phase prices (bars 160, 170) should NOT appear
-        recovery_prices = set(
-            stock_data_long_history.iloc[[160, 170]]["close"].round(2)
-        )
-        assert entry_prices.isdisjoint(
-            recovery_prices
-        ), "Recovery-phase entries should be filtered out by RSI < 30"
+        actual_dates = set(results["quote_date_entry"].unique())
+        assert actual_dates == ed["decline"]
+        assert actual_dates.isdisjoint(ed["recovery"])
 
     def test_ta_exit_signal_filters_exits(
         self, option_data_with_stock, stock_data_long_history
     ):
-        """rsi_above(14, 70) exit signal should only keep exits where RSI > 70.
+        """rsi_above(14, 70) exit signal should remove expiration-A exits.
 
-        The exit date (bar 195) has RSI >> 70 during recovery, so exits
-        should be preserved.
+        Exp-A (bar 100, RSI≈14) → rsi_above(14,70)=False → filtered out.
+        Exp-B (bar 195, RSI≈100) → rsi_above(14,70)=True → kept.
+        Baseline 18 → filtered 12 (only exp-B rows survive).
         """
-        # Baseline — all trades
+        exps = self._exp_dates(stock_data_long_history)
+
         results_all = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
             exit_dte=0,
             raw=True,
         )
+        assert len(results_all) == 18
 
-        # With exit signal
         results_exit = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -1584,47 +1600,117 @@ class TestTASignalE2E:
             stock_data=stock_data_long_history,
             raw=True,
         )
+        assert len(results_exit) == 12
 
-        # RSI > 70 at bar 195 (exit date), so results should match baseline
-        assert len(results_exit) == len(results_all)
+        # All surviving rows must have exp-B
+        assert set(results_exit["expiration"].unique()) == {exps["B"]}
+
+        # Inverse: rsi_below(14, 30) keeps only exp-A exits
+        # (bar 100 RSI≈14 < 30 → True; bar 195 RSI≈100 → False)
+        results_inverse = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            exit_signal=rsi_below(14, 30),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+        assert len(results_inverse) == 6
+
+        # All surviving inverse rows must have exp-A
+        assert set(results_inverse["expiration"].unique()) == {exps["A"]}
 
     def test_entry_and_exit_signals_both_filter(
         self, option_data_with_stock, stock_data_long_history
     ):
         """Combined entry + exit signals should both filter independently.
 
-        entry_signal=sma_above(20) filters to recovery entries only.
-        exit_signal=rsi_above(14, 70) keeps exits where RSI > 70.
+        Use rsi_below(14,30) as entry signal (keeps bars 30, 53 → 12 rows)
+        and rsi_above(14,70) as exit signal (keeps exp-B only).
+        Combined: decline entries × exp-B = 6 rows.
+
+        Crucially, BOTH filters independently reduce the result set:
+          - Entry-only:  18 → 12 (removes recovery entries)
+          - Exit-only:   18 → 12 (removes exp-A)
+          - Combined:    18 → 6  (removes both)
         """
+        ed = self._entry_dates(stock_data_long_history)
+        exps = self._exp_dates(stock_data_long_history)
+
         results = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
             exit_dte=0,
-            entry_signal=sma_above(20),
+            entry_signal=rsi_below(14, 30),
             exit_signal=rsi_above(14, 70),
             stock_data=stock_data_long_history,
             raw=True,
         )
+        assert len(results) == 6
 
-        assert len(results) > 0
+        # Verify entry dates are decline-only
+        actual_dates = set(results["quote_date_entry"].unique())
+        assert actual_dates == ed["decline"]
 
-        # Verify entry prices are SMA-valid
-        sd = stock_data_long_history.copy()
-        sd["underlying_price"] = sd["close"]
-        sma_valid_prices = set(sd.loc[sma_above(20)(sd), "close"].round(2))
-        entry_prices = set(results["underlying_price_entry"].unique())
-        assert entry_prices.issubset(sma_valid_prices)
+        # Verify expiration is B-only
+        assert set(results["expiration"].unique()) == {exps["B"]}
+
+        # Cross-check: each individual filter produces more rows
+        results_entry_only = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=rsi_below(14, 30),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+        results_exit_only = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            exit_signal=rsi_above(14, 70),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+        assert len(results_entry_only) == 12
+        assert len(results_exit_only) == 12
+        # Combined is strictly fewer than either individual filter
+        assert len(results) < len(results_entry_only)
+        assert len(results) < len(results_exit_only)
 
     def test_sustained_ta_signal_with_stock_data(
         self, option_data_with_stock, stock_data_long_history
     ):
-        """sustained(rsi_below(14, 30), days=3) should require 3+ consecutive RSI < 30.
+        """sustained(rsi_below(14, 30), days=3) must reject bar 53.
 
-        Bars 30 and 50 are deep in a long decline so the sustained signal
-        should fire there.  Bars 160 and 170 are in recovery (RSI >> 70)
-        so they must not appear.
+        The bounce at bars 41-42 resets the RSI streak.  At bar 53,
+        RSI just crossed back below 30 for <3 consecutive bars, so
+        sustained(days=3) rejects it.  Bar 30 is deep in the streak
+        (30+ consecutive bars with RSI=0) and survives.
+
+        This test MUST produce fewer rows than plain rsi_below(14,30)
+        to prove sustained actually checks streak length.
+
+        plain rsi_below: bars 30 + 53 → 12 rows
+        sustained(3):    bar 30 only  → 6 rows
         """
-        results = long_calls(
+        ed = self._entry_dates(stock_data_long_history)
+        decline_deep = {pd.Timestamp(stock_data_long_history["quote_date"].values[30])}
+
+        # Plain rsi_below keeps both decline entries
+        results_plain = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=rsi_below(14, 30),
+            stock_data=stock_data_long_history,
+            raw=True,
+        )
+        assert len(results_plain) == 12
+        assert set(results_plain["quote_date_entry"].unique()) == ed["decline"]
+
+        # sustained(days=3) rejects bar 53 (streak < 3 bars)
+        results_sustained = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
             exit_dte=0,
@@ -1632,49 +1718,51 @@ class TestTASignalE2E:
             stock_data=stock_data_long_history,
             raw=True,
         )
+        assert len(results_sustained) == 6
 
-        assert len(results) > 0
+        # Only bar 30 survives (deep in streak)
+        actual_dates = set(results_sustained["quote_date_entry"].unique())
+        assert actual_dates == decline_deep
 
-        # Verify no recovery-phase entry prices
-        sd = stock_data_long_history
-        recovery_prices = set(sd.iloc[[160, 170]]["close"].round(2))
-        entry_prices = set(results["underlying_price_entry"].unique())
-        assert entry_prices.isdisjoint(recovery_prices)
+        # Prove sustained is strictly more selective than plain
+        assert len(results_sustained) < len(results_plain)
 
-        # Verify all entry prices are from sustained-valid dates
-        sd_copy = sd.copy()
-        sd_copy["underlying_price"] = sd_copy["close"]
-        sustained_mask = sustained(rsi_below(14, 30), days=3)(sd_copy)
-        valid_prices = set(sd_copy.loc[sustained_mask, "close"].round(2))
-        assert entry_prices.issubset(valid_prices)
-
-    def test_atr_signal_uses_real_ohlcv(self, stock_data_long_history):
+    def test_atr_signal_uses_real_ohlcv(
+        self, option_data_with_stock, stock_data_long_history
+    ):
         """ATR signal should use real high/low from stock_data when available.
 
-        Runs atr_above on the full OHLCV stock_data and on a close-only
-        version. The results should differ because close-only ATR
-        approximates true range as |close_t - close_{t-1}| while real ATR
-        uses max(H-L, |H-prevC|, |L-prevC|).
+        With OHLCV stock_data, atr_above(14, 1.0) passes all 4 entries → 18 rows.
+        With close-only stock_data, bar 160 is rejected → 15 rows.
+        The intraday range from real high/low changes ATR values, causing
+        different filtering.
         """
-        sd = stock_data_long_history.copy()
-        sd["underlying_price"] = sd["close"]
+        sd_full = stock_data_long_history
+        sd_close_only = sd_full.drop(columns=["high", "low"])
 
-        # Full OHLCV ATR
-        sig = atr_above(period=14, multiplier=1.0)
-        ohlcv_result = sig(sd)
-
-        # Close-only ATR (drop high/low)
-        close_only = sd.drop(columns=["high", "low"])
-        close_result = sig(close_only)
-
-        # Both should produce boolean Series of same length
-        assert len(ohlcv_result) == len(close_result)
-        assert ohlcv_result.dtype == bool
-        assert close_result.dtype == bool
-
-        # Results should differ on at least some bars because
-        # real high/low add intraday range that close-to-close misses
-        assert not ohlcv_result.equals(close_result), (
-            "OHLCV ATR and close-only ATR should differ — "
-            "real high/low data is not being used"
+        results_ohlcv = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=atr_above(period=14, multiplier=1.0),
+            stock_data=sd_full,
+            raw=True,
         )
+        results_close = long_calls(
+            option_data_with_stock,
+            max_entry_dte=365,
+            exit_dte=0,
+            entry_signal=atr_above(period=14, multiplier=1.0),
+            stock_data=sd_close_only,
+            raw=True,
+        )
+
+        assert len(results_ohlcv) == 18
+        assert len(results_close) == 15
+
+        # OHLCV includes bar 160 that close-only misses
+        ohlcv_dates = set(results_ohlcv["quote_date_entry"].unique())
+        close_dates = set(results_close["quote_date_entry"].unique())
+        assert (
+            close_dates < ohlcv_dates
+        ), "Expected close-only to be a strict subset of OHLCV dates"

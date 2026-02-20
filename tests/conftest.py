@@ -394,26 +394,43 @@ def calendar_data():
     return pd.DataFrame(data=d, columns=cols)
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def stock_data_long_history():
     """
     200-bar OHLCV stock data with a designed price pattern:
-    - Bars 0–80:   decline from 220 → ~180  (RSI drops below 30)
-    - Bars 80–140:  flat around 180           (RSI neutral, price < SMA-20)
-    - Bars 140–199: recovery from 180 → ~225  (SMA crossover, RSI > 70 near end)
+    - Bars 0–40:   decline from 220 → ~196  (RSI drops to 0)
+    - Bars 41–42:  brief +2% bounce          (RSI jumps to ~51, breaks streak)
+    - Bars 43–80:  resume decline → ~173     (RSI gradually drops back below 30)
+    - Bars 80–140: flat around 173           (RSI neutral, price near SMA-20)
+    - Bars 140–199: recovery from ~174 → ~227 (SMA crossover, RSI > 70)
 
-    Suitable for SMA(20), RSI(14), ATR(14) indicator warmup.
+    The bounce at bars 41–42 creates a gap where rsi_below(14,30) resets,
+    so sustained(rsi_below(14,30), days=3) rejects bar 53 (RSI just crossed
+    back below 30 for <3 bars) but accepts bar 30 (deep in the streak).
+
+    Key bar values:
+      bar 30:  RSI=0,    sma_above(20)=False, rsi_below(14,30)=True,  sustained(3)=True
+      bar 53:  RSI≈29.8, sma_above(20)=False, rsi_below(14,30)=True,  sustained(3)=False
+      bar 100: RSI≈14,   rsi_above(14,70)=False (exit signal rejects exp-A)
+      bar 160: RSI≈99.8, sma_above(20)=True,  rsi_below(14,30)=False
+      bar 170: RSI≈99.9, sma_above(20)=True,  rsi_below(14,30)=False
+      bar 195: RSI≈100,  rsi_above(14,70)=True  (exit signal keeps exp-B)
     """
-    # Build daily_returns that produce the desired pattern
     n = 200
     rets: list[float] = []
-    # Phase 1: decline (80 bars)
-    for _ in range(80):
+    # Phase 1: decline (40 bars, -0.3%/day)
+    for _ in range(40):
         rets.append(-0.003)
-    # Phase 2: flat (60 bars)
+    # Phase 2: bounce (2 bars, +2%/day — breaks RSI streak)
+    rets.append(0.02)
+    rets.append(0.02)
+    # Phase 3: resume decline (38 bars, -0.3%/day)
+    for _ in range(38):
+        rets.append(-0.003)
+    # Phase 4: flat (60 bars)
     for _ in range(60):
         rets.append(0.0001)
-    # Phase 3: recovery (59 bars)
+    # Phase 5: recovery (59 bars, +0.4%/day)
     for _ in range(59):
         rets.append(0.004)
     assert len(rets) == n - 1
@@ -426,31 +443,47 @@ def stock_data_long_history():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def option_data_with_stock(stock_data_long_history):
     """
     Option chain whose entry/exit dates overlap with stock_data_long_history.
 
-    Picks 4 entry dates from the stock data (2 during decline where SMA signal
-    is False, 2 during recovery where SMA signal is True) and 1 exit date
-    near the end.
+    Uses FIXED strikes (195, 200, 205) to avoid many-to-many merge issues
+    from overlapping price-relative strikes across entry dates.
 
-    Expiration is set to the exit date so DTE=0 at exit.
+    Entry dates (4):
+      - Bar 30 (decline, RSI=0, sma=False)
+      - Bar 53 (post-bounce, RSI≈29.8, sma=False — sustained(3) rejects this)
+      - Bar 160 (recovery, RSI≈99.8, sma=True)
+      - Bar 170 (recovery, RSI≈99.9, sma=True)
+
+    Expirations (2):
+      - Exp A = bar 100 (flat phase, RSI≈14 → rsi_above(14,70) rejects)
+      - Exp B = bar 195 (recovery, RSI≈100 → rsi_above(14,70) keeps)
+
+    Recovery entries (bars 160, 170) are AFTER exp-A so they only match
+    exp-B. Decline entries (bars 30, 53) can match both.
+
+    Baseline row count for long_calls: 18
+      - Bar 30: 3 calls × 2 exps = 6
+      - Bar 53: 3 calls × 2 exps = 6
+      - Bar 160: 3 calls × 1 exp (B only) = 3
+      - Bar 170: 3 calls × 1 exp (B only) = 3
     """
     sd = stock_data_long_history
     dates = sd["quote_date"].values
-
-    # Pick dates by index into the stock data
-    entry_decline_1 = pd.Timestamp(dates[30])  # deep in decline
-    entry_decline_2 = pd.Timestamp(dates[50])  # still declining
-    entry_recovery_1 = pd.Timestamp(dates[160])  # recovery phase
-    entry_recovery_2 = pd.Timestamp(dates[170])  # recovery phase
-    exit_date = pd.Timestamp(dates[195])  # near end
-
-    # Read underlying prices at those dates
     price_map = dict(zip(sd["quote_date"], sd["close"]))
 
-    exp_date = exit_date  # DTE = 0 at exit
+    # Entry dates
+    entry_decline_1 = pd.Timestamp(dates[30])  # deep in decline
+    entry_decline_2 = pd.Timestamp(dates[53])  # post-bounce, RSI just < 30
+    entry_recovery_1 = pd.Timestamp(dates[160])  # recovery phase
+    entry_recovery_2 = pd.Timestamp(dates[170])  # recovery phase
+    exit_date_a = pd.Timestamp(dates[100])  # flat phase, RSI < 70
+    exit_date_b = pd.Timestamp(dates[195])  # recovery phase, RSI > 70
+
+    # Fixed strikes — avoids many-to-many merge from overlapping price-relative strikes
+    strikes = [195.0, 200.0, 205.0]
 
     cols = [
         "underlying_symbol",
@@ -470,37 +503,34 @@ def option_data_with_stock(stock_data_long_history):
         entry_recovery_1,
         entry_recovery_2,
     ]
-    for ed in entry_dates:
-        price = price_map[ed]
-        # Calls at strikes: price-5, price, price+5
-        for offset in [-5, 0, 5]:
-            strike = round(price + offset, 0)
-            # Rough premiums based on moneyness
-            if offset < 0:  # ITM call
-                bid, ask = 7.0, 7.10
-            elif offset == 0:  # ATM call
-                bid, ask = 3.5, 3.60
-            else:  # OTM call
-                bid, ask = 1.0, 1.10
-            rows.append(["SPX", price, "call", exp_date, ed, strike, bid, ask])
-        # Puts at same strikes
-        for offset in [-5, 0, 5]:
-            strike = round(price + offset, 0)
-            if offset > 0:  # ITM put
-                bid, ask = 7.0, 7.10
-            elif offset == 0:  # ATM put
-                bid, ask = 3.5, 3.60
-            else:  # OTM put
-                bid, ask = 1.0, 1.10
-            rows.append(["SPX", price, "put", exp_date, ed, strike, bid, ask])
+    expirations = [exit_date_a, exit_date_b]
 
-    # Exit date — need matching options at the exit date for all entered strikes
-    exit_price = price_map[exit_date]
-    for ed in entry_dates:
-        entry_price = price_map[ed]
-        for offset in [-5, 0, 5]:
-            strike = round(entry_price + offset, 0)
-            # Calls at expiration: intrinsic value only
+    for exp_date in expirations:
+        # Entry rows for each (entry_date, expiration) pair
+        for ed in entry_dates:
+            price = price_map[ed]
+            for strike in strikes:
+                moneyness = strike - price  # positive = OTM call
+                # Call premiums based on moneyness
+                if moneyness < -3:
+                    bid, ask = 7.0, 7.10
+                elif -3 <= moneyness <= 3:
+                    bid, ask = 3.5, 3.60
+                else:
+                    bid, ask = 1.0, 1.10
+                rows.append(["SPX", price, "call", exp_date, ed, strike, bid, ask])
+                # Put premiums (reverse moneyness)
+                if moneyness > 3:
+                    bid, ask = 7.0, 7.10
+                elif -3 <= moneyness <= 3:
+                    bid, ask = 3.5, 3.60
+                else:
+                    bid, ask = 1.0, 1.10
+                rows.append(["SPX", price, "put", exp_date, ed, strike, bid, ask])
+
+        # Single set of exit rows per expiration (no per-entry duplication)
+        exit_price = price_map[exp_date]
+        for strike in strikes:
             call_intrinsic = max(exit_price - strike, 0)
             rows.append(
                 [
@@ -508,13 +538,12 @@ def option_data_with_stock(stock_data_long_history):
                     exit_price,
                     "call",
                     exp_date,
-                    exit_date,
+                    exp_date,
                     strike,
                     round(call_intrinsic, 2),
                     round(call_intrinsic + 0.05, 2),
                 ]
             )
-            # Puts at expiration
             put_intrinsic = max(strike - exit_price, 0)
             rows.append(
                 [
@@ -522,7 +551,7 @@ def option_data_with_stock(stock_data_long_history):
                     exit_price,
                     "put",
                     exp_date,
-                    exit_date,
+                    exp_date,
                     strike,
                     round(put_intrinsic, 2),
                     round(put_intrinsic + 0.05, 2),
