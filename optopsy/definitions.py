@@ -19,6 +19,7 @@ evaluated_cols: List[str] = [
     "underlying_symbol",
     "option_type",
     "expiration",
+    "quote_date_entry",
     "dte_entry",
     "strike",
     "otm_pct_entry",
@@ -36,6 +37,7 @@ evaluated_cols: List[str] = [
 single_strike_internal_cols: List[str] = [
     "underlying_symbol",
     "underlying_price_entry",
+    "quote_date_entry",
     "option_type",
     "expiration",
     "dte_entry",

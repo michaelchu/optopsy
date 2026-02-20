@@ -120,43 +120,98 @@ def _cut_options_by_otm(
     return data
 
 
-def _extract_price_data(data: pd.DataFrame) -> pd.DataFrame:
+def _extract_signal_dates(data: pd.DataFrame) -> pd.DataFrame:
     """
-    Extract unique underlying price per (symbol, quote_date), sorted chronologically.
+    Extract unique (symbol, quote_date) pairs from option chain data.
 
-    Used to provide signal functions with a clean price time series for
-    computing indicators like RSI or SMA.
+    This provides only date-level information for signals that don't need
+    price data (e.g. day_of_week).  TA signals that reference
+    ``underlying_price`` will fail with a clear KeyError — users must
+    provide ``stock_data`` for those.
 
     Args:
         data: DataFrame containing option data (may have multiple rows per quote_date)
 
     Returns:
-        DataFrame with one row per (underlying_symbol, quote_date) containing
-        underlying_price, sorted by symbol and date
+        DataFrame with one row per (underlying_symbol, quote_date),
+        sorted by symbol and date
     """
     return (
-        data[["underlying_symbol", "quote_date", "underlying_price"]]
-        .drop_duplicates(["underlying_symbol", "quote_date"])
+        data[["underlying_symbol", "quote_date"]]
+        .drop_duplicates()
         .sort_values(["underlying_symbol", "quote_date"])
         .reset_index(drop=True)
     )
 
 
-def _get_signal_valid_dates(
-    price_data: pd.DataFrame, signal_func: Callable
-) -> pd.DataFrame:
+def _prepare_stock_data(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
-    Run a signal function on price data and return valid (symbol, quote_date) pairs.
+    Prepare user-provided OHLCV stock data for signal computation.
+
+    Ensures the DataFrame has the ``underlying_price`` column (mapped from
+    ``close`` if necessary) so that existing signal functions that reference
+    ``underlying_price`` keep working.  Extra OHLCV columns (``open``,
+    ``high``, ``low``, ``volume``) are passed through so signals like ATR
+    can use real high/low data.
 
     Args:
-        price_data: DataFrame with columns (underlying_symbol, quote_date, underlying_price)
-        signal_func: Callable that takes price_data and returns a boolean Series
+        stock_data: DataFrame with at least (underlying_symbol, quote_date)
+                    and either ``close`` or ``underlying_price``
+
+    Returns:
+        Sorted DataFrame ready for signal functions
+    """
+    if "underlying_price" not in stock_data.columns and "close" in stock_data.columns:
+        df = stock_data.copy()
+        df["underlying_price"] = df["close"]
+    else:
+        df = stock_data
+    return (
+        df.drop_duplicates(["underlying_symbol", "quote_date"])
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+
+
+def _resolve_signal_data(params: dict, fallback_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build the DataFrame that signal functions will receive.
+
+    When ``stock_data`` is provided in *params*, returns prepared OHLCV data.
+    Otherwise falls back to date-only extraction from *fallback_data* (sufficient
+    for date-based signals like ``day_of_week``).
+
+    TA signals that reference ``underlying_price`` will fail with a
+    ``KeyError`` on the date-only fallback — callers should provide
+    ``stock_data`` when using price-based signals.
+
+    Args:
+        params: Strategy kwargs/params dict (must support ``.get("stock_data")``)
+        fallback_data: Option-chain (or merged) DataFrame used when no stock_data
+    """
+    stock_data = params.get("stock_data")
+    if stock_data is not None:
+        return _prepare_stock_data(stock_data)
+    return _extract_signal_dates(fallback_data)
+
+
+def _get_signal_valid_dates(
+    signal_data: pd.DataFrame, signal_func: Callable
+) -> pd.DataFrame:
+    """
+    Run a signal function and return valid (symbol, quote_date) pairs.
+
+    Args:
+        signal_data: DataFrame passed to the signal function. When stock_data
+            is provided this contains OHLCV columns; otherwise only
+            (underlying_symbol, quote_date) for date-based signals.
+        signal_func: Callable that takes a DataFrame and returns a boolean Series
 
     Returns:
         DataFrame with (underlying_symbol, quote_date) rows where signal is True
     """
-    mask = signal_func(price_data)
-    return price_data.loc[mask, ["underlying_symbol", "quote_date"]]
+    mask = signal_func(signal_data)
+    return signal_data.loc[mask, ["underlying_symbol", "quote_date"]]
 
 
 def _apply_signal_filter(
@@ -311,13 +366,16 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     delta_min = kwargs.get("delta_min")
     delta_max = kwargs.get("delta_max")
 
-    # Extract price history for signal computation (before entry/exit split)
-    # so that indicators like RSI have full date coverage for both signals
+    # Build signal data for entry/exit signal computation.
+    # When stock_data is provided, signals get proper OHLCV data.
+    # Otherwise, signals only get (symbol, quote_date) — enough for
+    # date-based signals like day_of_week.  TA signals that need
+    # underlying_price will KeyError; callers must provide stock_data.
     entry_signal = kwargs.get("entry_signal")
     exit_signal = kwargs.get("exit_signal")
-    price_data = None
+    signal_data = None
     if entry_signal is not None or exit_signal is not None:
-        price_data = _extract_price_data(data)
+        signal_data = _resolve_signal_data(kwargs, data)
 
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
@@ -329,7 +387,7 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
     # Apply entry signal filtering (only to entries, exits are unaffected)
     if entry_signal is not None:
-        valid_entry_dates = _get_signal_valid_dates(price_data, entry_signal)
+        valid_entry_dates = _get_signal_valid_dates(signal_data, entry_signal)
         entries = _apply_signal_filter(entries, valid_entry_dates)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
@@ -337,7 +395,7 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
     # Apply exit signal filtering (only to exits, entries are unaffected)
     if exit_signal is not None:
-        valid_exit_dates = _get_signal_valid_dates(price_data, exit_signal)
+        valid_exit_dates = _get_signal_valid_dates(signal_data, exit_signal)
         exits = _apply_signal_filter(exits, valid_exit_dates)
 
     # Determine merge columns
@@ -655,6 +713,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             delta_interval=context["params"].get("delta_interval"),
             entry_signal=context["params"].get("entry_signal"),
             exit_signal=context["params"].get("exit_signal"),
+            stock_data=context["params"].get("stock_data"),
         )
         .pipe(
             _strategy_engine,
@@ -1048,10 +1107,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     # Apply entry signal filtering to calendar/diagonal spreads
     entry_signal = params.get("entry_signal")
     if entry_signal is not None and not merged.empty:
-        price_data = _extract_price_data(
-            merged.rename(columns={"underlying_price_entry": "underlying_price"})
-        )
-        valid_dates = _get_signal_valid_dates(price_data, entry_signal)
+        signal_data = _resolve_signal_data(params, merged)
+        valid_dates = _get_signal_valid_dates(signal_data, entry_signal)
         merged = _apply_signal_filter(merged, valid_dates)
 
     if merged.empty:
@@ -1072,8 +1129,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     # Apply exit signal filtering to calendar/diagonal spreads
     exit_signal = params.get("exit_signal")
     if exit_signal is not None and not merged.empty:
-        price_data = _extract_price_data(data)
-        valid_exit_dates = _get_signal_valid_dates(price_data, exit_signal)
+        signal_data = _resolve_signal_data(params, data)
+        valid_exit_dates = _get_signal_valid_dates(signal_data, exit_signal)
         merged = _apply_signal_filter(merged, valid_exit_dates, date_col="exit_date")
 
     if merged.empty:

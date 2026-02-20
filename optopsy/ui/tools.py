@@ -1,11 +1,16 @@
+import logging
 import os
+from datetime import timedelta
 from typing import Any
 
 import pandas as pd
 
 import optopsy as op
+import optopsy.signals as _signals
 
 from .providers import get_all_provider_tool_schemas, get_provider_for_tool
+
+_log = logging.getLogger(__name__)
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "data")
 
@@ -211,6 +216,44 @@ CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is
 
 STRATEGY_NAMES = sorted(STRATEGIES.keys())
 
+# ---------------------------------------------------------------------------
+# Signal registry
+# ---------------------------------------------------------------------------
+# Maps a flat string identifier -> factory lambda that returns a SignalFunc.
+# Defaults are baked in so the LLM only needs to pick a name.
+# Factories are called at execution time to avoid shared state between runs.
+
+SIGNAL_REGISTRY: dict[str, Any] = {
+    "rsi_below_30": lambda: _signals.rsi_below(14, 30),
+    "rsi_below_20": lambda: _signals.rsi_below(14, 20),
+    "rsi_above_70": lambda: _signals.rsi_above(14, 70),
+    "rsi_above_80": lambda: _signals.rsi_above(14, 80),
+    "sma_below_20": lambda: _signals.sma_below(20),
+    "sma_above_20": lambda: _signals.sma_above(20),
+    "sma_below_50": lambda: _signals.sma_below(50),
+    "sma_above_50": lambda: _signals.sma_above(50),
+    "macd_cross_above": lambda: _signals.macd_cross_above(),
+    "macd_cross_below": lambda: _signals.macd_cross_below(),
+    "bb_above_upper": lambda: _signals.bb_above_upper(),
+    "bb_below_lower": lambda: _signals.bb_below_lower(),
+    "ema_cross_above_10_50": lambda: _signals.ema_cross_above(10, 50),
+    "ema_cross_below_10_50": lambda: _signals.ema_cross_below(10, 50),
+    "ema_cross_above_20_200": lambda: _signals.ema_cross_above(20, 200),
+    "ema_cross_below_20_200": lambda: _signals.ema_cross_below(20, 200),
+    "atr_above_high_vol": lambda: _signals.atr_above(14, 1.5),
+    "atr_below_low_vol": lambda: _signals.atr_below(14, 0.75),
+    "day_of_week_monday": lambda: _signals.day_of_week(0),
+    "day_of_week_thursday": lambda: _signals.day_of_week(3),
+    "day_of_week_friday": lambda: _signals.day_of_week(4),
+}
+
+SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
+
+# Signals that only need quote_date (no OHLCV data / yfinance fetch).
+_DATE_ONLY_SIGNALS = frozenset(
+    k for k in SIGNAL_REGISTRY if k.startswith("day_of_week")
+)
+
 # Maps strategy name -> required option_type for data fetching.
 # "call"/"put" means only that type is needed; None means both are needed.
 STRATEGY_OPTION_TYPE: dict[str, str | None] = {
@@ -316,6 +359,53 @@ def get_tool_schemas() -> list[dict]:
                             "enum": STRATEGY_NAMES,
                             "description": "Name of the strategy to run",
                         },
+                        "entry_signal": {
+                            "type": "string",
+                            "enum": SIGNAL_NAMES,
+                            "description": (
+                                "Optional TA signal that gates entry. Only enters trades on "
+                                "dates where the signal is True for the underlying symbol. "
+                                "Momentum: macd_cross_above, macd_cross_below, "
+                                "ema_cross_above_10_50, ema_cross_below_10_50, "
+                                "ema_cross_above_20_200, ema_cross_below_20_200. "
+                                "Mean-reversion: rsi_below_30, rsi_below_20, rsi_above_70, "
+                                "rsi_above_80, bb_below_lower, bb_above_upper. "
+                                "Trend filter: sma_above_20, sma_below_20, sma_above_50, sma_below_50. "
+                                "Volatility: atr_above_high_vol (ATR > 1.5× median), "
+                                "atr_below_low_vol (ATR < 0.75× median). "
+                                "Calendar: day_of_week_monday, day_of_week_thursday, day_of_week_friday."
+                            ),
+                        },
+                        "entry_signal_days": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": (
+                                "Optional: require the entry_signal condition to hold for this "
+                                "many consecutive trading days before entering. For example, "
+                                "entry_signal='rsi_below_30' with entry_signal_days=5 means "
+                                "'RSI below 30 for 5+ consecutive days'. Works with any signal. "
+                                "Omit or set to 1 for no sustained requirement (default behavior)."
+                            ),
+                        },
+                        "exit_signal": {
+                            "type": "string",
+                            "enum": SIGNAL_NAMES,
+                            "description": (
+                                "Optional TA signal that gates exit. Only exits trades on "
+                                "dates where the signal is True for the underlying symbol. "
+                                "Uses the same signal names as entry_signal."
+                            ),
+                        },
+                        "exit_signal_days": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": (
+                                "Optional: require the exit_signal condition to hold for this "
+                                "many consecutive trading days before exiting. Works the same as "
+                                "entry_signal_days but for the exit signal. "
+                                "Omit or set to 1 for no sustained requirement (default behavior)."
+                            ),
+                        },
                         **STRATEGY_PARAMS_SCHEMA,
                         **CALENDAR_EXTRA_PARAMS,
                     },
@@ -329,6 +419,74 @@ def get_tool_schemas() -> list[dict]:
     tools.extend(get_all_provider_tool_schemas())
 
     return tools
+
+
+def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
+    """Fetch OHLCV stock data via yfinance for signal computation.
+
+    Pads the date range by 250 trading days (~1 year) so that indicators
+    with long warmup periods (EMA-200, MACD) have enough history.
+
+    Returns a DataFrame with columns:
+        underlying_symbol, quote_date, open, high, low, close, volume
+    Or None if yfinance is not available or the fetch fails.
+    """
+    if dataset.empty:
+        return None
+
+    try:
+        import yfinance as yf
+    except ImportError:
+        _log.warning("yfinance not installed — cannot fetch stock data for TA signals")
+        return None
+
+    symbols = dataset["underlying_symbol"].unique().tolist()
+    date_min = dataset["quote_date"].min()
+    date_max = dataset["quote_date"].max()
+    # Pad start by ~250 trading days for indicator warmup
+    padded_start = date_min - timedelta(days=365)
+
+    frames = []
+    for symbol in symbols:
+        try:
+            df = yf.download(
+                symbol,
+                start=str(padded_start.date()),
+                end=str((date_max + timedelta(days=1)).date()),
+                progress=False,
+            )
+            if df.empty:
+                continue
+            # yfinance returns MultiIndex columns for single tickers
+            cols = df.columns
+            if isinstance(cols, pd.MultiIndex):
+                df.columns = [c[0] for c in cols]
+            price_df = df.reset_index()
+            price_df.columns = [c.lower() for c in price_df.columns]
+            price_df = price_df.rename(columns={"date": "quote_date"})
+            price_df["quote_date"] = pd.to_datetime(
+                price_df["quote_date"]
+            ).dt.tz_localize(None)
+            price_df["underlying_symbol"] = symbol
+            frames.append(
+                price_df[
+                    [
+                        "underlying_symbol",
+                        "quote_date",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "volume",
+                    ]
+                ]
+            )
+        except Exception as exc:
+            _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+
+    if not frames:
+        return None
+    return pd.concat(frames, ignore_index=True)
 
 
 MAX_ROWS = 50
@@ -504,13 +662,71 @@ def execute_tool(
         if dataset is None:
             return ToolResult("No dataset loaded. Load data first.", dataset)
         func, _, _ = STRATEGIES[strategy_name]
-        # Build a clean kwargs dict without mutating the original arguments
+        # Build a clean kwargs dict without mutating the original arguments.
+        # Strip signal params — handled separately below.
+        _signal_keys = {
+            "strategy_name",
+            "entry_signal",
+            "entry_signal_days",
+            "exit_signal",
+            "exit_signal_days",
+        }
         strat_kwargs = {
             k: v
             for k, v in arguments.items()
-            if k != "strategy_name"
+            if k not in _signal_keys
             and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
         }
+        # Resolve entry_signal string -> SignalFunc at call-time (fresh closure)
+        entry_signal_name = arguments.get("entry_signal")
+        if entry_signal_name:
+            if entry_signal_name not in SIGNAL_REGISTRY:
+                return ToolResult(
+                    f"Unknown entry_signal '{entry_signal_name}'. "
+                    f"Available: {', '.join(SIGNAL_NAMES)}",
+                    dataset,
+                )
+            sig = SIGNAL_REGISTRY[entry_signal_name]()
+            # Wrap with sustained() if entry_signal_days is provided
+            try:
+                days = int(arguments.get("entry_signal_days", 0))
+            except (TypeError, ValueError):
+                days = 0
+            if days > 1:
+                sig = _signals.sustained(sig, days)
+            strat_kwargs["entry_signal"] = sig
+        # Resolve exit_signal string -> SignalFunc
+        exit_signal_name = arguments.get("exit_signal")
+        if exit_signal_name:
+            if exit_signal_name not in SIGNAL_REGISTRY:
+                return ToolResult(
+                    f"Unknown exit_signal '{exit_signal_name}'. "
+                    f"Available: {', '.join(SIGNAL_NAMES)}",
+                    dataset,
+                )
+            exit_sig = SIGNAL_REGISTRY[exit_signal_name]()
+            try:
+                exit_days = int(arguments.get("exit_signal_days", 0))
+            except (TypeError, ValueError):
+                exit_days = 0
+            if exit_days > 1:
+                exit_sig = _signals.sustained(exit_sig, exit_days)
+            strat_kwargs["exit_signal"] = exit_sig
+        # Fetch OHLCV stock data if any signal needs it (skip for date-only signals)
+        needs_stock = (
+            entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
+        ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+        if needs_stock:
+            stock_data = _fetch_stock_data_for_signals(dataset)
+            if stock_data is not None:
+                strat_kwargs["stock_data"] = stock_data
+            else:
+                return ToolResult(
+                    "TA signals require stock price data but yfinance is not "
+                    "installed or the fetch failed. Install yfinance "
+                    "(`pip install yfinance`) and try again.",
+                    dataset,
+                )
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:

@@ -13,19 +13,17 @@ setup(
     classifiers=[
         "Operating System :: OS Independent",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
-        "Programming Language :: Python :: 3.14",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.12,<3.14",
     packages=["optopsy", "optopsy.ui", "optopsy.ui.providers"],
     install_requires=[
         "pandas",
         "numpy",
         "typing_extensions>=4.0.0",
         "tabulate>=0.9.0,<1.0.0",
+        "pandas-ta>=0.4.67b0",
     ],
     extras_require={
         "ui": [

@@ -170,6 +170,24 @@ def _check_callable_or_none(key: str, value: Any) -> None:
         raise ValueError(f"Invalid setting for {key}, must be a callable or None")
 
 
+def _check_stock_data(key: str, value: Any) -> None:
+    """Validate that value is a DataFrame with required columns, or None."""
+    if value is None:
+        return
+    if not isinstance(value, pd.DataFrame):
+        raise ValueError(f"Invalid setting for {key}, must be a DataFrame or None")
+    required = {"underlying_symbol", "quote_date"}
+    missing = required - set(value.columns)
+    if missing:
+        raise ValueError(
+            f"stock_data missing required columns: {missing}. "
+            f"Expected at least: underlying_symbol, quote_date, "
+            f"and close (or underlying_price)."
+        )
+    if "close" not in value.columns and "underlying_price" not in value.columns:
+        raise ValueError("stock_data must have a 'close' or 'underlying_price' column.")
+
+
 def _check_data_types(data: pd.DataFrame) -> None:
     """
     Validate that DataFrame has required columns with correct data types.
@@ -273,6 +291,8 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     # Signal filtering
     "entry_signal": _check_callable_or_none,
     "exit_signal": _check_callable_or_none,
+    # External stock data for signals
+    "stock_data": _check_stock_data,
     # Slippage parameters
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,
