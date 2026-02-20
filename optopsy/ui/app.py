@@ -114,6 +114,6 @@ async def on_message(message: cl.Message):
 
 
 def main():
-    from chainlit.cli import run_chainlit
+    from optopsy.ui.cli import main as cli_main
 
-    run_chainlit(os.path.abspath(__file__))
+    cli_main()
