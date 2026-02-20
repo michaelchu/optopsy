@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from optopsy.ui.tools import execute_tool, SIGNAL_REGISTRY
+from optopsy.ui.tools import execute_tool
 
 
 class TestEntrySignalDaysExecutor:

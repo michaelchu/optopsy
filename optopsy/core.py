@@ -178,7 +178,12 @@ def _resolve_signal_data(params: dict, fallback_data: pd.DataFrame) -> pd.DataFr
     Build the DataFrame that signal functions will receive.
 
     When ``stock_data`` is provided in *params*, returns prepared OHLCV data.
-    Otherwise falls back to date-only extraction from *fallback_data*.
+    Otherwise falls back to date-only extraction from *fallback_data* (sufficient
+    for date-based signals like ``day_of_week``).
+
+    TA signals that reference ``underlying_price`` will fail with a
+    ``KeyError`` on the date-only fallback — callers should provide
+    ``stock_data`` when using price-based signals.
 
     Args:
         params: Strategy kwargs/params dict (must support ``.get("stock_data")``)
@@ -364,9 +369,8 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     # Build signal data for entry/exit signal computation.
     # When stock_data is provided, signals get proper OHLCV data.
     # Otherwise, signals only get (symbol, quote_date) — enough for
-    # date-based signals like day_of_week, but TA signals that need
-    # underlying_price will raise a KeyError prompting the user to
-    # provide stock_data.
+    # date-based signals like day_of_week.  TA signals that need
+    # underlying_price will KeyError; callers must provide stock_data.
     entry_signal = kwargs.get("entry_signal")
     exit_signal = kwargs.get("exit_signal")
     signal_data = None

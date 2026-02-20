@@ -437,7 +437,7 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     try:
         import yfinance as yf
     except ImportError:
-        _log.warning("yfinance not installed — falling back to option-chain prices")
+        _log.warning("yfinance not installed — cannot fetch stock data for TA signals")
         return None
 
     symbols = dataset["underlying_symbol"].unique().tolist()
@@ -720,6 +720,13 @@ def execute_tool(
             stock_data = _fetch_stock_data_for_signals(dataset)
             if stock_data is not None:
                 strat_kwargs["stock_data"] = stock_data
+            else:
+                return ToolResult(
+                    "TA signals require stock price data but yfinance is not "
+                    "installed or the fetch failed. Install yfinance "
+                    "(`pip install yfinance`) and try again.",
+                    dataset,
+                )
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:
