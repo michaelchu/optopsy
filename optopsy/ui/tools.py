@@ -235,9 +235,14 @@ def _normalize_days_param(days):
         list[int]: Days parameter as a list.
 
     Raises:
-        TypeError: If days is neither an int nor a list.
+        TypeError: If days is neither an int nor a list, or if list contains non-integers.
+        ValueError: If days is an empty list.
     """
     if isinstance(days, list):
+        if not days:
+            raise ValueError("days parameter cannot be an empty list")
+        if not all(isinstance(day, int) for day in days):
+            raise TypeError("all elements in days list must be integers")
         return days
     elif isinstance(days, int):
         return [days]
