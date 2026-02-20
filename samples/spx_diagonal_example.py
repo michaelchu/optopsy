@@ -50,8 +50,10 @@ def run_strategy():
     # Short front-month call, long back-month call at different strikes
     long_call_diagonal = op.long_call_diagonal(spx_data, **diagonal_params).round(2)
     print("\n1. Long Call Diagonal")
-    print(f"   (front DTE: {diagonal_params['front_dte_min']}-{diagonal_params['front_dte_max']}, "
-          f"back DTE: {diagonal_params['back_dte_min']}-{diagonal_params['back_dte_max']})")
+    print(
+        f"   (front DTE: {diagonal_params['front_dte_min']}-{diagonal_params['front_dte_max']}, "
+        f"back DTE: {diagonal_params['back_dte_min']}-{diagonal_params['back_dte_max']})"
+    )
     print("-" * 50)
     if long_call_diagonal.empty:
         print("   No trades matched the criteria with this sample data.")
