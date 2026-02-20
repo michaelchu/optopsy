@@ -30,7 +30,7 @@ Example:
     >>> results = op.long_calls(data, entry_signal=sig, raw=True)
 
     >>> # MACD + low-vol regime filter
-    >>> sig = signal(macd_cross_above()) & signal(atr_below_low_vol := atr_below(14, 0.75))
+    >>> sig = signal(macd_cross_above()) & signal(atr_below(14, 0.75))
     >>> results = op.iron_condor(data, entry_signal=sig)
 """
 
