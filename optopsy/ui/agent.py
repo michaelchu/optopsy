@@ -153,9 +153,7 @@ def _compact_history(messages: list[dict[str, Any]]) -> None:
     are left intact so the LLM has full context for its next decision.
     """
     # Find indices of all tool-result messages (excluding the last batch)
-    tool_indices = [
-        i for i, m in enumerate(messages) if m.get("role") == "tool"
-    ]
+    tool_indices = [i for i, m in enumerate(messages) if m.get("role") == "tool"]
     # Find indices of all assistant messages with tool_calls (intermediate turns)
     assistant_tc_indices = [
         i
@@ -167,7 +165,9 @@ def _compact_history(messages: list[dict[str, Any]]) -> None:
     # assistant-with-tool-calls message).
     last_assistant_tc = assistant_tc_indices[-1] if assistant_tc_indices else -1
     old_tool_indices = [i for i in tool_indices if i < last_assistant_tc]
-    old_assistant_indices = assistant_tc_indices[:-1] if len(assistant_tc_indices) > 1 else []
+    old_assistant_indices = (
+        assistant_tc_indices[:-1] if len(assistant_tc_indices) > 1 else []
+    )
 
     for i in old_tool_indices:
         content = messages[i].get("content", "")
