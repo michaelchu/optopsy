@@ -21,9 +21,7 @@ class ParquetCache:
         self._cache_dir = cache_dir
 
     def _path(self, category: str, symbol: str) -> str:
-        directory = os.path.join(self._cache_dir, category)
-        os.makedirs(directory, exist_ok=True)
-        return os.path.join(directory, f"{symbol.upper()}.parquet")
+        return os.path.join(self._cache_dir, category, f"{symbol.upper()}.parquet")
 
     def read(self, category: str, symbol: str) -> pd.DataFrame | None:
         path = self._path(category, symbol)
@@ -39,6 +37,7 @@ class ParquetCache:
 
     def write(self, category: str, symbol: str, df: pd.DataFrame) -> None:
         path = self._path(category, symbol)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         try:
             df.to_parquet(path, index=False, engine="pyarrow")
             _log.debug("Cache written: %s (%d rows)", path, len(df))
@@ -46,14 +45,32 @@ class ParquetCache:
             _log.warning("Failed to write cache %s: %s", path, exc)
 
     def merge_and_save(
-        self, category: str, symbol: str, new_df: pd.DataFrame
+        self,
+        category: str,
+        symbol: str,
+        new_df: pd.DataFrame,
+        dedup_cols: list[str] | None = None,
     ) -> pd.DataFrame:
+        """Merge *new_df* with any existing cache and deduplicate.
+
+        *dedup_cols* — columns that form a natural key for dedup.  When
+        provided, only the **last** occurrence of each key is kept so that
+        newer data wins.  Falls back to full-row dedup when ``None``.
+        """
         existing = self.read(category, symbol)
         if existing is not None and not existing.empty:
             merged = pd.concat([existing, new_df], ignore_index=True)
         else:
             merged = new_df.copy()
 
-        merged = merged.drop_duplicates()
+        if dedup_cols:
+            present = [c for c in dedup_cols if c in merged.columns]
+            if present:
+                merged = merged.drop_duplicates(subset=present, keep="last")
+            else:
+                merged = merged.drop_duplicates()
+        else:
+            merged = merged.drop_duplicates()
+
         self.write(category, symbol, merged)
         return merged

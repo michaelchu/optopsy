@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -54,6 +55,38 @@ _OPTIONS_NUMERIC_COLS = [
 ]
 
 _STOCK_NUMERIC_COLS = ["open", "high", "low", "close", "adjusted_close", "volume"]
+
+_OPTIONS_DEDUP_COLS = ["quote_date", "expiration", "strike", "option_type"]
+_STOCK_DEDUP_COLS = ["date"]
+
+# Calendar-day gap between consecutive cached dates that triggers a re-fetch.
+# Markets close for weekends (2 days) and occasional 3-day weekends.  A gap
+# of >5 calendar days strongly suggests missing data rather than a holiday.
+_INTERIOR_GAP_THRESHOLD = 5
+
+
+def _parse_date(value: str | None) -> date | None:
+    """Parse a YYYY-MM-DD string to a date, or return None."""
+    return datetime.strptime(value, "%Y-%m-%d").date() if value else None
+
+
+def _coerce_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Coerce columns to numeric in-place, ignoring missing columns."""
+    for col in cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
+
+
+def _check_response(resp: requests.Response) -> str | None:
+    """Return an error string for known EODHD error codes, or None if OK."""
+    if resp.status_code == 401:
+        return "EODHD API key is invalid or expired."
+    if resp.status_code == 403:
+        return "EODHD API access denied. Check your subscription plan."
+    if resp.status_code == 429:
+        return "EODHD rate limit exceeded. Try again later."
+    return None
 
 
 def _safe_raise_for_status(resp: requests.Response) -> None:
@@ -114,17 +147,14 @@ class EODHDProvider(DataProvider):
 
     @staticmethod
     def _request_with_retry(url: str, params: dict) -> requests.Response:
-        last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):
             try:
                 return requests.get(url, params=params, timeout=_TIMEOUT)
-            except requests.RequestException as exc:
-                last_exc = exc
+            except requests.RequestException:
                 if attempt == _MAX_RETRIES:
                     raise
                 time.sleep(2**attempt)
-        # Unreachable, but keeps mypy happy
-        raise last_exc  # type: ignore[misc]
+        raise AssertionError("unreachable")
 
     def _paginate_window(
         self, api_key: str, base_params: dict[str, Any]
@@ -148,16 +178,9 @@ class EODHDProvider(DataProvider):
 
         while True:
             resp = self._request_with_retry(url, params)
-            if resp.status_code == 401:
-                return [], False, "EODHD API key is invalid or expired."
-            if resp.status_code == 403:
-                return (
-                    [],
-                    False,
-                    "EODHD API access denied. Check your subscription plan.",
-                )
-            if resp.status_code == 429:
-                return [], False, "EODHD rate limit exceeded. Try again later."
+            error = _check_response(resp)
+            if error:
+                return [], False, error
             if resp.status_code == 422:
                 # API rejects large offsets — treat like hitting the cap
                 hit_cap = True
@@ -205,8 +228,14 @@ class EODHDProvider(DataProvider):
     ) -> list[tuple[str | None, str | None]]:
         """Compute date ranges missing from cache that need to be fetched.
 
-        Uses a "bookend" strategy: checks if the requested range extends
-        before or after the cached date range, and returns those extensions.
+        Checks three kinds of gaps:
+        1. **Before** — requested start is earlier than the cached min.
+        2. **After** — requested end is later than the cached max (or open-ended).
+        3. **Interior** — consecutive cached dates within the requested range are
+           more than ``_INTERIOR_GAP_THRESHOLD`` calendar days apart, suggesting
+           missing data (e.g. a partial fetch failure).
+
+        A return value of ``[(None, None)]`` means "fetch everything".
         """
         if cached_df is None or cached_df.empty or date_column not in cached_df.columns:
             return [
@@ -223,6 +252,24 @@ class EODHDProvider(DataProvider):
         if start_dt and start_dt < cached_min:
             gaps.append((str(start_dt), str(cached_min - timedelta(days=1))))
 
+        # Interior gaps — only within the overlap of request and cache
+        overlap_start = max(start_dt, cached_min) if start_dt else cached_min
+        overlap_end = min(end_dt, cached_max) if end_dt else cached_max
+        if overlap_start <= overlap_end:
+            unique_dates = sorted(cached_dates.unique())
+            for prev, curr in zip(unique_dates, unique_dates[1:]):
+                # Only check dates inside the overlap region
+                if prev < overlap_start or curr > overlap_end:
+                    continue
+                day_gap = (curr - prev).days
+                if day_gap > _INTERIOR_GAP_THRESHOLD:
+                    gaps.append(
+                        (
+                            str(prev + timedelta(days=1)),
+                            str(curr - timedelta(days=1)),
+                        )
+                    )
+
         # Gap after cached range
         if end_dt and end_dt > cached_max:
             gaps.append((str(cached_max + timedelta(days=1)), str(end_dt)))
@@ -232,7 +279,83 @@ class EODHDProvider(DataProvider):
 
         return gaps
 
-    # -- options: cache-aware orchestrator --
+    # -- cache-aware fetch orchestrator --
+
+    def _fetch_with_cache(
+        self,
+        symbol: str,
+        start_date: str | None,
+        end_date: str | None,
+        category: str,
+        date_column: str,
+        dedup_cols: list[str],
+        fetch_fn: Callable[
+            [str, str, list[tuple[str | None, str | None]]],
+            pd.DataFrame | str | None,
+        ],
+        label: str,
+    ) -> tuple[pd.DataFrame | str, date | None, date | None]:
+        """Shared cache → gap-detect → fetch → merge → slice pipeline.
+
+        Returns ``(df_or_error, start_dt, end_dt)``.  When the first element
+        is a string it is an error message; otherwise it is the sliced DataFrame.
+        """
+        api_key = self._get_api_key()
+        if not api_key:
+            return "EODHD_API_KEY not configured. Add it to your .env file.", None, None
+
+        start_dt = _parse_date(start_date)
+        end_dt = _parse_date(end_date)
+
+        # Phase 1: Read cache and detect gaps
+        cached_df = self._cache.read(category, symbol)
+        if cached_df is not None and not cached_df.empty:
+            _log.info(
+                "Cache hit for %s %s: %s rows", symbol, label, f"{len(cached_df):,}"
+            )
+        gaps = self._compute_date_gaps(cached_df, start_dt, end_dt, date_column)
+
+        # Phase 2: Fetch missing data from API
+        if gaps:
+            _log.info(
+                "Fetching %d gap(s) from EODHD for %s %s: %s",
+                len(gaps),
+                symbol,
+                label,
+                gaps,
+            )
+            result = fetch_fn(api_key, symbol, gaps)
+            if isinstance(result, str):
+                if cached_df is None or cached_df.empty:
+                    return result, None, None
+                _log.warning("API fetch failed, using cached data: %s", result)
+            elif result is not None and not result.empty:
+                cached_df = self._cache.merge_and_save(
+                    category, symbol, result, dedup_cols=dedup_cols
+                )
+        else:
+            _log.info("Full cache hit for %s %s, no API calls needed", symbol, label)
+
+        if cached_df is None or cached_df.empty:
+            return f"No {label} data found for {symbol}.", None, None
+
+        # Phase 3: Slice to requested date range
+        df = cached_df.copy()
+        if start_dt:
+            df = df[df[date_column].dt.date >= start_dt]
+        if end_dt:
+            df = df[df[date_column].dt.date <= end_dt]
+
+        if df.empty:
+            return (
+                f"No {label} data found for {symbol} in the requested date range.",
+                None,
+                None,
+            )
+
+        return df, start_dt, end_dt
+
+    # -- options --
 
     def _fetch_options(
         self,
@@ -242,64 +365,22 @@ class EODHDProvider(DataProvider):
         option_type: str | None = None,
         expiration_type: str = "monthly",
     ) -> tuple[str, pd.DataFrame | None]:
-        api_key = self._get_api_key()
-        if not api_key:
-            return "EODHD_API_KEY not configured. Add it to your .env file.", None
-
         symbol = symbol.upper()
-        start_dt = (
-            datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None
+        result, _, _ = self._fetch_with_cache(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            category="options",
+            date_column="quote_date",
+            dedup_cols=_OPTIONS_DEDUP_COLS,
+            fetch_fn=self._fetch_options_from_api,
+            label="options",
         )
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None
-
-        # Phase 1: Read cache and detect gaps
-        cached_df = self._cache.read("options", symbol)
-        if cached_df is not None and not cached_df.empty:
-            _log.info(
-                "Cache hit for %s options: %s rows", symbol, f"{len(cached_df):,}"
-            )
-        gaps = self._compute_date_gaps(cached_df, start_dt, end_dt)
-
-        # Phase 2: Fetch missing data from API
-        if gaps:
-            _log.info(
-                "Fetching %d gap(s) from EODHD for %s: %s",
-                len(gaps),
-                symbol,
-                gaps,
-            )
-            result = self._fetch_options_from_api(api_key, symbol, gaps)
-            if isinstance(result, str):
-                # API error — use cache if available, otherwise surface error
-                if cached_df is None or cached_df.empty:
-                    return result, None
-                _log.warning("API fetch failed, using cached data: %s", result)
-            elif result is not None and not result.empty:
-                cached_df = self._cache.merge_and_save("options", symbol, result)
-        else:
-            _log.info("Full cache hit for %s options, no API calls needed", symbol)
-
-        if cached_df is None or cached_df.empty:
-            return (
-                f"No options data found for {symbol} with the given filters.",
-                None,
-            )
-
-        # Phase 3: Slice to requested date range
-        df = cached_df.copy()
-        if start_dt:
-            df = df[df["quote_date"].dt.date >= start_dt]
-        if end_dt:
-            df = df[df["quote_date"].dt.date <= end_dt]
-
-        if df.empty:
-            return (
-                f"No options data found for {symbol} in the requested date range.",
-                None,
-            )
-
-        # Phase 4: Apply client-side filters and transforms
-        return self._apply_options_transforms(df, symbol, option_type, expiration_type)
+        if isinstance(result, str):
+            return result, None
+        return self._apply_options_transforms(
+            result, symbol, option_type, expiration_type
+        )
 
     def _fetch_options_from_api(
         self,
@@ -314,15 +395,11 @@ class EODHDProvider(DataProvider):
         all_rows: list[dict] = []
 
         for gap_start, gap_end in gaps:
-            if gap_start is None and gap_end is None:
-                continue
-
             base_params: dict[str, Any] = {
                 "filter[underlying_symbol]": symbol,
                 "fields[options-eod]": _FIELDS,
                 "page[limit]": _PAGE_LIMIT,
                 "sort": "exp_date",
-                # No filter[type] — always fetch all option types for caching
             }
             if gap_start:
                 base_params["filter[tradetime_from]"] = gap_start
@@ -357,13 +434,8 @@ class EODHDProvider(DataProvider):
                 last_tradetime = max(r.get("tradetime", "") for r in rows)
                 if not last_tradetime:
                     break
-                next_start = datetime.strptime(
-                    last_tradetime[:10], "%Y-%m-%d"
-                ).date() + timedelta(days=1)
-                if (
-                    gap_end
-                    and next_start > datetime.strptime(gap_end, "%Y-%m-%d").date()
-                ):
+                next_start = _parse_date(last_tradetime[:10]) + timedelta(days=1)
+                if gap_end and next_start > _parse_date(gap_end):
                     break
                 base_params["filter[tradetime_from]"] = str(next_start)
                 window += 1
@@ -374,12 +446,9 @@ class EODHDProvider(DataProvider):
         # Normalize for cache storage
         df = pd.DataFrame(all_rows)
         df = df.rename(columns=_COLUMN_MAP)
-        df = df.drop_duplicates()
         df["expiration"] = pd.to_datetime(df["expiration"])
         df["quote_date"] = pd.to_datetime(df["quote_date"])
-        for col in _OPTIONS_NUMERIC_COLS:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+        _coerce_numeric(df, _OPTIONS_NUMERIC_COLS)
 
         return df
 
@@ -390,8 +459,40 @@ class EODHDProvider(DataProvider):
         option_type: str | None,
         expiration_type: str | None,
     ) -> tuple[str, pd.DataFrame | None]:
-        """Apply client-side filters and yfinance price merge."""
-        # Filter by expiration type
+        """Pipeline: filter → resolve prices → select columns → summarize."""
+        df, err = self._filter_options(df, symbol, option_type, expiration_type)
+        if err:
+            return err, None
+
+        df = self._resolve_underlying_prices(df, symbol)
+        df = self._select_options_columns(df)
+        df = df.dropna(subset=["underlying_price"])
+
+        if df.empty:
+            return (
+                f"Fetched options for {symbol} from EODHD but could not "
+                "resolve underlying stock prices (yfinance lookup failed). "
+                "Try a different date range or check the ticker symbol.",
+                None,
+            )
+
+        summary = (
+            f"Fetched {len(df)} options records for {symbol} from EODHD. "
+            f"Date range: {df['quote_date'].min().date()} to {df['quote_date'].max().date()}, "
+            f"expirations: {df['expiration'].nunique()}, "
+            f"strikes: {df['strike'].nunique()}"
+        )
+        return summary, df
+
+    @staticmethod
+    def _filter_options(
+        df: pd.DataFrame,
+        symbol: str,
+        option_type: str | None,
+        expiration_type: str | None,
+    ) -> tuple[pd.DataFrame, str | None]:
+        """Filter by expiration type / option type and normalize option_type."""
+        df = df.copy()
         if expiration_type and "expiration_type" in df.columns:
             before = len(df)
             df = df[df["expiration_type"].str.lower() == expiration_type.lower()]
@@ -402,23 +503,23 @@ class EODHDProvider(DataProvider):
                 f"{len(df):,}",
             )
             if df.empty:
-                return (
+                return df, (
                     f"No {expiration_type} options found for {symbol}. "
-                    f"Try a different expiration_type (e.g. 'weekly').",
-                    None,
+                    f"Try a different expiration_type (e.g. 'weekly')."
                 )
 
-        # Filter by option type (client-side — cache stores both)
         if option_type and "option_type" in df.columns:
             ot = option_type.lower()[0]
             df = df[df["option_type"].str.lower().str[0] == ot]
             if df.empty:
-                return f"No {option_type} options found for {symbol}.", None
+                return df, f"No {option_type} options found for {symbol}."
 
-        # Normalize option_type to single char
         df["option_type"] = df["option_type"].str.lower().str[0]
+        return df, None
 
-        # Resolve underlying prices via yfinance
+    @staticmethod
+    def _resolve_underlying_prices(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+        """Merge underlying close prices from yfinance into the DataFrame."""
         _log.info(
             "Resolving underlying prices via yfinance for %s (%s rows)",
             symbol,
@@ -449,7 +550,11 @@ class EODHDProvider(DataProvider):
         except Exception as exc:
             _log.warning("yfinance price lookup failed for %s: %s", symbol, exc)
             df["underlying_price"] = pd.NA
+        return df
 
+    @staticmethod
+    def _select_options_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Keep only the columns needed for optopsy backtesting."""
         keep = [
             "underlying_symbol",
             "underlying_price",
@@ -462,27 +567,9 @@ class EODHDProvider(DataProvider):
         ]
         optional = ["delta", "gamma", "theta", "vega", "volume"]
         keep.extend([c for c in optional if c in df.columns])
-        df = df[[c for c in keep if c in df.columns]]
+        return df[[c for c in keep if c in df.columns]]
 
-        df = df.dropna(subset=["underlying_price"])
-
-        if df.empty:
-            return (
-                f"Fetched options for {symbol} from EODHD but could not "
-                "resolve underlying stock prices (yfinance lookup failed). "
-                "Try a different date range or check the ticker symbol.",
-                None,
-            )
-
-        summary = (
-            f"Fetched {len(df)} options records for {symbol} from EODHD. "
-            f"Date range: {df['quote_date'].min().date()} to {df['quote_date'].max().date()}, "
-            f"expirations: {df['expiration'].nunique()}, "
-            f"strikes: {df['strike'].nunique()}"
-        )
-        return summary, df
-
-    # -- stock prices: cache-aware --
+    # -- stock prices --
 
     def _fetch_stock_prices(
         self,
@@ -490,54 +577,21 @@ class EODHDProvider(DataProvider):
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> tuple[str, pd.DataFrame | None]:
-        api_key = self._get_api_key()
-        if not api_key:
-            return "EODHD_API_KEY not configured. Add it to your .env file.", None
-
         symbol = symbol.upper()
-        start_dt = (
-            datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None
+        result, _, _ = self._fetch_with_cache(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            category="stocks",
+            date_column="date",
+            dedup_cols=_STOCK_DEDUP_COLS,
+            fetch_fn=self._fetch_stock_prices_from_api,
+            label="stock prices",
         )
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None
+        if isinstance(result, str):
+            return result, None
 
-        # Phase 1: Read cache and detect gaps
-        cached_df = self._cache.read("stocks", symbol)
-        if cached_df is not None and not cached_df.empty:
-            _log.info(
-                "Cache hit for %s stock prices: %s rows", symbol, f"{len(cached_df):,}"
-            )
-        gaps = self._compute_date_gaps(cached_df, start_dt, end_dt, date_column="date")
-
-        # Phase 2: Fetch missing data from API
-        if gaps:
-            _log.info(
-                "Fetching %d gap(s) from EODHD for %s stock prices", len(gaps), symbol
-            )
-            result = self._fetch_stock_prices_from_api(api_key, symbol, gaps)
-            if isinstance(result, str):
-                if cached_df is None or cached_df.empty:
-                    return result, None
-                _log.warning("API failed, using cached stock data: %s", result)
-            elif result is not None and not result.empty:
-                cached_df = self._cache.merge_and_save("stocks", symbol, result)
-        else:
-            _log.info("Full cache hit for %s stock prices, no API calls needed", symbol)
-
-        if cached_df is None or cached_df.empty:
-            return f"No stock price data found for {symbol}.", None
-
-        # Phase 3: Slice to requested range
-        df = cached_df.copy()
-        if start_dt:
-            df = df[df["date"].dt.date >= start_dt]
-        if end_dt:
-            df = df[df["date"].dt.date <= end_dt]
-
-        if df.empty:
-            return f"No stock price data for {symbol} in the requested range.", None
-
-        df = df.drop(columns=["warning"], errors="ignore")
-
+        df = result.drop(columns=["warning"], errors="ignore")
         summary = (
             f"Fetched {len(df)} daily price records for {symbol} from EODHD. "
             f"Date range: {df['date'].min().date()} to {df['date'].max().date()}"
@@ -554,9 +608,6 @@ class EODHDProvider(DataProvider):
         all_data: list[dict] = []
 
         for gap_start, gap_end in gaps:
-            if gap_start is None and gap_end is None:
-                continue
-
             params: dict[str, Any] = {
                 "api_token": api_key,
                 "fmt": "json",
@@ -568,13 +619,9 @@ class EODHDProvider(DataProvider):
 
             url = f"https://eodhd.com/api/eod/{symbol}.US"
             resp = self._request_with_retry(url, params)
-
-            if resp.status_code == 401:
-                return "EODHD API key is invalid or expired."
-            if resp.status_code == 403:
-                return "EODHD API access denied. Check your subscription plan."
-            if resp.status_code == 429:
-                return "EODHD rate limit exceeded. Try again later."
+            error = _check_response(resp)
+            if error:
+                return error
             _safe_raise_for_status(resp)
 
             data = resp.json()
@@ -586,10 +633,7 @@ class EODHDProvider(DataProvider):
 
         df = pd.DataFrame(all_data)
         df["date"] = pd.to_datetime(df["date"])
-        for col in _STOCK_NUMERIC_COLS:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-        df = df.drop_duplicates()
+        _coerce_numeric(df, _STOCK_NUMERIC_COLS)
 
         return df
 
