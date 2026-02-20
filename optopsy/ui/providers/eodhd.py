@@ -252,23 +252,26 @@ class EODHDProvider(DataProvider):
         if start_dt and start_dt < cached_min:
             gaps.append((str(start_dt), str(cached_min - timedelta(days=1))))
 
-        # Interior gaps — only within the overlap of request and cache
+        # Interior gaps — check consecutive cached dates for holes that
+        # overlap with the requested range.  A gap between (prev, curr) is
+        # relevant when it *intersects* [overlap_start, overlap_end], not
+        # only when both endpoints fall inside the overlap.
         overlap_start = max(start_dt, cached_min) if start_dt else cached_min
         overlap_end = min(end_dt, cached_max) if end_dt else cached_max
         if overlap_start <= overlap_end:
             unique_dates = sorted(cached_dates.unique())
             for prev, curr in zip(unique_dates, unique_dates[1:]):
-                # Only check dates inside the overlap region
-                if prev < overlap_start or curr > overlap_end:
-                    continue
                 day_gap = (curr - prev).days
-                if day_gap > _INTERIOR_GAP_THRESHOLD:
-                    gaps.append(
-                        (
-                            str(prev + timedelta(days=1)),
-                            str(curr - timedelta(days=1)),
-                        )
-                    )
+                if day_gap <= _INTERIOR_GAP_THRESHOLD:
+                    continue
+                # The hole runs from prev+1 to curr-1.  Clamp to the
+                # overlap region so we never fetch outside the request.
+                hole_start = prev + timedelta(days=1)
+                hole_end = curr - timedelta(days=1)
+                clamped_start = max(hole_start, overlap_start)
+                clamped_end = min(hole_end, overlap_end)
+                if clamped_start <= clamped_end:
+                    gaps.append((str(clamped_start), str(clamped_end)))
 
         # Gap after cached range
         if end_dt and end_dt > cached_max:

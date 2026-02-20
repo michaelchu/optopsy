@@ -123,21 +123,24 @@ class TestComputeDateGaps:
         assert gaps == [(None, None)]
 
     def test_full_cache_hit_no_gaps(self):
-        cached = _make_cached_df(["2024-01-01", "2024-03-01"])
+        # Dense cache every 3 days — request falls entirely within
+        cached = _make_cached_df(pd.date_range("2024-01-01", "2024-03-01", freq="3D"))
         gaps = EODHDProvider._compute_date_gaps(
             cached, date(2024, 1, 15), date(2024, 2, 15)
         )
         assert gaps == []
 
     def test_gap_before_cache(self):
-        cached = _make_cached_df(["2024-03-01", "2024-06-01"])
+        # Dense cache from Mar-Jun, request starts before cache
+        cached = _make_cached_df(pd.date_range("2024-03-01", "2024-06-01", freq="3D"))
         gaps = EODHDProvider._compute_date_gaps(
             cached, date(2024, 1, 1), date(2024, 5, 1)
         )
         assert gaps == [("2024-01-01", "2024-02-29")]
 
     def test_gap_after_cache(self):
-        cached = _make_cached_df(["2024-01-01", "2024-03-01"])
+        # Dense cache from Jan-Mar, request extends past cache
+        cached = _make_cached_df(pd.date_range("2024-01-01", "2024-03-01", freq="3D"))
         gaps = EODHDProvider._compute_date_gaps(
             cached, date(2024, 2, 1), date(2024, 6, 1)
         )
@@ -157,9 +160,11 @@ class TestComputeDateGaps:
         assert (after_start, "2024-09-01") in gaps
 
     def test_no_end_date_fetches_after_cache(self):
-        cached = _make_cached_df(["2024-01-01", "2024-03-01"])
+        # Dense cache from Jan-Mar
+        cached = _make_cached_df(pd.date_range("2024-01-01", "2024-03-01", freq="3D"))
+        cached_max = pd.date_range("2024-01-01", "2024-03-01", freq="3D")[-1].date()
         gaps = EODHDProvider._compute_date_gaps(cached, date(2024, 2, 1), None)
-        assert gaps == [("2024-03-02", None)]
+        assert gaps == [(str(cached_max + timedelta(days=1)), None)]
 
     def test_exact_match_dense_cache_no_gaps(self):
         """Dense cache covering the full range produces no gaps."""
@@ -173,7 +178,11 @@ class TestComputeDateGaps:
         assert gaps == []
 
     def test_custom_date_column(self):
-        cached = _make_cached_df(["2024-01-01", "2024-03-01"], date_column="date")
+        # Dense cache from Jan-Mar with custom date column
+        cached = _make_cached_df(
+            pd.date_range("2024-01-01", "2024-03-01", freq="3D"),
+            date_column="date",
+        )
         gaps = EODHDProvider._compute_date_gaps(
             cached, date(2024, 2, 1), date(2024, 6, 1), date_column="date"
         )
@@ -218,6 +227,29 @@ class TestComputeDateGaps:
             cached, date(2024, 1, 1), date(2024, 1, 5)
         )
         assert gaps == []
+
+    def test_interior_gap_straddling_overlap_detected(self):
+        """A gap that straddles the overlap boundary should still be detected."""
+        # Cache: Jan 1-2 and Mar 1-2 (big gap in between)
+        # Request: Jan 15 to Feb 15 (entirely inside the gap)
+        cached = _make_cached_df(
+            ["2024-01-01", "2024-01-02", "2024-03-01", "2024-03-02"]
+        )
+        gaps = EODHDProvider._compute_date_gaps(
+            cached, date(2024, 1, 15), date(2024, 2, 15)
+        )
+        # Gap should be clamped to the requested range
+        assert ("2024-01-15", "2024-02-15") in gaps
+
+    def test_interior_gap_clamped_to_request(self):
+        """Interior gap bounds should be clamped to the overlap region."""
+        # Cache: Jan 1 and Jun 1 (huge gap). Request: Feb 1 to Apr 1
+        cached = _make_cached_df(["2024-01-01", "2024-06-01"])
+        gaps = EODHDProvider._compute_date_gaps(
+            cached, date(2024, 2, 1), date(2024, 4, 1)
+        )
+        # Should fetch Feb 1 to Apr 1, not Jan 2 to May 31
+        assert ("2024-02-01", "2024-04-01") in gaps
 
 
 # -- _fetch_with_cache --
