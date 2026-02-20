@@ -189,14 +189,14 @@ Filter entries using technical analysis signals powered by [pandas-ta](https://g
 from optopsy import long_calls, rsi_below, sustained, signal, day_of_week
 
 # Enter only when RSI(14) is below 30
-results = op.long_calls(data, entry_signal=rsi_below(14, 30))
+results = long_calls(data, entry_signal=rsi_below(14, 30))
 
 # Require RSI below 30 for 5 consecutive days
-results = op.long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
+results = long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
 
 # Compose signals with & and |
 sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))  # Oversold + Thursday
-results = op.long_calls(data, entry_signal=sig)
+results = long_calls(data, entry_signal=sig)
 ```
 
 ### Available Signals
