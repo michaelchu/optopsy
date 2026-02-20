@@ -31,8 +31,9 @@ it means the API key is not configured — tell the user to add it to their `.en
 
 ## Available Strategies and Option Type Filtering
 
-When fetching data with `fetch_eodhd_options`, ALWAYS pass the `option_type` parameter based on \
-the strategy the user wants to run. This halves the data volume and speeds up fetching significantly.
+Data fetched from EODHD is cached locally (both calls and puts together). The `option_type` \
+parameter on `fetch_eodhd_options` filters the returned DataFrame client-side — it does NOT \
+affect what is fetched from the API. Pass it to limit the data to what the strategy needs:
 
 **Calls only** (pass `option_type: "call"`):
 long_calls, short_calls, long_call_spread, short_call_spread, \
@@ -47,10 +48,6 @@ long_put_diagonal, short_put_diagonal
 **Both calls and puts** (omit `option_type`):
 long_straddles, short_straddles, long_strangles, short_strangles, \
 iron_condor, reverse_iron_condor, iron_butterfly, reverse_iron_butterfly, protective_put
-
-IMPORTANT: If the user mentions a specific strategy, always filter by option_type during fetch. \
-If comparing multiple strategies that need different types, omit the filter. \
-If the user hasn't specified a strategy yet, omit the filter.
 
 ## Expiration Type Filtering
 

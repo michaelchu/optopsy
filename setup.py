@@ -23,6 +23,7 @@ setup(
     install_requires=[
         "pandas",
         "numpy",
+        "pyarrow>=14.0.0",
         "typing_extensions>=4.0.0",
         "chainlit>=1.0.0,<3.0.0",
         "litellm>=1.0.0,<3.0.0",
