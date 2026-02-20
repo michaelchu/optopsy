@@ -115,69 +115,56 @@ Positive pct_change = profit, negative = loss.
 
 The `run_strategy` tool accepts optional `entry_signal` and `exit_signal` parameters that filter \
 which dates are eligible for trade entry/exit based on technical analysis of the underlying price \
-history. Only one signal per side (entry/exit) can be specified per run; combine signals via the \
-Python API for advanced use.
+history. Only one signal per side (entry/exit) can be specified per run.
 
-**Momentum / Crossover** (event-based — fires on the crossover bar only):
-- `macd_cross_above` — MACD line crosses above signal line; bullish momentum just emerged (~50 bar warmup)
-- `macd_cross_below` — MACD line crosses below signal line; bearish momentum just emerged (~50 bar warmup)
-- `ema_cross_above_10_50` — EMA(10) crosses above EMA(50); short-term bullish (~50 bar warmup)
-- `ema_cross_below_10_50` — EMA(10) crosses below EMA(50); short-term bearish
-- `ema_cross_above_20_200` — Golden cross; long-term bullish trend confirmation (~200 bar warmup)
-- `ema_cross_below_20_200` — Death cross; long-term bearish trend confirmation
+**Available signals** — pick the signal type, then optionally tune it with `entry_signal_params`:
 
-**Mean Reversion / Extremes** (state-based — True on any bar in that condition):
-- `rsi_below_30` — RSI(14) < 30; oversold, potential bounce
-- `rsi_below_20` — RSI(14) < 20; extreme oversold
-- `rsi_above_70` — RSI(14) > 70; overbought, potential reversal
-- `rsi_above_80` — RSI(14) > 80; extreme overbought
-- `bb_below_lower` — Price below lower Bollinger Band(20, 2σ); oversold / mean-reversion setup
-- `bb_above_upper` — Price above upper Bollinger Band(20, 2σ); overbought / breakout
+| Signal | Type | Default params | Notes |
+|---|---|---|---|
+| `rsi_below` | state | period=14, threshold=30 | Oversold; potential bounce |
+| `rsi_above` | state | period=14, threshold=70 | Overbought; potential reversal |
+| `sma_below` | state | period=50 | Price below SMA; downtrend |
+| `sma_above` | state | period=50 | Price above SMA; uptrend |
+| `macd_cross_above` | event | fast=12, slow=26, signal_period=9 | Bullish momentum; ~50 bar warmup |
+| `macd_cross_below` | event | fast=12, slow=26, signal_period=9 | Bearish momentum; ~50 bar warmup |
+| `bb_above_upper` | state | length=20, std=2.0 | Price above upper BB; overbought/breakout |
+| `bb_below_lower` | state | length=20, std=2.0 | Price below lower BB; oversold/mean-reversion |
+| `ema_cross_above` | event | fast=10, slow=50 | Bullish EMA cross; warmup = slow bars |
+| `ema_cross_below` | event | fast=10, slow=50 | Bearish EMA cross; warmup = slow bars |
+| `atr_above` | state | period=14, multiplier=1.5 | ATR > multiplier × median; elevated vol |
+| `atr_below` | state | period=14, multiplier=0.75 | ATR < multiplier × median; calm/low vol |
+| `day_of_week` | calendar | days=[4] | Fri by default; pass days=[0..6] for others |
 
-**Trend Filter** (state-based):
-- `sma_above_20` — Price above 20-day SMA; short-term uptrend
-- `sma_below_20` — Price below 20-day SMA; short-term downtrend
-- `sma_above_50` — Price above 50-day SMA; medium-term uptrend
-- `sma_below_50` — Price below 50-day SMA; medium-term downtrend
+**State-based** signals are True on every bar meeting the condition. \
+**Event-based** signals fire only on the crossover bar — use `entry_signal_days` to require persistence.
 
-**Volatility Regime** (state-based; uses real OHLCV data from yfinance when available):
-- `atr_above_high_vol` — ATR > 1.5× median ATR; elevated volatility environment
-- `atr_below_low_vol` — ATR < 0.75× median ATR; calm / low volatility environment
+**`entry_signal_params`** (optional object): Override any default parameter for the chosen signal. \
+Examples: `{"threshold": 40}`, `{"period": 200}`, `{"fast": 5, "slow": 20}`, `{"days": [3, 4]}`.
 
-**Calendar / Day Filter**:
-- `day_of_week_monday` — Enter only on Mondays
-- `day_of_week_thursday` — Enter only on Thursdays
-- `day_of_week_friday` — Enter only on Fridays
+**`entry_signal_days`** (optional integer): Require the signal to be True for N consecutive trading \
+days before entering. Works with any signal. Omit for single-bar behavior (default).
 
-**⚠ Warmup requirement**: Crossover signals (MACD, EMA) need sufficient price history to compute. \
-MACD needs ~50 bars; EMA(200) needs 200 bars. If the dataset is too short, these signals return no \
-valid dates — use state-based signals (RSI, SMA) instead for shorter datasets.
+**`exit_signal`** / **`exit_signal_params`** / **`exit_signal_days`**: Same as above but gate exits.
 
-**`entry_signal_days`** (optional integer): Requires the chosen entry signal to be True for N \
-consecutive trading days before entering. Works with **any** signal. Omit for default (single-bar) \
-behavior. Example: `entry_signal="rsi_below_30"` + `entry_signal_days=5` means "RSI below 30 for \
-5+ days in a row".
+**⚠ Warmup**: MACD needs ~50 bars; EMA cross needs `slow` bars of history. Use state-based signals \
+(RSI, SMA) for shorter datasets.
 
-**`exit_signal`** (optional): Same signal names as `entry_signal`, but gates trade exits instead of \
-entries. Only exits on dates where the signal is True for the underlying symbol.
-
-**`exit_signal_days`** (optional integer): Like `entry_signal_days` but for the exit signal. \
-Requires the exit signal to hold for N consecutive trading days before exiting.
-
-**Signal data source**: When a TA signal is used, the system automatically fetches OHLCV stock data \
-from yfinance for proper indicator computation (including ATR with real high/low prices). This is \
-done transparently — no extra parameters needed. If yfinance is not installed or the fetch fails, \
-TA signals will return an error — date-only signals (day_of_week) do not require yfinance.
+**Signal data source**: TA signals automatically fetch OHLCV data via yfinance. `day_of_week` does \
+not require yfinance.
 
 **Typical use-cases**:
-- "Only sell puts when the market is oversold" → `entry_signal="rsi_below_30"`
-- "Buy calls only when momentum is bullish" → `entry_signal="macd_cross_above"`
-- "Enter iron condors only in low-vol environments" → `entry_signal="atr_below_low_vol"`
-- "Sell covered calls only when trending up" → `entry_signal="sma_above_50"`
-- "Enter strangles only on Thursday expirations" → `entry_signal="day_of_week_thursday"`
-- "RSI below 30 for more than 5 days" → `entry_signal="rsi_below_30"`, `entry_signal_days=5`
-- "Exit when RSI crosses above 70" → `exit_signal="rsi_above_70"`
-- "Exit only after MACD bearish cross holds for 3 days" → `exit_signal="macd_cross_below"`, `exit_signal_days=3`
+- "Sell puts only when oversold" → `entry_signal="rsi_below"`
+- "RSI below 40 (custom threshold)" → `entry_signal="rsi_below"`, `entry_signal_params={"threshold": 40}`
+- "200-day SMA trend filter" → `entry_signal="sma_above"`, `entry_signal_params={"period": 200}`
+- "MACD bullish cross" → `entry_signal="macd_cross_above"`
+- "MACD fast settings (5/20/5)" → `entry_signal="macd_cross_above"`, `entry_signal_params={"fast": 5, "slow": 20, "signal_period": 5}`
+- "Low-vol iron condor entries" → `entry_signal="atr_below"`
+- "High-vol ATR > 2×" → `entry_signal="atr_above"`, `entry_signal_params={"multiplier": 2.0}`
+- "Enter only on Thursdays" → `entry_signal="day_of_week"`, `entry_signal_params={"days": [3]}`
+- "Enter on Tuesdays and Thursdays" → `entry_signal="day_of_week"`, `entry_signal_params={"days": [1, 3]}`
+- "RSI below 30 for 5 consecutive days" → `entry_signal="rsi_below"`, `entry_signal_days=5`
+- "Exit when RSI overbought" → `exit_signal="rsi_above"`
+- "Exit after MACD bearish cross holds 3 days" → `exit_signal="macd_cross_below"`, `exit_signal_days=3`
 
 ## Guidelines
 - Always load data before running strategies.
