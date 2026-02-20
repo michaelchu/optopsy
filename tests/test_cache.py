@@ -4,6 +4,9 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+pytest.importorskip("requests", reason="UI extras not installed")
+pytest.importorskip("pyarrow", reason="UI extras not installed")
+
 from optopsy.ui.providers.cache import ParquetCache
 from optopsy.ui.providers.eodhd import EODHDProvider
 
