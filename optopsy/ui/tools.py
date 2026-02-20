@@ -223,6 +223,42 @@ STRATEGY_NAMES = sorted(STRATEGIES.keys())
 # Defaults are baked in so the LLM only needs to pick a name.
 # Factories are called at execution time to avoid shared state between runs.
 
+
+def _normalize_days_param(days):
+    """
+    Convert days parameter to list format.
+
+    Args:
+        days (int or list[int]): Day index or list of day indices (0=Monday, 6=Sunday).
+
+    Returns:
+        list[int]: Days parameter as a list.
+
+    Raises:
+        TypeError: If days is neither an int nor a list, or if list contains non-integers.
+        ValueError: If days is an empty list or contains out-of-range values (not 0-6).
+    """
+    if isinstance(days, list):
+        if not days:
+            raise ValueError("days parameter cannot be an empty list")
+        if not all(isinstance(day, int) for day in days):
+            raise TypeError("all elements in days list must be integers")
+        invalid_days = [d for d in days if d < 0 or d > 6]
+        if invalid_days:
+            raise ValueError(
+                f"day values must be 0-6 (Monday-Sunday), got invalid values: {invalid_days}"
+            )
+        return days
+    elif isinstance(days, int):
+        if days < 0 or days > 6:
+            raise ValueError(f"day value must be 0-6 (Monday-Sunday), got {days}")
+        return [days]
+    else:
+        raise TypeError(
+            f"days parameter must be an int or list[int], got {type(days).__name__}"
+        )
+
+
 SIGNAL_REGISTRY: dict[str, Any] = {
     # RSI — defaults: period=14, threshold=30 (below) / 70 (above)
     "rsi_below": lambda **kw: _signals.rsi_below(
@@ -263,7 +299,9 @@ SIGNAL_REGISTRY: dict[str, Any] = {
         kw.get("period", 14), kw.get("multiplier", 0.75)
     ),
     # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
-    "day_of_week": lambda **kw: _signals.day_of_week(*kw.get("days", [4])),
+    "day_of_week": lambda **kw: _signals.day_of_week(
+        *_normalize_days_param(kw.get("days", [4]))
+    ),
 }
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
