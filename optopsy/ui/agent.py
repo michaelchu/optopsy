@@ -111,11 +111,12 @@ A debit strategy (you pay to enter) has negative total_entry_cost. \
 A credit strategy (you receive premium) has positive total_entry_cost. \
 Positive pct_change = profit, negative = loss.
 
-## Entry Signals
+## Entry & Exit Signals
 
-The `run_strategy` tool accepts an optional `entry_signal` parameter that filters which \
-dates are eligible for trade entry based on technical analysis of the underlying price history. \
-Only one signal can be specified per run; combine signals via the Python API for advanced use.
+The `run_strategy` tool accepts optional `entry_signal` and `exit_signal` parameters that filter \
+which dates are eligible for trade entry/exit based on technical analysis of the underlying price \
+history. Only one signal per side (entry/exit) can be specified per run; combine signals via the \
+Python API for advanced use.
 
 **Momentum / Crossover** (event-based — fires on the crossover bar only):
 - `macd_cross_above` — MACD line crosses above signal line; bullish momentum just emerged (~50 bar warmup)
@@ -152,23 +153,31 @@ Only one signal can be specified per run; combine signals via the Python API for
 MACD needs ~50 bars; EMA(200) needs 200 bars. If the dataset is too short, these signals return no \
 valid dates — use state-based signals (RSI, SMA) instead for shorter datasets.
 
-**`entry_signal_days`** (optional integer): Requires the chosen signal to be True for N consecutive \
-trading days before entering. Works with **any** signal. Omit for default (single-bar) behavior. \
-Example: `entry_signal="rsi_below_30"` + `entry_signal_days=5` means "RSI below 30 for 5+ days in a row".
+**`entry_signal_days`** (optional integer): Requires the chosen entry signal to be True for N \
+consecutive trading days before entering. Works with **any** signal. Omit for default (single-bar) \
+behavior. Example: `entry_signal="rsi_below_30"` + `entry_signal_days=5` means "RSI below 30 for \
+5+ days in a row".
 
-**Signal data source**: When a signal is used, the system automatically fetches OHLCV stock data from \
-yfinance for proper indicator computation (including ATR with real high/low prices). This is done \
-transparently — no extra parameters needed. If yfinance is unavailable, signals fall back to using \
-the underlying price from the options data.
+**`exit_signal`** (optional): Same signal names as `entry_signal`, but gates trade exits instead of \
+entries. Only exits on dates where the signal is True for the underlying symbol.
+
+**`exit_signal_days`** (optional integer): Like `entry_signal_days` but for the exit signal. \
+Requires the exit signal to hold for N consecutive trading days before exiting.
+
+**Signal data source**: When a TA signal is used, the system automatically fetches OHLCV stock data \
+from yfinance for proper indicator computation (including ATR with real high/low prices). This is \
+done transparently — no extra parameters needed. If yfinance is not installed or the fetch fails, \
+TA signals will return an error — date-only signals (day_of_week) do not require yfinance.
 
 **Typical use-cases**:
-- "Only sell puts when the market is oversold" → `rsi_below_30`
-- "Buy calls only when momentum is bullish" → `macd_cross_above`
-- "Enter iron condors only in low-vol environments" → `atr_below_low_vol`
-- "Sell covered calls only when trending up" → `sma_above_50`
-- "Enter strangles only on Thursday expirations" → `day_of_week_thursday`
+- "Only sell puts when the market is oversold" → `entry_signal="rsi_below_30"`
+- "Buy calls only when momentum is bullish" → `entry_signal="macd_cross_above"`
+- "Enter iron condors only in low-vol environments" → `entry_signal="atr_below_low_vol"`
+- "Sell covered calls only when trending up" → `entry_signal="sma_above_50"`
+- "Enter strangles only on Thursday expirations" → `entry_signal="day_of_week_thursday"`
 - "RSI below 30 for more than 5 days" → `entry_signal="rsi_below_30"`, `entry_signal_days=5`
-- "SMA below 50 for 10 days" → `entry_signal="sma_below_50"`, `entry_signal_days=10`
+- "Exit when RSI crosses above 70" → `exit_signal="rsi_above_70"`
+- "Exit only after MACD bearish cross holds for 3 days" → `exit_signal="macd_cross_below"`, `exit_signal_days=3`
 
 ## Guidelines
 - Always load data before running strategies.
