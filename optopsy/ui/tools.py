@@ -223,6 +223,12 @@ STRATEGY_NAMES = sorted(STRATEGIES.keys())
 # Defaults are baked in so the LLM only needs to pick a name.
 # Factories are called at execution time to avoid shared state between runs.
 
+
+def _normalize_days_param(days):
+    """Convert days parameter to list if it's a single integer."""
+    return days if isinstance(days, list) else [days]
+
+
 SIGNAL_REGISTRY: dict[str, Any] = {
     # RSI — defaults: period=14, threshold=30 (below) / 70 (above)
     "rsi_below": lambda **kw: _signals.rsi_below(
@@ -263,11 +269,9 @@ SIGNAL_REGISTRY: dict[str, Any] = {
         kw.get("period", 14), kw.get("multiplier", 0.75)
     ),
     # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
-    "day_of_week": lambda **kw: (
-        lambda days_param: _signals.day_of_week(
-            *(days_param if isinstance(days_param, list) else [days_param])
-        )
-    )(kw.get("days", [4])),
+    "day_of_week": lambda **kw: _signals.day_of_week(
+        *_normalize_days_param(kw.get("days", [4]))
+    ),
 }
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
