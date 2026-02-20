@@ -11,7 +11,7 @@ from optopsy.ui.tools import execute_tool
 class TestEntrySignalDaysExecutor:
     def test_signal_days_wraps_with_sustained(self, option_data_entry_exit):
         """entry_signal_days > 1 should wrap the signal with sustained()."""
-        # day_of_week_thursday fires on Thu only (1 day); requiring 2 consecutive
+        # day_of_week Thursday fires on Thu only (1 day); requiring 2 consecutive
         # days means it can never fire (Thu is isolated), so result is empty.
         result = execute_tool(
             "run_strategy",
@@ -19,7 +19,8 @@ class TestEntrySignalDaysExecutor:
                 "strategy_name": "long_calls",
                 "max_entry_dte": 90,
                 "exit_dte": 0,
-                "entry_signal": "day_of_week_thursday",
+                "entry_signal": "day_of_week",
+                "entry_signal_params": {"days": [3]},
                 "entry_signal_days": 2,
                 "raw": True,
             },
@@ -35,7 +36,8 @@ class TestEntrySignalDaysExecutor:
                 "strategy_name": "long_calls",
                 "max_entry_dte": 90,
                 "exit_dte": 0,
-                "entry_signal": "day_of_week_thursday",
+                "entry_signal": "day_of_week",
+                "entry_signal_params": {"days": [3]},
                 "raw": True,
             },
             option_data_entry_exit,
@@ -46,7 +48,8 @@ class TestEntrySignalDaysExecutor:
                 "strategy_name": "long_calls",
                 "max_entry_dte": 90,
                 "exit_dte": 0,
-                "entry_signal": "day_of_week_thursday",
+                "entry_signal": "day_of_week",
+                "entry_signal_params": {"days": [3]},
                 "entry_signal_days": 1,
                 "raw": True,
             },
@@ -62,7 +65,8 @@ class TestEntrySignalDaysExecutor:
                 "strategy_name": "long_calls",
                 "max_entry_dte": 90,
                 "exit_dte": 0,
-                "entry_signal": "day_of_week_thursday",
+                "entry_signal": "day_of_week",
+                "entry_signal_params": {"days": [3]},
                 "raw": True,
             },
             option_data_entry_exit,
@@ -114,7 +118,8 @@ class TestEntrySignalDaysExecutor:
                     "strategy_name": "long_calls",
                     "max_entry_dte": 90,
                     "exit_dte": 0,
-                    "entry_signal": "sma_above_20",
+                    "entry_signal": "sma_above",
+                    "entry_signal_params": {"period": 20},
                     "entry_signal_days": 3,
                     "raw": True,
                 },
