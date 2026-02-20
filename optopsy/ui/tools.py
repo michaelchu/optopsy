@@ -225,8 +225,26 @@ STRATEGY_NAMES = sorted(STRATEGIES.keys())
 
 
 def _normalize_days_param(days):
-    """Convert days parameter to list if it's a single integer."""
-    return days if isinstance(days, list) else [days]
+    """
+    Convert days parameter to list format.
+
+    Args:
+        days (int or list[int]): Day index or list of day indices (0=Monday, 6=Sunday).
+
+    Returns:
+        list[int]: Days parameter as a list.
+
+    Raises:
+        TypeError: If days is neither an int nor a list.
+    """
+    if isinstance(days, list):
+        return days
+    elif isinstance(days, int):
+        return [days]
+    else:
+        raise TypeError(
+            f"days parameter must be an int or list[int], got {type(days).__name__}"
+        )
 
 
 SIGNAL_REGISTRY: dict[str, Any] = {
