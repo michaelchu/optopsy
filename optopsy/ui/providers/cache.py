@@ -78,3 +78,47 @@ class ParquetCache:
 
         self.write(category, symbol, merged)
         return merged
+
+    def clear(self, symbol: str | None = None) -> int:
+        """Remove cached files.
+
+        If *symbol* is given, remove that symbol across all categories.
+        If ``None``, remove everything.  Returns number of files deleted.
+        """
+        count = 0
+        if not os.path.exists(self._cache_dir):
+            return count
+        for category in os.listdir(self._cache_dir):
+            cat_path = os.path.join(self._cache_dir, category)
+            if not os.path.isdir(cat_path):
+                continue
+            if symbol:
+                target = os.path.join(cat_path, f"{symbol.upper()}.parquet")
+                if os.path.exists(target):
+                    os.remove(target)
+                    count += 1
+            else:
+                for fname in os.listdir(cat_path):
+                    if fname.endswith(".parquet"):
+                        os.remove(os.path.join(cat_path, fname))
+                        count += 1
+        return count
+
+    def size(self) -> dict[str, int]:
+        """Return ``{category/SYMBOL.parquet: bytes}`` for all cached files."""
+        result: dict[str, int] = {}
+        if not os.path.exists(self._cache_dir):
+            return result
+        for category in sorted(os.listdir(self._cache_dir)):
+            cat_path = os.path.join(self._cache_dir, category)
+            if not os.path.isdir(cat_path):
+                continue
+            for fname in sorted(os.listdir(cat_path)):
+                if fname.endswith(".parquet"):
+                    fpath = os.path.join(cat_path, fname)
+                    result[f"{category}/{fname}"] = os.path.getsize(fpath)
+        return result
+
+    def total_size_bytes(self) -> int:
+        """Return total cache size in bytes."""
+        return sum(self.size().values())

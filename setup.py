@@ -39,7 +39,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "optopsy-chat=optopsy.ui.app:main [ui]",
+            "optopsy-chat=optopsy.ui.cli:main [ui]",
         ],
     },
 )

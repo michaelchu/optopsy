@@ -100,6 +100,64 @@ class TestParquetCacheMergeAndSave:
         assert len(result) == 2
 
 
+class TestParquetCacheClear:
+    def test_clear_all(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        cache.write("options", "AAPL", sample_df)
+        count = cache.clear()
+        assert count == 2
+        assert cache.size() == {}
+
+    def test_clear_symbol(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        cache.write("options", "AAPL", sample_df)
+        count = cache.clear(symbol="SPY")
+        assert count == 1
+        assert "options/SPY.parquet" not in cache.size()
+        assert "options/AAPL.parquet" in cache.size()
+
+    def test_clear_symbol_case_insensitive(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        count = cache.clear(symbol="spy")
+        assert count == 1
+
+    def test_clear_nonexistent(self, cache):
+        count = cache.clear(symbol="NOPE")
+        assert count == 0
+
+    def test_clear_across_categories(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        cache.write("stocks", "SPY", sample_df)
+        count = cache.clear(symbol="SPY")
+        assert count == 2
+
+
+class TestParquetCacheSize:
+    def test_empty_cache(self, tmp_path):
+        c = ParquetCache(cache_dir=str(tmp_path))
+        assert c.size() == {}
+        assert c.total_size_bytes() == 0
+
+    def test_with_files(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        entries = cache.size()
+        assert "options/SPY.parquet" in entries
+        assert entries["options/SPY.parquet"] > 0
+        assert cache.total_size_bytes() > 0
+
+    def test_multiple_files(self, cache, sample_df):
+        cache.write("options", "SPY", sample_df)
+        cache.write("options", "AAPL", sample_df)
+        entries = cache.size()
+        assert len(entries) == 2
+        assert cache.total_size_bytes() == sum(entries.values())
+
+    def test_nonexistent_cache_dir(self):
+        c = ParquetCache(cache_dir="/tmp/nonexistent_optopsy_cache_dir")
+        assert c.size() == {}
+        assert c.total_size_bytes() == 0
+
+
 # -- _compute_date_gaps --
 
 
