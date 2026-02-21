@@ -256,6 +256,18 @@ class EODHDProvider(DataProvider):
             )
         gaps = self._compute_date_gaps(cached_df, start_dt, end_dt, date_column)
 
+        # Guard: no cache + no dates = unbounded API request. Return a clear
+        # error so the agent asks the user for a date range instead of blindly
+        # fetching all available history.
+        if (cached_df is None or cached_df.empty) and gaps == [(None, None)]:
+            return (
+                f"No cached {label} data for {symbol} and no date range specified. "
+                f"Please ask the user what date range they want (e.g. start_date / end_date) "
+                f"before fetching from the API.",
+                None,
+                None,
+            )
+
         # Phase 2: Fetch missing data from API
         if gaps:
             _log.info(
