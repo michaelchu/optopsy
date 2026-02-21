@@ -54,10 +54,7 @@ _OPTIONS_NUMERIC_COLS = [
     "midpoint",
 ]
 
-_STOCK_NUMERIC_COLS = ["open", "high", "low", "close", "adjusted_close", "volume"]
-
 _OPTIONS_DEDUP_COLS = ["quote_date", "expiration", "strike", "option_type"]
-_STOCK_DEDUP_COLS = ["date"]
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -112,14 +109,10 @@ class EODHDProvider(DataProvider):
         return "EODHD_API_KEY"
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
-        return [self._options_schema(), self._stock_schema()]
+        return [self._options_schema()]
 
     def get_tool_names(self) -> list[str]:
-        return ["fetch_eodhd_options", "fetch_eodhd_stock_prices"]
-
-    def replaces_dataset(self, tool_name: str) -> bool:
-        # Stock price lookups are display-only; options data replaces the dataset.
-        return tool_name != "fetch_eodhd_stock_prices"
+        return ["fetch_eodhd_options"]
 
     def execute(
         self, tool_name: str, arguments: dict[str, Any]
@@ -131,12 +124,6 @@ class EODHDProvider(DataProvider):
                 end_date=arguments.get("end_date"),
                 option_type=arguments.get("option_type"),
                 expiration_type=arguments.get("expiration_type", "monthly"),
-            )
-        if tool_name == "fetch_eodhd_stock_prices":
-            return self._fetch_stock_prices(
-                symbol=arguments["symbol"],
-                start_date=arguments.get("start_date"),
-                end_date=arguments.get("end_date"),
             )
         return f"Unknown tool: {tool_name}", None
 
@@ -526,74 +513,6 @@ class EODHDProvider(DataProvider):
         keep.extend([c for c in optional if c in df.columns])
         return df[[c for c in keep if c in df.columns]]
 
-    # -- stock prices --
-
-    def _fetch_stock_prices(
-        self,
-        symbol: str,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> tuple[str, pd.DataFrame | None]:
-        symbol = symbol.upper()
-        result, _, _ = self._fetch_with_cache(
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            category="stocks",
-            date_column="date",
-            dedup_cols=_STOCK_DEDUP_COLS,
-            fetch_fn=self._fetch_stock_prices_from_api,
-            label="stock prices",
-        )
-        if isinstance(result, str):
-            return result, None
-
-        df = result.drop(columns=["warning"], errors="ignore")
-        summary = (
-            f"Fetched {len(df)} daily price records for {symbol} from EODHD. "
-            f"Date range: {df['date'].min().date()} to {df['date'].max().date()}"
-        )
-        return summary, df
-
-    def _fetch_stock_prices_from_api(
-        self,
-        api_key: str,
-        symbol: str,
-        gaps: list[tuple[str | None, str | None]],
-    ) -> pd.DataFrame | str | None:
-        """Fetch stock price data from EODHD for the given date gaps."""
-        all_data: list[dict] = []
-
-        for gap_start, gap_end in gaps:
-            params: dict[str, Any] = {
-                "api_token": api_key,
-                "fmt": "json",
-            }
-            if gap_start:
-                params["from"] = gap_start
-            if gap_end:
-                params["to"] = gap_end
-
-            url = f"https://eodhd.com/api/eod/{symbol}.US"
-            resp = self._request_with_retry(url, params)
-            error = _check_response(resp)
-            if error:
-                return error
-            _safe_raise_for_status(resp)
-
-            data = resp.json()
-            if data:
-                all_data.extend(data)
-
-        if not all_data:
-            return None
-
-        df = pd.DataFrame(all_data)
-        df["date"] = pd.to_datetime(df["date"])
-        _coerce_numeric(df, _STOCK_NUMERIC_COLS)
-
-        return df
-
     # -- tool schemas --
 
     def _options_schema(self) -> dict:
@@ -637,32 +556,4 @@ class EODHDProvider(DataProvider):
             },
         }
 
-    def _stock_schema(self) -> dict:
-        return {
-            "type": "function",
-            "function": {
-                "name": "fetch_eodhd_stock_prices",
-                "description": (
-                    "Fetch historical end-of-day stock price data (OHLCV) from "
-                    "EODHD for a US stock symbol."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": "US stock ticker symbol (e.g. AAPL, SPY, TSLA)",
-                        },
-                        "start_date": {
-                            "type": "string",
-                            "description": "Start date (YYYY-MM-DD). Defaults to all available.",
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "description": "End date (YYYY-MM-DD). Defaults to today.",
-                        },
-                    },
-                    "required": ["symbol"],
-                },
-            },
-        }
+
