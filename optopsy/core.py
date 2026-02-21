@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from .definitions import evaluated_cols, describe_cols
 from .checks import _run_checks, _run_calendar_checks
+from .timestamps import normalize_dates
 
 pd.set_option("expand_frame_repr", False)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
@@ -128,9 +129,14 @@ def _apply_signal_filter(
     """
     Filter data to only include rows matching valid (symbol, date) pairs.
 
+    Both the option chain data (normalized at the root of _process_strategy /
+    _process_calendar_strategy) and signal dates (normalized in apply_signal)
+    are already date-only, so this is a straightforward inner join.
+
     Args:
-        data: DataFrame to filter
+        data: DataFrame to filter (already date-normalized)
         valid_dates: DataFrame with (underlying_symbol, quote_date) of valid dates
+            (already date-normalized via apply_signal)
         date_col: Name of the date column in data to match against (default: quote_date)
 
     Returns:
@@ -590,6 +596,12 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     _run_checks(context["params"], data)
 
+    # Normalize date columns once at the root so all downstream merges
+    # (signal filtering, entry/exit matching) work regardless of source.
+    data = data.copy()
+    data["quote_date"] = normalize_dates(data["quote_date"])
+    data["expiration"] = normalize_dates(data["expiration"])
+
     # Build external_cols, adding delta_range if delta grouping is enabled
     external_cols = context["external_cols"].copy()
     if context["params"].get("delta_interval") is not None:
@@ -803,6 +815,7 @@ def _find_calendar_exit_prices(
     # Calculate exit date for each position.
     # Exit is timed relative to front leg (leg1) expiration, which is standard
     # calendar spread management: close before the short-dated option expires.
+    # Both expiration and quote_date are already date-normalized at the root.
     merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
 
     all_exit_dates = merged["exit_date"].unique()
@@ -965,8 +978,10 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             df, params, internal_cols, external_cols, same_strike
         )
 
-    # Work with a copy to avoid modifying input
+    # Work with a copy and normalize dates once at the root
     data = data.copy()
+    data["quote_date"] = normalize_dates(data["quote_date"])
+    data["expiration"] = normalize_dates(data["expiration"])
     data = _assign_dte(data)
 
     # Get front and back leg options

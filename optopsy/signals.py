@@ -35,6 +35,8 @@ from typing import Callable
 import pandas as pd
 import pandas_ta as ta
 
+from .timestamps import normalize_dates
+
 # Signal function type: takes a DataFrame with (underlying_symbol, quote_date,
 # underlying_price) and returns a boolean Series indicating valid entry/exit dates.
 SignalFunc = Callable[[pd.DataFrame], "pd.Series[bool]"]
@@ -711,6 +713,10 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
     before running a strategy and pass the result as ``entry_dates`` or
     ``exit_dates``.
 
+    The returned ``quote_date`` values are normalized to date-only so that
+    they reliably match option chain dates from any provider, regardless
+    of timezone or time-of-day differences.
+
     Args:
         data: DataFrame with at least ``underlying_symbol`` and ``quote_date``.
               For price-based signals (RSI, SMA, MACD, etc.), also needs
@@ -743,6 +749,7 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
     df = data.copy()
     if "underlying_price" not in df.columns and "close" in df.columns:
         df["underlying_price"] = df["close"]
+    df["quote_date"] = normalize_dates(df["quote_date"])
     df = (
         df.drop_duplicates(["underlying_symbol", "quote_date"])
         .sort_values(["underlying_symbol", "quote_date"])
