@@ -40,9 +40,9 @@ def make_stock_data(
     dates = pd.date_range(start, periods=periods, freq=freq)
 
     if daily_returns is not None:
-        assert (
-            len(daily_returns) == periods - 1
-        ), f"daily_returns length {len(daily_returns)} != periods-1 ({periods - 1})"
+        assert len(daily_returns) == periods - 1, (
+            f"daily_returns length {len(daily_returns)} != periods-1 ({periods - 1})"
+        )
         closes = [base_price]
         for r in daily_returns:
             closes.append(closes[-1] * (1 + r))

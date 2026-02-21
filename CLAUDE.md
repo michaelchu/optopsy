@@ -32,10 +32,16 @@ pytest tests/test_strategies.py -v
 pytest tests/ -k "butterfly"
 
 # Check code formatting
-black --check optopsy/ tests/ setup.py
+ruff format --check optopsy/ tests/ setup.py
 
 # Auto-format code
-black optopsy/ tests/ setup.py
+ruff format optopsy/ tests/ setup.py
+
+# Lint code
+ruff check optopsy/ tests/ setup.py
+
+# Lint and auto-fix
+ruff check --fix optopsy/ tests/ setup.py
 ```
 
 ## Architecture Overview

@@ -95,7 +95,6 @@ def _safe_raise_for_status(resp: requests.Response) -> None:
 
 
 class EODHDProvider(DataProvider):
-
     def __init__(self) -> None:
         self._cache = ParquetCache()
 

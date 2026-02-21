@@ -17,7 +17,6 @@ def filepath():
 
 
 def run_strategy():
-
     # indices for the column params are 0-indexed
     spx_data = op.csv_data(
         filepath(),

@@ -164,8 +164,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
         missing = [c for c in columns if c not in active_ds.columns]
         if missing:
             return _result(
-                f"Columns not found: {missing}. "
-                f"Available: {list(active_ds.columns)}"
+                f"Columns not found: {missing}. Available: {list(active_ds.columns)}"
             )
         df = active_ds[columns]
     else:
@@ -739,7 +738,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     invalid = [s for s in strategy_names if s not in STRATEGIES]
     if invalid:
         return _result(
-            f"Unknown strategies: {invalid}. " f"Available: {', '.join(STRATEGY_NAMES)}"
+            f"Unknown strategies: {invalid}. Available: {', '.join(STRATEGY_NAMES)}"
         )
 
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
@@ -1090,9 +1089,7 @@ def execute_tool(
                 else:
                     label = tool_name
                 updated_datasets = {**datasets, label: df}
-                display = (
-                    f"{summary}\n\nFirst 5 rows:\n" f"{_df_to_markdown(df.head())}"
-                )
+                display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
                 if len(updated_datasets) > 1:
                     summary += f"\nActive datasets: {list(updated_datasets.keys())}"
                 return _result(
