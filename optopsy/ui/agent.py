@@ -219,6 +219,20 @@ signals=[{"name": "atr_below"}, {"name": "day_of_week"}])`
 signals=[{"name": "macd_cross_above"}, {"name": "rsi_below"}], combine="or")`
 
 ## Guidelines
+## Multiple Datasets
+
+You can load more than one dataset in the same session — each gets a name (ticker or filename). \
+Use the `dataset_name` parameter on `run_strategy`, `preview_data`, and `build_signal` to target \
+a specific dataset. Omit it to use the most-recently-loaded dataset. This lets you compare the \
+same strategy across different tickers or time periods without reloading.
+
+Example — compare long_calls on SPY vs QQQ:
+1. Fetch/load SPY data (stored as "SPY")
+2. Fetch/load QQQ data (stored as "QQQ")
+3. `run_strategy(strategy_name="long_calls", dataset_name="SPY")`
+4. `run_strategy(strategy_name="long_calls", dataset_name="QQQ")`
+
+## Guidelines
 - Always load data before running strategies.
 - **IMPORTANT — no unnecessary re-fetching**: Do not re-fetch data for the same symbol and date range that \
 has already been fetched. Data is cached locally with intelligent gap detection — if you need a wider date \
@@ -295,27 +309,55 @@ class OptopsyAgent:
         self.tools = get_tool_schemas()
         self.dataset: pd.DataFrame | None = None
         self.signals: dict[str, pd.DataFrame] = {}
+        # Named dataset registry — multiple datasets can be active at once.
+        # Keys are ticker symbols or filenames; values are DataFrames.
+        self.datasets: dict[str, pd.DataFrame] = {}
 
     async def chat(
         self,
         messages: list[dict[str, Any]],
         on_tool_call=None,
         on_token=None,
+        on_assistant_tool_calls=None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """
         Run the agent loop: send messages to LLM, execute any tool calls,
         and return (final_response_text, updated_messages).
 
-        on_tool_call: async callback(tool_name, arguments, result) — UI step display.
+        on_tool_call: async callback(tool_name, arguments, result, tool_call_id)
+                      — UI step display.
         on_token: async callback(token_str) — called for each streamed token on
                   the *final* response (the one shown to the user).
+        on_assistant_tool_calls: async callback(tool_calls: list[dict]) — fired
+                  when the LLM emits tool_calls so the UI can persist them for
+                  session resume.
 
         Note: The system prompt is prepended on every LLM call so context is
         maintained across tool-calling iterations.  This is intentional but
         means token usage grows with conversation length.  For very long
         sessions consider adding history summarization before calling chat().
         """
-        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+        # Use Anthropic prompt caching for the system prompt: mark it with
+        # cache_control so it is cached after the first call and not re-billed
+        # on subsequent iterations.  LiteLLM passes this header to the API
+        # transparently; for non-Anthropic providers the content block form is
+        # used as-is without the extra key, so it degrades gracefully.
+        system_msg: dict[str, Any]
+        if self.model.startswith("anthropic/") or self.model.startswith("claude"):
+            system_msg = {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+            }
+        else:
+            system_msg = {"role": "system", "content": SYSTEM_PROMPT}
+
+        full_messages = [system_msg] + messages
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
             # Throttle LLM calls: skip delay on the first iteration,
@@ -327,68 +369,118 @@ class OptopsyAgent:
                 # only needs a short reminder of what happened.
                 _compact_history(full_messages)
 
-            # -- tool-calling turns: non-streaming for simplicity --
-            try:
-                response = await litellm.acompletion(
-                    model=self.model,
-                    messages=full_messages,
-                    tools=self.tools,
-                    tool_choice="auto",
-                )
-            except litellm.AuthenticationError:
-                raise RuntimeError(
-                    "No API key configured. Add your LLM provider key "
-                    "(e.g. `OPENAI_API_KEY`) to a `.env` file in this directory."
-                )
-            except litellm.RateLimitError:
-                raise RuntimeError(
-                    "LLM rate limit exceeded. Wait a moment and try again, "
-                    "or switch to a model with higher rate limits."
-                )
-            except (litellm.ServiceUnavailableError, litellm.APIConnectionError):
-                raise RuntimeError(
-                    "LLM service is temporarily unavailable. Please try again shortly."
-                )
+            # Stream every LLM turn so the user sees reasoning tokens live,
+            # even during intermediate tool-calling iterations.
+            # Retry on RateLimitError with exponential backoff (up to 3 attempts).
+            content_parts: list[str] = []
+            # tool_calls_acc: index -> {id, name, arguments_chunks}
+            tool_calls_acc: dict[int, dict[str, Any]] = {}
 
-            choice = response.choices[0]
-            assistant_msg = choice.message
+            _MAX_LLM_RETRIES = 3
+            for _attempt in range(_MAX_LLM_RETRIES):
+                content_parts = []
+                tool_calls_acc = {}
+                # Only stream tokens live on the first attempt; on retries we
+                # collect silently to avoid emitting garbled partial output
+                # from the failed attempt.
+                emit_tokens = on_token if _attempt == 0 else None
+                try:
+                    stream = await litellm.acompletion(
+                        model=self.model,
+                        messages=full_messages,
+                        tools=self.tools,
+                        tool_choice="auto",
+                        stream=True,
+                    )
+                    async for chunk in stream:
+                        delta = chunk.choices[0].delta if chunk.choices else None
+                        if delta is None:
+                            continue
+                        # Accumulate text content
+                        if delta.content:
+                            content_parts.append(delta.content)
+                            if emit_tokens:
+                                await emit_tokens(delta.content)
+                        # Accumulate tool call chunks
+                        if delta.tool_calls:
+                            for tc_chunk in delta.tool_calls:
+                                idx = tc_chunk.index
+                                if idx not in tool_calls_acc:
+                                    tool_calls_acc[idx] = {
+                                        "id": "",
+                                        "name": "",
+                                        "arguments": "",
+                                    }
+                                if tc_chunk.id:
+                                    tool_calls_acc[idx]["id"] = tc_chunk.id
+                                if tc_chunk.function:
+                                    if tc_chunk.function.name:
+                                        tool_calls_acc[idx]["name"] += tc_chunk.function.name
+                                    if tc_chunk.function.arguments:
+                                        tool_calls_acc[idx]["arguments"] += (
+                                            tc_chunk.function.arguments
+                                        )
+                    break  # Success — exit retry loop
+                except litellm.AuthenticationError:
+                    raise RuntimeError(
+                        "No API key configured. Add your LLM provider key "
+                        "(e.g. `OPENAI_API_KEY`) to a `.env` file in this directory."
+                    )
+                except litellm.RateLimitError:
+                    if _attempt == _MAX_LLM_RETRIES - 1:
+                        raise RuntimeError(
+                            "LLM rate limit exceeded after retries. "
+                            "Wait a moment and try again, or switch to a model "
+                            "with higher rate limits."
+                        )
+                    backoff = 2 ** _attempt  # 1s, 2s
+                    await asyncio.sleep(backoff)
+                except (litellm.ServiceUnavailableError, litellm.APIConnectionError):
+                    if _attempt == _MAX_LLM_RETRIES - 1:
+                        raise RuntimeError(
+                            "LLM service is temporarily unavailable. Please try again shortly."
+                        )
+                    await asyncio.sleep(2 ** _attempt)
+
+            # On retried attempts, emit the collected content now (the first
+            # attempt streamed nothing to avoid partial output on the screen).
+            if _attempt > 0 and content_parts and on_token:
+                for chunk in content_parts:
+                    await on_token(chunk)
+
+            content = "".join(content_parts)
+            tool_calls_list = [
+                {
+                    "id": tc["id"],
+                    "type": "function",
+                    "function": {
+                        "name": tc["name"],
+                        "arguments": tc["arguments"],
+                    },
+                }
+                for tc in tool_calls_acc.values()
+            ]
 
             # Append assistant message to history
-            msg_dict: dict[str, Any] = {
-                "role": "assistant",
-                "content": assistant_msg.content or "",
-            }
-            if assistant_msg.tool_calls:
-                msg_dict["tool_calls"] = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    }
-                    for tc in assistant_msg.tool_calls
-                ]
+            msg_dict: dict[str, Any] = {"role": "assistant", "content": content}
+            if tool_calls_list:
+                msg_dict["tool_calls"] = tool_calls_list
             full_messages.append(msg_dict)
 
-            # If no tool calls, this is the final answer.
-            if not assistant_msg.tool_calls:
-                # If we already got the full response above (non-streamed
-                # intermediate turns that happened to be the last one), just
-                # emit the content token-by-token for the UI.
-                content = assistant_msg.content or ""
-                if on_token and content:
-                    # Emit in small chunks so the UI feels responsive
-                    for i in range(0, len(content), 4):
-                        await on_token(content[i : i + 4])
+            # Notify the UI so it can persist tool_calls for session resume.
+            if tool_calls_list and on_assistant_tool_calls:
+                await on_assistant_tool_calls(tool_calls_list)
+
+            # If no tool calls, this is the final answer (already streamed above).
+            if not tool_calls_list:
                 return content, full_messages[1:]
 
             # Execute each tool call
-            for tc in assistant_msg.tool_calls:
-                func_name = tc.function.name
+            for tc in tool_calls_list:
+                func_name = tc["function"]["name"]
+                tc_id = tc["id"]
                 try:
-                    args = json.loads(tc.function.arguments)
+                    args = json.loads(tc["function"]["arguments"])
                 except json.JSONDecodeError:
                     args = {}
 
@@ -397,23 +489,25 @@ class OptopsyAgent:
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
-                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals: execute_tool(
-                        fn, a, ds, sg
+                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, dss=self.datasets: execute_tool(
+                        fn, a, ds, sg, dss
                     ),
                 )
                 self.dataset = result.dataset
                 if result.signals is not None:
                     self.signals = result.signals
+                if result.datasets is not None:
+                    self.datasets = result.datasets
 
                 # Show the rich version to the user in the UI
                 if on_tool_call:
-                    await on_tool_call(func_name, args, result.user_display)
+                    await on_tool_call(func_name, args, result.user_display, tc_id)
 
                 # Send only the concise summary to the LLM
                 full_messages.append(
                     {
                         "role": "tool",
-                        "tool_call_id": tc.id,
+                        "tool_call_id": tc_id,
                         "content": result.llm_summary,
                     }
                 )
