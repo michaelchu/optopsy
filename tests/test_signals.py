@@ -924,9 +924,9 @@ class TestMACDSignals:
     def test_macd_cross_above_fires_after_v_recovery(self, macd_price_data_bullish):
         """MACD cross above should fire at least once after a V-shaped recovery."""
         result = macd_cross_above()(macd_price_data_bullish)
-        assert (
-            result.any()
-        ), "Expected at least one bullish MACD crossover in V-recovery"
+        assert result.any(), (
+            "Expected at least one bullish MACD crossover in V-recovery"
+        )
 
     def test_macd_cross_above_not_always_true(self, macd_price_data_bullish):
         """Crossover is an event, not a state — should not be True on every bar."""
@@ -978,9 +978,9 @@ class TestBollingerBandSignals:
         result = bb_above_upper(length=20, std=2.0)(bb_spike_data)
         # The first spike bar (index 25) has the window still dominated by 100s,
         # so the upper band is ~100 and 200 is well above it.
-        assert (
-            result.any()
-        ), "Expected bb_above_upper to fire when price spikes far above bands"
+        assert result.any(), (
+            "Expected bb_above_upper to fire when price spikes far above bands"
+        )
         assert result.iloc[25] == True  # first spike bar must fire
 
     def test_bb_below_lower_not_true_on_spike(self, bb_spike_data):
@@ -1085,9 +1085,9 @@ class TestATRSignals:
         """atr_above and atr_below should not agree on every bar."""
         above = atr_above(period=14, multiplier=1.0)(volatile_price_data)
         below = atr_below(period=14, multiplier=1.0)(volatile_price_data)
-        assert not (
-            above == below
-        ).all(), "Expected above and below to disagree on some bars"
+        assert not (above == below).all(), (
+            "Expected above and below to disagree on some bars"
+        )
 
     def test_atr_insufficient_data_returns_all_false(self):
         """With fewer bars than ATR period, should return all False."""
@@ -1834,6 +1834,6 @@ class TestTASignalE2E:
         # OHLCV includes bar 160 that close-only misses
         ohlcv_dates = set(results_ohlcv["quote_date_entry"].unique())
         close_dates = set(results_close["quote_date_entry"].unique())
-        assert (
-            close_dates < ohlcv_dates
-        ), "Expected close-only to be a strict subset of OHLCV dates"
+        assert close_dates < ohlcv_dates, (
+            "Expected close-only to be a strict subset of OHLCV dates"
+        )

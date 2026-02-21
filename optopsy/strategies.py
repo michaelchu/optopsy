@@ -754,7 +754,7 @@ def _calendar_spread(
     data: pd.DataFrame,
     leg_def: List[Tuple],
     same_strike: bool = True,
-    **kwargs: Unpack[StrategyParams]
+    **kwargs: Unpack[StrategyParams],
 ) -> pd.DataFrame:
     """
     Process calendar or diagonal spread strategies.
