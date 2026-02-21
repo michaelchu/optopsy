@@ -759,6 +759,31 @@ def get_tool_schemas() -> list[dict]:
         {
             "type": "function",
             "function": {
+                "name": "inspect_cache",
+                "description": (
+                    "List all locally cached datasets and their date ranges without "
+                    "making any network requests. Use this to discover what data is "
+                    "already available before deciding whether to fetch more. "
+                    "Optionally filter by symbol."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {
+                            "type": "string",
+                            "description": (
+                                "Optional ticker symbol to filter results (e.g. 'SPY'). "
+                                "Omit to list all cached symbols."
+                            ),
+                        },
+                    },
+                    "required": [],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "fetch_stock_data",
                 "description": (
                     "Fetch historical daily OHLCV (open/high/low/close/volume) stock "
@@ -2003,6 +2028,81 @@ def execute_tool(
         return _result(llm_summary, user_display=user_display, res=scan_results)
 
     # -----------------------------------------------------------------
+    # inspect_cache — list cached datasets and their date ranges
+    # -----------------------------------------------------------------
+    if tool_name == "inspect_cache":
+        filter_symbol = arguments.get("symbol", "").strip().upper() or None
+        cache = ParquetCache()
+        cache_files = cache.size()  # {category/SYMBOL.parquet: bytes}
+
+        if not cache_files:
+            return _result(
+                "No cached data found. Use fetch_options_data or fetch_stock_data to load data."
+            )
+
+        rows = []
+        for key, size_bytes in sorted(cache_files.items()):
+            parts = key.split("/")
+            if len(parts) != 2:
+                continue
+            category, fname = parts
+            symbol = fname.replace(".parquet", "")
+            if filter_symbol and symbol != filter_symbol:
+                continue
+            df = cache.read(category, symbol)
+            if df is None or df.empty:
+                continue
+            # Detect date column
+            date_col = next(
+                (c for c in ("quote_date", "date") if c in df.columns), None
+            )
+            if date_col:
+                dates = pd.to_datetime(df[date_col])
+                date_from = str(dates.min().date())
+                date_to = str(dates.max().date())
+                unique_dates = int(dates.dt.date.nunique())
+            else:
+                date_from = date_to = "unknown"
+                unique_dates = 0
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "category": category,
+                    "rows": len(df),
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "trading_days": unique_dates,
+                    "size_mb": round(size_bytes / 1_048_576, 2),
+                }
+            )
+
+        if not rows:
+            msg = (
+                f"No cached data for {filter_symbol}."
+                if filter_symbol
+                else "No cached data found."
+            )
+            return _result(msg)
+
+        result_df = pd.DataFrame(rows)
+        total_mb = result_df["size_mb"].sum()
+        llm_lines = [
+            f"inspect_cache: {len(rows)} cached dataset(s), {total_mb:.1f} MB total"
+        ]
+        for r in rows:
+            llm_lines.append(
+                f"{r['symbol']} ({r['category']}): {r['rows']:,} rows, "
+                f"{r['date_from']} to {r['date_to']}, {r['trading_days']} trading days"
+            )
+        llm_summary = "\n".join(llm_lines)
+        user_display = (
+            f"### Cached Datasets\n\n"
+            f"*{len(rows)} dataset(s) — {total_mb:.1f} MB total on disk*\n\n"
+            f"{_df_to_markdown(result_df)}"
+        )
+        return _result(llm_summary, user_display=user_display)
+
+    # -----------------------------------------------------------------
     # list_results — recall prior strategy runs from this session
     # -----------------------------------------------------------------
     if tool_name == "list_results":
@@ -2083,6 +2183,7 @@ def execute_tool(
         "build_signal",
         "preview_signal",
         "fetch_stock_data",
+        "inspect_cache",
         "run_strategy",
         "scan_strategies",
         "list_results",
