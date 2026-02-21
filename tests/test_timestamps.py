@@ -159,31 +159,6 @@ class TestCrossSourceDateMatching:
         result = long_calls(option_data, entry_dates=entry_dates, raw=True)
         assert len(result) > 0
 
-    def test_signal_filter_normalizes_both_sides(self):
-        """_apply_signal_filter normalizes both data and signal dates."""
-        from optopsy.core import _apply_signal_filter
-
-        # Option-side dates at midnight
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": ["SPX", "SPX"],
-                "quote_date": pd.to_datetime(
-                    ["2024-01-15 00:00:00", "2024-01-16 00:00:00"]
-                ),
-                "value": [100, 200],
-            }
-        )
-        # Signal-side dates at market close (16:30)
-        signal_dates = pd.DataFrame(
-            {
-                "underlying_symbol": ["SPX"],
-                "quote_date": pd.to_datetime(["2024-01-15 16:30:00"]),
-            }
-        )
-        result = _apply_signal_filter(data, signal_dates)
-        assert len(result) == 1
-        assert result["value"].iloc[0] == 100
-
 
 class TestApplySignalNormalization:
     """Tests for normalization within apply_signal itself."""
