@@ -6,6 +6,8 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+pytest.importorskip("pyarrow", reason="UI extras not installed")
+
 from optopsy.ui.tools import (
     _empty_signal_suggestion,
     _intersect_with_options_dates,
@@ -202,7 +204,7 @@ def test_entry_signal_no_overlap_gives_suggestion(options_dec_2025):
     )
 
     with patch(
-        "optopsy.ui.tools._fetch_stock_data_for_signals",
+        "optopsy.ui.tools._executor._fetch_stock_data_for_signals",
         return_value=fake_stock,
     ):
         result = execute_tool(
@@ -242,7 +244,7 @@ def test_exit_signal_no_overlap_gives_suggestion(options_dec_2025):
     )
 
     with patch(
-        "optopsy.ui.tools._fetch_stock_data_for_signals",
+        "optopsy.ui.tools._executor._fetch_stock_data_for_signals",
         return_value=fake_stock,
     ):
         result = execute_tool(
@@ -279,7 +281,7 @@ def test_build_signal_no_overlap_gives_suggestion(options_dec_2025):
     )
 
     with patch(
-        "optopsy.ui.tools._fetch_stock_data_for_signals",
+        "optopsy.ui.tools._executor._fetch_stock_data_for_signals",
         return_value=fake_stock,
     ):
         result = execute_tool(
