@@ -2045,20 +2045,27 @@ def execute_tool(
 
         n = len(df)
         label = f"for '{filter_name}'" if filter_name else "across all strategies"
-        llm_summary = f"list_results: {n} run(s) {label} this session.\n" + df[
-            [
-                c
-                for c in [
-                    "strategy",
-                    "max_entry_dte",
-                    "exit_dte",
-                    "max_otm_pct",
-                    "mean_return",
-                    "win_rate",
-                ]
-                if c in df.columns
-            ]
-        ].to_string(index=False)
+        top_n = 5
+        top = df.head(top_n)
+        top_lines = []
+        for _, row in top.iterrows():
+            parts = [str(row["strategy"])]
+            if "max_entry_dte" in row:
+                parts.append(f"dte={int(row['max_entry_dte'])}")
+            if "exit_dte" in row:
+                parts.append(f"exit={int(row['exit_dte'])}")
+            if "max_otm_pct" in row:
+                parts.append(f"otm={row['max_otm_pct']:.2f}")
+            if "mean_return" in row and pd.notna(row["mean_return"]):
+                parts.append(f"mean={row['mean_return']:.4f}")
+            if "win_rate" in row and pd.notna(row["win_rate"]):
+                parts.append(f"wr={row['win_rate']:.2%}")
+            top_lines.append(" | ".join(parts))
+        more = f" ({n - top_n} more not shown)" if n > top_n else ""
+        llm_summary = (
+            f"list_results: {n} run(s) {label} this session. "
+            f"Top {min(n, top_n)} by mean_return{more}:\n" + "\n".join(top_lines)
+        )
         user_display = (
             f"### Prior Strategy Runs "
             f"({n}{f' — {filter_name}' if filter_name else ''})\n\n"
