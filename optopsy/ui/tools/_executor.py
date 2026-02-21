@@ -120,9 +120,19 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
         return err
     summary = _df_summary(active_ds, label)
 
-    rows = max(int(arguments.get("rows", 5) or 5), 1)
-    sample = str(arguments.get("sample", False)).lower() == "true"
+    try:
+        rows = max(int(arguments.get("rows", 5) or 5), 1)
+    except (TypeError, ValueError):
+        return _result("Invalid 'rows' parameter; it must be a positive integer.")
+    raw_sample = arguments.get("sample", False)
+    sample = raw_sample is True or (
+        isinstance(raw_sample, str) and raw_sample.strip().lower() == "true"
+    )
     position = arguments.get("position", "head")
+    if position not in ("head", "tail"):
+        return _result(
+            f"Invalid position '{position}'. Allowed values are 'head' or 'tail'."
+        )
 
     if sample:
         preview = active_ds.sample(min(rows, len(active_ds)))
@@ -145,7 +155,13 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
         return err
 
     columns = arguments.get("columns")
+    if isinstance(columns, str):
+        columns = [columns]
+    elif columns is not None and not isinstance(columns, (list, tuple)):
+        return _result("`columns` must be a string or a list of strings.")
     if columns:
+        if not all(isinstance(c, str) for c in columns):
+            return _result("All entries in `columns` must be strings.")
         missing = [c for c in columns if c not in active_ds.columns]
         if missing:
             return _result(
@@ -206,17 +222,37 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
                 f"({dates.dt.date.nunique():,} unique)"
             )
 
-    # LLM summary (compact)
+    # LLM summary (compact, bounded to avoid blowing up context)
+    _MAX_NAN_COLS = 10
+    _MAX_NUMERIC_COLS = 10
+
+    def _fmt_stat(value):
+        if pd.isna(value):
+            return "NaN"
+        try:
+            return f"{value:.4f}"
+        except (TypeError, ValueError):
+            return str(value)
+
     llm_parts = [f"describe_data({label}): {shape}"]
     if not nan_nonzero.empty:
-        llm_parts.append(f"NaN columns: {dict(nan_nonzero)}")
+        nan_sorted = nan_nonzero.sort_values(ascending=False)
+        top_nan = nan_sorted.head(_MAX_NAN_COLS)
+        llm_parts.append(f"NaN columns: {dict(top_nan)}")
+        if len(nan_sorted) > _MAX_NAN_COLS:
+            llm_parts.append(
+                f"... and {len(nan_sorted) - _MAX_NAN_COLS} more NaN columns"
+            )
     if len(numeric_cols.columns) > 0:
-        for c in numeric_cols.columns:
+        for c in list(numeric_cols.columns)[:_MAX_NUMERIC_COLS]:
             col = numeric_cols[c]
             llm_parts.append(
-                f"{c}: min={col.min():.4f}, max={col.max():.4f}, "
-                f"mean={col.mean():.4f}"
+                f"{c}: min={_fmt_stat(col.min())}, max={_fmt_stat(col.max())}, "
+                f"mean={_fmt_stat(col.mean())}"
             )
+        if len(numeric_cols.columns) > _MAX_NUMERIC_COLS:
+            remaining = len(numeric_cols.columns) - _MAX_NUMERIC_COLS
+            llm_parts.append(f"... and {remaining} more numeric columns")
     for d in date_sections:
         llm_parts.append(d)
     llm_summary = "\n".join(llm_parts)
