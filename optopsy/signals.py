@@ -291,6 +291,8 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
         above: True → price > upper band; False → price < lower band
     """
     length, std = int(length), float(std)
+    # pandas_ta names BB columns as BBU_{length}_{std}_{std} where std is a float.
+    # The float() cast above ensures we match this format (e.g. 2 -> 2.0 -> "BBU_20_2.0_2.0").
     if above:
         band_col = f"BBU_{length}_{std}_{std}"
         fill_val = float("inf")

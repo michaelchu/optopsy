@@ -8,6 +8,11 @@ def filepath():
     return os.path.join(curr_file, "./test_data/data.csv")
 
 
+def filepath_noncontiguous():
+    curr_file = os.path.abspath(os.path.dirname(__file__))
+    return os.path.join(curr_file, "./test_data/data_noncontiguous.csv")
+
+
 def test_import_csv_file():
     data = op.datafeeds.csv_data(
         filepath(),
@@ -107,3 +112,55 @@ def test_import_csv_with_no_date_range():
     assert data.iloc[1]["expiration"] == datetime(2000, 1, 20)
     assert data.iloc[2]["expiration"] == datetime(2010, 1, 20)
     assert data.iloc[3]["expiration"] == datetime(2020, 1, 20)
+
+
+def test_import_csv_noncontiguous_columns():
+    """usecols optimization must handle non-contiguous column indices (gaps)."""
+    data = op.datafeeds.csv_data(
+        filepath_noncontiguous(),
+        underlying_symbol=0,
+        underlying_price=3,
+        option_type=5,
+        expiration=6,
+        quote_date=7,
+        strike=8,
+        bid=9,
+        ask=10,
+    )
+
+    expected_columns = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+    assert list(data.columns) == expected_columns
+    assert len(data) == 4
+    assert data.iloc[0]["underlying_symbol"] == "SPX"
+    assert data.iloc[0]["underlying_price"] == 359.69
+    assert data.iloc[0]["strike"] == 225
+    assert data.iloc[0]["expiration"] == datetime(1990, 1, 20)
+
+
+def test_import_csv_noncontiguous_columns_with_date_range():
+    """Non-contiguous column mapping should work with date filtering too."""
+    data = op.datafeeds.csv_data(
+        filepath_noncontiguous(),
+        start_date=datetime(2000, 1, 1),
+        end_date=datetime(2010, 12, 31),
+        underlying_symbol=0,
+        underlying_price=3,
+        option_type=5,
+        expiration=6,
+        quote_date=7,
+        strike=8,
+        bid=9,
+        ask=10,
+    )
+    assert len(data) == 2
+    assert data.iloc[0]["expiration"] == datetime(2000, 1, 20)
+    assert data.iloc[1]["expiration"] == datetime(2010, 1, 20)

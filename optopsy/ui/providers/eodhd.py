@@ -8,7 +8,6 @@ from typing import Any
 
 import pandas as pd
 import requests
-import yfinance as yf
 
 from .base import DataProvider
 from .cache import ParquetCache, compute_date_gaps
@@ -476,6 +475,16 @@ class EODHDProvider(DataProvider):
     @staticmethod
     def _resolve_underlying_prices(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """Merge underlying close prices from yfinance into the DataFrame."""
+        try:
+            import yfinance as yf
+        except ImportError:
+            _log.warning(
+                "yfinance is not installed; cannot resolve underlying prices for %s",
+                symbol,
+            )
+            df["underlying_price"] = pd.NA
+            return df
+
         _log.info(
             "Resolving underlying prices via yfinance for %s (%s rows)",
             symbol,

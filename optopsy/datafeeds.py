@@ -1,7 +1,9 @@
 from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
-from .core import _trim, _ltrim, _rtrim
+
 from .checks import _check_data_types
+from .core import _ltrim, _rtrim, _trim
 
 default_kwargs: Dict[str, Any] = {
     "start_date": None,
@@ -20,8 +22,8 @@ default_kwargs: Dict[str, Any] = {
     "theta": None,
     "vega": None,
     # Optional liquidity columns for slippage modeling (set to column index to include)
-    "volume": None,  # Used by liquidity-based slippage
-    "open_interest": None,  # Reserved for future use
+    "volume": None,
+    "open_interest": None,
 }
 
 
@@ -51,16 +53,17 @@ def _standardize_cols(
     data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
 ) -> pd.DataFrame:
     """Rename columns to standardized names."""
-    col_names = list(data.columns)
-    cols = {col_names[idx]: label for idx, label in column_mapping if idx is not None}
+    idx_to_label = {idx: label for idx, label in column_mapping if idx is not None}
+    sorted_indices = sorted(idx_to_label)
+    idx_to_colname = dict(zip(sorted_indices, data.columns))
+    cols = {
+        idx_to_colname[idx]: label for idx, label in column_mapping if idx is not None
+    }
     return data.rename(columns=cols)
 
 
 def _infer_date_cols(data: pd.DataFrame) -> pd.DataFrame:
     """Convert date columns to datetime format."""
-    # infer_datetime_format was deprecated in pandas 2.0 and removed in 3.0
-    # For pandas < 2.0, use infer_datetime_format=True for better performance
-    # For pandas >= 2.0, the strict inference is now default behavior
     pandas_version = tuple(int(x) for x in pd.__version__.split(".")[:2])
 
     if pandas_version < (2, 0):
@@ -167,10 +170,11 @@ def csv_data(
             column_mapping.append((params[col], col))
 
     try:
+        # Only read the columns we need from the CSV to save memory and I/O
+        col_indices = sorted(c for c, _ in column_mapping if c is not None)
         return (
-            pd.read_csv(file_path)
+            pd.read_csv(file_path, usecols=col_indices)
             .pipe(_standardize_cols, column_mapping)
-            .pipe(_trim_cols, column_mapping)
             .pipe(_infer_date_cols)
             .pipe(_trim_dates, params["start_date"], params["end_date"])
         )

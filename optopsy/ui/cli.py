@@ -16,6 +16,10 @@ def _format_bytes(n: int) -> str:
 
 
 def _cmd_cache_size(args: argparse.Namespace) -> None:
+    from optopsy.ui._compat import import_optional_dependency
+
+    import_optional_dependency("pyarrow")
+
     from optopsy.ui.providers.cache import ParquetCache
 
     cache = ParquetCache()
@@ -29,6 +33,10 @@ def _cmd_cache_size(args: argparse.Namespace) -> None:
 
 
 def _cmd_cache_clear(args: argparse.Namespace) -> None:
+    from optopsy.ui._compat import import_optional_dependency
+
+    import_optional_dependency("pyarrow")
+
     from optopsy.ui.providers.cache import ParquetCache
 
     cache = ParquetCache()
@@ -65,6 +73,11 @@ def _cmd_run(args: argparse.Namespace) -> None:
             secret = secrets.token_hex(32)
             secret_file.write_text(secret)
         os.environ["CHAINLIT_AUTH_SECRET"] = secret
+
+    from optopsy.ui._compat import import_optional_dependency
+
+    import_optional_dependency("chainlit")
+    import_optional_dependency("litellm")
 
     from chainlit.config import config
 
