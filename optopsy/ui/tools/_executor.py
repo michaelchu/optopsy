@@ -7,16 +7,15 @@ from typing import Any
 
 import pandas as pd
 
-import optopsy as op
 import optopsy.signals as _signals
 from optopsy.signals import apply_signal
 
 from ..providers import get_provider_for_tool
 from ..providers.cache import ParquetCache
 from ._helpers import (
-    _DATE_ONLY_SIGNALS,
     _YF_CACHE_CATEGORY,
     _YF_DEDUP_COLS,
+    ToolResult,
     _date_only_fallback,
     _df_summary,
     _df_to_markdown,
@@ -33,8 +32,8 @@ from ._helpers import (
     _yf_cache,
     _yf_compute_gaps,
 )
-from ._helpers import ToolResult
 from ._schemas import (
+    _DATE_ONLY_SIGNALS,
     CALENDAR_EXTRA_PARAMS,
     CALENDAR_STRATEGIES,
     SIGNAL_NAMES,

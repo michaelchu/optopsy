@@ -1,6 +1,7 @@
-from optopsy.strategies import *
-from optopsy.definitions import *
 import pytest
+
+from optopsy.definitions import *
+from optopsy.strategies import *
 
 describe_cols = [
     "count",

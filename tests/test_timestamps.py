@@ -10,9 +10,9 @@ import datetime
 import pandas as pd
 import pytest
 
-from optopsy.timestamps import normalize_dates
 from optopsy.signals import apply_signal, day_of_week
 from optopsy.strategies import long_calls
+from optopsy.timestamps import normalize_dates
 
 
 class TestNormalizeDates:

@@ -1,32 +1,34 @@
 """Tests for entry and exit signal filtering functionality."""
 
 import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
+
 from optopsy.signals import (
+    Signal,
     _compute_rsi,
-    apply_signal,
-    rsi_below,
-    rsi_above,
-    day_of_week,
-    sma_below,
-    sma_above,
     and_signals,
-    or_signals,
-    macd_cross_above,
-    macd_cross_below,
-    bb_above_upper,
-    bb_below_lower,
-    ema_cross_above,
-    ema_cross_below,
+    apply_signal,
     atr_above,
     atr_below,
-    sustained,
-    Signal,
+    bb_above_upper,
+    bb_below_lower,
+    day_of_week,
+    ema_cross_above,
+    ema_cross_below,
+    macd_cross_above,
+    macd_cross_below,
+    or_signals,
+    rsi_above,
+    rsi_below,
     signal,
+    sma_above,
+    sma_below,
+    sustained,
 )
-from optopsy.strategies import long_calls, short_puts, long_call_calendar
+from optopsy.strategies import long_calls, short_puts
 
 # ============================================================================
 # Fixtures

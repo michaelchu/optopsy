@@ -1,6 +1,6 @@
-from optopsy.strategies import Side
 from optopsy.core import _calls
 from optopsy.rules import _rule_non_overlapping_strike
+from optopsy.strategies import Side
 
 
 def test_no_overlapping_strikes(data):

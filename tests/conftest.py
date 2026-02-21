@@ -1,7 +1,8 @@
-import numpy as np
-import pytest
-import pandas as pd
 import datetime as datetime
+
+import numpy as np
+import pandas as pd
+import pytest
 
 
 def make_stock_data(

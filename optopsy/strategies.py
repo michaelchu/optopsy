@@ -1,32 +1,33 @@
+from enum import Enum
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 from typing_extensions import Unpack
-from .core import _calls, _puts, _process_strategy, _process_calendar_strategy
-from .types import StrategyParams, CalendarStrategyParams
+
+from .core import _calls, _process_calendar_strategy, _process_strategy, _puts
 from .definitions import (
-    single_strike_external_cols,
-    single_strike_internal_cols,
+    calendar_spread_external_cols,
+    calendar_spread_internal_cols,
+    diagonal_spread_external_cols,
+    diagonal_spread_internal_cols,
     double_strike_external_cols,
     double_strike_internal_cols,
-    triple_strike_external_cols,
-    triple_strike_internal_cols,
     quadruple_strike_external_cols,
     quadruple_strike_internal_cols,
+    single_strike_external_cols,
+    single_strike_internal_cols,
     straddle_internal_cols,
-    calendar_spread_internal_cols,
-    calendar_spread_external_cols,
-    diagonal_spread_internal_cols,
-    diagonal_spread_external_cols,
+    triple_strike_external_cols,
+    triple_strike_internal_cols,
 )
 from .rules import (
-    _rule_non_overlapping_strike,
     _rule_butterfly_strikes,
-    _rule_iron_condor_strikes,
-    _rule_iron_butterfly_strikes,
     _rule_expiration_ordering,
+    _rule_iron_butterfly_strikes,
+    _rule_iron_condor_strikes,
+    _rule_non_overlapping_strike,
 )
-from enum import Enum
+from .types import StrategyParams
 
 default_kwargs: Dict[str, Any] = {
     "dte_interval": 7,

@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv, find_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +20,6 @@ import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
 import optopsy as op
-
 from optopsy.ui.agent import OptopsyAgent
 from optopsy.ui.providers import get_provider_names
 

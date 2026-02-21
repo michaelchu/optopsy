@@ -2,7 +2,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from .checks import _check_data_types
 from .core import _ltrim, _rtrim, _trim
 
 default_kwargs: Dict[str, Any] = {

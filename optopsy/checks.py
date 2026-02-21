@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, Tuple
+
 import pandas as pd
 
 expected_types: Dict[str, Tuple[str, ...]] = {
