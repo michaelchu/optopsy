@@ -393,8 +393,23 @@ def get_tool_schemas() -> list[dict]:
             "type": "function",
             "function": {
                 "name": "preview_data",
-                "description": "Show shape, columns, date range, and sample rows of the loaded dataset.",
-                "parameters": {"type": "object", "properties": {}, "required": []},
+                "description": (
+                    "Show shape, columns, date range, and sample rows of a dataset. "
+                    "Omit dataset_name to inspect the most-recently-loaded dataset."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Name (ticker or filename) of the dataset to preview. "
+                                "Omit to use the most-recently-loaded dataset."
+                            ),
+                        },
+                    },
+                    "required": [],
+                },
             },
         },
         {
@@ -492,6 +507,15 @@ def get_tool_schemas() -> list[dict]:
                                 "Cannot be combined with exit_signal."
                             ),
                         },
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Name (ticker or filename) of the dataset to run the "
+                                "strategy on. Omit to use the most-recently-loaded dataset. "
+                                "Use this to compare the same strategy across multiple "
+                                "loaded datasets (e.g. 'SPY' vs 'QQQ')."
+                            ),
+                        },
                         **STRATEGY_PARAMS_SCHEMA,
                         **CALENDAR_EXTRA_PARAMS,
                     },
@@ -557,6 +581,13 @@ def get_tool_schemas() -> list[dict]:
                             "description": (
                                 "How to combine multiple signals: 'and' (all must be True, "
                                 "default) or 'or' (any must be True)"
+                            ),
+                        },
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Name (ticker or filename) of the dataset to build the "
+                                "signal from. Omit to use the most-recently-loaded dataset."
                             ),
                         },
                     },
@@ -686,9 +717,20 @@ class ToolResult:
     what happened without blowing up the token budget.
     ``user_display`` is the richer version (with full tables) shown in the UI.
     ``signals`` carries named signal date DataFrames across tool calls.
+    ``datasets`` carries the full named-dataset registry so multiple datasets
+    can be active simultaneously (keyed by label, e.g. ticker or filename).
+    ``active_dataset_name`` is the label of the dataset that was just loaded
+    or selected; None means no change to the active selection.
     """
 
-    __slots__ = ("llm_summary", "user_display", "dataset", "signals")
+    __slots__ = (
+        "llm_summary",
+        "user_display",
+        "dataset",
+        "signals",
+        "datasets",
+        "active_dataset_name",
+    )
 
     def __init__(
         self,
@@ -696,11 +738,15 @@ class ToolResult:
         dataset: pd.DataFrame | None,
         user_display: str | None = None,
         signals: dict[str, pd.DataFrame] | None = None,
+        datasets: dict[str, pd.DataFrame] | None = None,
+        active_dataset_name: str | None = None,
     ):
         self.llm_summary = llm_summary
         self.user_display = user_display or llm_summary
         self.dataset = dataset
         self.signals = signals
+        self.datasets = datasets
+        self.active_dataset_name = active_dataset_name
 
 
 def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
@@ -763,6 +809,7 @@ def execute_tool(
     arguments: dict[str, Any],
     dataset: pd.DataFrame | None,
     signals: dict[str, pd.DataFrame] | None = None,
+    datasets: dict[str, pd.DataFrame] | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
@@ -770,20 +817,41 @@ def execute_tool(
     The ToolResult contains a concise ``llm_summary`` (sent to the LLM) and a
     richer ``user_display`` (shown in the chat UI).  The ``dataset`` field
     carries the currently-active DataFrame forward.  The ``signals`` dict
-    carries named signal date DataFrames across tool calls.
+    carries named signal date DataFrames across tool calls.  The ``datasets``
+    dict is the named-dataset registry (ticker/filename -> DataFrame) that
+    allows multiple datasets to be active simultaneously.
     """
     if signals is None:
         signals = {}
+    if datasets is None:
+        datasets = {}
 
-    # Helper to build a ToolResult that always carries signals forward.
+    def _resolve_dataset(
+        name: str | None,
+        active: pd.DataFrame | None,
+        dss: dict[str, pd.DataFrame],
+    ) -> pd.DataFrame | None:
+        """Return the dataset for *name*, falling back to *active*."""
+        if name:
+            return dss.get(name)
+        return active
+
+    # Helper to build a ToolResult that always carries state forward.
     def _result(
         llm_summary: str,
         ds: pd.DataFrame | None = dataset,
         user_display: str | None = None,
         sigs: dict[str, pd.DataFrame] | None = None,
+        dss: dict[str, pd.DataFrame] | None = None,
+        active_name: str | None = None,
     ) -> ToolResult:
         return ToolResult(
-            llm_summary, ds, user_display, sigs if sigs is not None else signals
+            llm_summary,
+            ds,
+            user_display,
+            sigs if sigs is not None else signals,
+            dss if dss is not None else datasets,
+            active_name,
         )
 
     if tool_name == "load_csv_data":
@@ -803,9 +871,13 @@ def execute_tool(
             kwargs["end_date"] = arguments["end_date"]
         try:
             df = op.csv_data(filepath, **kwargs)
-            summary = _df_summary(df, f"Loaded '{filename}'")
+            label = filename
+            updated_datasets = {**datasets, label: df}
+            summary = _df_summary(df, f"Loaded '{label}'")
+            if len(updated_datasets) > 1:
+                summary += f"\nActive datasets: {list(updated_datasets.keys())}"
             display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
-            return _result(summary, df, display)
+            return _result(summary, df, display, dss=updated_datasets, active_name=label)
         except Exception as e:
             return _result(f"Error loading '{filename}': {e}")
 
@@ -827,19 +899,39 @@ def execute_tool(
                     # the current active dataset unchanged.
                     display = f"{summary}\n\n{_df_to_markdown(df)}"
                     return _result(summary, user_display=display)
+                # Derive a label from the ticker symbol in the data if possible.
+                label: str
+                if "underlying_symbol" in df.columns:
+                    syms = df["underlying_symbol"].unique()
+                    label = syms[0] if len(syms) == 1 else str(list(syms))
+                else:
+                    label = tool_name
+                updated_datasets = {**datasets, label: df}
                 display = (
                     f"{summary}\n\nFirst 5 rows:\n" f"{_df_to_markdown(df.head())}"
                 )
-                return _result(summary, df, display)
+                if len(updated_datasets) > 1:
+                    summary += f"\nActive datasets: {list(updated_datasets.keys())}"
+                return _result(
+                    summary, df, display, dss=updated_datasets, active_name=label
+                )
             return _result(summary)
         except Exception as e:
             return _result(f"Error running {tool_name}: {e}")
 
     if tool_name == "preview_data":
-        if dataset is None:
+        ds_name = arguments.get("dataset_name")
+        active_ds = _resolve_dataset(ds_name, dataset, datasets)
+        if active_ds is None:
+            if datasets:
+                return _result(
+                    f"Dataset '{ds_name}' not found. "
+                    f"Available: {list(datasets.keys())}"
+                )
             return _result("No dataset loaded. Use load_csv_data first.")
-        summary = _df_summary(dataset)
-        display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(dataset.head())}"
+        label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
+        summary = _df_summary(active_ds, label)
+        display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(active_ds.head())}"
         return _result(summary, user_display=display)
 
     # -----------------------------------------------------------------
@@ -849,8 +941,16 @@ def execute_tool(
         slot = arguments.get("slot", "").strip()
         if not slot:
             return _result("Missing required 'slot' name for the signal.")
-        if dataset is None:
+        ds_name = arguments.get("dataset_name")
+        active_ds = _resolve_dataset(ds_name, dataset, datasets)
+        if active_ds is None:
+            if datasets:
+                return _result(
+                    f"Dataset '{ds_name}' not found. "
+                    f"Available: {list(datasets.keys())}"
+                )
             return _result("No dataset loaded. Load data first.")
+        dataset = active_ds  # shadow for the rest of the block
 
         signal_specs = arguments.get("signals")
         if not signal_specs or not isinstance(signal_specs, list):
@@ -970,8 +1070,16 @@ def execute_tool(
                 f"Unknown strategy '{strategy_name}'. "
                 f"Available: {', '.join(STRATEGY_NAMES)}",
             )
-        if dataset is None:
+        ds_name = arguments.get("dataset_name")
+        active_ds = _resolve_dataset(ds_name, dataset, datasets)
+        if active_ds is None:
+            if datasets:
+                return _result(
+                    f"Dataset '{ds_name}' not found. "
+                    f"Available: {list(datasets.keys())}"
+                )
             return _result("No dataset loaded. Load data first.")
+        dataset = active_ds  # shadow for the rest of the block
         func, _, _ = STRATEGIES[strategy_name]
         # Build a clean kwargs dict without mutating the original arguments.
         # Strip signal params — handled separately below.

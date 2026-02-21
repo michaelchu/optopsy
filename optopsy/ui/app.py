@@ -64,17 +64,55 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
 
     Without this handler Chainlit falls back to on_chat_start, which creates a
     fresh session and sends the welcome message again mid-conversation.
+
+    Dataset and signal DataFrames are in-process state that cannot be persisted
+    across sessions.  We inject a system-level note into the history so the LLM
+    knows it must reload any data before running strategies.
     """
     model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
     agent = OptopsyAgent(model=model)
 
-    # Rebuild message history from the persisted thread
+    # Rebuild message history from the persisted thread, including tool calls.
+    # Chainlit step types:
+    #   "user_message"      -> role: user
+    #   "assistant_message" -> role: assistant  (may embed tool_calls metadata)
+    #   "tool"              -> role: tool        (tool result)
     messages: list[dict] = []
     for step in thread.get("steps", []):
-        if step.get("type") == "user_message":
+        step_type = step.get("type")
+        if step_type == "user_message":
             messages.append({"role": "user", "content": step.get("output", "")})
-        elif step.get("type") == "assistant_message":
-            messages.append({"role": "assistant", "content": step.get("output", "")})
+        elif step_type == "assistant_message":
+            msg: dict = {"role": "assistant", "content": step.get("output", "")}
+            # Restore tool_calls array if stored in step metadata
+            tool_calls = (step.get("metadata") or {}).get("tool_calls")
+            if tool_calls:
+                msg["tool_calls"] = tool_calls
+            messages.append(msg)
+        elif step_type == "tool":
+            meta = step.get("metadata") or {}
+            tool_call_id = meta.get("tool_call_id", step.get("id", ""))
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": step.get("output", ""),
+                }
+            )
+
+    # Datasets and signals are lost on reconnect (they live only in memory).
+    # Append a concise reminder so the LLM doesn't try to use stale state.
+    if any(m.get("role") == "tool" for m in messages):
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    "[Session resumed] In-memory datasets and signals were cleared "
+                    "during the reconnect. Please reload any data before running "
+                    "strategies."
+                ),
+            }
+        )
 
     cl.user_session.set("agent", agent)
     cl.user_session.set("messages", messages)
@@ -87,11 +125,15 @@ async def on_message(message: cl.Message):
 
     messages.append({"role": "user", "content": message.content})
 
-    # Show tool calls as expandable steps with a loading indicator
-    async def on_tool_call(tool_name, arguments, result):
+    # Show tool calls as expandable steps with a loading indicator.
+    # tool_call_id is stored in step metadata so on_chat_resume can reconstruct
+    # the tool message history with the correct ID.
+    async def on_tool_call(tool_name, arguments, result, tool_call_id=""):
         async with cl.Step(name=tool_name, type="tool") as step:
             step.input = str(arguments)
             step.output = result
+            if tool_call_id:
+                step.metadata = {"tool_call_id": tool_call_id}
 
     # Stream the final LLM response token-by-token
     response_msg = cl.Message(content="")
@@ -100,9 +142,18 @@ async def on_message(message: cl.Message):
     async def on_token(token: str):
         await response_msg.stream_token(token)
 
+    # When the LLM emits tool_calls, store them in the response message's
+    # metadata so on_chat_resume can reconstruct the tool call history.
+    async def on_assistant_tool_calls(tool_calls: list[dict]):
+        response_msg.metadata = {"tool_calls": tool_calls}
+        await response_msg.update()
+
     try:
         result_text, updated_messages = await agent.chat(
-            messages, on_tool_call=on_tool_call, on_token=on_token
+            messages,
+            on_tool_call=on_tool_call,
+            on_token=on_token,
+            on_assistant_tool_calls=on_assistant_tool_calls,
         )
         # Finalize the streamed message
         response_msg.content = result_text
