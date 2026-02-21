@@ -902,9 +902,12 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     if s["total_trades"] == 0:
         return _result(f"simulate({strategy_name}): no trades generated.")
 
-    # Build result key
-    dte = arguments.get("max_entry_dte", 90)
-    sim_key = f"sim:{strategy_name}:dte={dte}"
+    # Build result key — include all params that affect output
+    key_parts = [f"sim:{strategy_name}"]
+    for k in sorted(arguments.keys()):
+        if k not in ("strategy_name", "dataset_name"):
+            key_parts.append(f"{k}={arguments[k]}")
+    sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
 
     # Store in results (include trade_log for later retrieval)
     updated_results = dict(results)

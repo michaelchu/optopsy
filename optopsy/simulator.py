@@ -17,11 +17,14 @@ Example::
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Union
 
 import numpy as np
 import pandas as pd
+
+_log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Public types
@@ -44,6 +47,31 @@ class SimulationResult:
 
 
 # ---------------------------------------------------------------------------
+# Trade log schema
+# ---------------------------------------------------------------------------
+
+_TRADE_LOG_COLUMNS = [
+    "trade_id",
+    "underlying_symbol",
+    "entry_date",
+    "exit_date",
+    "days_held",
+    "expiration",
+    "entry_cost",
+    "exit_proceeds",
+    "quantity",
+    "multiplier",
+    "dollar_cost",
+    "dollar_proceeds",
+    "realized_pnl",
+    "pct_change",
+    "cumulative_pnl",
+    "equity",
+    "description",
+]
+
+
+# ---------------------------------------------------------------------------
 # Column detection helpers
 # ---------------------------------------------------------------------------
 
@@ -55,6 +83,11 @@ _MULTI_LEG_COST_COLS = {"total_entry_cost", "total_exit_proceeds"}
 
 # Calendar/diagonal strategies have per-leg expirations
 _CALENDAR_MARKER = "expiration_leg1"
+
+# Single-leg short strategies — raw output has unsigned option prices (same as
+# long), so we negate entry/exit during normalisation to convert to signed cash
+# flows: negative entry_cost = credit received, negative exit_proceeds = paid.
+_SHORT_SINGLE_LEG = frozenset({"short_calls", "short_puts"})
 
 
 def _is_single_leg(columns: pd.Index) -> bool:
@@ -70,24 +103,31 @@ def _is_calendar(columns: pd.Index) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _normalise_trades(raw: pd.DataFrame) -> pd.DataFrame:
+def _normalise_trades(
+    raw: pd.DataFrame, *, is_short_single: bool = False
+) -> pd.DataFrame:
     """Map raw strategy output to a uniform schema for the simulation loop.
 
     Returns a DataFrame with columns:
         entry_date, exit_date, expiration, underlying_symbol,
         entry_cost, exit_proceeds, pct_change, description
+
+    After normalisation, ``entry_cost`` and ``exit_proceeds`` are *signed cash
+    flows*: negative means cash outflow (paid), positive means cash inflow
+    (received).  For multi-leg strategies the raw output already encodes this.
+    For single-leg short strategies, the unsigned option prices are negated.
     """
     cols = raw.columns
 
     if _is_single_leg(cols):
-        return _normalise_single_leg(raw)
+        return _normalise_single_leg(raw, negate=is_short_single)
     if _is_calendar(cols):
         return _normalise_calendar(raw)
     # Multi-leg (spreads, butterflies, condors, straddles, strangles)
     return _normalise_multi_leg(raw)
 
 
-def _normalise_single_leg(raw: pd.DataFrame) -> pd.DataFrame:
+def _normalise_single_leg(raw: pd.DataFrame, *, negate: bool = False) -> pd.DataFrame:
     entry_date = pd.to_datetime(raw["quote_date_entry"])
     expiration = pd.to_datetime(raw["expiration"])
 
@@ -98,9 +138,17 @@ def _normalise_single_leg(raw: pd.DataFrame) -> pd.DataFrame:
     # in the raw output, approximate exit_date = expiration.
     exit_date = expiration
 
-    option_type = raw.get("option_type", pd.Series([""] * len(raw)))
-    strike = raw.get("strike", pd.Series([np.nan] * len(raw)))
+    option_type = raw.get("option_type", pd.Series([""] * len(raw), index=raw.index))
+    strike = raw.get("strike", pd.Series([np.nan] * len(raw), index=raw.index))
     desc = option_type.astype(str) + " " + strike.astype(str)
+
+    # For short single-leg strategies, negate prices to signed cash flows:
+    # selling at entry = credit (negative cost), buying back at exit = debit
+    # (negative proceeds).  This aligns with multi-leg convention where
+    # total_entry_cost < 0 means credit.
+    sign = -1 if negate else 1
+    entry_cost = raw["entry"] * sign
+    exit_proceeds = raw["exit"] * sign
 
     return pd.DataFrame(
         {
@@ -108,8 +156,8 @@ def _normalise_single_leg(raw: pd.DataFrame) -> pd.DataFrame:
             "exit_date": exit_date,
             "expiration": expiration,
             "underlying_symbol": raw["underlying_symbol"],
-            "entry_cost": raw["entry"],
-            "exit_proceeds": raw["exit"],
+            "entry_cost": entry_cost,
+            "exit_proceeds": exit_proceeds,
             "pct_change": raw["pct_change"],
             "description": desc,
         }
@@ -125,15 +173,20 @@ def _normalise_multi_leg(raw: pd.DataFrame) -> pd.DataFrame:
     elif "dte_entry" in raw.columns and "expiration" in raw.columns:
         entry_date = _derive_entry_date(raw)
     else:
-        # Fallback: shouldn't happen with standard strategies
-        entry_date = pd.to_datetime(raw.iloc[:, 0])
+        raise ValueError(
+            "Cannot determine entry date for multi-leg trade: "
+            f"columns={list(raw.columns)}"
+        )
 
     if "expiration" in raw.columns:
         expiration = pd.to_datetime(raw["expiration"])
     elif "expiration_leg1" in raw.columns:
         expiration = pd.to_datetime(raw["expiration_leg1"])
     else:
-        expiration = entry_date  # fallback
+        raise ValueError(
+            "Cannot determine expiration for multi-leg trade: "
+            f"columns={list(raw.columns)}"
+        )
     exit_date = expiration
 
     # Build a human-readable description from available strike/type columns
@@ -177,7 +230,10 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
         exp = pd.to_datetime(raw["expiration_leg1"])
         entry_date = exp - pd.to_timedelta(raw["dte_entry_leg1"], unit="D")
     else:
-        entry_date = pd.to_datetime(raw.iloc[:, 0])
+        raise ValueError(
+            "Cannot determine entry date for calendar trade: "
+            f"columns={list(raw.columns)}"
+        )
 
     # Exit date = front expiration (leg1) — the spread is typically closed
     # near front expiration
@@ -185,8 +241,8 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
     expiration = exit_date
 
     strike_col = "strike" if "strike" in raw.columns else "strike_leg1"
-    strike = raw.get(strike_col, pd.Series([np.nan] * len(raw)))
-    option_type = raw.get("option_type", pd.Series([""] * len(raw)))
+    strike = raw.get(strike_col, pd.Series([np.nan] * len(raw), index=raw.index))
+    option_type = raw.get("option_type", pd.Series([""] * len(raw), index=raw.index))
     desc = "cal " + option_type.astype(str) + " " + strike.astype(str)
 
     return pd.DataFrame(
@@ -325,9 +381,9 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
 
     pnl = trade_log["realized_pnl"]
     wins = pnl[pnl > 0]
-    losses = pnl[pnl <= 0]
+    losses = pnl[pnl < 0]
     total_wins = float(wins.sum()) if len(wins) > 0 else 0.0
-    total_losses = float(losses.sum().item()) if len(losses) > 0 else 0.0
+    total_losses = float(losses.sum()) if len(losses) > 0 else 0.0
 
     # Max drawdown from equity curve
     equity = trade_log["equity"]
@@ -400,30 +456,13 @@ def simulate(
     try:
         raw = strategy(data, raw=True, **strategy_kwargs)
     except Exception:
+        _log.debug(
+            "Strategy raised an exception, returning empty result", exc_info=True
+        )
         raw = pd.DataFrame()
 
     if raw.empty:
-        empty_log = pd.DataFrame(
-            columns=[
-                "trade_id",
-                "underlying_symbol",
-                "entry_date",
-                "exit_date",
-                "days_held",
-                "expiration",
-                "entry_cost",
-                "exit_proceeds",
-                "quantity",
-                "multiplier",
-                "dollar_cost",
-                "dollar_proceeds",
-                "realized_pnl",
-                "pct_change",
-                "cumulative_pnl",
-                "equity",
-                "description",
-            ]
-        )
+        empty_log = pd.DataFrame(columns=_TRADE_LOG_COLUMNS)
         empty_curve = pd.Series(dtype=float, name="equity")
         return SimulationResult(
             trade_log=empty_log,
@@ -450,8 +489,12 @@ def simulate(
 
     selected_raw = pd.DataFrame(selected_rows)
 
+    # Detect short single-leg strategies so normalisation can negate prices
+    strategy_name = getattr(strategy, "__name__", "")
+    is_short_single = strategy_name in _SHORT_SINGLE_LEG
+
     # Normalise to uniform schema
-    trades = _normalise_trades(selected_raw)
+    trades = _normalise_trades(selected_raw, is_short_single=is_short_single)
     trades = trades.sort_values("entry_date").reset_index(drop=True)
 
     # Simulation loop
@@ -466,66 +509,52 @@ def simulate(
         set(trades["entry_date"].tolist() + trades["exit_date"].tolist())
     )
 
-    # Index trades by entry date for quick lookup
-    entry_date_map: dict[Any, int] = {}
-    for idx, row in trades.iterrows():
-        ed = row["entry_date"]
-        if ed not in entry_date_map:
-            entry_date_map[ed] = idx  # type: ignore[assignment]
+    # Index trades by entry date for quick lookup (first occurrence per date)
+    _first_idx = trades.drop_duplicates("entry_date", keep="first").index
+    entry_date_map: dict[Any, int] = {
+        trades.at[i, "entry_date"]: i
+        for i in _first_idx  # type: ignore[misc]
+    }
+
+    def _close_pos(pos: dict[str, Any]) -> dict[str, Any]:
+        """Build a completed-trade dict and compute realized P&L.
+
+        After normalisation, entry_cost and exit_proceeds are signed cash
+        flows.  P&L is always ``(exit_proceeds - entry_cost) * qty * mult``.
+        """
+        qty = pos["quantity"]
+        mult = pos["multiplier"]
+        dollar_cost = abs(pos["entry_cost"]) * qty * mult
+        realized = (pos["exit_proceeds"] - pos["entry_cost"]) * qty * mult
+        return {
+            "dollar_cost": dollar_cost,
+            "dollar_proceeds": pos["exit_proceeds"] * qty * mult,
+            "realized_pnl": realized,
+            "days_held": (pos["exit_date"] - pos["entry_date"]).days,
+        }
 
     for current_date in all_dates:
         # Close positions whose exit_date has arrived
         still_open = []
         for pos in open_positions:
             if pos["exit_date"] <= current_date:
-                dollar_proceeds = (
-                    pos["exit_proceeds"] * pos["quantity"] * pos["multiplier"]
-                )
-                dollar_cost = (
-                    abs(pos["entry_cost"]) * pos["quantity"] * pos["multiplier"]
-                )
-                realized = dollar_proceeds - dollar_cost
-                if pos["entry_cost"] < 0:
-                    # Credit strategy: P&L = -(exit - entry) * qty * mult
-                    realized = (
-                        -(pos["exit_proceeds"] - pos["entry_cost"])
-                        * pos["quantity"]
-                        * pos["multiplier"]
-                    )
-                else:
-                    # Debit strategy: P&L = (exit - entry) * qty * mult
-                    realized = (
-                        (pos["exit_proceeds"] - pos["entry_cost"])
-                        * pos["quantity"]
-                        * pos["multiplier"]
-                    )
-
-                cumulative_pnl += realized
-                cash += dollar_cost + realized  # return cost + pnl
+                closed = _close_pos(pos)
+                cumulative_pnl += closed["realized_pnl"]
+                cash += closed["dollar_cost"] + closed["realized_pnl"]
 
                 completed_trades.append(
                     {
-                        "trade_id": pos["trade_id"],
-                        "underlying_symbol": pos["underlying_symbol"],
-                        "entry_date": pos["entry_date"],
-                        "exit_date": pos["exit_date"],
-                        "days_held": (pos["exit_date"] - pos["entry_date"]).days,
-                        "expiration": pos["expiration"],
-                        "entry_cost": pos["entry_cost"],
-                        "exit_proceeds": pos["exit_proceeds"],
+                        **{
+                            k: pos[k]
+                            for k in pos
+                            if k != "quantity" and k != "multiplier"
+                        },
                         "quantity": pos["quantity"],
                         "multiplier": pos["multiplier"],
-                        "dollar_cost": abs(pos["entry_cost"])
-                        * pos["quantity"]
-                        * pos["multiplier"],
-                        "dollar_proceeds": pos["exit_proceeds"]
-                        * pos["quantity"]
-                        * pos["multiplier"],
-                        "realized_pnl": realized,
+                        **closed,
                         "pct_change": pos["pct_change"],
                         "cumulative_pnl": cumulative_pnl,
                         "equity": capital + cumulative_pnl,
-                        "description": pos["description"],
                     }
                 )
             else:
@@ -566,65 +595,26 @@ def simulate(
 
     # Close any remaining open positions at end
     for pos in open_positions:
-        dollar_cost = abs(pos["entry_cost"]) * pos["quantity"] * pos["multiplier"]
-        realized = (
-            (pos["exit_proceeds"] - pos["entry_cost"])
-            * pos["quantity"]
-            * pos["multiplier"]
-        )
-        cumulative_pnl += realized
-        cash += dollar_cost + realized
+        closed = _close_pos(pos)
+        cumulative_pnl += closed["realized_pnl"]
+        cash += closed["dollar_cost"] + closed["realized_pnl"]
 
         completed_trades.append(
             {
-                "trade_id": pos["trade_id"],
-                "underlying_symbol": pos["underlying_symbol"],
-                "entry_date": pos["entry_date"],
-                "exit_date": pos["exit_date"],
-                "days_held": (pos["exit_date"] - pos["entry_date"]).days,
-                "expiration": pos["expiration"],
-                "entry_cost": pos["entry_cost"],
-                "exit_proceeds": pos["exit_proceeds"],
+                **{k: pos[k] for k in pos if k != "quantity" and k != "multiplier"},
                 "quantity": pos["quantity"],
                 "multiplier": pos["multiplier"],
-                "dollar_cost": abs(pos["entry_cost"])
-                * pos["quantity"]
-                * pos["multiplier"],
-                "dollar_proceeds": pos["exit_proceeds"]
-                * pos["quantity"]
-                * pos["multiplier"],
-                "realized_pnl": realized,
+                **closed,
                 "pct_change": pos["pct_change"],
                 "cumulative_pnl": cumulative_pnl,
                 "equity": capital + cumulative_pnl,
-                "description": pos["description"],
             }
         )
 
     # Build trade log DataFrame
     trade_log = pd.DataFrame(completed_trades)
     if trade_log.empty:
-        trade_log = pd.DataFrame(
-            columns=[
-                "trade_id",
-                "underlying_symbol",
-                "entry_date",
-                "exit_date",
-                "days_held",
-                "expiration",
-                "entry_cost",
-                "exit_proceeds",
-                "quantity",
-                "multiplier",
-                "dollar_cost",
-                "dollar_proceeds",
-                "realized_pnl",
-                "pct_change",
-                "cumulative_pnl",
-                "equity",
-                "description",
-            ]
-        )
+        trade_log = pd.DataFrame(columns=_TRADE_LOG_COLUMNS)
 
     # Build equity curve
     if not trade_log.empty:

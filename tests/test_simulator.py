@@ -253,21 +253,26 @@ class TestSingleTrade:
 
 class TestPositionLimits:
     def test_max_positions_one_prevents_overlap(self, multi_entry_data):
-        result = simulate(
+        result_limited = simulate(
             multi_entry_data, op.long_calls, max_positions=1, selector="first"
         )
-        # With max_positions=1, only one position can be open at a time.
-        # The first trade enters 2018-01-01 and exits 2018-01-31.
-        # The second trade enters 2018-01-15 (while first is still open),
-        # so it should be skipped.
-        assert result.summary["total_trades"] <= 2
+        result_unlimited = simulate(
+            multi_entry_data, op.long_calls, max_positions=5, selector="first"
+        )
+        # With max_positions=1, the second trade (entering while first is open)
+        # should be skipped, giving fewer trades than unlimited.
+        assert (
+            result_limited.summary["total_trades"]
+            < result_unlimited.summary["total_trades"]
+            or result_limited.summary["total_trades"] == 1
+        )
 
     def test_max_positions_greater_allows_concurrent(self, multi_entry_data):
         result = simulate(
             multi_entry_data, op.long_calls, max_positions=5, selector="first"
         )
         # With high max_positions, both trades should execute
-        assert result.summary["total_trades"] >= 1
+        assert result.summary["total_trades"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -323,10 +328,69 @@ class TestMultiLeg:
     def test_butterfly_simulation(self, multi_strike_data):
         result = simulate(multi_strike_data, op.long_call_butterfly, selector="first")
         assert isinstance(result, SimulationResult)
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            assert (
+                trade["realized_pnl"] != 0
+                or trade["entry_cost"] != trade["exit_proceeds"]
+            )
+            assert trade["dollar_cost"] > 0
 
     def test_iron_condor_simulation(self, multi_strike_data):
         result = simulate(multi_strike_data, op.iron_condor, selector="first")
         assert isinstance(result, SimulationResult)
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            assert trade["dollar_cost"] > 0
+            assert trade["days_held"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# Credit strategy P&L
+# ---------------------------------------------------------------------------
+
+
+class TestCreditStrategy:
+    def test_short_call_entry_cost_negative(self, data):
+        """Short single-leg strategies should have negative entry_cost (credit)."""
+        result = simulate(data, op.short_calls, selector="first")
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            # After normalisation, short single-leg entry_cost is negative
+            assert trade["entry_cost"] < 0
+
+    def test_short_call_pnl_formula(self, data):
+        """P&L = (exit_proceeds - entry_cost) * qty * mult for all strategies."""
+        result = simulate(data, op.short_calls, selector="first")
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            expected_pnl = (
+                (trade["exit_proceeds"] - trade["entry_cost"])
+                * trade["quantity"]
+                * trade["multiplier"]
+            )
+            assert trade["realized_pnl"] == pytest.approx(expected_pnl)
+
+    def test_short_call_losing_trade_negative_pnl(self, data):
+        """Short call where underlying goes up should lose money."""
+        # Data has underlying going from 213.93 to 220 — calls go up
+        result = simulate(data, op.short_calls, selector="first")
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            # Option went up: bad for short seller → negative P&L
+            assert trade["realized_pnl"] < 0
+
+    def test_short_put_spread_pnl(self, data):
+        """Short put spread (credit spread) P&L = (exit - entry) * qty * mult."""
+        result = simulate(data, op.short_put_spread, selector="first")
+        if result.summary["total_trades"] > 0:
+            trade = result.trade_log.iloc[0]
+            expected_pnl = (
+                (trade["exit_proceeds"] - trade["entry_cost"])
+                * trade["quantity"]
+                * trade["multiplier"]
+            )
+            assert trade["realized_pnl"] == pytest.approx(expected_pnl)
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +451,22 @@ class TestSummaryStats:
         s = result.summary
         if s["losing_trades"] == 0 and s["winning_trades"] > 0:
             assert s["profit_factor"] == float("inf")
+
+    def test_breakeven_not_counted_as_loss(self):
+        """A trade with $0 P&L should not count as a loss."""
+        from optopsy.simulator import _compute_summary
+
+        trade_log = pd.DataFrame(
+            {
+                "realized_pnl": [100.0, 0.0, -50.0],
+                "equity": [100_100.0, 100_100.0, 100_050.0],
+                "days_held": [30, 30, 30],
+            }
+        )
+        s = _compute_summary(trade_log, 100_000.0)
+        assert s["winning_trades"] == 1
+        assert s["losing_trades"] == 1
+        assert s["total_trades"] == 3
 
 
 # ---------------------------------------------------------------------------
