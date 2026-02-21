@@ -34,6 +34,8 @@ nav:
       - Calendar Spreads: strategies/calendars.md
       - Diagonal Spreads: strategies/diagonals.md
   - Parameters: parameters.md
+  - Entry Signals: entry-signals.md
+  - AI Chat UI: chat-ui.md
   - Examples: examples.md
   - API Reference: api-reference.md
 
@@ -84,6 +86,8 @@ plugins:
             Calendar Spreads: 日历价差
             Diagonal Spreads: 对角价差
             Parameters: 参数
+            Entry Signals: 入场信号
+            AI Chat UI: AI 聊天界面
             Examples: 示例
             API Reference: API 参考
   - mkdocstrings:

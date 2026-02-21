@@ -384,9 +384,33 @@ results = op.iron_condor(
 )
 ```
 
+## Entry Signal Examples
+
+Optopsy supports filtering entries with technical analysis indicators. See the [Entry Signals](entry-signals.md) page for the full reference. Here's a quick example:
+
+```python
+from optopsy import apply_signal, rsi_below, sma_above, signal
+
+# Enter long calls only when RSI < 30 AND price is above the 50-day SMA
+entry = signal(rsi_below(14, 30)) & signal(sma_above(50))
+entry_dates = apply_signal(data, entry)
+results = op.long_calls(data, entry_dates=entry_dates)
+```
+
+## Data Sources
+
+Optopsy works with any historical options data in CSV or DataFrame format. Some sources:
+
+- [EODHD US Stock Options Data API](https://eodhd.com/financial-apis/options-data-api) - Built-in integration via the [Chat UI](chat-ui.md) (API key required)
+- [HistoricalOptionData.com](https://historicaloptiondata.com/) - Free samples available
+- [CBOE DataShop](https://datashop.cboe.com/) - Official exchange data
+- [Polygon.io](https://polygon.io/) - Options data API
+- Your broker's data export (Schwab, IBKR, Tastytrade, etc.)
+
 ## Next Steps
 
 - Review [Strategy documentation](strategies.md) for specific strategy details
 - Check [Parameters](parameters.md) for all configuration options
+- Learn about [Entry Signals](entry-signals.md) for TA-based filtering
+- Try the [AI Chat UI](chat-ui.md) for natural language backtesting
 - See [API Reference](api-reference.md) for function signatures
-- Explore the `samples/` directory in the repository for more examples

@@ -21,8 +21,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ### 3. Install Development Dependencies
 
 ```bash
-pip install -e .
-pip install pytest black
+pip install -e ".[ui]"
+pip install pytest ruff mypy
 ```
 
 ### 4. Verify Installation
@@ -46,19 +46,28 @@ pytest tests/test_strategies.py -v
 pytest tests/ -k "butterfly" -v
 ```
 
-### Code Formatting
+### Code Formatting and Linting
 
-Optopsy uses [Black](https://github.com/psf/black) for code formatting:
+Optopsy uses [Ruff](https://github.com/astral-sh/ruff) for formatting and linting:
 
 ```bash
 # Check formatting
-black --check optopsy/ tests/ setup.py
+ruff format --check optopsy/ tests/ setup.py
 
 # Auto-format code
-black optopsy/ tests/ setup.py
+ruff format optopsy/ tests/ setup.py
+
+# Lint code
+ruff check optopsy/ tests/ setup.py
+
+# Lint and auto-fix
+ruff check --fix optopsy/ tests/ setup.py
+
+# Type check
+mypy optopsy/
 ```
 
-**Important:** All code must be formatted with Black before submitting a PR.
+**Important:** All code must pass `ruff format`, `ruff check`, and `mypy` before submitting a PR.
 
 ## Adding a New Strategy
 
@@ -155,7 +164,9 @@ Add documentation to the appropriate strategy category file in `docs/strategies/
 ### Before Submitting
 
 - [ ] All tests pass (`pytest tests/ -v`)
-- [ ] Code is formatted with Black (`black optopsy/ tests/`)
+- [ ] Code is formatted with Ruff (`ruff format optopsy/ tests/ setup.py`)
+- [ ] Linting passes (`ruff check optopsy/ tests/ setup.py`)
+- [ ] Type checking passes (`mypy optopsy/`)
 - [ ] New features have tests
 - [ ] New strategies have documentation
 - [ ] Docstrings follow existing style (Google format)
@@ -186,7 +197,7 @@ How to test these changes
 
 ## Checklist
 - [ ] Tests pass
-- [ ] Code formatted with Black
+- [ ] Code formatted with Ruff
 - [ ] Documentation updated
 - [ ] Type hints included
 ```
@@ -330,4 +341,4 @@ If you have questions about contributing, feel free to:
 - Create an issue with the "question" label
 - Check existing issues and documentation
 
-Thank you for contributing to Optopsy! 🎉
+Thank you for contributing to Optopsy!

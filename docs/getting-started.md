@@ -7,12 +7,16 @@ This guide will walk you through setting up Optopsy and running your first backt
 Install Optopsy using pip:
 
 ```bash
+# Core library
 pip install optopsy
+
+# With AI Chat UI (optional)
+pip install optopsy[ui]
 ```
 
 ### Requirements
 
-- Python 3.8 or higher
+- Python 3.12-3.13
 - Pandas 2.0 or higher
 - NumPy 1.26 or higher
 
@@ -166,6 +170,8 @@ This gives you every individual trade for custom analysis.
 
 - Explore [all 28 strategies](strategies.md)
 - Learn about [strategy parameters](parameters.md)
+- Filter entries with [technical analysis signals](entry-signals.md)
+- Try the [AI Chat UI](chat-ui.md) for natural language backtesting
 - See more [examples](examples.md) with Greeks filtering and slippage
 - Read the [API Reference](api-reference.md) for detailed function documentation
 
