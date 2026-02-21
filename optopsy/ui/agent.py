@@ -318,6 +318,7 @@ class OptopsyAgent:
         messages: list[dict[str, Any]],
         on_tool_call=None,
         on_token=None,
+        on_thinking_token=None,
         on_assistant_tool_calls=None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """
@@ -328,6 +329,8 @@ class OptopsyAgent:
                       — UI step display.
         on_token: async callback(token_str) — called for each streamed token on
                   the *final* response (the one shown to the user).
+        on_thinking_token: async callback(token_str) — called for streamed tokens
+                  on intermediate tool-calling turns (reasoning shown separately).
         on_assistant_tool_calls: async callback(tool_calls: list[dict]) — fired
                   when the LLM emits tool_calls so the UI can persist them for
                   session resume.
@@ -380,10 +383,11 @@ class OptopsyAgent:
             for _attempt in range(_MAX_LLM_RETRIES):
                 content_parts = []
                 tool_calls_acc = {}
-                # Only stream tokens live on the first attempt; on retries we
-                # collect silently to avoid emitting garbled partial output
-                # from the failed attempt.
-                emit_tokens = on_token if _attempt == 0 else None
+                # On the first attempt stream tokens live to on_thinking_token
+                # (intermediate reasoning).  We don't yet know if this is a
+                # final turn — that's determined only after the stream ends.
+                # On retries, collect silently to avoid garbled partial output.
+                live_token_cb = on_thinking_token if _attempt == 0 else None
                 try:
                     stream = await litellm.acompletion(
                         model=self.model,
@@ -399,8 +403,8 @@ class OptopsyAgent:
                         # Accumulate text content
                         if delta.content:
                             content_parts.append(delta.content)
-                            if emit_tokens:
-                                await emit_tokens(delta.content)
+                            if live_token_cb:
+                                await live_token_cb(delta.content)
                         # Accumulate tool call chunks
                         if delta.tool_calls:
                             for tc_chunk in delta.tool_calls:
@@ -415,11 +419,13 @@ class OptopsyAgent:
                                     tool_calls_acc[idx]["id"] = tc_chunk.id
                                 if tc_chunk.function:
                                     if tc_chunk.function.name:
-                                        tool_calls_acc[idx]["name"] += tc_chunk.function.name
+                                        tool_calls_acc[idx][
+                                            "name"
+                                        ] += tc_chunk.function.name
                                     if tc_chunk.function.arguments:
-                                        tool_calls_acc[idx]["arguments"] += (
-                                            tc_chunk.function.arguments
-                                        )
+                                        tool_calls_acc[idx][
+                                            "arguments"
+                                        ] += tc_chunk.function.arguments
                     break  # Success — exit retry loop
                 except litellm.AuthenticationError:
                     raise RuntimeError(
@@ -433,20 +439,14 @@ class OptopsyAgent:
                             "Wait a moment and try again, or switch to a model "
                             "with higher rate limits."
                         )
-                    backoff = 2 ** _attempt  # 1s, 2s
+                    backoff = 2**_attempt  # 1s, 2s
                     await asyncio.sleep(backoff)
                 except (litellm.ServiceUnavailableError, litellm.APIConnectionError):
                     if _attempt == _MAX_LLM_RETRIES - 1:
                         raise RuntimeError(
                             "LLM service is temporarily unavailable. Please try again shortly."
                         )
-                    await asyncio.sleep(2 ** _attempt)
-
-            # On retried attempts, emit the collected content now (the first
-            # attempt streamed nothing to avoid partial output on the screen).
-            if _attempt > 0 and content_parts and on_token:
-                for chunk in content_parts:
-                    await on_token(chunk)
+                    await asyncio.sleep(2**_attempt)
 
             content = "".join(content_parts)
             tool_calls_list = [
@@ -471,8 +471,13 @@ class OptopsyAgent:
             if tool_calls_list and on_assistant_tool_calls:
                 await on_assistant_tool_calls(tool_calls_list)
 
-            # If no tool calls, this is the final answer (already streamed above).
+            # If no tool calls this is the final answer.
+            # The content was streamed to on_thinking_token (or silently on
+            # retries), so re-emit it to on_token for the main message.
             if not tool_calls_list:
+                if on_token and content:
+                    for chunk in content_parts:
+                        await on_token(chunk)
                 return content, full_messages[1:]
 
             # Execute each tool call

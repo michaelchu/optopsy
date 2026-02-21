@@ -135,16 +135,22 @@ async def on_message(message: cl.Message):
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
 
-    # Stream the final LLM response token-by-token
+    # Intermediate LLM reasoning streams into response_msg live so the user
+    # can see it.  When tool calls are confirmed, the message is cleared so
+    # the final answer starts clean.
     response_msg = cl.Message(content="")
     await response_msg.send()
+
+    async def on_thinking_token(token: str):
+        await response_msg.stream_token(token)
 
     async def on_token(token: str):
         await response_msg.stream_token(token)
 
-    # When the LLM emits tool_calls, store them in the response message's
-    # metadata so on_chat_resume can reconstruct the tool call history.
+    # When the LLM emits tool_calls, clear the thinking text from the message
+    # so the final answer isn't prefixed with intermediate reasoning.
     async def on_assistant_tool_calls(tool_calls: list[dict]):
+        response_msg.content = ""
         response_msg.metadata = {"tool_calls": tool_calls}
         await response_msg.update()
 
@@ -153,6 +159,7 @@ async def on_message(message: cl.Message):
             messages,
             on_tool_call=on_tool_call,
             on_token=on_token,
+            on_thinking_token=on_thinking_token,
             on_assistant_tool_calls=on_assistant_tool_calls,
         )
         # Finalize the streamed message

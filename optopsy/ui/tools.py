@@ -877,7 +877,9 @@ def execute_tool(
             if len(updated_datasets) > 1:
                 summary += f"\nActive datasets: {list(updated_datasets.keys())}"
             display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
-            return _result(summary, df, display, dss=updated_datasets, active_name=label)
+            return _result(
+                summary, df, display, dss=updated_datasets, active_name=label
+            )
         except Exception as e:
             return _result(f"Error loading '{filename}': {e}")
 
