@@ -59,6 +59,16 @@ Then launch:
 optopsy-chat
 ```
 
+Your conversations are saved automatically and available in the sidebar. Fetched options data is cached locally so subsequent requests for the same symbol skip the API call.
+
+**Cache management:**
+
+```bash
+optopsy-chat cache size          # show disk usage
+optopsy-chat cache clear         # clear all cached data
+optopsy-chat cache clear SPY     # clear a specific symbol
+```
+
 **Example prompts:**
 - *"Fetch AAPL options from the last 3 months and run a short put spread"*
 - *"Compare iron condors vs iron butterflies on SPY"*
