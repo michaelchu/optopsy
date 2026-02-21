@@ -6,6 +6,9 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+pytest.importorskip("yfinance", reason="yfinance not installed (install ui extras)")
+pytest.importorskip("chainlit", reason="chainlit not installed (install ui extras)")
+
 from optopsy.ui.providers.cache import ParquetCache
 from optopsy.ui.tools import _fetch_stock_data_for_signals, _YF_CACHE_CATEGORY
 
