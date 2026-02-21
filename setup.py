@@ -18,6 +18,7 @@ setup(
     ],
     python_requires=">=3.12,<3.14",
     packages=["optopsy", "optopsy.ui", "optopsy.ui.providers"],
+    package_data={"optopsy.ui": ["public/*"]},
     install_requires=[
         "pandas",
         "numpy",
@@ -33,6 +34,9 @@ setup(
             "python-dotenv>=1.0.0,<2.0.0",
             "requests>=2.28.0,<3.0.0",
             "yfinance>=0.2.0,<1.0.0",
+            "sqlalchemy>=2.0.0,<3.0.0",
+            "aiosqlite>=0.17.0,<1.0.0",
+            "greenlet>=3.0.0",
         ],
     },
     entry_points={

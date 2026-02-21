@@ -46,12 +46,34 @@ def _cmd_run(args: argparse.Namespace) -> None:
     if args.port:
         os.environ["CHAINLIT_PORT"] = str(args.port)
 
+    # Point Chainlit's app root at the ui/ package directory so that
+    # our public/ assets (custom JS) are served regardless of cwd.
+    ui_dir = os.path.dirname(os.path.abspath(__file__))
+    os.environ.setdefault("CHAINLIT_APP_ROOT", ui_dir)
+
+    # Chainlit requires a JWT secret when auth callbacks are registered.
+    # Generate one on first run and persist it so sessions survive restarts.
+    if not os.environ.get("CHAINLIT_AUTH_SECRET"):
+        import secrets
+        from pathlib import Path
+
+        secret_file = Path("~/.optopsy/auth_secret").expanduser()
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        if secret_file.exists():
+            secret = secret_file.read_text().strip()
+        else:
+            secret = secrets.token_hex(32)
+            secret_file.write_text(secret)
+        os.environ["CHAINLIT_AUTH_SECRET"] = secret
+
     from chainlit.config import config
 
     config.run.headless = args.headless
     config.run.debug = args.debug
     config.run.watch = args.watch
     config.ui.language = "en-US"
+    config.ui.confirm_new_chat = False
+    config.ui.custom_js = "/public/redirect_after_delete.js"
 
     from chainlit.cli import run_chainlit
 
