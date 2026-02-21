@@ -255,7 +255,8 @@ async def on_message(message: cl.Message):
 
     # Handle CSV file uploads via drag-and-drop
     csv_elements = [
-        el for el in (message.elements or [])
+        el
+        for el in (message.elements or [])
         if el.name and el.name.lower().endswith(".csv") and el.path
     ]
     for el in csv_elements:
@@ -280,9 +281,7 @@ async def on_message(message: cl.Message):
                 )
             ).send()
         except Exception as e:
-            await cl.Message(
-                content=f"Failed to load **{el.name}**: {e}"
-            ).send()
+            await cl.Message(content=f"Failed to load **{el.name}**: {e}").send()
 
     messages.append({"role": "user", "content": message.content})
 
