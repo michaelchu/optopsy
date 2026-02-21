@@ -592,11 +592,19 @@ def get_tool_schemas() -> list[dict]:
     return tools
 
 
-def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
+def _fetch_stock_data_for_signals(
+    dataset: pd.DataFrame,
+    stock_cache: dict[str, pd.DataFrame] | None = None,
+) -> pd.DataFrame | None:
     """Fetch OHLCV stock data via yfinance for signal computation.
 
     Pads the date range by 250 trading days (~1 year) so that indicators
     with long warmup periods (EMA-200, MACD) have enough history.
+
+    If *stock_cache* is provided, previously fetched data for a symbol is
+    reused instead of hitting yfinance again.  New fetches are stored back
+    into *stock_cache* so subsequent calls within the same session skip
+    the network round-trip.
 
     Returns a DataFrame with columns:
         underlying_symbol, quote_date, open, high, low, close, volume
@@ -619,6 +627,16 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
 
     frames = []
     for symbol in symbols:
+        # Check the session-level cache first
+        if stock_cache is not None and symbol in stock_cache:
+            cached = stock_cache[symbol]
+            # Verify the cached data covers our required range
+            cached_min = cached["quote_date"].min()
+            cached_max = cached["quote_date"].max()
+            if cached_min <= padded_start and cached_max >= date_max:
+                frames.append(cached)
+                continue
+
         try:
             df = yf.download(
                 symbol,
@@ -639,19 +657,21 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
                 price_df["quote_date"]
             ).dt.tz_localize(None)
             price_df["underlying_symbol"] = symbol
-            frames.append(
-                price_df[
-                    [
-                        "underlying_symbol",
-                        "quote_date",
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
-                    ]
+            result_df = price_df[
+                [
+                    "underlying_symbol",
+                    "quote_date",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
                 ]
-            )
+            ]
+            frames.append(result_df)
+            # Store in session cache for reuse
+            if stock_cache is not None:
+                stock_cache[symbol] = result_df
         except Exception as exc:
             _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
 
@@ -763,6 +783,7 @@ def execute_tool(
     arguments: dict[str, Any],
     dataset: pd.DataFrame | None,
     signals: dict[str, pd.DataFrame] | None = None,
+    stock_cache: dict[str, pd.DataFrame] | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
@@ -771,9 +792,14 @@ def execute_tool(
     richer ``user_display`` (shown in the chat UI).  The ``dataset`` field
     carries the currently-active DataFrame forward.  The ``signals`` dict
     carries named signal date DataFrames across tool calls.
+
+    *stock_cache* is an optional mutable dict that caches yfinance OHLCV
+    data across tool calls within a session.  Keyed by symbol.
     """
     if signals is None:
         signals = {}
+    if stock_cache is None:
+        stock_cache = {}
 
     # Helper to build a ToolResult that always carries signals forward.
     def _result(
@@ -861,7 +887,7 @@ def execute_tool(
 
         signal_data = None
         if needs_stock:
-            signal_data = _fetch_stock_data_for_signals(dataset)
+            signal_data = _fetch_stock_data_for_signals(dataset, stock_cache)
             if signal_data is None:
                 return _result(
                     "TA signals require stock price data but yfinance is not "
@@ -1050,7 +1076,7 @@ def execute_tool(
 
         signal_data = None
         if needs_stock:
-            signal_data = _fetch_stock_data_for_signals(dataset)
+            signal_data = _fetch_stock_data_for_signals(dataset, stock_cache)
             if signal_data is None:
                 return _result(
                     "TA signals require stock price data but yfinance is not "

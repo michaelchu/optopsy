@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 from typing import Any
 
@@ -246,6 +247,9 @@ and consistency (lower std is better).
 
 _MAX_TOOL_ITERATIONS = 15
 
+# Timeout for individual tool execution (seconds).
+_TOOL_TIMEOUT = 120
+
 # Tool results longer than this (in chars) get truncated in older messages
 # to keep token usage manageable across many iterations.
 _COMPACT_THRESHOLD = 300
@@ -295,6 +299,9 @@ class OptopsyAgent:
         self.tools = get_tool_schemas()
         self.dataset: pd.DataFrame | None = None
         self.signals: dict[str, pd.DataFrame] = {}
+        # Session-level cache for yfinance OHLCV data used by TA signals.
+        # Keyed by symbol — avoids redundant downloads across tool calls.
+        self.stock_cache: dict[str, pd.DataFrame] = {}
 
     async def chat(
         self,
@@ -315,7 +322,12 @@ class OptopsyAgent:
         means token usage grows with conversation length.  For very long
         sessions consider adding history summarization before calling chat().
         """
-        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+        # Deep-copy so that _compact_history does not mutate the caller's
+        # message dicts — the caller keeps full-fidelity history while we
+        # independently truncate older tool results for token savings.
+        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + copy.deepcopy(
+            messages
+        )
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
             # Throttle LLM calls: skip delay on the first iteration,
@@ -395,12 +407,21 @@ class OptopsyAgent:
                 # Run tool in a thread so the event loop stays alive
                 # (keeps WebSocket heartbeats flowing during long fetches).
                 loop = asyncio.get_running_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals: execute_tool(
-                        fn, a, ds, sg
-                    ),
-                )
+                try:
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            None,
+                            lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, sc=self.stock_cache: execute_tool(
+                                fn, a, ds, sg, sc
+                            ),
+                        ),
+                        timeout=_TOOL_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    result = ToolResult(
+                        f"Tool '{func_name}' timed out after {_TOOL_TIMEOUT}s.",
+                        self.dataset,
+                    )
                 self.dataset = result.dataset
                 if result.signals is not None:
                     self.signals = result.signals

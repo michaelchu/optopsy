@@ -535,6 +535,10 @@ class EODHDProvider(DataProvider):
     @staticmethod
     def _resolve_underlying_prices(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """Merge underlying close prices from yfinance into the DataFrame."""
+        # Drop any pre-existing underlying_price column to avoid duplicate
+        # suffixed columns (underlying_price_x / _y) from the merge.
+        if "underlying_price" in df.columns:
+            df = df.drop(columns=["underlying_price"])
         _log.info(
             "Resolving underlying prices via yfinance for %s (%s rows)",
             symbol,

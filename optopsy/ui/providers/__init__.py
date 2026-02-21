@@ -6,6 +6,9 @@ from .base import DataProvider
 # pyarrow, etc.) when only the core library is installed.
 _ALL_PROVIDERS: list[DataProvider] | None = None
 
+# Cached lookup: tool_name -> DataProvider for O(1) dispatch.
+_TOOL_LOOKUP: dict[str, DataProvider] | None = None
+
 
 def _load_providers() -> list[DataProvider]:
     global _ALL_PROVIDERS
@@ -37,9 +40,17 @@ def get_all_provider_tool_schemas() -> list[dict[str, Any]]:
     return schemas
 
 
+def _build_tool_lookup() -> dict[str, DataProvider]:
+    """Build and cache a {tool_name: provider} mapping for O(1) dispatch."""
+    global _TOOL_LOOKUP
+    if _TOOL_LOOKUP is None:
+        _TOOL_LOOKUP = {}
+        for p in get_available_providers():
+            for name in p.get_tool_names():
+                _TOOL_LOOKUP[name] = p
+    return _TOOL_LOOKUP
+
+
 def get_provider_for_tool(tool_name: str) -> DataProvider | None:
     """Find which available provider handles a given tool name."""
-    for p in get_available_providers():
-        if tool_name in p.get_tool_names():
-            return p
-    return None
+    return _build_tool_lookup().get(tool_name)
