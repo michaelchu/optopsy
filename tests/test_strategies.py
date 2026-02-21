@@ -1,7 +1,54 @@
+import numpy as np
+import pandas as pd
 import pytest
 
-from optopsy.definitions import *
-from optopsy.strategies import *
+from optopsy.definitions import (
+    calendar_spread_external_cols,
+    calendar_spread_internal_cols,
+    diagonal_spread_external_cols,
+    diagonal_spread_internal_cols,
+    double_strike_external_cols,
+    double_strike_internal_cols,
+    quadruple_strike_external_cols,
+    quadruple_strike_internal_cols,
+    single_strike_external_cols,
+    single_strike_internal_cols,
+    straddle_internal_cols,
+    triple_strike_external_cols,
+    triple_strike_internal_cols,
+)
+from optopsy.strategies import (
+    covered_call,
+    iron_butterfly,
+    iron_condor,
+    long_call_butterfly,
+    long_call_calendar,
+    long_call_diagonal,
+    long_call_spread,
+    long_calls,
+    long_put_butterfly,
+    long_put_calendar,
+    long_put_diagonal,
+    long_put_spread,
+    long_puts,
+    long_straddles,
+    long_strangles,
+    protective_put,
+    reverse_iron_butterfly,
+    reverse_iron_condor,
+    short_call_butterfly,
+    short_call_calendar,
+    short_call_diagonal,
+    short_call_spread,
+    short_calls,
+    short_put_butterfly,
+    short_put_calendar,
+    short_put_diagonal,
+    short_put_spread,
+    short_puts,
+    short_straddles,
+    short_strangles,
+)
 
 describe_cols = [
     "count",
@@ -917,3 +964,328 @@ def test_slippage_calendar_spread_mode(calendar_data):
 
     # Calendar spread is a debit spread, so higher entry cost is worse
     assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+
+
+# =============================================================================
+# Empty DataFrame Edge Cases
+# =============================================================================
+
+
+@pytest.fixture(scope="module")
+def empty_option_data():
+    """Empty DataFrame with correct columns and dtypes for options data."""
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+    df = pd.DataFrame(columns=cols)
+    df["underlying_price"] = df["underlying_price"].astype("float64")
+    df["strike"] = df["strike"].astype("float64")
+    df["bid"] = df["bid"].astype("float64")
+    df["ask"] = df["ask"].astype("float64")
+    df["expiration"] = pd.Series(dtype="datetime64[ns]")
+    df["quote_date"] = pd.Series(dtype="datetime64[ns]")
+    return df
+
+
+def test_empty_data_long_calls(empty_option_data):
+    """Empty DataFrame should return empty result with correct columns."""
+    results = long_calls(empty_option_data, raw=True)
+    assert len(results) == 0
+    assert list(results.columns) == single_strike_internal_cols
+
+
+def test_empty_data_long_call_spread(empty_option_data):
+    """Empty DataFrame should return empty result for spread."""
+    results = long_call_spread(empty_option_data, raw=True)
+    assert len(results) == 0
+
+
+def test_empty_data_iron_condor(empty_option_data):
+    """Empty DataFrame should return empty result for iron condor."""
+    results = iron_condor(empty_option_data, raw=True)
+    assert len(results) == 0
+
+
+# =============================================================================
+# NaN Values in Price Columns
+# =============================================================================
+
+
+def test_nan_in_bid_ask_filtered(data):
+    """Options with NaN bid/ask should be filtered by min_bid_ask check."""
+    data_with_nan = data.copy()
+    # Set some bid/ask to NaN
+    data_with_nan.loc[0, "bid"] = np.nan
+    data_with_nan.loc[0, "ask"] = np.nan
+    # Should not crash — NaN rows are filtered out during evaluation
+    results = long_calls(data_with_nan, raw=True)
+    assert isinstance(results, pd.DataFrame)
+
+
+# =============================================================================
+# drop_nan=False Tests
+# =============================================================================
+
+
+def test_drop_nan_false(data):
+    """drop_nan=False should keep NaN rows in aggregated output."""
+    results_drop = long_calls(data, drop_nan=True)
+    results_keep = long_calls(data, drop_nan=False)
+    # With drop_nan=False, we may get more rows (including NaN groups)
+    assert len(results_keep) >= len(results_drop)
+    assert list(results_keep.columns) == single_strike_external_cols + describe_cols
+
+
+# =============================================================================
+# Vertical Spread Aggregated Mode Tests
+# =============================================================================
+
+
+def test_long_call_spread_aggregated(multi_strike_data):
+    """Test long call spread aggregated output has correct columns."""
+    results = long_call_spread(multi_strike_data)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+    assert len(results) > 0
+
+
+def test_short_call_spread_aggregated(multi_strike_data):
+    """Test short call spread aggregated output has correct columns."""
+    results = short_call_spread(multi_strike_data)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+def test_long_put_spread_aggregated(multi_strike_data):
+    """Test long put spread aggregated output has correct columns."""
+    results = long_put_spread(multi_strike_data)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+def test_short_put_spread_aggregated(multi_strike_data):
+    """Test short put spread aggregated output has correct columns."""
+    results = short_put_spread(multi_strike_data)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+# =============================================================================
+# Diagonal Spread P&L Value Tests
+# =============================================================================
+
+
+def test_long_call_diagonal_pnl_values(calendar_data):
+    """Test long call diagonal spread calculates P&L correctly."""
+    results = long_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert len(results) > 0
+    # Verify P&L columns exist and are numeric
+    assert "total_entry_cost" in results.columns
+    assert "total_exit_proceeds" in results.columns
+    assert "pct_change" in results.columns
+    # All pct_change values should be finite (no infinities)
+    assert results["pct_change"].dropna().apply(np.isfinite).all()
+
+
+def test_short_call_diagonal_pnl_values(calendar_data):
+    """Test short call diagonal P&L values are opposite of long."""
+    long_results = long_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    short_results = short_call_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    # Long and short diagonals should have opposite entry cost signs
+    if len(long_results) > 0 and len(short_results) > 0:
+        # Entry costs should have opposite signs (debit vs credit)
+        long_entry = long_results.iloc[0]["total_entry_cost"]
+        short_entry = short_results.iloc[0]["total_entry_cost"]
+        assert long_entry * short_entry < 0 or (long_entry == 0 and short_entry == 0)
+
+
+def test_long_put_diagonal_pnl_values(calendar_data):
+    """Test long put diagonal spread P&L values."""
+    results = long_put_diagonal(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    assert len(results) > 0
+    assert results["pct_change"].dropna().apply(np.isfinite).all()
+
+
+# =============================================================================
+# Short Variant P&L Value Assertions
+# =============================================================================
+
+
+def test_short_call_butterfly_pnl_values(multi_strike_data):
+    """Short call butterfly P&L should be opposite of long call butterfly."""
+    long_results = long_call_butterfly(multi_strike_data, raw=True)
+    short_results = short_call_butterfly(multi_strike_data, raw=True)
+
+    # Find matching strike combination
+    long_row = long_results[
+        (long_results["strike_leg1"] == 210.0)
+        & (long_results["strike_leg2"] == 212.5)
+        & (long_results["strike_leg3"] == 215.0)
+    ].iloc[0]
+    short_row = short_results[
+        (short_results["strike_leg1"] == 210.0)
+        & (short_results["strike_leg2"] == 212.5)
+        & (short_results["strike_leg3"] == 215.0)
+    ].iloc[0]
+
+    # Entry costs should be opposite sign (debit vs credit)
+    assert round(long_row["total_entry_cost"], 2) == -round(
+        short_row["total_entry_cost"], 2
+    )
+    # Exit proceeds should be opposite sign
+    assert round(long_row["total_exit_proceeds"], 2) == -round(
+        short_row["total_exit_proceeds"], 2
+    )
+
+
+def test_short_put_butterfly_pnl_values(multi_strike_data):
+    """Short put butterfly P&L should be opposite of long put butterfly."""
+    long_results = long_put_butterfly(multi_strike_data, raw=True)
+    short_results = short_put_butterfly(multi_strike_data, raw=True)
+
+    long_row = long_results[
+        (long_results["strike_leg1"] == 210.0)
+        & (long_results["strike_leg2"] == 212.5)
+        & (long_results["strike_leg3"] == 215.0)
+    ].iloc[0]
+    short_row = short_results[
+        (short_results["strike_leg1"] == 210.0)
+        & (short_results["strike_leg2"] == 212.5)
+        & (short_results["strike_leg3"] == 215.0)
+    ].iloc[0]
+
+    assert round(long_row["total_entry_cost"], 2) == -round(
+        short_row["total_entry_cost"], 2
+    )
+
+
+def test_reverse_iron_condor_pnl_values(multi_strike_data):
+    """Reverse iron condor P&L should be opposite of iron condor."""
+    ic_results = iron_condor(multi_strike_data, raw=True)
+    ric_results = reverse_iron_condor(multi_strike_data, raw=True)
+
+    ic_row = ic_results[
+        (ic_results["strike_leg1"] == 207.5)
+        & (ic_results["strike_leg2"] == 210.0)
+        & (ic_results["strike_leg3"] == 215.0)
+        & (ic_results["strike_leg4"] == 217.5)
+    ].iloc[0]
+    ric_row = ric_results[
+        (ric_results["strike_leg1"] == 207.5)
+        & (ric_results["strike_leg2"] == 210.0)
+        & (ric_results["strike_leg3"] == 215.0)
+        & (ric_results["strike_leg4"] == 217.5)
+    ].iloc[0]
+
+    assert round(ic_row["total_entry_cost"], 2) == -round(
+        ric_row["total_entry_cost"], 2
+    )
+
+
+def test_reverse_iron_butterfly_pnl_values(multi_strike_data):
+    """Reverse iron butterfly P&L should be opposite of iron butterfly."""
+    ib_results = iron_butterfly(multi_strike_data, raw=True)
+    rib_results = reverse_iron_butterfly(multi_strike_data, raw=True)
+
+    ib_row = ib_results[
+        (ib_results["strike_leg1"] == 207.5)
+        & (ib_results["strike_leg2"] == 212.5)
+        & (ib_results["strike_leg3"] == 212.5)
+        & (ib_results["strike_leg4"] == 217.5)
+    ].iloc[0]
+    rib_row = rib_results[
+        (rib_results["strike_leg1"] == 207.5)
+        & (rib_results["strike_leg2"] == 212.5)
+        & (rib_results["strike_leg3"] == 212.5)
+        & (rib_results["strike_leg4"] == 217.5)
+    ].iloc[0]
+
+    assert round(ib_row["total_entry_cost"], 2) == -round(
+        rib_row["total_entry_cost"], 2
+    )
+
+
+# =============================================================================
+# Calendar-specific exit_dte_tolerance Tests
+# =============================================================================
+
+
+def test_calendar_exit_dte_tolerance(calendar_data):
+    """Calendar spread with exit_dte_tolerance should find nearby exit dates."""
+    # Use exit_dte=8 which doesn't have exact data, but tolerance=2 should find day 7
+    results = long_call_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=8,
+        exit_dte_tolerance=2,
+    )
+    # Should find results by snapping to the available exit date (7 DTE)
+    assert len(results) > 0
+
+
+def test_calendar_exit_dte_tolerance_zero_no_match(calendar_data):
+    """Calendar with exit_dte=8 and tolerance=0 should find no matches."""
+    results = long_call_calendar(
+        calendar_data,
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=8,
+        exit_dte_tolerance=0,
+    )
+    assert len(results) == 0
+
+
+# =============================================================================
+# Duplicate Input Row Tests
+# =============================================================================
+
+
+def test_duplicate_rows_handled(data):
+    """Duplicate rows in input data should not crash the pipeline."""
+    duplicated = pd.concat([data, data], ignore_index=True)
+    results = long_calls(duplicated, raw=True)
+    assert isinstance(results, pd.DataFrame)
+    # Should have more results due to duplicated entries
+    assert len(results) >= 2

@@ -833,7 +833,8 @@ def _find_calendar_exit_prices(
 
         date_map = {}
         for target_date in all_exit_dates:
-            diffs = np.abs(available_dates - target_date)
+            target_np = np.datetime64(target_date)
+            diffs = np.abs(available_dates - target_np)
             min_idx = diffs.argmin()
             if diffs[min_idx] <= tolerance_td:
                 date_map[target_date] = available_dates[min_idx]
