@@ -2,12 +2,13 @@ import asyncio
 import json
 from typing import Any
 
-import litellm
 import pandas as pd
 
-from .tools import ToolResult, execute_tool, get_tool_schemas
+import litellm
 
 litellm.suppress_debug_info = True
+
+from .tools import ToolResult, execute_tool, get_tool_schemas
 
 SYSTEM_PROMPT = """\
 You are an options strategy backtesting assistant powered by the optopsy library.

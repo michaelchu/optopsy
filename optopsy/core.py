@@ -5,9 +5,6 @@ from .definitions import evaluated_cols, describe_cols
 from .checks import _run_checks, _run_calendar_checks
 from .timestamps import normalize_dates
 
-pd.set_option("expand_frame_repr", False)
-pd.set_option("display.max_rows", None, "display.max_columns", None)
-
 
 def _calculate_fill_price(
     bid: pd.Series,
@@ -363,12 +360,12 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 def _calls(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for call options only."""
-    return data[data.option_type.str.lower().str.startswith("c")]
+    return data[data["option_type"].str.startswith("c")]
 
 
 def _puts(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for put options only."""
-    return data[data.option_type.str.lower().str.startswith("p")]
+    return data[data["option_type"].str.startswith("p")]
 
 
 def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
@@ -566,9 +563,10 @@ def _strategy_engine(
     ) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
-    # Pre-rename columns for each leg to avoid suffix issues with 3+ legs
+    # Pre-rename columns for each leg to avoid suffix issues with 3+ legs.
+    # .rename() already returns a new DataFrame, so .copy() is unnecessary.
     partials = [
-        _rename_leg_columns(leg[1](data).copy(), idx, join_on or [])
+        _rename_leg_columns(leg[1](data), idx, join_on or [])
         for idx, leg in enumerate(leg_def, start=1)
     ]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
@@ -601,6 +599,8 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     data = data.copy()
     data["quote_date"] = normalize_dates(data["quote_date"])
     data["expiration"] = normalize_dates(data["expiration"])
+    # Normalize option_type once so _calls/_puts avoid repeated .str.lower() calls
+    data["option_type"] = data["option_type"].str.lower()
 
     # Build external_cols, adding delta_range if delta grouping is enabled
     external_cols = context["external_cols"].copy()
@@ -978,10 +978,11 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             df, params, internal_cols, external_cols, same_strike
         )
 
-    # Work with a copy and normalize dates once at the root
+    # Work with a copy and normalize dates/option_type once at the root
     data = data.copy()
     data["quote_date"] = normalize_dates(data["quote_date"])
     data["expiration"] = normalize_dates(data["expiration"])
+    data["option_type"] = data["option_type"].str.lower()
     data = _assign_dte(data)
 
     # Get front and back leg options
