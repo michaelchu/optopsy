@@ -5,6 +5,8 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+pytest.importorskip("pyarrow", reason="UI extras not installed")
+
 from optopsy.ui.tools import execute_tool
 
 
@@ -114,7 +116,7 @@ class TestEntrySignalDaysExecutor:
             }
         )
         with patch(
-            "optopsy.ui.tools._fetch_stock_data_for_signals",
+            "optopsy.ui.tools._executor._fetch_stock_data_for_signals",
             return_value=fake_stock,
         ):
             result = execute_tool(
