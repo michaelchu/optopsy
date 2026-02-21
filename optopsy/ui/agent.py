@@ -18,7 +18,7 @@ You help users:
 3. Interpret results and explain strategy performance
 
 ## Workflow
-- If a data provider is available (e.g. `fetch_eodhd_options`), use it to fetch data for a ticker. \
+- If a data provider is available (e.g. `fetch_options_data`), use it to fetch data for a ticker. \
 This loads the data directly into memory — no file step needed.
 - When fetching data, ALWAYS provide both `start_date` and `end_date`. If the user doesn't specify \
 dates, pick a reasonable 3-month window ending today. Always respect the user's requested date range \
@@ -32,7 +32,7 @@ it means the API key is not configured — tell the user to add it to their `.en
 ## Available Strategies and Option Type Filtering
 
 Data fetched from EODHD is cached locally (both calls and puts together). The `option_type` \
-parameter on `fetch_eodhd_options` filters the returned DataFrame client-side — it does NOT \
+parameter on `fetch_options_data` filters the returned DataFrame client-side — it does NOT \
 affect what is fetched from the API. Pass it to limit the data to what the strategy needs:
 
 **Calls only** (pass `option_type: "call"`):
@@ -51,7 +51,7 @@ iron_condor, reverse_iron_condor, iron_butterfly, reverse_iron_butterfly, protec
 
 ## Expiration Type Filtering
 
-`fetch_eodhd_options` defaults to `expiration_type: "monthly"` which filters out weekly options. \
+`fetch_options_data` defaults to `expiration_type: "monthly"` which filters out weekly options. \
 This significantly reduces data volume. Pass `expiration_type: "weekly"` when:
 1. The user explicitly asks for weekly options/expirations
 2. The user requests short DTE strategies (max_entry_dte ≤ 14 or mentions DTE ≤ 14) — monthly \

@@ -33,9 +33,7 @@ def compute_date_gaps(
     list of ``(start_str, end_str)`` tuples for each missing range.
     """
     if cached_df is None or cached_df.empty or date_column not in cached_df.columns:
-        return [
-            (str(start_dt) if start_dt else None, str(end_dt) if end_dt else None)
-        ]
+        return [(str(start_dt) if start_dt else None, str(end_dt) if end_dt else None)]
 
     cached_dates = pd.to_datetime(cached_df[date_column]).dt.date
     cached_min = cached_dates.min()
