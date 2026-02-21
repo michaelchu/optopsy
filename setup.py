@@ -1,5 +1,26 @@
 from setuptools import setup, find_packages
 
+# Core library packages (always installed)
+_core_packages = find_packages(
+    exclude=["tests", "tests.*", "samples", "optopsy.ui", "optopsy.ui.*"],
+)
+
+# UI packages — included in the distribution but only functional when
+# installed with the [ui] extra, which provides the required third-party
+# dependencies (chainlit, litellm, etc.).  The console_scripts entry point
+# is gated with [ui] so `optopsy-chat` won't be registered without it.
+#
+# NOTE: setuptools extras_require controls *dependencies*, not which
+# packages are included in a wheel/sdist.  To truly exclude these files
+# from a core-only install you would need a separate distribution package
+# (e.g. "optopsy-ui").  We include them here so that `pip install
+# optopsy[ui]` works correctly in both editable and non-editable installs.
+_ui_packages = [
+    "optopsy.ui",
+    "optopsy.ui.tools",
+    "optopsy.ui.providers",
+]
+
 setup(
     name="optopsy",
     description="A nimble backtesting and statistics library for options strategies",
@@ -17,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.13",
     ],
     python_requires=">=3.12,<3.14",
-    packages=find_packages(exclude=["tests", "tests.*", "samples"]),
+    packages=_core_packages + _ui_packages,
     package_data={"optopsy.ui": ["public/*"]},
     install_requires=[
         "pandas",
