@@ -1,7 +1,8 @@
 [![CI](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/optopsy.svg)](https://badge.fury.io/py/optopsy)
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
-[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Python](https://img.shields.io/pypi/pyversions/optopsy)](https://pypi.org/project/optopsy/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # Optopsy
 
