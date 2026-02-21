@@ -1192,9 +1192,7 @@ def _make_result_summary(
     elif "mean" in result_df.columns:
         if "count" in result_df.columns:
             total = int(result_df["count"].sum())
-            wt_mean = float(
-                (result_df["mean"] * result_df["count"]).sum() / total
-            )
+            wt_mean = float((result_df["mean"] * result_df["count"]).sum() / total)
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
@@ -1212,7 +1210,12 @@ def _make_result_summary(
         )
     else:
         summary.update(
-            {"count": len(result_df), "mean_return": None, "std": None, "win_rate": None}
+            {
+                "count": len(result_df),
+                "mean_return": None,
+                "std": None,
+                "win_rate": None,
+            }
         )
     return summary
 
@@ -1390,14 +1393,17 @@ def execute_tool(
                 ("p90", 0.90),
             ]
         }
-        dte_stats = {"min": int(dte_series.min()), **dte_pcts, "max": int(dte_series.max())}
+        dte_stats = {
+            "min": int(dte_series.min()),
+            **dte_pcts,
+            "max": int(dte_series.max()),
+        }
 
         # OTM% distribution — only rows where underlying_price > 0
         df_otm = df[df["underlying_price"] > 0].copy()
         df_otm["_otm_pct"] = (
-            (df_otm["strike"] - df_otm["underlying_price"]).abs()
-            / df_otm["underlying_price"]
-        )
+            df_otm["strike"] - df_otm["underlying_price"]
+        ).abs() / df_otm["underlying_price"]
         otm_series = df_otm["_otm_pct"].dropna()
         otm_pcts = {
             k: round(float(otm_series.quantile(q)), 4)
@@ -1442,7 +1448,9 @@ def execute_tool(
         }:
             recommended["max_entry_dte"] = min(45, dte_stats["p75"])
             recommended["max_otm_pct"] = min(0.3, otm_stats["p75"])
-            strategy_note = "Multi-leg strategies typically work best in the 20-45 DTE range."
+            strategy_note = (
+                "Multi-leg strategies typically work best in the 20-45 DTE range."
+            )
         elif strategy_name and "spread" in strategy_name:
             recommended["max_otm_pct"] = min(0.2, otm_stats["p75"])
             strategy_note = "Spreads often use tighter OTM% for better liquidity."
@@ -1837,9 +1845,7 @@ def execute_tool(
         if err:
             return _result(f"Error running {strategy_name}: {err}")
         if result_df is None or result_df.empty:
-            params_used = {
-                k: v for k, v in arguments.items() if k != "strategy_name"
-            }
+            params_used = {k: v for k, v in arguments.items() if k != "strategy_name"}
             return _result(
                 f"{strategy_name} returned no results with parameters: "
                 f"{params_used or 'defaults'}.",
@@ -2039,16 +2045,20 @@ def execute_tool(
 
         n = len(df)
         label = f"for '{filter_name}'" if filter_name else "across all strategies"
-        llm_summary = (
-            f"list_results: {n} run(s) {label} this session.\n"
-            + df[
-                [
-                    c
-                    for c in ["strategy", "max_entry_dte", "exit_dte", "max_otm_pct", "mean_return", "win_rate"]
-                    if c in df.columns
+        llm_summary = f"list_results: {n} run(s) {label} this session.\n" + df[
+            [
+                c
+                for c in [
+                    "strategy",
+                    "max_entry_dte",
+                    "exit_dte",
+                    "max_otm_pct",
+                    "mean_return",
+                    "win_rate",
                 ]
-            ].to_string(index=False)
-        )
+                if c in df.columns
+            ]
+        ].to_string(index=False)
         user_display = (
             f"### Prior Strategy Runs "
             f"({n}{f' — {filter_name}' if filter_name else ''})\n\n"
