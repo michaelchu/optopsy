@@ -422,6 +422,44 @@ def get_tool_schemas() -> list[dict]:
         {
             "type": "function",
             "function": {
+                "name": "suggest_strategy_params",
+                "description": (
+                    "Analyze a loaded dataset and suggest good starting parameters "
+                    "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "
+                    "and OTM% distributions. Call this before running a strategy when "
+                    "the user has not specified explicit parameters, to avoid guessing "
+                    "values the data can't satisfy. Returns percentile tables and a "
+                    "JSON block of recommended parameter values ready to pass to "
+                    "run_strategy or scan_strategies."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Dataset to analyze. "
+                                "Omit to use the most-recently-loaded dataset."
+                            ),
+                        },
+                        "strategy_name": {
+                            "type": "string",
+                            "enum": STRATEGY_NAMES,
+                            "description": (
+                                "Optional: tailor suggestions for a specific strategy. "
+                                "Iron condors and multi-leg strategies get tighter DTE/OTM% "
+                                "defaults. Calendar strategies receive front/back DTE "
+                                "recommendations instead of max_entry_dte."
+                            ),
+                        },
+                    },
+                    "required": [],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "run_strategy",
                 "description": (
                     "Run an options strategy backtest on the loaded dataset. "
@@ -527,6 +565,102 @@ def get_tool_schemas() -> list[dict]:
                         **CALENDAR_EXTRA_PARAMS,
                     },
                     "required": ["strategy_name"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "scan_strategies",
+                "description": (
+                    "Run multiple strategy/parameter combinations in one call and "
+                    "return a ranked leaderboard. Use this instead of calling "
+                    "run_strategy repeatedly when the user wants to compare DTE values, "
+                    "OTM% values, or multiple strategies on the same dataset. "
+                    "Does NOT support signals or calendar strategies — use run_strategy "
+                    "for those."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "strategy_names": {
+                            "type": "array",
+                            "items": {"type": "string", "enum": STRATEGY_NAMES},
+                            "minItems": 1,
+                            "description": "One or more strategy names to include in the scan.",
+                        },
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Dataset to run on. "
+                                "Omit to use the most-recently-loaded dataset."
+                            ),
+                        },
+                        "max_entry_dte_values": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": (
+                                "List of max_entry_dte values to sweep (e.g. [30, 45, 60]). "
+                                "Omit to use the default (90)."
+                            ),
+                        },
+                        "exit_dte_values": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": (
+                                "List of exit_dte values to sweep (e.g. [0, 7, 14]). "
+                                "Omit to use the default (0)."
+                            ),
+                        },
+                        "max_otm_pct_values": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": (
+                                "List of max_otm_pct values to sweep (e.g. [0.1, 0.2, 0.3]). "
+                                "Omit to use the default (0.5)."
+                            ),
+                        },
+                        "slippage": {
+                            "type": "string",
+                            "enum": ["mid", "spread", "liquidity"],
+                            "description": (
+                                "Slippage model applied to all combinations. Default: 'mid'."
+                            ),
+                        },
+                        "max_combinations": {
+                            "type": "integer",
+                            "description": (
+                                "Safety cap on total combinations to run (default: 50). "
+                                "Combinations exceeding this limit are skipped."
+                            ),
+                        },
+                    },
+                    "required": ["strategy_names"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_results",
+                "description": (
+                    "List all strategy runs already executed in this session. "
+                    "Call this before running a strategy to check whether the same "
+                    "combination has already been run and avoid redundant calls. "
+                    "Returns a table sorted by mean_return descending."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "strategy_name": {
+                            "type": "string",
+                            "enum": STRATEGY_NAMES,
+                            "description": (
+                                "Optional: filter to only show runs for this strategy."
+                            ),
+                        },
+                    },
+                    "required": [],
                 },
             },
         },
@@ -903,6 +1037,10 @@ class ToolResult:
     can be active simultaneously (keyed by label, e.g. ticker or filename).
     ``active_dataset_name`` is the label of the dataset that was just loaded
     or selected; None means no change to the active selection.
+    ``results`` is the session-scoped registry of strategy runs (keyed by a
+    string like ``"short_puts:dte=45,exit=0,otm=0.20,slip=mid"``), carrying
+    lightweight scalar summaries across tool calls so the agent can recall
+    what it has already run without re-executing.
     """
 
     __slots__ = (
@@ -912,6 +1050,7 @@ class ToolResult:
         "signals",
         "datasets",
         "active_dataset_name",
+        "results",
     )
 
     def __init__(
@@ -922,6 +1061,7 @@ class ToolResult:
         signals: dict[str, pd.DataFrame] | None = None,
         datasets: dict[str, pd.DataFrame] | None = None,
         active_dataset_name: str | None = None,
+        results: dict[str, dict] | None = None,
     ):
         self.llm_summary = llm_summary
         self.user_display = user_display or llm_summary
@@ -929,6 +1069,7 @@ class ToolResult:
         self.signals = signals
         self.datasets = datasets
         self.active_dataset_name = active_dataset_name
+        self.results = results
 
 
 def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
@@ -986,12 +1127,103 @@ def _strategy_llm_summary(df: pd.DataFrame, strategy_name: str, mode: str) -> st
     return "\n".join(lines)
 
 
+def _run_one_strategy(
+    strategy_name: str,
+    dataset: pd.DataFrame,
+    strat_kwargs: dict,
+) -> tuple[pd.DataFrame | None, str]:
+    """Execute one strategy call.
+
+    Returns ``(result_df, "")`` on success or ``(None, error_msg)`` on failure.
+    Used by both ``run_strategy`` and ``scan_strategies`` to avoid duplicating
+    the core call site.
+    """
+    if strategy_name not in STRATEGIES:
+        return None, f"Unknown strategy '{strategy_name}'"
+    func, _, _ = STRATEGIES[strategy_name]
+    try:
+        return func(dataset, **strat_kwargs), ""
+    except Exception as e:
+        return None, str(e)
+
+
+def _make_result_key(strategy_name: str, arguments: dict) -> str:
+    """Stable, human-readable key for a strategy run (used as results dict key).
+
+    Encodes the core parameters that meaningfully distinguish runs. Omits
+    signal params and dataset_name to keep keys short and scannable.
+    """
+    dte = arguments.get("max_entry_dte", 90)
+    exit_dte = arguments.get("exit_dte", 0)
+    otm = arguments.get("max_otm_pct", 0.5)
+    slippage = arguments.get("slippage", "mid")
+    return f"{strategy_name}:dte={dte},exit={exit_dte},otm={otm:.2f},slip={slippage}"
+
+
+def _make_result_summary(
+    strategy_name: str,
+    result_df: pd.DataFrame,
+    arguments: dict,
+) -> dict:
+    """Build a lightweight scalar summary stored in the results registry.
+
+    Stores only scalar stats — never full DataFrames — so memory usage stays
+    proportional to the number of runs rather than data volume.  Handles both
+    raw-mode (``pct_change`` column) and aggregated-mode (``mean`` column).
+    """
+    summary: dict = {
+        "strategy": strategy_name,
+        "max_entry_dte": arguments.get("max_entry_dte", 90),
+        "exit_dte": arguments.get("exit_dte", 0),
+        "max_otm_pct": arguments.get("max_otm_pct", 0.5),
+        "slippage": arguments.get("slippage", "mid"),
+        "dataset": arguments.get("dataset_name", "default"),
+    }
+    if "pct_change" in result_df.columns:
+        pct = result_df["pct_change"]
+        summary.update(
+            {
+                "count": len(pct),
+                "mean_return": round(float(pct.mean()), 4),
+                "std": round(float(pct.std()), 4),
+                "win_rate": round(float((pct > 0).mean()), 4),
+            }
+        )
+    elif "mean" in result_df.columns:
+        if "count" in result_df.columns:
+            total = int(result_df["count"].sum())
+            wt_mean = float(
+                (result_df["mean"] * result_df["count"]).sum() / total
+            )
+        else:
+            total = len(result_df)
+            wt_mean = float(result_df["mean"].mean())
+        summary.update(
+            {
+                "count": total,
+                "mean_return": round(wt_mean, 4),
+                "std": (
+                    round(float(result_df["std"].mean()), 4)
+                    if "std" in result_df.columns
+                    else None
+                ),
+                "win_rate": round(float((result_df["mean"] > 0).mean()), 4),
+            }
+        )
+    else:
+        summary.update(
+            {"count": len(result_df), "mean_return": None, "std": None, "win_rate": None}
+        )
+    return summary
+
+
 def execute_tool(
     tool_name: str,
     arguments: dict[str, Any],
     dataset: pd.DataFrame | None,
     signals: dict[str, pd.DataFrame] | None = None,
     datasets: dict[str, pd.DataFrame] | None = None,
+    results: dict[str, dict] | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
@@ -1001,12 +1233,15 @@ def execute_tool(
     carries the currently-active DataFrame forward.  The ``signals`` dict
     carries named signal date DataFrames across tool calls.  The ``datasets``
     dict is the named-dataset registry (ticker/filename -> DataFrame) that
-    allows multiple datasets to be active simultaneously.
+    allows multiple datasets to be active simultaneously.  The ``results`` dict
+    is the session-scoped strategy run registry.
     """
     if signals is None:
         signals = {}
     if datasets is None:
         datasets = {}
+    if results is None:
+        results = {}
 
     def _resolve_dataset(
         name: str | None,
@@ -1026,6 +1261,7 @@ def execute_tool(
         sigs: dict[str, pd.DataFrame] | None = None,
         dss: dict[str, pd.DataFrame] | None = None,
         active_name: str | None = None,
+        res: dict[str, dict] | None = None,
     ) -> ToolResult:
         return ToolResult(
             llm_summary,
@@ -1034,6 +1270,7 @@ def execute_tool(
             sigs if sigs is not None else signals,
             dss if dss is not None else datasets,
             active_name,
+            res if res is not None else results,
         )
 
     if tool_name == "load_csv_data":
@@ -1117,6 +1354,122 @@ def execute_tool(
         summary = _df_summary(active_ds, label)
         display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(active_ds.head())}"
         return _result(summary, user_display=display)
+
+    # -----------------------------------------------------------------
+    # suggest_strategy_params — analyze DTE/OTM% distributions and
+    # return anchored parameter recommendations for strategy runs
+    # -----------------------------------------------------------------
+    if tool_name == "suggest_strategy_params":
+        import json as _json
+
+        ds_name = arguments.get("dataset_name")
+        active_ds = _resolve_dataset(ds_name, dataset, datasets)
+        if active_ds is None:
+            if datasets:
+                return _result(
+                    f"Dataset '{ds_name}' not found. "
+                    f"Available: {list(datasets.keys())}"
+                )
+            return _result("No dataset loaded. Load data first.")
+
+        strategy_name = arguments.get("strategy_name")
+        df = active_ds.copy()
+
+        # DTE distribution
+        df["_dte"] = (
+            pd.to_datetime(df["expiration"]) - pd.to_datetime(df["quote_date"])
+        ).dt.days
+        dte_series = df["_dte"].dropna()
+        dte_pcts = {
+            k: int(dte_series.quantile(q))
+            for k, q in [
+                ("p10", 0.10),
+                ("p25", 0.25),
+                ("p50", 0.50),
+                ("p75", 0.75),
+                ("p90", 0.90),
+            ]
+        }
+        dte_stats = {"min": int(dte_series.min()), **dte_pcts, "max": int(dte_series.max())}
+
+        # OTM% distribution — only rows where underlying_price > 0
+        df_otm = df[df["underlying_price"] > 0].copy()
+        df_otm["_otm_pct"] = (
+            (df_otm["strike"] - df_otm["underlying_price"]).abs()
+            / df_otm["underlying_price"]
+        )
+        otm_series = df_otm["_otm_pct"].dropna()
+        otm_pcts = {
+            k: round(float(otm_series.quantile(q)), 4)
+            for k, q in [
+                ("p10", 0.10),
+                ("p25", 0.25),
+                ("p50", 0.50),
+                ("p75", 0.75),
+                ("p90", 0.90),
+            ]
+        }
+        otm_stats = {
+            "min": round(float(otm_series.min()), 4),
+            **otm_pcts,
+            "max": round(float(otm_series.max()), 4),
+        }
+
+        # Base recommendations
+        recommended: dict = {
+            "max_entry_dte": dte_stats["p75"],
+            "exit_dte": max(0, dte_stats["p10"]),
+            "max_otm_pct": otm_stats["p75"],
+        }
+        strategy_note = ""
+
+        # Strategy-specific overrides
+        if strategy_name in CALENDAR_STRATEGIES:
+            recommended = {
+                "front_dte_min": max(10, dte_stats["p10"]),
+                "front_dte_max": min(45, dte_stats["p50"]),
+                "back_dte_min": min(50, dte_stats["p75"]),
+                "back_dte_max": min(120, dte_stats["p90"]),
+            }
+            strategy_note = (
+                "Calendar strategy — use front/back DTE instead of max_entry_dte."
+            )
+        elif strategy_name in {
+            "iron_condor",
+            "reverse_iron_condor",
+            "iron_butterfly",
+            "reverse_iron_butterfly",
+        }:
+            recommended["max_entry_dte"] = min(45, dte_stats["p75"])
+            recommended["max_otm_pct"] = min(0.3, otm_stats["p75"])
+            strategy_note = "Multi-leg strategies typically work best in the 20-45 DTE range."
+        elif strategy_name and "spread" in strategy_name:
+            recommended["max_otm_pct"] = min(0.2, otm_stats["p75"])
+            strategy_note = "Spreads often use tighter OTM% for better liquidity."
+
+        reco_json = _json.dumps(recommended, indent=2)
+        label = f" for `{strategy_name}`" if strategy_name else ""
+
+        dte_rows = "\n".join(f"| {k} | {v} |" for k, v in dte_stats.items())
+        otm_rows = "\n".join(f"| {k} | {v:.4f} |" for k, v in otm_stats.items())
+
+        llm_summary = (
+            f"suggest_strategy_params{label}\n"
+            f"DTE distribution: {dte_stats}\n"
+            f"OTM% distribution: {otm_stats}\n"
+            f"Recommended: {recommended}"
+            + (f"\nNote: {strategy_note}" if strategy_note else "")
+        )
+        user_display = (
+            f"### Parameter Suggestions{label}\n\n"
+            f"**DTE Distribution** ({len(dte_series):,} options)\n\n"
+            f"| Percentile | DTE |\n|---|---|\n{dte_rows}\n\n"
+            f"**OTM% Distribution** ({len(otm_series):,} options)\n\n"
+            f"| Percentile | OTM% |\n|---|---|\n{otm_rows}\n\n"
+            f"**Recommended starting parameters:**\n```json\n{reco_json}\n```"
+            + (f"\n\n*{strategy_note}*" if strategy_note else "")
+        )
+        return _result(llm_summary, user_display=user_display)
 
     # -----------------------------------------------------------------
     # build_signal — create/compose TA signals and store as named slots
@@ -1480,34 +1833,241 @@ def execute_tool(
                     f"the options data ({opt_min} to {opt_max}). {suggestion}"
                 )
             strat_kwargs["exit_dates"] = exit_dates
-        try:
-            result = func(dataset, **strat_kwargs)
-            if result.empty:
-                params_used = {
-                    k: v for k, v in arguments.items() if k != "strategy_name"
-                }
+        result_df, err = _run_one_strategy(strategy_name, dataset, strat_kwargs)
+        if err:
+            return _result(f"Error running {strategy_name}: {err}")
+        if result_df is None or result_df.empty:
+            params_used = {
+                k: v for k, v in arguments.items() if k != "strategy_name"
+            }
+            return _result(
+                f"{strategy_name} returned no results with parameters: "
+                f"{params_used or 'defaults'}.",
+            )
+        is_raw = arguments.get("raw", False)
+        mode = "raw trades" if is_raw else "aggregated stats"
+        table = _df_to_markdown(result_df)
+        display = f"**{strategy_name}** — {len(result_df)} {mode}\n\n{table}"
+        # LLM gets a compact summary instead of a full table to save tokens.
+        # The user already sees the full table via user_display.
+        llm_summary = _strategy_llm_summary(result_df, strategy_name, mode)
+        result_key = _make_result_key(strategy_name, arguments)
+        updated_results = {
+            **results,
+            result_key: _make_result_summary(strategy_name, result_df, arguments),
+        }
+        return _result(llm_summary, user_display=display, res=updated_results)
+
+    # -----------------------------------------------------------------
+    # scan_strategies — run Cartesian product of params in one call
+    # -----------------------------------------------------------------
+    if tool_name == "scan_strategies":
+        import itertools as _itertools
+
+        strategy_names = arguments.get("strategy_names", [])
+        if not strategy_names:
+            return _result("'strategy_names' must be a non-empty list.")
+        invalid = [s for s in strategy_names if s not in STRATEGIES]
+        if invalid:
+            return _result(
+                f"Unknown strategies: {invalid}. "
+                f"Available: {', '.join(STRATEGY_NAMES)}"
+            )
+
+        active_ds = _resolve_dataset(arguments.get("dataset_name"), dataset, datasets)
+        if active_ds is None:
+            if datasets:
                 return _result(
-                    f"{strategy_name} returned no results with parameters: "
-                    f"{params_used or 'defaults'}.",
+                    f"Dataset '{arguments.get('dataset_name')}' not found. "
+                    f"Available: {list(datasets.keys())}"
                 )
-            is_raw = arguments.get("raw", False)
-            mode = "raw trades" if is_raw else "aggregated stats"
-            table = _df_to_markdown(result)
-            display = f"**{strategy_name}** — {len(result)} {mode}\n\n{table}"
-            # LLM gets a compact summary instead of a full table to save tokens.
-            # The user already sees the full table via user_display.
-            llm_summary = _strategy_llm_summary(result, strategy_name, mode)
-            return _result(llm_summary, user_display=display)
-        except Exception as e:
-            return _result(f"Error running {strategy_name}: {e}")
+            return _result("No dataset loaded. Load data first.")
+
+        max_combos = int(arguments.get("max_combinations", 50))
+        slippage = arguments.get("slippage", "mid")
+        dte_values = arguments.get("max_entry_dte_values") or [90]
+        exit_values = arguments.get("exit_dte_values") or [0]
+        otm_values = arguments.get("max_otm_pct_values") or [0.5]
+
+        all_combos = list(
+            _itertools.product(strategy_names, dte_values, exit_values, otm_values)
+        )
+        truncated = len(all_combos) > max_combos
+        combos_to_run = all_combos[:max_combos]
+
+        rows = []
+        errors = []
+        scan_results = dict(results)
+
+        for strat, max_dte, exit_dte, max_otm in combos_to_run:
+            if strat in CALENDAR_STRATEGIES:
+                errors.append(
+                    f"{strat}: skipped (calendar strategy — no front/back DTE sweep; "
+                    "use run_strategy directly)"
+                )
+                continue
+
+            strat_kwargs = {
+                "max_entry_dte": max_dte,
+                "exit_dte": exit_dte,
+                "max_otm_pct": max_otm,
+                "slippage": slippage,
+            }
+            result_df, err = _run_one_strategy(strat, active_ds, strat_kwargs)
+
+            combo_args = {
+                "max_entry_dte": max_dte,
+                "exit_dte": exit_dte,
+                "max_otm_pct": max_otm,
+                "slippage": slippage,
+            }
+            if err:
+                errors.append(
+                    f"{strat}(dte={max_dte},exit={exit_dte},otm={max_otm:.2f}): {err}"
+                )
+                continue
+
+            if result_df is None or result_df.empty:
+                rows.append(
+                    {
+                        "strategy": strat,
+                        "max_entry_dte": max_dte,
+                        "exit_dte": exit_dte,
+                        "max_otm_pct": max_otm,
+                        "count": 0,
+                        "mean_return": float("nan"),
+                        "std": float("nan"),
+                        "win_rate": float("nan"),
+                    }
+                )
+                continue
+
+            summary = _make_result_summary(strat, result_df, combo_args)
+            rows.append(
+                {
+                    "strategy": strat,
+                    "max_entry_dte": max_dte,
+                    "exit_dte": exit_dte,
+                    "max_otm_pct": max_otm,
+                    "count": summary["count"],
+                    "mean_return": summary["mean_return"],
+                    "std": summary["std"],
+                    "win_rate": summary["win_rate"],
+                }
+            )
+            key = _make_result_key(strat, combo_args)
+            scan_results[key] = {**summary, "source": "scan_strategies"}
+
+        if not rows and not errors:
+            return _result("scan_strategies: no combinations produced results.")
+
+        leaderboard = (
+            pd.DataFrame(rows)
+            .sort_values("mean_return", ascending=False)
+            .reset_index(drop=True)
+        )
+        n_ok = int(leaderboard["mean_return"].notna().sum())
+        n_empty = int((leaderboard["count"] == 0).sum())
+
+        header_parts = [
+            f"scan_strategies: {len(combos_to_run)} combination(s) run, "
+            f"{n_ok} with results, {n_empty} empty, {len(errors)} error(s)"
+        ]
+        if truncated:
+            header_parts.append(
+                f"WARNING: {len(all_combos) - max_combos} combination(s) skipped "
+                f"(exceeded max_combinations={max_combos})"
+            )
+        if errors:
+            header_parts.append("Errors/skipped: " + "; ".join(errors))
+
+        best_rows = leaderboard[leaderboard["mean_return"].notna()]
+        if not best_rows.empty:
+            best = best_rows.iloc[0]
+            header_parts.append(
+                f"Best: {best['strategy']} "
+                f"(dte={best['max_entry_dte']}, exit={best['exit_dte']}, "
+                f"otm={best['max_otm_pct']:.2f}) — "
+                f"mean={best['mean_return']:.4f}, win_rate={best['win_rate']:.2%}"
+            )
+
+        llm_summary = "\n".join(header_parts)
+        table = _df_to_markdown(leaderboard)
+        user_display = f"### Strategy Scan Results\n\n{llm_summary}\n\n{table}"
+        return _result(llm_summary, user_display=user_display, res=scan_results)
+
+    # -----------------------------------------------------------------
+    # list_results — recall prior strategy runs from this session
+    # -----------------------------------------------------------------
+    if tool_name == "list_results":
+        filter_name = arguments.get("strategy_name")
+        relevant = {
+            k: v
+            for k, v in results.items()
+            if filter_name is None or v.get("strategy") == filter_name
+        }
+
+        if not relevant:
+            if filter_name:
+                return _result(
+                    f"No prior runs for '{filter_name}' in this session. "
+                    "Use run_strategy or scan_strategies first."
+                )
+            return _result(
+                "No strategy runs in this session yet. "
+                "Use run_strategy or scan_strategies first."
+            )
+
+        df = (
+            pd.DataFrame(list(relevant.values()))
+            .sort_values("mean_return", ascending=False, na_position="last")
+            .reset_index(drop=True)
+        )
+        col_order = [
+            "strategy",
+            "max_entry_dte",
+            "exit_dte",
+            "max_otm_pct",
+            "slippage",
+            "count",
+            "mean_return",
+            "std",
+            "win_rate",
+            "dataset",
+        ]
+        df = df[[c for c in col_order if c in df.columns]]
+
+        n = len(df)
+        label = f"for '{filter_name}'" if filter_name else "across all strategies"
+        llm_summary = (
+            f"list_results: {n} run(s) {label} this session.\n"
+            + df[
+                [
+                    c
+                    for c in ["strategy", "max_entry_dte", "exit_dte", "max_otm_pct", "mean_return", "win_rate"]
+                    if c in df.columns
+                ]
+            ].to_string(index=False)
+        )
+        user_display = (
+            f"### Prior Strategy Runs "
+            f"({n}{f' — {filter_name}' if filter_name else ''})\n\n"
+            "*Session only — not persisted across restarts. "
+            "Sorted by mean_return descending.*\n\n"
+            f"{_df_to_markdown(df)}"
+        )
+        return _result(llm_summary, user_display=user_display)
 
     available = [
         "load_csv_data",
         "list_data_files",
         "preview_data",
+        "suggest_strategy_params",
         "build_signal",
         "preview_signal",
         "fetch_stock_data",
         "run_strategy",
+        "scan_strategies",
+        "list_results",
     ]
     return _result(f"Unknown tool: {tool_name}. Available: {', '.join(available)}")

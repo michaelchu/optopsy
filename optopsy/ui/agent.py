@@ -261,6 +261,16 @@ which have enough trades to be statistically meaningful (count > 10), and risk-a
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
 and consistency (lower std is better).
 - Be concise but helpful. The tool results are already formatted as markdown tables.
+
+## Avoiding Redundant Strategy Calls
+- Before running a strategy when the user has not specified parameters, call \
+`suggest_strategy_params` first to get data-anchored DTE/OTM% recommendations. Do not guess.
+- When comparing multiple DTE values, OTM% values, or strategies, use `scan_strategies` (one \
+call) instead of multiple `run_strategy` calls.
+- Before re-running a strategy with parameters you may have tried before, call `list_results` \
+to check what combinations were already executed this session.
+- `scan_strategies` does not support TA signals or calendar strategies — use `run_strategy` \
+for those.
 """
 
 
@@ -318,6 +328,9 @@ class OptopsyAgent:
         # Named dataset registry — multiple datasets can be active at once.
         # Keys are ticker symbols or filenames; values are DataFrames.
         self.datasets: dict[str, pd.DataFrame] = {}
+        # Session-scoped strategy run registry — keyed by result key string,
+        # values are lightweight scalar summaries (no DataFrames).
+        self.results: dict[str, dict] = {}
 
     async def chat(
         self,
@@ -500,8 +513,8 @@ class OptopsyAgent:
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
-                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, dss=self.datasets: execute_tool(
-                        fn, a, ds, sg, dss
+                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, dss=self.datasets, rs=self.results: execute_tool(
+                        fn, a, ds, sg, dss, rs
                     ),
                 )
                 self.dataset = result.dataset
@@ -509,6 +522,8 @@ class OptopsyAgent:
                     self.signals = result.signals
                 if result.datasets is not None:
                     self.datasets = result.datasets
+                if result.results is not None:
+                    self.results = result.results
 
                 # Show the rich version to the user in the UI
                 if on_tool_call:
