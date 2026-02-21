@@ -10,17 +10,12 @@ _ALL_PROVIDERS: list[DataProvider] | None = None
 def _load_providers() -> list[DataProvider]:
     global _ALL_PROVIDERS
     if _ALL_PROVIDERS is None:
-        from optopsy.ui._compat import import_optional_dependency
+        try:
+            from .eodhd import EODHDProvider
 
-        # requests is the main transitive dep for providers; if missing,
-        # skip provider registration entirely (core-only install).
-        if import_optional_dependency("requests", errors="ignore") is None:
+            _ALL_PROVIDERS = [EODHDProvider()]
+        except ImportError:
             _ALL_PROVIDERS = []
-            return _ALL_PROVIDERS
-
-        from .eodhd import EODHDProvider
-
-        _ALL_PROVIDERS = [EODHDProvider()]
     return _ALL_PROVIDERS
 
 

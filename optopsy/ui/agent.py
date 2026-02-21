@@ -4,9 +4,8 @@ from typing import Any
 
 import pandas as pd
 
-from optopsy.ui._compat import import_optional_dependency
+import litellm
 
-litellm = import_optional_dependency("litellm")
 litellm.suppress_debug_info = True
 
 from .tools import ToolResult, execute_tool, get_tool_schemas
