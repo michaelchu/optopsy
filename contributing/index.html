@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -292,6 +292,44 @@
     
   
   Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../entry-signals/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Entry Signals
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Chat UI
 
       </a>
     </li>
@@ -782,6 +820,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../examples/" class="md-nav__link">
         
   
@@ -940,10 +1032,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#code-formatting" class="md-nav__link">
+  <a href="#code-formatting-and-linting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Code Formatting
+        Code Formatting and Linting
       
     </span>
   </a>
@@ -1331,8 +1423,8 @@
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">  </span><span class="c1"># On Windows: venv\Scripts\activate</span>
 </code></pre></div>
 <h3 id="3-install-development-dependencies">3. Install Development Dependencies<a class="headerlink" href="#3-install-development-dependencies" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pip<span class="w"> </span>install<span class="w"> </span>pytest<span class="w"> </span>black
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[ui]&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pip<span class="w"> </span>install<span class="w"> </span>pytest<span class="w"> </span>ruff<span class="w"> </span>mypy
 </code></pre></div>
 <h3 id="4-verify-installation">4. Verify Installation<a class="headerlink" href="#4-verify-installation" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>-v
@@ -1348,15 +1440,24 @@
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Run tests matching a pattern</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;butterfly&quot;</span><span class="w"> </span>-v
 </code></pre></div>
-<h3 id="code-formatting">Code Formatting<a class="headerlink" href="#code-formatting" title="Permanent link">&para;</a></h3>
-<p>Optopsy uses <a href="https://github.com/psf/black">Black</a> for code formatting:</p>
+<h3 id="code-formatting-and-linting">Code Formatting and Linting<a class="headerlink" href="#code-formatting-and-linting" title="Permanent link">&para;</a></h3>
+<p>Optopsy uses <a href="https://github.com/astral-sh/ruff">Ruff</a> for formatting and linting:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Check formatting</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>black<span class="w"> </span>--check<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>ruff<span class="w"> </span>format<span class="w"> </span>--check<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Auto-format code</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>black<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>ruff<span class="w"> </span>format<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Lint code</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>ruff<span class="w"> </span>check<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Lint and auto-fix</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>ruff<span class="w"> </span>check<span class="w"> </span>--fix<span class="w"> </span>optopsy/<span class="w"> </span>tests/<span class="w"> </span>setup.py
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># Type check</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>mypy<span class="w"> </span>optopsy/
 </code></pre></div>
-<p><strong>Important:</strong> All code must be formatted with Black before submitting a PR.</p>
+<p><strong>Important:</strong> All code must pass <code>ruff format</code>, <code>ruff check</code>, and <code>mypy</code> before submitting a PR.</p>
 <h2 id="adding-a-new-strategy">Adding a New Strategy<a class="headerlink" href="#adding-a-new-strategy" title="Permanent link">&para;</a></h2>
 <p>Follow these steps to add a new options strategy:</p>
 <h3 id="1-define-strategy-in-strategiespy">1. Define Strategy in <code>strategies.py</code><a class="headerlink" href="#1-define-strategy-in-strategiespy" title="Permanent link">&para;</a></h3>
@@ -1427,7 +1528,9 @@
 <h3 id="before-submitting">Before Submitting<a class="headerlink" href="#before-submitting" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] All tests pass (<code>pytest tests/ -v</code>)</li>
-<li>[ ] Code is formatted with Black (<code>black optopsy/ tests/</code>)</li>
+<li>[ ] Code is formatted with Ruff (<code>ruff format optopsy/ tests/ setup.py</code>)</li>
+<li>[ ] Linting passes (<code>ruff check optopsy/ tests/ setup.py</code>)</li>
+<li>[ ] Type checking passes (<code>mypy optopsy/</code>)</li>
 <li>[ ] New features have tests</li>
 <li>[ ] New strategies have documentation</li>
 <li>[ ] Docstrings follow existing style (Google format)</li>
@@ -1454,7 +1557,7 @@
 <a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
 <a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="gu">## Checklist</span>
 <a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="k">- [ ]</span> Tests pass
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="k">- [ ]</span> Code formatted with Black
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="k">- [ ]</span> Code formatted with Ruff
 <a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="k">- [ ]</span> Documentation updated
 <a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="k">- [ ]</span> Type hints included
 </code></pre></div>
@@ -1565,7 +1668,7 @@
 - Open a GitHub Discussion
 - Create an issue with the "question" label
 - Check existing issues and documentation</p>
-<p>Thank you for contributing to Optopsy! 🎉</p>
+<p>Thank you for contributing to Optopsy!</p>
 
 
 

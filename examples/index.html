@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://michaelchu.github.io/optopsy/examples/">
       
       
-        <link rel="prev" href="../parameters/">
+        <link rel="prev" href="../chat-ui/">
       
       
         <link rel="next" href="../api-reference/">
@@ -29,7 +29,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -296,6 +296,44 @@
     
   
   Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../entry-signals/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Entry Signals
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Chat UI
 
       </a>
     </li>
@@ -785,6 +823,60 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -1105,6 +1197,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-signal-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Signal Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Sources
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1438,6 +1552,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-signal-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Signal Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Sources
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1793,12 +1929,31 @@
 <a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">1000</span>
 <a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="p">)</span>
 </code></pre></div>
+<h2 id="entry-signal-examples">Entry Signal Examples<a class="headerlink" href="#entry-signal-examples" title="Permanent link">&para;</a></h2>
+<p>Optopsy supports filtering entries with technical analysis indicators. See the <a href="../entry-signals/">Entry Signals</a> page for the full reference. Here's a quick example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">,</span> <span class="n">sma_above</span><span class="p">,</span> <span class="n">signal</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Enter long calls only when RSI &lt; 30 AND price is above the 50-day SMA</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">signal</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">sma_above</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="data-sources">Data Sources<a class="headerlink" href="#data-sources" title="Permanent link">&para;</a></h2>
+<p>Optopsy works with any historical options data in CSV or DataFrame format. Some sources:</p>
+<ul>
+<li><a href="https://eodhd.com/financial-apis/options-data-api">EODHD US Stock Options Data API</a> - Built-in integration via the <a href="../chat-ui/">Chat UI</a> (API key required)</li>
+<li><a href="https://historicaloptiondata.com/">HistoricalOptionData.com</a> - Free samples available</li>
+<li><a href="https://datashop.cboe.com/">CBOE DataShop</a> - Official exchange data</li>
+<li><a href="https://polygon.io/">Polygon.io</a> - Options data API</li>
+<li>Your broker's data export (Schwab, IBKR, Tastytrade, etc.)</li>
+</ul>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Review <a href="../strategies/">Strategy documentation</a> for specific strategy details</li>
 <li>Check <a href="../parameters/">Parameters</a> for all configuration options</li>
+<li>Learn about <a href="../entry-signals/">Entry Signals</a> for TA-based filtering</li>
+<li>Try the <a href="../chat-ui/">AI Chat UI</a> for natural language backtesting</li>
 <li>See <a href="../api-reference/">API Reference</a> for function signatures</li>
-<li>Explore the <code>samples/</code> directory in the repository for more examples</li>
 </ul>
 
 

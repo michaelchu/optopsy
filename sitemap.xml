@@ -2,210 +2,266 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
         <loc>https://michaelchu.github.io/optopsy/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/ai-search-discovery-enhancements/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/ai-search-discovery-enhancements/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/ai-search-discovery-enhancements/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/api-reference/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/api-reference/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/api-reference/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/chat-ui/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/chat-ui/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/chat-ui/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/contributing/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/contributing/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/contributing/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/entry-signals/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/entry-signals/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/entry-signals/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/examples/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/examples/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/examples/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/getting-started/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/getting-started/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/parameters/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/parameters/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/parameters/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/ideas/agent-backtesting-architecture-eval/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/ideas/agent-backtesting-architecture-eval/"/>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/ideas/agent-backtesting-architecture-eval/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/butterflies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/butterflies/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/butterflies/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/calendars/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/calendars/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/calendars/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/covered/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/covered/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/covered/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/diagonals/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/diagonals/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/diagonals/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/iron-strategies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/iron-strategies/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/iron-strategies/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/singles/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/singles/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/singles/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/spreads/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/spreads/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/spreads/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/strategies/straddles-strangles/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/straddles-strangles/"/>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/straddles-strangles/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/zh/ai-search-discovery-enhancements/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/ai-search-discovery-enhancements/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/ai-search-discovery-enhancements/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/zh/api-reference/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/api-reference/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/api-reference/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/zh/chat-ui/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/chat-ui/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/chat-ui/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/zh/contributing/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/contributing/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/contributing/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/zh/entry-signals/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/entry-signals/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/entry-signals/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/zh/examples/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/examples/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/examples/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/getting-started/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/getting-started/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/parameters/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/parameters/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/parameters/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/"/>
     </url>
     <url>
+        <loc>https://michaelchu.github.io/optopsy/zh/ideas/agent-backtesting-architecture-eval/</loc>
+        <lastmod>2026-02-21</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/ideas/agent-backtesting-architecture-eval/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/ideas/agent-backtesting-architecture-eval/"/>
+    </url>
+    <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/butterflies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/butterflies/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/butterflies/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/calendars/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/calendars/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/calendars/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/covered/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/covered/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/covered/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/diagonals/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/diagonals/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/diagonals/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/iron-strategies/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/iron-strategies/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/iron-strategies/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/singles/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/singles/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/singles/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/spreads/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/spreads/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/spreads/"/>
     </url>
     <url>
         <loc>https://michaelchu.github.io/optopsy/zh/strategies/straddles-strangles/</loc>
-        <lastmod>2026-02-09</lastmod>
+        <lastmod>2026-02-21</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="zh" href="https://michaelchu.github.io/optopsy/zh/strategies/straddles-strangles/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://michaelchu.github.io/optopsy/strategies/straddles-strangles/"/>

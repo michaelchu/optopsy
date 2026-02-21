@@ -27,7 +27,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -296,6 +296,44 @@
     
   
   Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="entry-signals/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Entry Signals
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Chat UI
 
       </a>
     </li>
@@ -910,6 +948,60 @@
   
   
     <li class="md-nav__item">
+      <a href="entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="examples/" class="md-nav__link">
         
   
@@ -1087,11 +1179,13 @@
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>28 Built-in Strategies</strong> - From simple calls/puts to iron condors, butterflies, calendars, and diagonals</li>
+<li><strong>Entry Signals</strong> - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via <a href="https://github.com/twopirllc/pandas-ta">pandas-ta</a></li>
 <li><strong>Greeks Filtering</strong> - Filter options by delta to target specific probability ranges</li>
 <li><strong>Slippage Modeling</strong> - Realistic fills with mid, spread, or liquidity-based slippage</li>
 <li><strong>Flexible Grouping</strong> - Analyze results by DTE, OTM%, and delta intervals</li>
 <li><strong>Any Data Source</strong> - Works with any options data in CSV or DataFrame format</li>
 <li><strong>Pandas Native</strong> - Returns DataFrames that integrate with your existing workflow</li>
+<li><strong>AI Chat UI</strong> - Interactive <a href="chat-ui/">AI-powered chat interface</a> for running backtests with natural language</li>
 </ul>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
@@ -1110,14 +1204,20 @@
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Core library</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># With AI Chat UI</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy<span class="o">[</span>ui<span class="o">]</span>
 </code></pre></div>
-<p><strong>Requirements:</strong> Python 3.8+, Pandas 2.0+, NumPy 1.26+</p>
+<p><strong>Requirements:</strong> Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+</p>
 <h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Check the <a href="getting-started/">Getting Started</a> guide for a detailed walkthrough</li>
 <li>Browse <a href="strategies/">Strategies</a> for available options strategies</li>
 <li>Review <a href="parameters/">Parameters</a> for configuration options</li>
+<li>Learn about <a href="entry-signals/">Entry Signals</a> for TA-based entry filtering</li>
+<li>Try the <a href="chat-ui/">AI Chat UI</a> for natural language backtesting</li>
 <li>See <a href="examples/">Examples</a> for common use cases</li>
 <li>View the <a href="api-reference/">API Reference</a> for complete function documentation</li>
 </ul>

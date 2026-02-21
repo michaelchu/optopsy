@@ -1,0 +1,1607 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Options Backtesting Library for Python">
+      
+      
+        <meta name="author" content="Michael Chu">
+      
+      
+        <link rel="canonical" href="https://michaelchu.github.io/optopsy/entry-signals/">
+      
+      
+        <link rel="prev" href="../parameters/">
+      
+      
+        <link rel="next" href="../chat-ui/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../zh/entry-signals/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Entry Signals - Optopsy Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#entry-signals" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Optopsy Documentation" class="md-header__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Optopsy Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Entry Signals
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../zh/entry-signals/" hreflang="zh" class="md-select__link">
+              中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../strategies/" class="md-tabs__link">
+          
+  
+  
+  Strategies
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../parameters/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Entry Signals
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Chat UI
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../examples/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Examples
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Optopsy Documentation" class="md-nav__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Optopsy Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Strategies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Strategies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/singles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-Leg Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/straddles-strangles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Straddles & Strangles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/spreads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vertical Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/butterflies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/iron-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Iron Condors & Iron Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/covered/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covered Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/calendars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calendar Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/diagonals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagonal Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combinators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combinators
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signal Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rsi-enter-on-oversold-exit-on-overbought" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RSI - enter on oversold, exit on overbought
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sma-trend-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMA - trend filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macd-enter-on-bullish-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MACD - enter on bullish crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bollinger-bands-mean-reversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bollinger Bands - mean reversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ema-crossover-golden-cross" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EMA Crossover - golden cross
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atr-low-volatility-regime-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ATR - low-volatility regime filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-restrict-entries-to-specific-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar - restrict entries to specific days
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-multiple-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Multiple Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sustained-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sustained Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-stock-ohlcv-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Stock OHLCV Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-signal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Signal Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combinators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combinators
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signal Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rsi-enter-on-oversold-exit-on-overbought" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RSI - enter on oversold, exit on overbought
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sma-trend-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMA - trend filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macd-enter-on-bullish-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MACD - enter on bullish crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bollinger-bands-mean-reversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bollinger Bands - mean reversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ema-crossover-golden-cross" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EMA Crossover - golden cross
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atr-low-volatility-regime-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ATR - low-volatility regime filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-restrict-entries-to-specific-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar - restrict entries to specific days
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-multiple-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Multiple Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sustained-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sustained Signals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-stock-ohlcv-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Stock OHLCV Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-signal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Signal Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="entry-signals">Entry Signals<a class="headerlink" href="#entry-signals" title="Permanent link">&para;</a></h1>
+<p>Filter strategy entries using technical analysis signals powered by <a href="https://github.com/twopirllc/pandas-ta">pandas-ta</a>. Use <code>apply_signal</code> to compute valid dates, then pass them as <code>entry_dates</code> or <code>exit_dates</code> to any strategy.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">long_calls</span><span class="p">,</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">,</span> <span class="n">sustained</span><span class="p">,</span> <span class="n">signal</span><span class="p">,</span> <span class="n">day_of_week</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Enter only when RSI(14) is below 30</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Require RSI below 30 for 5 consecutive days</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sustained</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span> <span class="n">days</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">results</span> <span class="o">=</span> <span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Compose signals with &amp; and |</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">sig</span> <span class="o">=</span> <span class="n">signal</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">day_of_week</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>  <span class="c1"># Oversold + Thursday</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">results</span> <span class="o">=</span> <span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="available-signals">Available Signals<a class="headerlink" href="#available-signals" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Signals</th>
+<th>Default Parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RSI</strong></td>
+<td><code>rsi_below</code>, <code>rsi_above</code></td>
+<td><code>period=14</code>, <code>threshold=30</code> / <code>70</code></td>
+</tr>
+<tr>
+<td><strong>SMA</strong></td>
+<td><code>sma_below</code>, <code>sma_above</code></td>
+<td><code>period=20</code></td>
+</tr>
+<tr>
+<td><strong>MACD</strong></td>
+<td><code>macd_cross_above</code>, <code>macd_cross_below</code></td>
+<td><code>fast=12</code>, <code>slow=26</code>, <code>signal_period=9</code></td>
+</tr>
+<tr>
+<td><strong>Bollinger Bands</strong></td>
+<td><code>bb_above_upper</code>, <code>bb_below_lower</code></td>
+<td><code>length=20</code>, <code>std=2.0</code></td>
+</tr>
+<tr>
+<td><strong>EMA Crossover</strong></td>
+<td><code>ema_cross_above</code>, <code>ema_cross_below</code></td>
+<td><code>fast=10</code>, <code>slow=50</code></td>
+</tr>
+<tr>
+<td><strong>ATR Volatility</strong></td>
+<td><code>atr_above</code>, <code>atr_below</code></td>
+<td><code>period=14</code>, <code>multiplier=1.5</code> / <code>0.75</code></td>
+</tr>
+<tr>
+<td><strong>Calendar</strong></td>
+<td><code>day_of_week</code></td>
+<td>Days: <code>0</code>=Mon ... <code>4</code>=Fri</td>
+</tr>
+</tbody>
+</table>
+<h2 id="combinators">Combinators<a class="headerlink" href="#combinators" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sustained(signal, days=5)</code></td>
+<td>Require signal True for N consecutive bars</td>
+</tr>
+<tr>
+<td><code>and_signals(sig1, sig2, ...)</code></td>
+<td>All signals must be True</td>
+</tr>
+<tr>
+<td><code>or_signals(sig1, sig2, ...)</code></td>
+<td>At least one signal must be True</td>
+</tr>
+<tr>
+<td><code>Signal</code> class with <code>&amp;</code> / <code>\|</code></td>
+<td>Fluent operator chaining</td>
+</tr>
+</tbody>
+</table>
+<h2 id="signal-examples">Signal Examples<a class="headerlink" href="#signal-examples" title="Permanent link">&para;</a></h2>
+<h3 id="rsi-enter-on-oversold-exit-on-overbought">RSI - enter on oversold, exit on overbought<a class="headerlink" href="#rsi-enter-on-oversold-exit-on-overbought" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">,</span> <span class="n">rsi_above</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">30</span><span class="p">))</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">exit_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">rsi_above</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">70</span><span class="p">))</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">,</span> <span class="n">exit_dates</span><span class="o">=</span><span class="n">exit_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="sma-trend-filter">SMA - trend filter<a class="headerlink" href="#sma-trend-filter" title="Permanent link">&para;</a></h3>
+<p>Only enter when price is above its 50-day moving average:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">sma_above</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sma_above</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="mi">50</span><span class="p">))</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="macd-enter-on-bullish-crossover">MACD - enter on bullish crossover<a class="headerlink" href="#macd-enter-on-bullish-crossover" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">macd_cross_above</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">macd_cross_above</span><span class="p">(</span><span class="n">fast</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">slow</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">signal_period</span><span class="o">=</span><span class="mi">9</span><span class="p">))</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="bollinger-bands-mean-reversion">Bollinger Bands - mean reversion<a class="headerlink" href="#bollinger-bands-mean-reversion" title="Permanent link">&para;</a></h3>
+<p>Enter when price dips below the lower band:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">bb_below_lower</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">bb_below_lower</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_puts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="ema-crossover-golden-cross">EMA Crossover - golden cross<a class="headerlink" href="#ema-crossover-golden-cross" title="Permanent link">&para;</a></h3>
+<p>Fast EMA crosses above slow EMA:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">ema_cross_above</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">ema_cross_above</span><span class="p">(</span><span class="n">fast</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">slow</span><span class="o">=</span><span class="mi">50</span><span class="p">))</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="atr-low-volatility-regime-filter">ATR - low-volatility regime filter<a class="headerlink" href="#atr-low-volatility-regime-filter" title="Permanent link">&para;</a></h3>
+<p>Only sell premium in low-volatility regimes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">atr_below</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">atr_below</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">multiplier</span><span class="o">=</span><span class="mf">0.75</span><span class="p">))</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="calendar-restrict-entries-to-specific-days">Calendar - restrict entries to specific days<a class="headerlink" href="#calendar-restrict-entries-to-specific-days" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">day_of_week</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Enter only on Mondays and Fridays</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">day_of_week</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_straddles</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="combining-multiple-signals">Combining Multiple Signals<a class="headerlink" href="#combining-multiple-signals" title="Permanent link">&para;</a></h2>
+<p>Use the <code>Signal</code> class with <code>&amp;</code> (AND) and <code>|</code> (OR) operators, or the functional <code>and_signals</code> / <code>or_signals</code> helpers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">signal</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">,</span> <span class="n">sma_above</span><span class="p">,</span> <span class="n">atr_below</span><span class="p">,</span> <span class="n">day_of_week</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">and_signals</span><span class="p">,</span> <span class="n">or_signals</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Fluent API: oversold + uptrend + low volatility</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">signal</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">sma_above</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">atr_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">))</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="c1"># Functional API: same logic</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">and_signals</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span> <span class="n">sma_above</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">atr_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">))</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="c1"># OR: enter when EITHER condition fires</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">macd_cross_above</span><span class="p">,</span> <span class="n">bb_below_lower</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">or_signals</span><span class="p">(</span><span class="n">macd_cross_above</span><span class="p">(),</span> <span class="n">bb_below_lower</span><span class="p">())</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_spread</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="sustained-signals">Sustained Signals<a class="headerlink" href="#sustained-signals" title="Permanent link">&para;</a></h2>
+<p>Require a condition to persist for multiple consecutive days before triggering:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">sustained</span><span class="p">,</span> <span class="n">rsi_below</span><span class="p">,</span> <span class="n">bb_below_lower</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># RSI must stay below 30 for 5 straight days</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sustained</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span> <span class="n">days</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Bollinger Band breach sustained for 3 days</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">sustained</span><span class="p">(</span><span class="n">bb_below_lower</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="n">days</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_puts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="using-stock-ohlcv-data">Using Stock OHLCV Data<a class="headerlink" href="#using-stock-ohlcv-data" title="Permanent link">&para;</a></h2>
+<p>By default, signals compute indicators from the option chain's <code>underlying_price</code> column. For more accurate TA signals (especially ATR, which benefits from real high/low data), use <code>apply_signal</code> on a separate stock OHLCV DataFrame and pass the result as <code>entry_dates</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">atr_above</span><span class="p">,</span> <span class="n">ema_cross_above</span><span class="p">,</span> <span class="n">signal</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Load OHLCV stock data (must have: underlying_symbol, quote_date, close;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># optional: open, high, low, volume)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">stock_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;SPX_daily_ohlcv.csv&quot;</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;quote_date&quot;</span><span class="p">])</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1"># Compute entry dates from stock data using real high/low for ATR</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">signal</span><span class="p">(</span><span class="n">atr_above</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">multiplier</span><span class="o">=</span><span class="mf">1.5</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">ema_cross_above</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">stock_df</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="c1"># Pass pre-computed dates to the strategy</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_straddles</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="custom-signal-functions">Custom Signal Functions<a class="headerlink" href="#custom-signal-functions" title="Permanent link">&para;</a></h2>
+<p>Any function matching the signature <code>(pd.DataFrame) -&gt; pd.Series[bool]</code> can be used as a signal:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_signal</span><span class="p">,</span> <span class="n">signal</span><span class="p">,</span> <span class="n">rsi_below</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Custom: only enter when underlying price is above 4000</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">price_above_4000</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;underlying_price&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">4000</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">price_above_4000</span><span class="p">)</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="c1"># Combine custom signals with built-in ones</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">entry</span> <span class="o">=</span> <span class="n">signal</span><span class="p">(</span><span class="n">price_above_4000</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">signal</span><span class="p">(</span><span class="n">rsi_below</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="n">entry_dates</span> <span class="o">=</span> <span class="n">apply_signal</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">entry_dates</span><span class="o">=</span><span class="n">entry_dates</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "toc.follow", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

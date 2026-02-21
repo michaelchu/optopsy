@@ -29,7 +29,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -298,6 +298,44 @@
     
   
   Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../entry-signals/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Entry Signals
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI Chat UI
 
       </a>
     </li>
@@ -1069,6 +1107,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../examples/" class="md-nav__link">
         
   
@@ -1400,11 +1492,15 @@
 <p>This guide will walk you through setting up Optopsy and running your first backtest.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Install Optopsy using pip:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Core library</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># With AI Chat UI (optional)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>pip<span class="w"> </span>install<span class="w"> </span>optopsy<span class="o">[</span>ui<span class="o">]</span>
 </code></pre></div>
 <h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Python 3.8 or higher</li>
+<li>Python 3.12-3.13</li>
 <li>Pandas 2.0 or higher</li>
 <li>NumPy 1.26 or higher</li>
 </ul>
@@ -1621,6 +1717,8 @@
 <ul>
 <li>Explore <a href="../strategies/">all 28 strategies</a></li>
 <li>Learn about <a href="../parameters/">strategy parameters</a></li>
+<li>Filter entries with <a href="../entry-signals/">technical analysis signals</a></li>
+<li>Try the <a href="../chat-ui/">AI Chat UI</a> for natural language backtesting</li>
 <li>See more <a href="../examples/">examples</a> with Greeks filtering and slippage</li>
 <li>Read the <a href="../api-reference/">API Reference</a> for detailed function documentation</li>
 </ul>

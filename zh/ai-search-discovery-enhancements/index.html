@@ -1,0 +1,1845 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Options Backtesting Library for Python">
+      
+      
+        <meta name="author" content="Michael Chu">
+      
+      
+        <link rel="canonical" href="https://michaelchu.github.io/optopsy/zh/ai-search-discovery-enhancements/">
+      
+      
+      
+      
+        
+          <link rel="alternate" href="../../ai-search-discovery-enhancements/" hreflang="en">
+        
+          <link rel="alternate" href="./" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>AI Chat: Strategy Search & Discovery Enhancements - Optopsy Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ai-chat-strategy-search-discovery-enhancements" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../" title="Optopsy Documentation" class="md-header__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Optopsy Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              AI Chat: Strategy Search &amp; Discovery Enhancements
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="选择当前语言">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../ai-search-discovery-enhancements/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="zh" class="md-select__link">
+              中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/michaelchu/optopsy" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../" class="md-tabs__link">
+        
+  
+  
+    
+  
+  首页
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  入门指南
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../strategies/" class="md-tabs__link">
+          
+  
+  
+  策略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../parameters/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  参数
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../entry-signals/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  入场信号
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../chat-ui/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  AI 聊天界面
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../examples/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  示例
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API 参考
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../" title="Optopsy Documentation" class="md-nav__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Optopsy Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/michaelchu/optopsy" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    入门指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    策略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    策略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/singles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    单腿策略
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/straddles-strangles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    跨式组合
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/spreads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    垂直价差
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/butterflies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    蝶式价差
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/iron-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    铁秃鹰和铁蝶式
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/covered/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    备兑策略
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/calendars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日历价差
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/diagonals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    对角价差
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    参数
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    入场信号
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 聊天界面
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem Statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspiration-from-eodhd-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspiration from EODHD Guides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proposed-new-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed New Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proposed New Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scan_strategies-strategy-scanner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. scan_strategies — Strategy Scanner
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-parameter_sweep-parameter-optimizer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. parameter_sweep — Parameter Optimizer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-compare_strategies-side-by-side-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. compare_strategies — Side-by-Side Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-analyze_trades-trade-level-analytics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. analyze_trades — Trade-Level Analytics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-best_buckets-top-performing-segments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. best_buckets — Top Performing Segments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enhanced-system-prompt-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enhanced System Prompt Additions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#greeks-aware-search-future-enhancement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Greeks-Aware Search (Future Enhancement)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-enhanced-scanning-future-enhancement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal-Enhanced Scanning (Future Enhancement)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Considerations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ai-chat-strategy-search-discovery-enhancements">AI Chat: Strategy Search &amp; Discovery Enhancements<a class="headerlink" href="#ai-chat-strategy-search-discovery-enhancements" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Design document for giving the AI chat agent richer tools to autonomously
+search, scan, and discover profitable options strategies.</p>
+</blockquote>
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>The AI chat currently has four tools:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_data_files</code></td>
+<td>List available CSVs</td>
+</tr>
+<tr>
+<td><code>load_csv_data</code></td>
+<td>Load a CSV into memory</td>
+</tr>
+<tr>
+<td><code>preview_data</code></td>
+<td>Show shape / columns / sample rows</td>
+</tr>
+<tr>
+<td><code>run_strategy</code></td>
+<td>Run <strong>one</strong> strategy with <strong>one</strong> set of parameters</td>
+</tr>
+</tbody>
+</table>
+<p>This means every question like <em>"What's the most profitable strategy for SPX?"</em>
+forces the AI into a tedious loop: run a strategy, read the result, adjust
+parameters, run again, run a different strategy, compare mentally, etc.  It has
+no way to systematically search the parameter space or compare strategies
+side-by-side.  The 15-iteration tool-call limit means it can explore at most
+~12 configurations before running out of turns.</p>
+<h2 id="inspiration-from-eodhd-guides">Inspiration from EODHD Guides<a class="headerlink" href="#inspiration-from-eodhd-guides" title="Permanent link">&para;</a></h2>
+<p>Two EODHD guides informed these ideas:</p>
+<p><strong>Advanced guide (Greeks-first approach):</strong></p>
+<ul>
+<li>Uses option Greeks (delta, gamma, theta, vega) as primary search dimensions
+  rather than just strike/DTE</li>
+<li>Strategies are categorized by which Greek they exploit: gamma scalping,
+  vega-based volatility plays, theta decay harvesting</li>
+<li>Advocates scanning across Greek exposures to find the right risk dimension,
+  then structuring positions around it</li>
+<li>Multi-Greek portfolio-level risk management: hedging delta while harvesting
+  theta, etc.</li>
+</ul>
+<p><strong>Beginner guide (signal-filtered backtesting):</strong></p>
+<ul>
+<li>Combines technical signals (SMA crossovers) with options entry/exit timing</li>
+<li>Uses multiple exit mechanisms: profit targets, stop losses, trailing stops</li>
+<li>Measures win rate, total ROI, and win/loss counts as primary metrics</li>
+<li>Highlights that raw backtests without slippage/fees overstate returns</li>
+</ul>
+<p><strong>Key takeaways for our tools:</strong></p>
+<ol>
+<li>Users think in terms of <em>goals</em> ("I want theta income", "I want to profit
+   from a volatility spike") not individual strategy names</li>
+<li>Comparing strategies across a shared metric (Sharpe, win rate, profit
+   factor) is more useful than eyeballing separate tables</li>
+<li>Greeks-based filtering (especially delta) should be a first-class search
+   dimension alongside DTE and OTM%</li>
+<li>Signal-filtered entry timing (RSI, SMA) can dramatically change results and
+   should be easy to toggle during scans</li>
+</ol>
+<hr />
+<h2 id="proposed-new-tools">Proposed New Tools<a class="headerlink" href="#proposed-new-tools" title="Permanent link">&para;</a></h2>
+<h3 id="1-scan_strategies-strategy-scanner">1. <code>scan_strategies</code> — Strategy Scanner<a class="headerlink" href="#1-scan_strategies-strategy-scanner" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Run all (or a filtered subset of) the 28 strategies against the
+loaded data in a single tool call and return a ranked leaderboard.</p>
+<p><strong>Why the AI needs this:</strong> Today, testing 6 strategies requires 6 separate
+<code>run_strategy</code> calls consuming 6+ of the 15 iteration budget.  A scanner does
+it in one call.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategies</code></td>
+<td><code>string[]</code> (optional)</td>
+<td>Subset of strategy names to scan. Default: all 28.</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td><code>string</code> (optional)</td>
+<td>Filter by category: <code>"bullish"</code>, <code>"bearish"</code>, <code>"neutral"</code>, <code>"volatile"</code>, <code>"income"</code>. Overridden by explicit <code>strategies</code> list.</td>
+</tr>
+<tr>
+<td><code>max_entry_dte</code></td>
+<td><code>integer</code></td>
+<td>Shared DTE param (default 90)</td>
+</tr>
+<tr>
+<td><code>exit_dte</code></td>
+<td><code>integer</code></td>
+<td>Shared exit DTE (default 0)</td>
+</tr>
+<tr>
+<td><code>max_otm_pct</code></td>
+<td><code>float</code></td>
+<td>Shared OTM filter (default 0.5)</td>
+</tr>
+<tr>
+<td><code>min_bid_ask</code></td>
+<td><code>float</code></td>
+<td>Shared bid/ask floor (default 0.05)</td>
+</tr>
+<tr>
+<td><code>slippage</code></td>
+<td><code>string</code></td>
+<td>Shared slippage model (default <code>"mid"</code>)</td>
+</tr>
+<tr>
+<td><code>sort_by</code></td>
+<td><code>string</code></td>
+<td>Ranking metric: <code>"mean"</code>, <code>"median"</code>, <code>"win_rate"</code>, <code>"sharpe"</code>, <code>"profit_factor"</code>. Default <code>"sharpe"</code>.</td>
+</tr>
+<tr>
+<td><code>top_n</code></td>
+<td><code>integer</code></td>
+<td>Return only top N results (default 10)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Strategy categories mapping:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bullish:  long_calls, short_puts, long_call_spread, short_put_spread,
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>          covered_call
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>bearish:  long_puts, short_calls, long_put_spread, short_call_spread,
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>          protective_put
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>neutral:  short_straddles, short_strangles, iron_condor, iron_butterfly,
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>          long_call_butterfly, long_put_butterfly
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>volatile: long_straddles, long_strangles, reverse_iron_condor,
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>          reverse_iron_butterfly, short_call_butterfly, short_put_butterfly
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>income:   short_puts, short_calls, short_straddles, short_strangles,
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>          iron_condor, iron_butterfly, covered_call
+</code></pre></div>
+<p><strong>Output (returned to AI):</strong></p>
+<p>A compact table with one row per strategy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>| strategy            | trades | mean    | median  | win_rate | sharpe | profit_factor |
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>|---------------------|--------|---------|---------|----------|--------|---------------|
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>| short_put_spread    | 312    |  0.0843 |  0.0621 | 0.68     |  1.24  |  2.14         |
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>| iron_condor         | 287    |  0.0712 |  0.0534 | 0.72     |  1.18  |  2.01         |
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>| covered_call        | 245    |  0.0398 |  0.0312 | 0.61     |  0.95  |  1.65         |
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>...
+</code></pre></div>
+<p><strong>Metrics computed per strategy (using raw=True internally):</strong></p>
+<ul>
+<li><code>trades</code>: total number of trades</li>
+<li><code>mean</code>: mean pct_change</li>
+<li><code>median</code>: median pct_change</li>
+<li><code>std</code>: standard deviation</li>
+<li><code>win_rate</code>: fraction of trades with pct_change &gt; 0</li>
+<li><code>sharpe</code>: mean / std (annualization optional, but raw ratio is useful enough)</li>
+<li><code>profit_factor</code>: sum(winning trades) / abs(sum(losing trades))</li>
+<li><code>max_drawdown</code>: worst single trade pct_change</li>
+<li><code>best_trade</code>: best single trade pct_change</li>
+</ul>
+<p><strong>Implementation approach:</strong></p>
+<p>Run each strategy with <code>raw=True</code> internally, compute summary metrics from the
+raw DataFrame, collect into a single comparison DataFrame, sort by requested
+metric, and return the top N.  Strategies that return empty results are
+included with zeroed metrics and a note.</p>
+<hr />
+<h3 id="2-parameter_sweep-parameter-optimizer">2. <code>parameter_sweep</code> — Parameter Optimizer<a class="headerlink" href="#2-parameter_sweep-parameter-optimizer" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Sweep one or two parameters across a range for a single strategy
+to find the optimal configuration.</p>
+<p><strong>Why the AI needs this:</strong> The AI currently has to guess good parameters or
+try them one at a time.  A sweep tool lets it answer <em>"What DTE works best
+for iron condors?"</em> in a single call.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategy_name</code></td>
+<td><code>string</code></td>
+<td>Strategy to sweep</td>
+</tr>
+<tr>
+<td><code>sweep_param</code></td>
+<td><code>string</code></td>
+<td>Primary parameter to sweep: <code>"max_entry_dte"</code>, <code>"exit_dte"</code>, <code>"max_otm_pct"</code>, <code>"min_bid_ask"</code>, or <code>"slippage"</code></td>
+</tr>
+<tr>
+<td><code>sweep_values</code></td>
+<td><code>number[]</code> or <code>string[]</code></td>
+<td>Explicit list of values to try</td>
+</tr>
+<tr>
+<td><code>sweep_param_2</code></td>
+<td><code>string</code> (optional)</td>
+<td>Second parameter for 2D sweep</td>
+</tr>
+<tr>
+<td><code>sweep_values_2</code></td>
+<td><code>number[]</code> or <code>string[]</code> (optional)</td>
+<td>Values for second param</td>
+</tr>
+<tr>
+<td><code>sort_by</code></td>
+<td><code>string</code></td>
+<td>Metric to optimize: <code>"mean"</code>, <code>"median"</code>, <code>"win_rate"</code>, <code>"sharpe"</code>, <code>"profit_factor"</code>. Default <code>"sharpe"</code>.</td>
+</tr>
+<tr>
+<td><em>(other strategy params)</em></td>
+<td></td>
+<td>Fixed values for non-swept params</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output:</strong></p>
+<p>For 1D sweep:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>| max_entry_dte | trades | mean    | win_rate | sharpe | profit_factor |
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>|---------------|--------|---------|----------|--------|---------------|
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>| 30            | 89     |  0.1021 | 0.72     |  1.45  |  2.31         |
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>| 45            | 156    |  0.0843 | 0.68     |  1.24  |  2.14         |  &lt;-- best
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>| 60            | 201    |  0.0612 | 0.63     |  0.98  |  1.78         |
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>| 90            | 312    |  0.0398 | 0.58     |  0.72  |  1.42         |
+</code></pre></div>
+<p>For 2D sweep (e.g., DTE x OTM):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>| max_entry_dte | max_otm_pct | trades | mean    | sharpe |
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>|---------------|-------------|--------|---------|--------|
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>| 30            | 0.05        | 23     |  0.1201 |  1.65  |
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>| 30            | 0.10        | 45     |  0.0987 |  1.42  |
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>| 45            | 0.05        | 41     |  0.1021 |  1.51  |
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>...
+</code></pre></div>
+<p><strong>Implementation approach:</strong></p>
+<p>Use <code>itertools.product</code> to generate all parameter combinations.  For each
+combination, call the strategy function with <code>raw=True</code>, compute summary
+metrics, and collect results.  Sort by the requested metric.</p>
+<hr />
+<h3 id="3-compare_strategies-side-by-side-comparison">3. <code>compare_strategies</code> — Side-by-Side Comparison<a class="headerlink" href="#3-compare_strategies-side-by-side-comparison" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Run 2-4 explicitly named strategies with identical parameters and
+return a unified comparison table.</p>
+<p><strong>Why the AI needs this:</strong> Users frequently ask <em>"Should I use an iron condor
+or iron butterfly?"</em>  Today the AI runs them separately and tries to remember
+the first result while processing the second.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategies</code></td>
+<td><code>string[]</code></td>
+<td>2-4 strategy names to compare</td>
+</tr>
+<tr>
+<td><em>(all standard strategy params)</em></td>
+<td></td>
+<td>Shared parameters</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>| metric         | iron_condor | iron_butterfly | short_straddle |
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>|----------------|-------------|----------------|----------------|
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>| trades         | 287         | 245            | 312            |
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>| mean           |  0.0712     |  0.0543        |  0.0892        |
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>| median         |  0.0534     |  0.0421        |  0.0654        |
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>| std            |  0.0832     |  0.0987        |  0.1243        |
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>| win_rate       |  0.72       |  0.65          |  0.63          |
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>| sharpe         |  1.18       |  0.95          |  0.72          |
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>| profit_factor  |  2.01       |  1.78          |  1.56          |
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>| max_drawdown   | -0.4521     | -0.6234        | -0.8901        |
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>| best_trade     |  0.3201     |  0.2987        |  0.4523        |
+</code></pre></div>
+<p>This is similar to <code>scan_strategies</code> but intentionally limited to a small
+set and includes more detailed metrics since there are fewer strategies to
+display.</p>
+<hr />
+<h3 id="4-analyze_trades-trade-level-analytics">4. <code>analyze_trades</code> — Trade-Level Analytics<a class="headerlink" href="#4-analyze_trades-trade-level-analytics" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Compute detailed analytics on raw trade results that go beyond
+what the default aggregated output provides.</p>
+<p><strong>Why the AI needs this:</strong> The current <code>run_strategy</code> with <code>raw=False</code> only
+returns descriptive statistics grouped by DTE/OTM buckets.  There's no win
+rate, no Sharpe, no profit factor, no drawdown curve.  With <code>raw=True</code> the AI
+gets individual trades but has to mentally compute statistics — which LLMs are
+bad at.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategy_name</code></td>
+<td><code>string</code></td>
+<td>Strategy to analyze</td>
+</tr>
+<tr>
+<td><code>group_by</code></td>
+<td><code>string</code> (optional)</td>
+<td>Additional grouping: <code>"month"</code>, <code>"weekday"</code>, <code>"dte_range"</code>, <code>"otm_pct_range"</code>. Default: overall (no grouping).</td>
+</tr>
+<tr>
+<td><em>(all standard strategy params)</em></td>
+<td></td>
+<td>Strategy parameters</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output (overall mode):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Summary for short_put_spread (312 trades, 2018-01-03 to 2023-12-28):
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>| metric              | value   |
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>|---------------------|---------|
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>| total_trades        | 312     |
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>| winners             | 212     |
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>| losers              | 100     |
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>| win_rate            | 0.6795  |
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>| mean_return         | 0.0843  |
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>| median_return       | 0.0621  |
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>| std_return          | 0.0987  |
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>| sharpe_ratio        | 0.854   |
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>| profit_factor       | 2.14    |
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>| avg_winner          | 0.1523  |
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>| avg_loser           | -0.0612 |
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>| max_win             | 0.4521  |
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>| max_loss            | -0.3201 |
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>| expectancy          | 0.0843  |
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>| payoff_ratio        | 2.49    |
+</code></pre></div>
+<p><strong>Output (grouped by month):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>| month | trades | win_rate | mean    | sharpe |
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>|-------|--------|----------|---------|--------|
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>| Jan   | 26     | 0.73     |  0.0921 |  1.32  |
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>| Feb   | 24     | 0.71     |  0.0843 |  1.18  |
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>| Mar   | 28     | 0.54     | -0.0123 | -0.15  |
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>...
+</code></pre></div>
+<p>This lets the AI discover seasonality, day-of-week effects, and which
+DTE/OTM buckets drive performance.</p>
+<p><strong>Metrics glossary:</strong></p>
+<ul>
+<li><strong>win_rate</strong>: winners / total_trades</li>
+<li><strong>sharpe_ratio</strong>: mean_return / std_return (simple, non-annualized)</li>
+<li><strong>profit_factor</strong>: gross_profit / gross_loss</li>
+<li><strong>expectancy</strong>: (win_rate * avg_winner) + ((1 - win_rate) * avg_loser)</li>
+<li><strong>payoff_ratio</strong>: avg_winner / abs(avg_loser)</li>
+</ul>
+<hr />
+<h3 id="5-best_buckets-top-performing-segments">5. <code>best_buckets</code> — Top Performing Segments<a class="headerlink" href="#5-best_buckets-top-performing-segments" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Find the top N DTE/OTM/delta segments across one or more
+strategies, ranked by a chosen metric.</p>
+<p><strong>Why the AI needs this:</strong> The current aggregated output returns <em>all</em> buckets
+for one strategy.  The AI has to scan a 30+ row table to find the good ones.
+This tool does the scanning automatically across multiple strategies.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategies</code></td>
+<td><code>string[]</code> (optional)</td>
+<td>Strategies to scan (default: all non-calendar)</td>
+</tr>
+<tr>
+<td><code>sort_by</code></td>
+<td><code>string</code></td>
+<td><code>"mean"</code>, <code>"median"</code>, <code>"count"</code>, <code>"sharpe"</code>. Default: <code>"mean"</code></td>
+</tr>
+<tr>
+<td><code>min_count</code></td>
+<td><code>integer</code></td>
+<td>Minimum trade count for a bucket to qualify (default 10). Filters noise.</td>
+</tr>
+<tr>
+<td><code>top_n</code></td>
+<td><code>integer</code></td>
+<td>Number of top buckets to return (default 15)</td>
+</tr>
+<tr>
+<td><em>(standard strategy params)</em></td>
+<td></td>
+<td>Shared parameters</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>| strategy         | dte_range | otm_pct_range | count | mean    | std    | sharpe |
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>|------------------|-----------|---------------|-------|---------|--------|--------|
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>| short_put_spread | (21, 28]  | (0.05, 0.10]  | 45    |  0.1201 | 0.0654 |  1.84  |
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>| iron_condor      | (28, 35]  | (0.10, 0.15]  | 38    |  0.1087 | 0.0721 |  1.51  |
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>| short_straddle   | (14, 21]  | (0.00, 0.05]  | 52    |  0.0954 | 0.0687 |  1.39  |
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>...
+</code></pre></div>
+<p>This is the single most powerful discovery tool — it answers <em>"Where in the
+DTE/OTM space do options strategies make money?"</em> across all strategies at
+once.</p>
+<hr />
+<h2 id="enhanced-system-prompt-additions">Enhanced System Prompt Additions<a class="headerlink" href="#enhanced-system-prompt-additions" title="Permanent link">&para;</a></h2>
+<p>The agent system prompt needs to teach the AI <em>when</em> to use each new tool.
+Proposed additions to the <code>## Workflow</code> section:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>## Strategy Discovery Workflow
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>When a user wants to FIND profitable strategies (not just run a specific one):
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>1. **Start broad → `scan_strategies`**
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>   Use category filters to match the user&#39;s market view:
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>   - &quot;I&#39;m bullish on AAPL&quot; → scan with category=&quot;bullish&quot;
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>   - &quot;I want income&quot; → scan with category=&quot;income&quot;
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>   - &quot;What works best?&quot; → scan all strategies
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>2. **Drill into winners → `parameter_sweep`**
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>   Take the top 2-3 strategies from the scan and sweep their key params:
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>   - Sweep max_entry_dte across [14, 21, 30, 45, 60, 90]
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>   - Sweep max_otm_pct across [0.05, 0.10, 0.15, 0.20, 0.30]
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>   - 2D sweep of DTE x OTM for the best strategy
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>3. **Compare finalists → `compare_strategies`**
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>   Run the top 2-3 with their optimal params side-by-side
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>4. **Deep-dive → `analyze_trades`**
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>   For the chosen strategy, show monthly seasonality, day-of-week effects,
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>   and detailed risk metrics
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>5. **Find the sweet spot → `best_buckets`**
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>   Show the user exactly which DTE/OTM combinations are most profitable
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>## When to use which tool:
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>- User asks &quot;what strategy should I use?&quot; → scan_strategies
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>- User asks &quot;what DTE is best for iron condors?&quot; → parameter_sweep
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>- User asks &quot;iron condor vs iron butterfly?&quot; → compare_strategies
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>- User asks &quot;how risky is this strategy?&quot; → analyze_trades
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>- User asks &quot;where do options make money?&quot; → best_buckets
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>- User asks &quot;run a long call spread&quot; → run_strategy (existing tool)
+</code></pre></div>
+<hr />
+<h2 id="greeks-aware-search-future-enhancement">Greeks-Aware Search (Future Enhancement)<a class="headerlink" href="#greeks-aware-search-future-enhancement" title="Permanent link">&para;</a></h2>
+<p>The EODHD advanced guide highlights that professionals think in terms of Greek
+exposures, not strategy names.  A future enhancement could add a
+<code>search_by_greeks</code> tool:</p>
+<p><strong>Concept:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target_delta</code></td>
+<td><code>float</code> (optional)</td>
+<td>Desired net delta exposure (e.g. 0.0 for neutral)</td>
+</tr>
+<tr>
+<td><code>target_theta</code></td>
+<td><code>string</code> (optional)</td>
+<td><code>"positive"</code> (collect decay) or <code>"negative"</code> (pay for optionality)</td>
+</tr>
+<tr>
+<td><code>target_vega</code></td>
+<td><code>string</code> (optional)</td>
+<td><code>"positive"</code> (long vol) or <code>"negative"</code> (short vol)</td>
+</tr>
+<tr>
+<td><code>target_gamma</code></td>
+<td><code>string</code> (optional)</td>
+<td><code>"positive"</code> or <code>"negative"</code></td>
+</tr>
+</tbody>
+</table>
+<p>This would internally map to appropriate strategies:</p>
+<ul>
+<li>delta-neutral + positive theta + negative vega → iron condor, iron butterfly, short straddle</li>
+<li>delta-neutral + negative theta + positive vega → long straddle, long strangle, reverse iron condor</li>
+<li>positive delta + positive theta → short puts, bull put spread, covered call</li>
+</ul>
+<p><strong>Prerequisite:</strong> This requires the dataset to include Greek columns (delta at
+minimum).  The tool would validate this and fall back to strategy-name-based
+search if Greeks aren't available.</p>
+<p>This is not proposed for the initial implementation but is a natural extension
+once the core search tools are in place.</p>
+<hr />
+<h2 id="signal-enhanced-scanning-future-enhancement">Signal-Enhanced Scanning (Future Enhancement)<a class="headerlink" href="#signal-enhanced-scanning-future-enhancement" title="Permanent link">&para;</a></h2>
+<p>The EODHD beginner guide shows that combining technical signals with entry
+timing changes results dramatically.  Optopsy already has signals (<code>rsi_below</code>,
+<code>rsi_above</code>, <code>sma_below</code>, <code>sma_above</code>, <code>day_of_week</code>, <code>and_signals</code>,
+<code>or_signals</code>) but they aren't exposed to the AI chat at all.</p>
+<p><strong>Proposed approach:</strong></p>
+<p>Add a <code>signals</code> parameter to <code>scan_strategies</code> and <code>parameter_sweep</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;signals&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">&quot;entry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;and&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">      </span><span class="nt">&quot;conditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;signal&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rsi_below&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;period&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;threshold&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">},</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;signal&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;day_of_week&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;days&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">]}</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="nt">&quot;exit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;or&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">      </span><span class="nt">&quot;conditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;signal&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rsi_above&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;period&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;threshold&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">70</span><span class="p">}</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="p">}</span>
+</code></pre></div>
+<p>The tool would construct the appropriate <code>and_signals()</code> / <code>or_signals()</code>
+compositions and pass them as <code>entry_signal</code> / <code>exit_signal</code> to each strategy.</p>
+<p>This would let the AI answer questions like:
+- <em>"Do iron condors work better when entered on oversold RSI days?"</em>
+- <em>"What's the best strategy to enter when price is above the 50-day SMA?"</em></p>
+<p><strong>Not proposed for initial implementation</strong> because the combinatorial space
+(strategy x params x signals) is large and could be slow.  Better to get the
+core search tools working first.</p>
+<hr />
+<h2 id="implementation-priority">Implementation Priority<a class="headerlink" href="#implementation-priority" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Tool</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td><code>scan_strategies</code></td>
+<td>Medium</td>
+<td>Highest — unlocks "what's best?" questions</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td><code>analyze_trades</code></td>
+<td>Low</td>
+<td>High — proper metrics for any strategy result</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td><code>parameter_sweep</code></td>
+<td>Medium</td>
+<td>High — finds optimal params automatically</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td><code>compare_strategies</code></td>
+<td>Low</td>
+<td>Medium — cleaner than manual comparison</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td><code>best_buckets</code></td>
+<td>Medium</td>
+<td>Medium — cross-strategy bucket discovery</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td><code>search_by_greeks</code></td>
+<td>High</td>
+<td>Medium — requires Greek data in dataset</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>Signal-enhanced scanning</td>
+<td>High</td>
+<td>Medium — combinatorial complexity</td>
+</tr>
+</tbody>
+</table>
+<p>P0 items should be built first.  They cover the two most common user intents:
+<em>"What strategy should I use?"</em> and <em>"How good is this strategy, really?"</em></p>
+<hr />
+<h2 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>scan_strategies</code> running all 28 strategies</strong> could be slow on large
+  datasets.  Mitigation: run non-calendar strategies first (they share the same
+  data pipeline), skip strategies that require data columns not present (e.g.,
+  skip delta-filtered strategies when no delta column exists).  Consider running
+  strategies in parallel using <code>concurrent.futures</code>.</li>
+<li><strong><code>parameter_sweep</code> with 2D sweeps</strong> can generate many combinations (e.g.,
+  6 DTE values x 5 OTM values = 30 runs).  Mitigation: cap at 50 combinations
+  per sweep call and warn the user if they request more.</li>
+<li><strong>Memory</strong>: All tools compute results from <code>raw=True</code> trades and discard
+  intermediate DataFrames.  Only the summary metrics table is kept.</li>
+<li><strong>LLM token budget</strong>: All new tools should follow the existing pattern of
+  returning a compact <code>llm_summary</code> (table + key insight) to the AI and a
+  richer <code>user_display</code> to the UI.</li>
+</ul>
+<hr />
+<h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
+<p>Each new tool needs:</p>
+<ol>
+<li><strong>Unit tests</strong> using the existing test fixtures in <code>conftest.py</code> (the
+   <code>data</code> and <code>multi_strike_data</code> fixtures provide enough rows for basic
+   strategy runs)</li>
+<li><strong>Edge cases</strong>: empty results, single-strategy scan, sweep with one value,
+   dataset missing optional columns</li>
+<li><strong>Integration test</strong>: load sample data, run <code>scan_strategies</code>, verify the
+   output has expected columns and is sorted correctly</li>
+</ol>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p>These five tools transform the AI from a manual strategy runner into an
+autonomous strategy discovery engine.  The user says <em>"Find me the best income
+strategy for SPX"</em> and the AI can:</p>
+<ol>
+<li><code>scan_strategies(category="income")</code> to find the top candidates</li>
+<li><code>parameter_sweep(strategy="short_put_spread", sweep_param="max_entry_dte")</code>
+   to optimize the winner</li>
+<li><code>analyze_trades(strategy="short_put_spread", group_by="month")</code> to check
+   for seasonality</li>
+<li>Present a complete recommendation with supporting data</li>
+</ol>
+<p>Instead of 12+ tool calls and mental arithmetic, this takes 3 focused calls
+with proper statistical metrics at every step.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "toc.follow", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
