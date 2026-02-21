@@ -622,6 +622,36 @@ def get_tool_schemas() -> list[dict]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "fetch_stock_data",
+                "description": (
+                    "Fetch historical daily OHLCV (open/high/low/close/volume) stock "
+                    "price data for a symbol via yfinance. Results are cached locally. "
+                    "Use this to inspect price history, verify signal dates, or prime "
+                    "the cache before running strategies with TA signals."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {
+                            "type": "string",
+                            "description": "US stock ticker symbol (e.g. SPY, AAPL, QQQ)",
+                        },
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date (YYYY-MM-DD). Omit for all available history.",
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "description": "End date (YYYY-MM-DD). Omit for today.",
+                        },
+                    },
+                    "required": ["symbol"],
+                },
+            },
+        },
     ]
 
     # Data provider tools (only added when API keys are configured)
@@ -1228,6 +1258,70 @@ def execute_tool(
         return _result(summary, user_display=display)
 
     # -----------------------------------------------------------------
+    # fetch_stock_data — explicit yfinance OHLCV fetch (display-only)
+    # -----------------------------------------------------------------
+    if tool_name == "fetch_stock_data":
+        try:
+            import yfinance as yf
+        except ImportError:
+            return _result("yfinance is not installed. Run: pip install yfinance")
+
+        symbol = arguments["symbol"].upper()
+        start_date = arguments.get("start_date")
+        end_date = arguments.get("end_date")
+
+        start_dt = pd.Timestamp(start_date).date() if start_date else None
+        end_dt = pd.Timestamp(end_date).date() if end_date else date.today()
+        # When no start date given, fetch the full available history
+        fetch_start = start_dt or date(2000, 1, 1)
+
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+        gaps = _yf_compute_gaps(cached, fetch_start, end_dt)
+
+        if gaps:
+            new_frames = []
+            for gap_start, gap_end in gaps:
+                yf_start = gap_start or str(fetch_start)
+                yf_end = str(
+                    (pd.Timestamp(gap_end).date() + timedelta(days=1))
+                    if gap_end
+                    else (end_dt + timedelta(days=1))
+                )
+                try:
+                    raw = yf.download(symbol, start=yf_start, end=yf_end, progress=False)
+                    if not raw.empty:
+                        new_frames.append(_normalise_yf_df(raw, symbol))
+                except (OSError, ValueError) as exc:
+                    _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+
+            if new_frames:
+                new_data = pd.concat(new_frames, ignore_index=True)
+                cached = _yf_cache.merge_and_save(
+                    _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
+                )
+
+        if cached is None or cached.empty:
+            return _result(f"No stock data found for {symbol}.")
+
+        # Slice to requested range and rename date → quote_date for display
+        df = cached.rename(columns={"date": "quote_date"})
+        if start_dt:
+            df = df[pd.to_datetime(df["quote_date"]).dt.date >= start_dt]
+        df = df[pd.to_datetime(df["quote_date"]).dt.date <= end_dt]
+
+        if df.empty:
+            return _result(f"No stock data for {symbol} in the requested date range.")
+
+        d_min = pd.to_datetime(df["quote_date"]).dt.date.min()
+        d_max = pd.to_datetime(df["quote_date"]).dt.date.max()
+        summary = (
+            f"Fetched {len(df):,} daily price records for {symbol}. "
+            f"Date range: {d_min} to {d_max}."
+        )
+        display = f"{summary}\n\nFirst 10 rows:\n{_df_to_markdown(df.head(10))}"
+        return _result(summary, user_display=display)
+
+    # -----------------------------------------------------------------
     # run_strategy
     # -----------------------------------------------------------------
     if tool_name == "run_strategy":
@@ -1413,6 +1507,7 @@ def execute_tool(
         "preview_data",
         "build_signal",
         "preview_signal",
+        "fetch_stock_data",
         "run_strategy",
     ]
     return _result(f"Unknown tool: {tool_name}. Available: {', '.join(available)}")
