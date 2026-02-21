@@ -151,3 +151,19 @@ Pluggable provider system for fetching market data.
 2. Implement `name`, `env_key`, `get_tool_schemas()`, `get_tool_names()`, `execute()`
 3. Register in `providers/__init__.py`
 4. Provider is auto-detected if its `env_key` is set
+
+## Releasing
+
+Publishing to PyPI is automated via GitHub Actions (`.github/workflows/python-publish.yml`) using trusted publishing. To release:
+
+1. Update `version` in `setup.py` (e.g., `"2.3.0"`, or `"2.3.0b1"` for pre-releases)
+2. Commit and push the version bump
+3. Create a GitHub release via `gh release create`:
+   ```bash
+   # Stable release
+   gh release create v2.3.0 --title "v2.3.0" --notes "Release notes here"
+
+   # Pre-release / beta
+   gh release create v2.3.0b1 --title "v2.3.0b1" --notes "Release notes here" --prerelease
+   ```
+4. The workflow automatically builds and publishes to PyPI — no API tokens needed locally
