@@ -138,7 +138,6 @@ async def on_message(message: cl.Message):
     # Delay creating the response message until after all tool steps finish,
     # so the final answer always appears below the tool step items.
     response_msg: cl.Message | None = None
-    final_tokens: list[str] = []
 
     async def on_thinking_token(token: str):
         # Intermediate reasoning — silently discard; we only show the final answer.

@@ -717,6 +717,63 @@ def _intersect_with_options_dates(
     return merged.reset_index(drop=True)
 
 
+def _empty_signal_suggestion(
+    raw_signal_dates: pd.DataFrame,
+    opt_min: "date",
+    opt_max: "date",
+) -> str:
+    """Build a human-readable suggestion when a signal produces no overlapping dates.
+
+    raw_signal_dates: result of apply_signal() before intersection — the full set
+    of dates where the signal fired in the available price history.
+    opt_min / opt_max: the date range of the loaded options dataset.
+
+    Three cases:
+    1. Signal fired before the options window → suggest fetching around that date.
+    2. Signal fired after the options window → same.
+    3. Signal fired only within the options window but no dates matched → data gap.
+    4. Signal never fired at all → suggest relaxing parameters.
+    """
+    if raw_signal_dates.empty:
+        return (
+            "The signal never fired in the available price history. "
+            "Try relaxing the signal parameters (e.g. raise the RSI threshold)."
+        )
+
+    fired_dates = pd.to_datetime(raw_signal_dates["quote_date"]).dt.date
+    before = fired_dates[fired_dates < opt_min]
+    after = fired_dates[fired_dates > opt_max]
+    within = fired_dates[(fired_dates >= opt_min) & (fired_dates <= opt_max)]
+
+    # If all fired dates are inside the options window but still no overlap,
+    # it's a data-gap issue (e.g. signal fired on a date the options dataset skips).
+    if before.empty and after.empty and not within.empty:
+        return (
+            "The signal fired within your options window but on dates not present "
+            "in the dataset (possible market holiday or data gap). "
+            "Try a slightly wider date range."
+        )
+
+    parts = []
+    if not before.empty:
+        last_before = before.max()
+        suggest_start = last_before - timedelta(days=30)
+        suggest_end = last_before + timedelta(days=30)
+        parts.append(
+            f"It last fired on {last_before} (before your options window). "
+            f"Try fetching options from {suggest_start} to {suggest_end}."
+        )
+    if not after.empty:
+        first_after = after.min()
+        suggest_start = first_after - timedelta(days=30)
+        suggest_end = first_after + timedelta(days=30)
+        parts.append(
+            f"It next fires on {first_after} (after your options window). "
+            f"Try fetching options from {suggest_start} to {suggest_end}."
+        )
+    return " ".join(parts)
+
+
 MAX_ROWS = 50
 
 
@@ -1038,10 +1095,11 @@ def execute_tool(
         else:
             combined = _signals.and_signals(*built_signals)
 
-        # Compute valid dates, intersected with actual options dates
-        valid_dates = _intersect_with_options_dates(
-            apply_signal(signal_data, combined), dataset
-        )
+        # Compute valid dates, intersected with actual options dates.
+        # Keep the raw (pre-intersection) result so we can reuse it for
+        # the suggestion message without a second apply_signal() call.
+        raw_signal_dates = apply_signal(signal_data, combined)
+        valid_dates = _intersect_with_options_dates(raw_signal_dates, dataset)
 
         # Store in signals dict
         updated_signals = dict(signals)
@@ -1062,44 +1120,7 @@ def execute_tool(
         else:
             opt_min = dataset["quote_date"].min().date()
             opt_max = dataset["quote_date"].max().date()
-            # Check when the signal actually fired in the full price history
-            all_signal_dates = apply_signal(signal_data, combined)
-            if not all_signal_dates.empty:
-                fired_dates = pd.to_datetime(
-                    all_signal_dates["quote_date"]
-                ).dt.date
-                before = fired_dates[fired_dates < opt_min]
-                after = fired_dates[fired_dates > opt_max]
-                suggestion_parts = []
-                if not before.empty:
-                    last_before = before.max()
-                    suggest_start = last_before - timedelta(days=30)
-                    suggest_end = last_before + timedelta(days=30)
-                    suggestion_parts.append(
-                        f"It last fired on {last_before} (before your options window). "
-                        f"Try fetching options from {suggest_start} to {suggest_end}."
-                    )
-                if not after.empty:
-                    first_after = after.min()
-                    suggest_start = first_after - timedelta(days=30)
-                    suggest_end = first_after + timedelta(days=30)
-                    suggestion_parts.append(
-                        f"It next fires on {first_after} (after your options window). "
-                        f"Try fetching options from {suggest_start} to {suggest_end}."
-                    )
-                suggestion = (
-                    " ".join(suggestion_parts)
-                    if suggestion_parts
-                    else (
-                        f"Signal fired on {fired_dates.min()} to {fired_dates.max()} "
-                        f"— fetch options for that period."
-                    )
-                )
-            else:
-                suggestion = (
-                    "The signal never fired in the available price history. "
-                    "Try relaxing the signal parameters."
-                )
+            suggestion = _empty_signal_suggestion(raw_signal_dates, opt_min, opt_max)
             display_lines.append(
                 f"WARNING: No signal dates overlap the options data "
                 f"({opt_min} to {opt_max}). {suggestion}"
@@ -1261,55 +1282,12 @@ def execute_tool(
                 days = 0
             if days > 1:
                 sig = _signals.sustained(sig, days)
-            entry_dates = _intersect_with_options_dates(
-                apply_signal(signal_data, sig), dataset
-            )
+            raw_entry_dates = apply_signal(signal_data, sig)
+            entry_dates = _intersect_with_options_dates(raw_entry_dates, dataset)
             if entry_dates.empty:
                 opt_min = dataset["quote_date"].min().date()
                 opt_max = dataset["quote_date"].max().date()
-                # Find when the signal actually fired in the full yfinance history
-                # (unfiltered — not intersected with options dates) so we can
-                # suggest a concrete fetch range to the user.
-                all_signal_dates = apply_signal(signal_data, sig)
-                if not all_signal_dates.empty:
-                    fired_dates = pd.to_datetime(
-                        all_signal_dates["quote_date"]
-                    ).dt.date
-                    # Dates before the options window
-                    before = fired_dates[fired_dates < opt_min]
-                    # Dates after the options window
-                    after = fired_dates[fired_dates > opt_max]
-                    suggestion_parts = []
-                    if not before.empty:
-                        last_before = before.max()
-                        # Suggest a 2-month window centred on that date
-                        suggest_start = last_before - timedelta(days=30)
-                        suggest_end = last_before + timedelta(days=30)
-                        suggestion_parts.append(
-                            f"It last fired on {last_before} (before your options window). "
-                            f"Try fetching options from {suggest_start} to {suggest_end}."
-                        )
-                    if not after.empty:
-                        first_after = after.min()
-                        suggest_start = first_after - timedelta(days=30)
-                        suggest_end = first_after + timedelta(days=30)
-                        suggestion_parts.append(
-                            f"It next fires on {first_after} (after your options window). "
-                            f"Try fetching options from {suggest_start} to {suggest_end}."
-                        )
-                    suggestion = (
-                        " ".join(suggestion_parts)
-                        if suggestion_parts
-                        else (
-                            f"The signal fired on {fired_dates.min()} to "
-                            f"{fired_dates.max()} — fetch options for that period."
-                        )
-                    )
-                else:
-                    suggestion = (
-                        "The signal never fired in the available price history. "
-                        "Try relaxing the signal parameters (e.g. raise the RSI threshold)."
-                    )
+                suggestion = _empty_signal_suggestion(raw_entry_dates, opt_min, opt_max)
                 return _result(
                     f"Entry signal '{entry_signal_name}' produced no dates overlapping "
                     f"the options data ({opt_min} to {opt_max}). {suggestion}"
@@ -1326,9 +1304,17 @@ def execute_tool(
                 exit_days = 0
             if exit_days > 1:
                 exit_sig = _signals.sustained(exit_sig, exit_days)
-            strat_kwargs["exit_dates"] = _intersect_with_options_dates(
-                apply_signal(signal_data, exit_sig), dataset
-            )
+            raw_exit_dates = apply_signal(signal_data, exit_sig)
+            exit_dates = _intersect_with_options_dates(raw_exit_dates, dataset)
+            if exit_dates.empty:
+                opt_min = dataset["quote_date"].min().date()
+                opt_max = dataset["quote_date"].max().date()
+                suggestion = _empty_signal_suggestion(raw_exit_dates, opt_min, opt_max)
+                return _result(
+                    f"Exit signal '{exit_signal_name}' produced no dates overlapping "
+                    f"the options data ({opt_min} to {opt_max}). {suggestion}"
+                )
+            strat_kwargs["exit_dates"] = exit_dates
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:
