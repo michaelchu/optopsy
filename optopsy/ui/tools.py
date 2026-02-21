@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
@@ -10,10 +10,17 @@ import optopsy.signals as _signals
 from optopsy.signals import apply_signal
 
 from .providers import get_all_provider_tool_schemas, get_provider_for_tool
+from .providers.cache import ParquetCache
+from .providers.eodhd import EODHDProvider
 
 _log = logging.getLogger(__name__)
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "data")
+
+# Cache for yfinance OHLCV data (category="stocks", one file per symbol)
+_yf_cache = ParquetCache()
+_YF_CACHE_CATEGORY = "stocks"
+_YF_DEDUP_COLS = ["date"]
 
 STRATEGY_PARAMS_SCHEMA = {
     "max_entry_dte": {
@@ -623,15 +630,56 @@ def get_tool_schemas() -> list[dict]:
     return tools
 
 
+def _yf_compute_gaps(
+    cached_df: pd.DataFrame | None,
+    start_dt: date,
+    end_dt: date,
+) -> list[tuple[str | None, str | None]]:
+    """Compute date gaps for the yfinance stock cache.
+
+    Delegates to EODHDProvider._compute_date_gaps using ``date`` as the date
+    column (matching how yfinance rows are stored in the cache).
+    """
+    return EODHDProvider._compute_date_gaps(
+        cached_df, start_dt, end_dt, date_column="date"
+    )
+
+
+def _normalise_yf_df(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    """Normalise a raw yfinance download DataFrame for cache storage.
+
+    Flattens MultiIndex columns, lowercases names, strips timezone info, adds
+    ``underlying_symbol``, and keeps ``date`` (not ``quote_date``) as the date
+    column so rows are compatible with the ``stocks/`` cache schema.
+    """
+    if isinstance(df.columns, pd.MultiIndex):
+        df = df.copy()
+        df.columns = [c[0] for c in df.columns]
+    df = df.reset_index()
+    df.columns = [c.lower() for c in df.columns]
+    # yfinance uses "date" as the index name; ensure it's present
+    if "date" not in df.columns and "index" in df.columns:
+        df = df.rename(columns={"index": "date"})
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    df["underlying_symbol"] = symbol
+    keep = ["underlying_symbol", "date", "open", "high", "low", "close", "volume"]
+    return df[[c for c in keep if c in df.columns]]
+
+
 def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     """Fetch OHLCV stock data via yfinance for signal computation.
 
-    Pads the date range by 250 trading days (~1 year) so that indicators
+    Pads the date range by ~250 trading days (~1 year) so that indicators
     with long warmup periods (EMA-200, MACD) have enough history.
+
+    Results are cached in ``~/.optopsy/cache/stocks/{SYMBOL}.parquet``.
+    Only missing date ranges (gaps) are fetched from yfinance; subsequent
+    calls for the same symbol and date range are served from cache with no
+    network activity.
 
     Returns a DataFrame with columns:
         underlying_symbol, quote_date, open, high, low, close, volume
-    Or None if yfinance is not available or the fetch fails.
+    Or None if yfinance is not available or all fetches fail.
     """
     if dataset.empty:
         return None
@@ -643,46 +691,71 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
     symbols = dataset["underlying_symbol"].unique().tolist()
-    date_min = dataset["quote_date"].min()
-    date_max = dataset["quote_date"].max()
+    date_min = pd.to_datetime(dataset["quote_date"].min()).date()
+    date_max = pd.to_datetime(dataset["quote_date"].max()).date()
     # Pad start by ~250 trading days for indicator warmup
     padded_start = date_min - timedelta(days=365)
 
     frames = []
     for symbol in symbols:
         try:
-            df = yf.download(
-                symbol,
-                start=str(padded_start.date()),
-                end=str((date_max + timedelta(days=1)).date()),
-                progress=False,
-            )
-            if df.empty:
+            # Phase 1: read cache, detect missing date ranges
+            cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+            gaps = _yf_compute_gaps(cached, padded_start, date_max)
+
+            # Phase 2: fetch only the missing gaps from yfinance
+            if gaps:
+                _log.info(
+                    "Fetching %d gap(s) from yfinance for %s: %s",
+                    len(gaps),
+                    symbol,
+                    gaps,
+                )
+                new_frames = []
+                for gap_start, gap_end in gaps:
+                    yf_start = gap_start or str(padded_start)
+                    yf_end = str(
+                        (pd.Timestamp(gap_end).date() + timedelta(days=1))
+                        if gap_end
+                        else (date_max + timedelta(days=1))
+                    )
+                    raw = yf.download(
+                        symbol, start=yf_start, end=yf_end, progress=False
+                    )
+                    if raw.empty:
+                        continue
+                    new_frames.append(_normalise_yf_df(raw, symbol))
+
+                if new_frames:
+                    new_data = pd.concat(new_frames, ignore_index=True)
+                    cached = _yf_cache.merge_and_save(
+                        _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
+                    )
+            else:
+                _log.info("Full cache hit for %s stock data, skipping yfinance", symbol)
+
+            if cached is None or cached.empty:
                 continue
-            # yfinance returns MultiIndex columns for single tickers
-            cols = df.columns
-            if isinstance(cols, pd.MultiIndex):
-                df.columns = [c[0] for c in cols]
-            price_df = df.reset_index()
-            price_df.columns = [c.lower() for c in price_df.columns]
-            price_df = price_df.rename(columns={"date": "quote_date"})
-            price_df["quote_date"] = pd.to_datetime(
-                price_df["quote_date"]
-            ).dt.tz_localize(None)
-            price_df["underlying_symbol"] = symbol
-            frames.append(
-                price_df[
-                    [
-                        "underlying_symbol",
-                        "quote_date",
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
+
+            # Phase 3: slice to [padded_start, date_max], rename date → quote_date
+            result = cached[
+                (pd.to_datetime(cached["date"]).dt.date >= padded_start)
+                & (pd.to_datetime(cached["date"]).dt.date <= date_max)
+            ].rename(columns={"date": "quote_date"})
+            if not result.empty:
+                frames.append(
+                    result[
+                        [
+                            "underlying_symbol",
+                            "quote_date",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "volume",
+                        ]
                     ]
-                ]
-            )
+                )
         except Exception as exc:
             _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
 
