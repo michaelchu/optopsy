@@ -1,10 +1,14 @@
 import logging
 from datetime import date, timedelta
+from typing import Any
 
 import pandas as pd
 
+import optopsy.signals as _signals
+from optopsy.signals import apply_signal
+
 from ..providers.cache import ParquetCache, compute_date_gaps
-from ._schemas import STRATEGIES, _DATE_ONLY_SIGNALS
+from ._schemas import SIGNAL_REGISTRY, STRATEGIES, _DATE_ONLY_SIGNALS
 
 _log = logging.getLogger(__name__)
 
@@ -434,3 +438,72 @@ def _make_result_summary(
             }
         )
     return summary
+
+
+def _signal_slot_summary(
+    valid_dates: pd.DataFrame,
+) -> tuple[int, list[str], "date | None", "date | None"]:
+    """Extract common stats from a signal slot DataFrame.
+
+    Returns ``(n_dates, symbols, date_min, date_max)``.  When the slot is
+    empty ``symbols`` is ``[]`` and date values are ``None``.
+    """
+    n_dates = len(valid_dates)
+    if n_dates == 0:
+        return 0, [], None, None
+    symbols = valid_dates["underlying_symbol"].unique().tolist()
+    date_min = valid_dates["quote_date"].min().date()
+    date_max = valid_dates["quote_date"].max().date()
+    return n_dates, symbols, date_min, date_max
+
+
+def _date_only_fallback(dataset: pd.DataFrame) -> pd.DataFrame:
+    """Build a minimal date-indexed DataFrame for date-only signals.
+
+    Used when no OHLCV stock data is needed — extracts unique
+    ``(underlying_symbol, quote_date)`` pairs from the options dataset.
+    """
+    return (
+        dataset[["underlying_symbol", "quote_date"]]
+        .drop_duplicates()
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+
+
+def _resolve_inline_signal(
+    signal_name: str,
+    arguments: dict[str, Any],
+    signal_data: pd.DataFrame,
+    dataset: pd.DataFrame,
+    prefix: str,
+) -> tuple[pd.DataFrame | None, str | None]:
+    """Resolve an inline signal name to a filtered dates DataFrame.
+
+    ``prefix`` is ``"entry"`` or ``"exit"`` — used to look up
+    ``{prefix}_signal_params`` and ``{prefix}_signal_days`` in *arguments*.
+
+    Returns ``(dates_df, error_msg)``.  On success ``error_msg`` is None.
+    On failure ``dates_df`` is None and ``error_msg`` explains the issue.
+    """
+    params = arguments.get(f"{prefix}_signal_params") or {}
+    sig = SIGNAL_REGISTRY[signal_name](**params)
+    try:
+        days = int(arguments.get(f"{prefix}_signal_days", 0))
+    except (TypeError, ValueError):
+        days = 0
+    if days > 1:
+        sig = _signals.sustained(sig, days)
+
+    raw_dates = apply_signal(signal_data, sig)
+    filtered = _intersect_with_options_dates(raw_dates, dataset)
+    if filtered.empty:
+        opt_min = dataset["quote_date"].min().date()
+        opt_max = dataset["quote_date"].max().date()
+        suggestion = _empty_signal_suggestion(raw_dates, opt_min, opt_max)
+        kind = prefix.capitalize()
+        return None, (
+            f"{kind} signal '{signal_name}' produced no dates overlapping "
+            f"the options data ({opt_min} to {opt_max}). {suggestion}"
+        )
+    return filtered, None

@@ -364,6 +364,48 @@ def get_tool_schemas() -> list[dict]:
                                 "Omit to use the most-recently-loaded dataset."
                             ),
                         },
+                        "rows": {
+                            "type": "integer",
+                            "description": "Number of rows to show (default: 5)",
+                            "minimum": 1,
+                        },
+                        "position": {
+                            "type": "string",
+                            "enum": ["head", "tail"],
+                            "description": "Show first or last rows (default: head)",
+                        },
+                        "sample": {
+                            "type": "boolean",
+                            "description": "If true, show random sample instead of head/tail",
+                        },
+                    },
+                    "required": [],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "describe_data",
+                "description": (
+                    "Show summary statistics, data types, missing values, and "
+                    "distributions for a dataset. Use for data quality checks "
+                    "and debugging."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "dataset_name": {
+                            "type": "string",
+                            "description": "Dataset to describe. Omit for most recent.",
+                        },
+                        "columns": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Specific columns to describe. Omit for all."
+                            ),
+                        },
                     },
                     "required": [],
                 },
@@ -709,6 +751,21 @@ def get_tool_schemas() -> list[dict]:
         {
             "type": "function",
             "function": {
+                "name": "list_signals",
+                "description": (
+                    "List all named signal slots built in this session. "
+                    "Shows slot names, date counts, and date ranges."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "inspect_cache",
                 "description": (
                     "List all locally cached datasets and their date ranges without "
@@ -724,6 +781,28 @@ def get_tool_schemas() -> list[dict]:
                             "description": (
                                 "Optional ticker symbol to filter results (e.g. 'SPY'). "
                                 "Omit to list all cached symbols."
+                            ),
+                        },
+                    },
+                    "required": [],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "clear_cache",
+                "description": (
+                    "Delete cached datasets (options chains, stock prices). "
+                    "Optionally filter by symbol."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {
+                            "type": "string",
+                            "description": (
+                                "Ticker to clear (e.g. 'SPY'). Omit to clear all."
                             ),
                         },
                     },
