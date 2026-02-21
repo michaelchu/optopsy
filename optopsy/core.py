@@ -1,8 +1,10 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-import pandas as pd
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
 import numpy as np
-from .definitions import evaluated_cols, describe_cols
-from .checks import _run_checks, _run_calendar_checks
+import pandas as pd
+
+from .checks import _run_calendar_checks, _run_checks
+from .definitions import describe_cols, evaluated_cols
 from .timestamps import normalize_dates
 
 

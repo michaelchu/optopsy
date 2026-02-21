@@ -6,7 +6,6 @@ import types
 try:
     import pandas_ta  # noqa: F401
 except (ImportError, ModuleNotFoundError, Exception):
-    import numpy as np
     import pandas as pd
 
     pta = types.ModuleType("pandas_ta")

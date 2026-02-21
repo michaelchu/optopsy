@@ -1,6 +1,8 @@
 import os
-import optopsy as op
+
 import tabulate as tb
+
+import optopsy as op
 
 
 def filepath():

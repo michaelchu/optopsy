@@ -10,7 +10,7 @@ pytest.importorskip("yfinance", reason="yfinance not installed (install ui extra
 pytest.importorskip("chainlit", reason="chainlit not installed (install ui extras)")
 
 from optopsy.ui.providers.cache import ParquetCache
-from optopsy.ui.tools import _fetch_stock_data_for_signals, _YF_CACHE_CATEGORY
+from optopsy.ui.tools import _YF_CACHE_CATEGORY, _fetch_stock_data_for_signals
 
 # ---------------------------------------------------------------------------
 # Helpers

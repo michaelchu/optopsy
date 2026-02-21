@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # Core library packages (always installed)
 _core_packages = find_packages(

@@ -1,4 +1,5 @@
 import pytest
+
 import optopsy.checks as op
 
 
