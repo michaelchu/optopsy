@@ -7,6 +7,7 @@ import pandas as pd
 
 import optopsy as op
 import optopsy.signals as _signals
+from optopsy.signals import apply_signal
 
 from .providers import get_all_provider_tool_schemas, get_provider_for_tool
 
@@ -748,15 +749,51 @@ def execute_tool(
             if k not in _signal_keys
             and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
         }
-        # Resolve entry_signal string -> SignalFunc at call-time (fresh closure)
+        # Resolve entry/exit signals to pre-computed date DataFrames
         entry_signal_name = arguments.get("entry_signal")
-        if entry_signal_name:
-            if entry_signal_name not in SIGNAL_REGISTRY:
+        exit_signal_name = arguments.get("exit_signal")
+
+        # Validate signal names early, before fetching stock data
+        if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
+            return ToolResult(
+                f"Unknown entry_signal '{entry_signal_name}'. "
+                f"Available: {', '.join(SIGNAL_NAMES)}",
+                dataset,
+            )
+        if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
+            return ToolResult(
+                f"Unknown exit_signal '{exit_signal_name}'. "
+                f"Available: {', '.join(SIGNAL_NAMES)}",
+                dataset,
+            )
+
+        # Determine if we need OHLCV stock data for signal computation
+        needs_stock = (
+            entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
+        ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+
+        signal_data = None
+        if needs_stock:
+            signal_data = _fetch_stock_data_for_signals(dataset)
+            if signal_data is None:
                 return ToolResult(
-                    f"Unknown entry_signal '{entry_signal_name}'. "
-                    f"Available: {', '.join(SIGNAL_NAMES)}",
+                    "TA signals require stock price data but yfinance is not "
+                    "installed or the fetch failed. Install yfinance "
+                    "(`pip install yfinance`) and try again.",
                     dataset,
                 )
+
+        # For date-only signals, extract unique dates from the option dataset
+        if signal_data is None and (entry_signal_name or exit_signal_name):
+            signal_data = (
+                dataset[["underlying_symbol", "quote_date"]]
+                .drop_duplicates()
+                .sort_values(["underlying_symbol", "quote_date"])
+                .reset_index(drop=True)
+            )
+
+        # Resolve entry_signal string -> SignalFunc -> pre-computed entry_dates
+        if entry_signal_name:
             entry_params = arguments.get("entry_signal_params") or {}
             sig = SIGNAL_REGISTRY[entry_signal_name](**entry_params)
             # Wrap with sustained() if entry_signal_days is provided
@@ -766,16 +803,10 @@ def execute_tool(
                 days = 0
             if days > 1:
                 sig = _signals.sustained(sig, days)
-            strat_kwargs["entry_signal"] = sig
-        # Resolve exit_signal string -> SignalFunc
-        exit_signal_name = arguments.get("exit_signal")
+            strat_kwargs["entry_dates"] = apply_signal(signal_data, sig)
+
+        # Resolve exit_signal string -> SignalFunc -> pre-computed exit_dates
         if exit_signal_name:
-            if exit_signal_name not in SIGNAL_REGISTRY:
-                return ToolResult(
-                    f"Unknown exit_signal '{exit_signal_name}'. "
-                    f"Available: {', '.join(SIGNAL_NAMES)}",
-                    dataset,
-                )
             exit_params = arguments.get("exit_signal_params") or {}
             exit_sig = SIGNAL_REGISTRY[exit_signal_name](**exit_params)
             try:
@@ -784,22 +815,7 @@ def execute_tool(
                 exit_days = 0
             if exit_days > 1:
                 exit_sig = _signals.sustained(exit_sig, exit_days)
-            strat_kwargs["exit_signal"] = exit_sig
-        # Fetch OHLCV stock data if any signal needs it (skip for date-only signals)
-        needs_stock = (
-            entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
-        ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
-        if needs_stock:
-            stock_data = _fetch_stock_data_for_signals(dataset)
-            if stock_data is not None:
-                strat_kwargs["stock_data"] = stock_data
-            else:
-                return ToolResult(
-                    "TA signals require stock price data but yfinance is not "
-                    "installed or the fetch failed. Install yfinance "
-                    "(`pip install yfinance`) and try again.",
-                    dataset,
-                )
+            strat_kwargs["exit_dates"] = apply_signal(signal_data, exit_sig)
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:
