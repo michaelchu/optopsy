@@ -20,9 +20,12 @@ You help users:
 ## Workflow
 - If a data provider is available (e.g. `fetch_options_data`), use it to fetch data for a ticker. \
 This loads the data directly into memory — no file step needed.
-- When fetching data, ALWAYS provide both `start_date` and `end_date`. If the user doesn't specify \
-dates, pick a reasonable 3-month window ending today. Always respect the user's requested date range \
-exactly — never widen or extend it.
+- When fetching data, always respect the user's intent regarding dates:
+  - If the user specifies dates, use them exactly — never widen or extend the range.
+  - If the user says "use cached data", "data in the cache", or similar, call `fetch_options_data` \
+with NO `start_date` or `end_date` — this returns cached data without hitting the API.
+  - If the user doesn't mention dates and doesn't refer to cached data, pick a reasonable \
+3-month window ending today and provide both `start_date` and `end_date`.
 - Alternatively, use `list_data_files` and `load_csv_data` to load from local CSV files.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
@@ -323,6 +326,14 @@ class OptopsyAgent:
     def __init__(self, model: str = "anthropic/claude-haiku-4-5-20251001"):
         self.model = model
         self.tools = get_tool_schemas()
+        # Cache tool schemas as a prefix on Anthropic models — add cache_control
+        # to the last tool so all tool definitions are cached together.  Cache
+        # order: tools → system → messages.  On subsequent tool-loop iterations
+        # this saves ~2,250 tokens per call (cache hit = 10% of base price).
+        if (
+            self.model.startswith("anthropic/") or self.model.startswith("claude")
+        ) and self.tools:
+            self.tools[-1] = {**self.tools[-1], "cache_control": {"type": "ephemeral"}}
         self.dataset: pd.DataFrame | None = None
         self.signals: dict[str, pd.DataFrame] = {}
         # Named dataset registry — multiple datasets can be active at once.
@@ -359,23 +370,57 @@ class OptopsyAgent:
         means token usage grows with conversation length.  For very long
         sessions consider adding history summarization before calling chat().
         """
-        # Use Anthropic prompt caching for the system prompt: mark it with
-        # cache_control so it is cached after the first call and not re-billed
-        # on subsequent iterations.  LiteLLM passes this header to the API
-        # transparently; for non-Anthropic providers the content block form is
-        # used as-is without the extra key, so it degrades gracefully.
+        # Build the system message.  For Anthropic models, use the content-block
+        # form so we can attach cache_control to the static prompt and append a
+        # dynamic results memo without invalidating the cached prefix.
+        # The results memo gives the LLM passive awareness of prior strategy runs
+        # without requiring an explicit list_results tool call — critical for
+        # comparisons where old tool results have already been compacted away.
         system_msg: dict[str, Any]
         if self.model.startswith("anthropic/") or self.model.startswith("claude"):
-            system_msg = {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": SYSTEM_PROMPT,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-            }
+            system_content: list[dict[str, Any]] = [
+                {
+                    "type": "text",
+                    "text": SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            # Append a compact memo of session results so the LLM can compare
+            # strategies without calling list_results again.  Not cached —
+            # it changes after each run — but it's tiny (~50-200 chars).
+            if self.results:
+                top = sorted(
+                    self.results.values(),
+                    key=lambda r: r.get("mean_return") or float("-inf"),
+                    reverse=True,
+                )[:5]
+                lines = []
+                for r in top:
+                    parts = [str(r.get("strategy", "?"))]
+                    if "max_entry_dte" in r:
+                        parts.append(f"dte={r['max_entry_dte']}")
+                    if "exit_dte" in r:
+                        parts.append(f"exit={r['exit_dte']}")
+                    if "max_otm_pct" in r:
+                        parts.append(f"otm={r['max_otm_pct']:.2f}")
+                    if r.get("mean_return") is not None:
+                        parts.append(f"mean={r['mean_return']:.4f}")
+                    if r.get("win_rate") is not None:
+                        parts.append(f"wr={r['win_rate']:.2%}")
+                    lines.append(" | ".join(parts))
+                n_total = len(self.results)
+                n_shown = len(top)
+                more = (
+                    f" ({n_total - n_shown} more not shown)"
+                    if n_total > n_shown
+                    else ""
+                )
+                memo = (
+                    f"Session results so far ({n_total} run(s), top {n_shown} by mean_return{more}):\n"
+                    + "\n".join(lines)
+                )
+                system_content.append({"type": "text", "text": memo})
+            system_msg = {"role": "system", "content": system_content}
         else:
             system_msg = {"role": "system", "content": SYSTEM_PROMPT}
 

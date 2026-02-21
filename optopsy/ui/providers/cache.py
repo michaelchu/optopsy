@@ -63,13 +63,18 @@ def compute_date_gaps(
             if clamped_start <= clamped_end:
                 gaps.append((str(clamped_start), str(clamped_end)))
 
-    # Gap after cached range
+    # Gap after cached range.
+    # Only fetch beyond cached_max when the user explicitly requested an end
+    # date past what we have, OR when a specific start_date was given that
+    # implies they want data up to today (open-ended but intentional).
+    # A fully open-ended request (no start_dt, no end_dt) means "use the
+    # cache as-is" — don't trigger a live fetch just because today > cached_max.
     if end_dt and end_dt > cached_max:
         gaps.append((str(cached_max + timedelta(days=1)), str(end_dt)))
-    elif end_dt is None:
-        gap_start_date = cached_max + timedelta(days=1)
-        if start_dt:
-            gap_start_date = max(gap_start_date, start_dt)
+    elif end_dt is None and start_dt is not None:
+        # start_dt given but no end_dt → user wants data from start_dt onward;
+        # fetch the tail if cached_max doesn't already cover start_dt onward.
+        gap_start_date = max(cached_max + timedelta(days=1), start_dt)
         gaps.append((str(gap_start_date), None))
 
     return gaps
