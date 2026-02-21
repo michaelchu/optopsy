@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 import optopsy.checks as op
@@ -159,28 +160,20 @@ class TestCheckDatesDataframe:
             op._check_dates_dataframe("some key", "invalid")
 
     def test_rejects_missing_columns(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="missing required columns"):
             op._check_dates_dataframe("some key", pd.DataFrame({"foo": [1]}))
 
     def test_accepts_valid_dataframe(self):
-        import pandas as pd
-
         df = pd.DataFrame({"underlying_symbol": ["SPX"], "quote_date": ["2024-01-01"]})
         assert op._check_dates_dataframe("some key", df) is None
 
 
 class TestCheckDataTypes:
     def test_rejects_missing_column(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="Expected column"):
             op._check_data_types(pd.DataFrame({"some_col": ["some val"]}))
 
     def test_rejects_wrong_type(self):
-        import pandas as pd
-
         with pytest.raises(
             ValueError, match="underlying_symbol does not match expected types"
         ):
@@ -189,37 +182,25 @@ class TestCheckDataTypes:
 
 class TestCheckGreekColumn:
     def test_rejects_missing_delta(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="Greek column 'delta' not found"):
             op._check_greek_column(pd.DataFrame({"bid": [1.0]}), "delta")
 
     def test_rejects_wrong_type(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="does not match expected types"):
             op._check_greek_column(pd.DataFrame({"delta": ["string"]}), "delta")
 
     def test_accepts_valid_delta(self):
-        import pandas as pd
-
         assert op._check_greek_column(pd.DataFrame({"delta": [0.5]}), "delta") is None
 
 
 class TestCheckVolumeColumn:
     def test_rejects_missing_volume(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="volume.*not found"):
             op._check_volume_column(pd.DataFrame({"bid": [1.0]}))
 
     def test_rejects_wrong_type(self):
-        import pandas as pd
-
         with pytest.raises(ValueError, match="does not match expected types"):
             op._check_volume_column(pd.DataFrame({"volume": ["string"]}))
 
     def test_accepts_valid_volume(self):
-        import pandas as pd
-
         assert op._check_volume_column(pd.DataFrame({"volume": [100]})) is None

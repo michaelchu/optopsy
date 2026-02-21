@@ -1034,11 +1034,15 @@ def test_nan_in_bid_ask_filtered(data):
 # =============================================================================
 
 
-def test_drop_nan_false(data):
-    """drop_nan=False should keep NaN rows in aggregated output."""
-    results_drop = long_calls(data, drop_nan=True)
-    results_keep = long_calls(data, drop_nan=False)
-    # With drop_nan=False, we may get more rows (including NaN groups)
+def test_drop_nan_false(multi_strike_data):
+    """drop_nan=False should retain groups where all non-count stats are NaN."""
+    # Use narrow DTE/OTM intervals to create bins with no data (NaN stats)
+    common = dict(
+        dte_interval=5, max_entry_dte=90, otm_pct_interval=0.01, max_otm_pct=0.5
+    )
+    results_drop = long_calls(multi_strike_data, drop_nan=True, **common)
+    results_keep = long_calls(multi_strike_data, drop_nan=False, **common)
+    # drop_nan=False should keep more (or equal) rows than drop_nan=True
     assert len(results_keep) >= len(results_drop)
     assert list(results_keep.columns) == single_strike_external_cols + describe_cols
 
@@ -1079,7 +1083,13 @@ def test_short_put_spread_aggregated(multi_strike_data):
 
 
 def test_long_call_diagonal_pnl_values(calendar_data):
-    """Test long call diagonal spread calculates P&L correctly."""
+    """Test long call diagonal spread calculates P&L correctly.
+
+    Using front 210 call / back 212.5 call diagonal:
+    Entry: short front 210 call (-4.45) + long back 212.5 call (4.95) = 0.50 debit
+    Exit: close short front (-5.45) + close long back (5.05) = -0.40
+    pct_change = (-0.40 - 0.50) / |0.50| = -1.80
+    """
     results = long_call_diagonal(
         calendar_data,
         raw=True,
@@ -1089,13 +1099,13 @@ def test_long_call_diagonal_pnl_values(calendar_data):
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results) > 0
-    # Verify P&L columns exist and are numeric
-    assert "total_entry_cost" in results.columns
-    assert "total_exit_proceeds" in results.columns
-    assert "pct_change" in results.columns
-    # All pct_change values should be finite (no infinities)
-    assert results["pct_change"].dropna().apply(np.isfinite).all()
+    assert len(results) == 9
+    row = results[
+        (results["strike_leg1"] == 210.0) & (results["strike_leg2"] == 212.5)
+    ].iloc[0]
+    assert round(row["total_entry_cost"], 2) == 0.50
+    assert round(row["total_exit_proceeds"], 2) == -0.40
+    assert round(row["pct_change"], 2) == -1.80
 
 
 def test_short_call_diagonal_pnl_values(calendar_data):
@@ -1118,16 +1128,22 @@ def test_short_call_diagonal_pnl_values(calendar_data):
         back_dte_max=70,
         exit_dte=7,
     )
-    # Long and short diagonals should have opposite entry cost signs
-    if len(long_results) > 0 and len(short_results) > 0:
-        # Entry costs should have opposite signs (debit vs credit)
-        long_entry = long_results.iloc[0]["total_entry_cost"]
-        short_entry = short_results.iloc[0]["total_entry_cost"]
-        assert long_entry * short_entry < 0 or (long_entry == 0 and short_entry == 0)
+    assert len(long_results) > 0, "Long diagonal should produce results"
+    assert len(short_results) > 0, "Short diagonal should produce results"
+    # Entry costs should have opposite signs (debit vs credit)
+    long_entry = long_results.iloc[0]["total_entry_cost"]
+    short_entry = short_results.iloc[0]["total_entry_cost"]
+    assert long_entry * short_entry < 0 or (long_entry == 0 and short_entry == 0)
 
 
 def test_long_put_diagonal_pnl_values(calendar_data):
-    """Test long put diagonal spread P&L values."""
+    """Test long put diagonal spread P&L values.
+
+    Using front 212.5 put / back 210 put diagonal:
+    Entry: short front 212.5 put (-2.95) + long back 210 put (3.45) = 0.50 debit
+    Exit: close short front (-0.35) + close long back (1.45) = 1.10
+    pct_change = (1.10 - 0.50) / |0.50| = 1.20
+    """
     results = long_put_diagonal(
         calendar_data,
         raw=True,
@@ -1137,8 +1153,13 @@ def test_long_put_diagonal_pnl_values(calendar_data):
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results) > 0
-    assert results["pct_change"].dropna().apply(np.isfinite).all()
+    assert len(results) == 9
+    row = results[
+        (results["strike_leg1"] == 212.5) & (results["strike_leg2"] == 210.0)
+    ].iloc[0]
+    assert round(row["total_entry_cost"], 2) == 0.50
+    assert round(row["total_exit_proceeds"], 2) == 1.10
+    assert round(row["pct_change"], 2) == 1.20
 
 
 # =============================================================================
