@@ -420,6 +420,114 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     }
 
 
+def _filter_trades(
+    trades: pd.DataFrame,
+    max_positions: int,
+) -> pd.DataFrame:
+    """Filter trades based on position limits and overlap rules.
+
+    Light O(n) scan over trades sorted by entry_date.  For each trade:
+
+    - ``max_positions=1``: keep trade only if its entry_date >= the previous
+      kept trade's exit_date (greedy non-overlap).
+    - ``max_positions > 1``: track open intervals.  Keep trade if fewer than
+      *max_positions* are open **and** no open position shares the same
+      expiration.
+
+    Returns the filtered DataFrame of trades that will execute.
+    """
+    if trades.empty:
+        return trades
+
+    n = len(trades)
+    entry_dates = trades["entry_date"].values
+    exit_dates = trades["exit_date"].values
+    expirations = trades["expiration"].values
+
+    keep = np.zeros(n, dtype=bool)
+
+    if max_positions == 1:
+        # Fast path: greedy non-overlap
+        prev_exit = None
+        for i in range(n):
+            if prev_exit is None or entry_dates[i] >= prev_exit:
+                keep[i] = True
+                prev_exit = exit_dates[i]
+    else:
+        # Track open positions as (exit_date, expiration) pairs
+        open_exits: list[Any] = []
+        open_exps: list[Any] = []
+        for i in range(n):
+            # Close positions where exit_date <= current entry_date
+            still_open_exits = []
+            still_open_exps = []
+            for j in range(len(open_exits)):
+                if open_exits[j] > entry_dates[i]:
+                    still_open_exits.append(open_exits[j])
+                    still_open_exps.append(open_exps[j])
+            open_exits = still_open_exits
+            open_exps = still_open_exps
+
+            if len(open_exits) < max_positions:
+                # Check no duplicate expiration
+                if expirations[i] not in open_exps:
+                    keep[i] = True
+                    open_exits.append(exit_dates[i])
+                    open_exps.append(expirations[i])
+
+    return trades.loc[keep].reset_index(drop=True)
+
+
+def _build_trade_log(
+    trades: pd.DataFrame,
+    capital: float,
+    quantity: int,
+    multiplier: int,
+) -> pd.DataFrame:
+    """Compute P&L columns vectorially on filtered trades.
+
+    Returns a DataFrame with :data:`_TRADE_LOG_COLUMNS`.  If equity drops to
+    zero or below (ruin), the log is truncated at that trade.
+    """
+    if trades.empty:
+        return pd.DataFrame(columns=_TRADE_LOG_COLUMNS)
+
+    trade_log = pd.DataFrame(
+        {
+            "trade_id": np.arange(1, len(trades) + 1),
+            "underlying_symbol": trades["underlying_symbol"].values,
+            "entry_date": trades["entry_date"].values,
+            "exit_date": trades["exit_date"].values,
+            "expiration": trades["expiration"].values,
+            "entry_cost": trades["entry_cost"].values,
+            "exit_proceeds": trades["exit_proceeds"].values,
+            "quantity": quantity,
+            "multiplier": multiplier,
+            "pct_change": trades["pct_change"].values,
+            "description": trades["description"].values,
+        }
+    )
+
+    trade_log["dollar_cost"] = trade_log["entry_cost"].abs() * quantity * multiplier
+    trade_log["dollar_proceeds"] = trade_log["exit_proceeds"] * quantity * multiplier
+    trade_log["realized_pnl"] = (
+        (trade_log["exit_proceeds"] - trade_log["entry_cost"]) * quantity * multiplier
+    )
+    trade_log["days_held"] = (
+        pd.to_datetime(trade_log["exit_date"]) - pd.to_datetime(trade_log["entry_date"])
+    ).dt.days
+    trade_log["cumulative_pnl"] = trade_log["realized_pnl"].cumsum()
+    trade_log["equity"] = capital + trade_log["cumulative_pnl"]
+
+    # Ruin check: truncate at first trade where equity <= 0
+    ruin_mask = trade_log["equity"] <= 0
+    if ruin_mask.any():
+        ruin_idx = ruin_mask.idxmax()  # first True
+        trade_log = trade_log.loc[:ruin_idx]  # type: ignore[misc]
+
+    return trade_log
+
+
 def simulate(
     data: pd.DataFrame,
     strategy: Callable[..., pd.DataFrame],
@@ -509,124 +617,11 @@ def simulate(
     )
     trades = trades.sort_values("entry_date").reset_index(drop=True)
 
-    # Simulation loop
-    cash = capital
-    cumulative_pnl = 0.0
-    open_positions: list[dict[str, Any]] = []
-    completed_trades: list[dict[str, Any]] = []
-    trade_id = 0
+    # Filter trades by position limits and overlap rules
+    filtered = _filter_trades(trades, max_positions)
 
-    # Build a set of all dates we need to process
-    all_dates = sorted(
-        set(trades["entry_date"].tolist() + trades["exit_date"].tolist())
-    )
-
-    # Index trades by entry date for quick lookup (first occurrence per date)
-    _first_idx = trades.drop_duplicates("entry_date", keep="first").index
-    entry_date_map: dict[Any, int] = {
-        trades.at[i, "entry_date"]: i
-        for i in _first_idx  # type: ignore[misc]
-    }
-
-    def _close_pos(pos: dict[str, Any]) -> dict[str, Any]:
-        """Build a completed-trade dict and compute realized P&L.
-
-        After normalisation, entry_cost and exit_proceeds are signed cash
-        flows.  P&L is always ``(exit_proceeds - entry_cost) * qty * mult``.
-        """
-        qty = pos["quantity"]
-        mult = pos["multiplier"]
-        dollar_cost = abs(pos["entry_cost"]) * qty * mult
-        realized = (pos["exit_proceeds"] - pos["entry_cost"]) * qty * mult
-        return {
-            "dollar_cost": dollar_cost,
-            "dollar_proceeds": pos["exit_proceeds"] * qty * mult,
-            "realized_pnl": realized,
-            "days_held": (pos["exit_date"] - pos["entry_date"]).days,
-        }
-
-    for current_date in all_dates:
-        # Close positions whose exit_date has arrived
-        still_open = []
-        for pos in open_positions:
-            if pos["exit_date"] <= current_date:
-                closed = _close_pos(pos)
-                cumulative_pnl += closed["realized_pnl"]
-                cash += closed["dollar_cost"] + closed["realized_pnl"]
-
-                completed_trades.append(
-                    {
-                        **{
-                            k: pos[k]
-                            for k in pos
-                            if k != "quantity" and k != "multiplier"
-                        },
-                        "quantity": pos["quantity"],
-                        "multiplier": pos["multiplier"],
-                        **closed,
-                        "pct_change": pos["pct_change"],
-                        "cumulative_pnl": cumulative_pnl,
-                        "equity": capital + cumulative_pnl,
-                    }
-                )
-            else:
-                still_open.append(pos)
-        open_positions = still_open
-
-        # Try to open a new position if there's a trade for this date
-        if current_date in entry_date_map and len(open_positions) < max_positions:
-            idx = entry_date_map[current_date]
-            trade = trades.loc[idx]
-
-            # Check no duplicate expirations when max_positions > 1
-            if max_positions > 1:
-                open_expirations = {p["expiration"] for p in open_positions}
-                if trade["expiration"] in open_expirations:
-                    continue
-
-            dollar_cost = abs(trade["entry_cost"]) * quantity * multiplier
-
-            if dollar_cost <= cash:
-                cash -= dollar_cost
-                trade_id += 1
-                open_positions.append(
-                    {
-                        "trade_id": trade_id,
-                        "underlying_symbol": trade["underlying_symbol"],
-                        "entry_date": trade["entry_date"],
-                        "exit_date": trade["exit_date"],
-                        "expiration": trade["expiration"],
-                        "entry_cost": trade["entry_cost"],
-                        "exit_proceeds": trade["exit_proceeds"],
-                        "pct_change": trade["pct_change"],
-                        "quantity": quantity,
-                        "multiplier": multiplier,
-                        "description": trade["description"],
-                    }
-                )
-
-    # Close any remaining open positions at end
-    for pos in open_positions:
-        closed = _close_pos(pos)
-        cumulative_pnl += closed["realized_pnl"]
-        cash += closed["dollar_cost"] + closed["realized_pnl"]
-
-        completed_trades.append(
-            {
-                **{k: pos[k] for k in pos if k != "quantity" and k != "multiplier"},
-                "quantity": pos["quantity"],
-                "multiplier": pos["multiplier"],
-                **closed,
-                "pct_change": pos["pct_change"],
-                "cumulative_pnl": cumulative_pnl,
-                "equity": capital + cumulative_pnl,
-            }
-        )
-
-    # Build trade log DataFrame
-    trade_log = pd.DataFrame(completed_trades)
-    if trade_log.empty:
-        trade_log = pd.DataFrame(columns=_TRADE_LOG_COLUMNS)
+    # Build trade log with vectorized P&L computation
+    trade_log = _build_trade_log(filtered, capital, quantity, multiplier)
 
     # Build equity curve
     if not trade_log.empty:

@@ -8,6 +8,8 @@ import pytest
 import optopsy as op
 from optopsy.simulator import (
     SimulationResult,
+    _build_trade_log,
+    _filter_trades,
     _find_cost_col,
     _find_entry_date_col,
     _find_otm_col,
@@ -408,10 +410,11 @@ class TestCapitalTracking:
                 capital + last_trade["cumulative_pnl"]
             )
 
-    def test_insufficient_capital_skips_trade(self, data):
-        # With very low capital, the trade should be skipped
+    def test_low_capital_trade_still_executes(self, data):
+        """Trades execute regardless of capital; no pre-trade capital gate."""
         result = simulate(data, op.long_calls, capital=1.0, selector="first")
-        assert result.summary["total_trades"] == 0
+        # The trade executes even with $1 capital
+        assert result.summary["total_trades"] == 1
 
     def test_quantity_multiplier_affect_cost(self, data):
         result1 = simulate(
@@ -673,3 +676,82 @@ class TestEquityCurve:
         result = simulate(data, op.long_calls, selector="first")
         if result.summary["losing_trades"] == 0 and not result.equity_curve.empty:
             assert result.equity_curve.is_monotonic_increasing
+
+
+# ---------------------------------------------------------------------------
+# Trade filtering (overlap and expiration dedup)
+# ---------------------------------------------------------------------------
+
+
+class TestFilterTrades:
+    def test_overlap_filter(self):
+        """Trade 2 overlaps trade 1; trade 3 does not. Only 2 trades execute."""
+        trades = pd.DataFrame(
+            {
+                "entry_date": pd.to_datetime(
+                    ["2018-01-01", "2018-01-15", "2018-02-01"]
+                ),
+                "exit_date": pd.to_datetime(["2018-01-31", "2018-02-15", "2018-02-28"]),
+                "expiration": pd.to_datetime(
+                    ["2018-01-31", "2018-02-15", "2018-02-28"]
+                ),
+                "underlying_symbol": ["SPX"] * 3,
+                "entry_cost": [1.0, 1.0, 1.0],
+                "exit_proceeds": [1.5, 1.5, 1.5],
+                "pct_change": [0.5, 0.5, 0.5],
+                "description": ["t1", "t2", "t3"],
+            }
+        )
+        filtered = _filter_trades(trades, max_positions=1)
+        assert len(filtered) == 2
+        assert filtered.iloc[0]["description"] == "t1"
+        assert filtered.iloc[1]["description"] == "t3"
+
+    def test_multi_position_expiration_dedup(self):
+        """With max_positions=3, trades with duplicate expirations are skipped."""
+        trades = pd.DataFrame(
+            {
+                "entry_date": pd.to_datetime(
+                    ["2018-01-01", "2018-01-05", "2018-01-10"]
+                ),
+                "exit_date": pd.to_datetime(["2018-01-31", "2018-01-31", "2018-02-28"]),
+                "expiration": pd.to_datetime(
+                    ["2018-01-31", "2018-01-31", "2018-02-28"]
+                ),
+                "underlying_symbol": ["SPX"] * 3,
+                "entry_cost": [1.0, 1.0, 1.0],
+                "exit_proceeds": [1.5, 1.5, 1.5],
+                "pct_change": [0.5, 0.5, 0.5],
+                "description": ["t1", "t2", "t3"],
+            }
+        )
+        filtered = _filter_trades(trades, max_positions=3)
+        # t1 and t3 kept; t2 skipped because same expiration as t1
+        assert len(filtered) == 2
+        assert filtered.iloc[0]["description"] == "t1"
+        assert filtered.iloc[1]["description"] == "t3"
+
+    def test_ruin_truncation(self):
+        """Build trade log stops at first trade where equity <= 0."""
+        trades = pd.DataFrame(
+            {
+                "entry_date": pd.to_datetime(
+                    ["2018-01-01", "2018-02-01", "2018-03-01"]
+                ),
+                "exit_date": pd.to_datetime(["2018-01-31", "2018-02-28", "2018-03-31"]),
+                "expiration": pd.to_datetime(
+                    ["2018-01-31", "2018-02-28", "2018-03-31"]
+                ),
+                "underlying_symbol": ["SPX"] * 3,
+                "entry_cost": [5.0, 5.0, 5.0],
+                "exit_proceeds": [1.0, 1.0, 1.0],
+                "pct_change": [-0.8, -0.8, -0.8],
+                "description": ["t1", "t2", "t3"],
+            }
+        )
+        # capital=500, each trade loses (1-5)*1*100 = -400
+        # After trade 1: equity = 500 + (-400) = 100
+        # After trade 2: equity = 500 + (-800) = -300 → ruin
+        log = _build_trade_log(trades, capital=500.0, quantity=1, multiplier=100)
+        assert len(log) == 2
+        assert log.iloc[-1]["equity"] <= 0
