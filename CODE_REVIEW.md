@@ -113,7 +113,39 @@ otm_series = (
 
 ## 2. Bug Potential
 
-### 🔴 2.1 — Global `pd.set_option` side effects on import
+### 🔴 2.1 — `setup.py` missing `optopsy.ui.tools` package
+
+**File:** `setup.py:20`
+
+```python
+packages=["optopsy", "optopsy.ui", "optopsy.ui.providers"],
+```
+
+**Problem:** The `packages` list does not include `"optopsy.ui.tools"`. When installed via `pip install`, the `tools/` subpackage (`_executor.py`, `_helpers.py`, `_schemas.py`) would be missing entirely, causing the chat UI to crash on startup with an `ImportError`.
+
+**Risk:** Critical — the UI is completely broken when installed from PyPI or via `pip install .` (as opposed to `pip install -e .` which uses the source tree directly and happens to work).
+
+**Fix:**
+
+```python
+packages=["optopsy", "optopsy.ui", "optopsy.ui.tools", "optopsy.ui.providers"],
+```
+
+Or better, use `find_packages()`:
+
+```python
+from setuptools import setup, find_packages
+
+setup(
+    ...
+    packages=find_packages(exclude=["tests", "tests.*", "samples"]),
+    ...
+)
+```
+
+---
+
+### 🔴 2.2 — Global `pd.set_option` side effects on import (library anti-pattern)
 
 **File:** `optopsy/core.py:8-9`
 
@@ -134,7 +166,7 @@ pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 ---
 
-### 🟡 2.2 — `_check_positive_integer` checks value before type
+### 🟡 2.3 — `_check_positive_integer` checks value before type
 
 **File:** `optopsy/checks.py:113`
 
@@ -160,7 +192,7 @@ Same issue exists in `_check_positive_integer_inclusive` (line 119) and `_check_
 
 ---
 
-### 🟡 2.3 — Bollinger Band column name depends on float formatting
+### 🟡 2.4 — Bollinger Band column name depends on float formatting
 
 **File:** `optopsy/signals.py:295`
 
@@ -181,7 +213,7 @@ band_col = f"BBU_{length}_{std}_{std}"
 
 ---
 
-### 🟡 2.4 — `_infer_date_cols` mutates the input DataFrame
+### 🟡 2.5 — `_infer_date_cols` mutates the input DataFrame
 
 **File:** `optopsy/datafeeds.py:59-72`
 
@@ -477,11 +509,12 @@ def test_compact_history_preserves_last_tool_result():
 
 **The codebase is in good shape for a personal project.** The core strategy engine (`core.py`) is well-structured with a clean pipeline architecture. The signal system is elegantly decoupled. The caching layer is thoughtful (gap detection, dedup). Test coverage for the library layer is solid with dedicated test files for strategies, signals, checks, rules, datafeeds, cache, timestamps, and CLI.
 
-### Top 3 Action Items
+### Top 4 Action Items
 
-1. **Remove `pd.set_option` from `core.py`** (🔴 — 2-line delete, prevents silent side effects for all importers)
-2. **Refactor `_executor.py` into a registry pattern** (🔴 — biggest maintainability win, enables testability)
-3. **Pre-lowercase `option_type` in `_process_strategy`** (🟡 — simple performance win for multi-leg strategies)
+1. **Add `optopsy.ui.tools` to `setup.py` packages** (🔴 — 1-line fix, UI is broken on pip install without it)
+2. **Remove `pd.set_option` from `core.py`** (🔴 — 2-line delete, prevents silent side effects for all importers)
+3. **Refactor `_executor.py` into a registry pattern** (🔴 — biggest maintainability win, enables testability)
+4. **Pre-lowercase `option_type` in `_process_strategy`** (🟡 — simple performance win for multi-leg strategies)
 
 ### Strengths
 
