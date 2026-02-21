@@ -74,6 +74,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
     config.ui.language = "en-US"
     config.ui.confirm_new_chat = False
     config.ui.custom_js = "/public/redirect_after_delete.js"
+    config.ui.custom_css = "/public/hide_avatar.css"
 
     from chainlit.cli import run_chainlit
 
