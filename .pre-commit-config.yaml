@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: venv/bin/pytest tests/ -q
+        language: system
+        pass_filenames: false
+        always_run: true
