@@ -12,3 +12,5 @@ ignore = ["E501"]
 "**/__init__.py" = ["F401"]
 # Test files use star imports and explicit True/False asserts
 "tests/*" = ["F403", "F405", "E712"]
+# Vulture whitelist uses bare names as suppression markers
+"vulture_whitelist.py" = ["F821"]

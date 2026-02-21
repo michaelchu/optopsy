@@ -28,12 +28,24 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e ".${{ matrix.extras }}"
-        pip install pytest black
+        pip install pytest pytest-cov ruff mypy vulture pandas-stubs
 
-    - name: Check code formatting with black
+    - name: Check code formatting with ruff
       run: |
-        black --check optopsy/ tests/ setup.py
+        ruff format --check optopsy/ tests/ setup.py
+
+    - name: Lint with ruff
+      run: |
+        ruff check optopsy/ tests/ setup.py
+
+    - name: Type check with mypy
+      run: |
+        mypy optopsy/
+
+    - name: Check for dead code with vulture
+      run: |
+        vulture optopsy/ vulture_whitelist.py
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v
+        pytest tests/ -v --cov=optopsy --cov-report=term-missing
