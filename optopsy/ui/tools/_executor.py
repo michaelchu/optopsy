@@ -17,6 +17,7 @@ from ._helpers import (
     _DATE_ONLY_SIGNALS,
     _YF_CACHE_CATEGORY,
     _YF_DEDUP_COLS,
+    _date_only_fallback,
     _df_summary,
     _df_to_markdown,
     _empty_signal_suggestion,
@@ -25,7 +26,9 @@ from ._helpers import (
     _make_result_key,
     _make_result_summary,
     _normalise_yf_df,
+    _resolve_inline_signal,
     _run_one_strategy,
+    _signal_slot_summary,
     _strategy_llm_summary,
     _yf_cache,
     _yf_compute_gaps,
@@ -81,25 +84,28 @@ def _require_dataset(
     dataset: pd.DataFrame | None,
     datasets: dict[str, pd.DataFrame],
     _result: Callable[..., ToolResult],
-) -> tuple[pd.DataFrame | None, str | None, ToolResult | None]:
+) -> tuple[pd.DataFrame | None, str, ToolResult | None]:
     """Resolve a dataset or return an error ToolResult.
 
-    Returns ``(active_ds, ds_name, error_result)``.  When ``error_result``
-    is not None the caller should return it immediately.
+    Returns ``(active_ds, label, error_result)``.  ``label`` is the
+    human-readable dataset name (explicit name, last-loaded key, or
+    ``"Dataset"``).  When ``error_result`` is not None the caller should
+    return it immediately.
     """
     ds_name = arguments.get("dataset_name")
     active_ds = _resolve_dataset(ds_name, dataset, datasets)
+    label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
     if active_ds is not None:
-        return active_ds, ds_name, None
+        return active_ds, label, None
     if datasets:
         return (
             None,
-            ds_name,
+            label,
             _result(
                 f"Dataset '{ds_name}' not found. Available: {list(datasets.keys())}"
             ),
         )
-    return None, ds_name, _result("No dataset loaded. Load data first.")
+    return None, label, _result("No dataset loaded. Load data first.")
 
 
 # ---------------------------------------------------------------------------
@@ -109,25 +115,13 @@ def _require_dataset(
 
 @_register("preview_data")
 def _handle_preview_data(arguments, dataset, signals, datasets, results, _result):
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
-    label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
     summary = _df_summary(active_ds, label)
 
-    try:
-        rows = int(arguments.get("rows", 5))
-    except (TypeError, ValueError):
-        rows = 5
-    if rows <= 0:
-        rows = 5
-    raw_sample = arguments.get("sample", False)
-    if isinstance(raw_sample, bool):
-        sample = raw_sample
-    elif isinstance(raw_sample, str):
-        sample = raw_sample.strip().lower() == "true"
-    else:
-        sample = False
+    rows = max(int(arguments.get("rows", 5) or 5), 1)
+    sample = str(arguments.get("sample", False)).lower() == "true"
     position = arguments.get("position", "head")
 
     if sample:
@@ -146,16 +140,11 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
 
 @_register("describe_data")
 def _handle_describe_data(arguments, dataset, signals, datasets, results, _result):
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
-    label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
 
     columns = arguments.get("columns")
-    if isinstance(columns, str):
-        columns = [columns]
-    elif columns is not None and not isinstance(columns, (list, tuple)):
-        return _result("`columns` must be a string or a list of strings.")
     if columns:
         missing = [c for c in columns if c not in active_ds.columns]
         if missing:
@@ -185,7 +174,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
 
     # Numeric describe
     numeric_cols = df.select_dtypes(include="number")
-    if not numeric_cols.empty:
+    if len(numeric_cols.columns) > 0:
         desc = numeric_cols.describe().round(4)
         numeric_section = _df_to_markdown(
             desc.reset_index().rename(columns={"index": "stat"})
@@ -221,7 +210,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     llm_parts = [f"describe_data({label}): {shape}"]
     if not nan_nonzero.empty:
         llm_parts.append(f"NaN columns: {dict(nan_nonzero)}")
-    if not numeric_cols.empty:
+    if len(numeric_cols.columns) > 0:
         for c in numeric_cols.columns:
             col = numeric_cols[c]
             llm_parts.append(
@@ -253,7 +242,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
 def _handle_suggest_strategy_params(
     arguments, dataset, signals, datasets, results, _result
 ):
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
 
@@ -366,7 +355,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     slot = arguments.get("slot", "").strip()
     if not slot:
         return _result("Missing required 'slot' name for the signal.")
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
     dataset = active_ds  # shadow for the rest of the block
@@ -390,12 +379,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
 
     # Fallback for date-only signals
     if signal_data is None:
-        signal_data = (
-            dataset[["underlying_symbol", "quote_date"]]
-            .drop_duplicates()
-            .sort_values(["underlying_symbol", "quote_date"])
-            .reset_index(drop=True)
-        )
+        signal_data = _date_only_fallback(dataset)
 
     # Build individual signal functions
     built_signals = []
@@ -441,13 +425,10 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
 
     combiner = f" {combine.upper()} " if len(descriptions) > 1 else ""
     desc = combiner.join(descriptions)
-    n_dates = len(valid_dates)
-    symbols = valid_dates["underlying_symbol"].unique().tolist() if n_dates else []
-    summary = f"Signal '{slot}' built: {desc} → {n_dates} valid dates " f"for {symbols}"
+    n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
+    summary = f"Signal '{slot}' built: {desc} → {n_dates} valid dates for {symbols}"
     display_lines = [summary]
     if n_dates > 0:
-        date_min = valid_dates["quote_date"].min().date()
-        date_max = valid_dates["quote_date"].max().date()
         display_lines.append(f"Date range: {date_min} to {date_max}")
     else:
         opt_min = dataset["quote_date"].min().date()
@@ -473,12 +454,9 @@ def _handle_preview_signal(arguments, dataset, signals, datasets, results, _resu
             f"Available slots: {available_slots or 'none — use build_signal first'}"
         )
     valid_dates = signals[slot]
-    n_dates = len(valid_dates)
+    n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
     if n_dates == 0:
         return _result(f"Signal '{slot}' has 0 valid dates.")
-    symbols = valid_dates["underlying_symbol"].unique().tolist()
-    date_min = valid_dates["quote_date"].min().date()
-    date_max = valid_dates["quote_date"].max().date()
     summary = (
         f"Signal '{slot}': {n_dates} valid dates, "
         f"symbols={symbols}, range={date_min} to {date_max}"
@@ -495,30 +473,16 @@ def _handle_list_signals(arguments, dataset, signals, datasets, results, _result
 
     rows = []
     for slot, valid_dates in signals.items():
-        n_dates = len(valid_dates)
-        if n_dates == 0:
-            rows.append(
-                {
-                    "slot": slot,
-                    "dates": 0,
-                    "symbols": "",
-                    "date_from": "",
-                    "date_to": "",
-                }
-            )
-        else:
-            symbols = valid_dates["underlying_symbol"].unique().tolist()
-            date_min = valid_dates["quote_date"].min().date()
-            date_max = valid_dates["quote_date"].max().date()
-            rows.append(
-                {
-                    "slot": slot,
-                    "dates": n_dates,
-                    "symbols": ", ".join(str(s) for s in symbols),
-                    "date_from": str(date_min),
-                    "date_to": str(date_max),
-                }
-            )
+        n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
+        rows.append(
+            {
+                "slot": slot,
+                "dates": n_dates,
+                "symbols": ", ".join(str(s) for s in symbols),
+                "date_from": str(date_min or ""),
+                "date_to": str(date_max or ""),
+            }
+        )
 
     result_df = pd.DataFrame(rows)
     llm_lines = [f"list_signals: {len(rows)} signal slot(s)"]
@@ -606,7 +570,7 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
             f"Unknown strategy '{strategy_name}'. "
             f"Available: {', '.join(STRATEGY_NAMES)}",
         )
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
     dataset = active_ds  # shadow for the rest of the block
@@ -694,57 +658,20 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
 
     # For date-only signals, extract unique dates from the option dataset
     if signal_data is None and (entry_signal_name or exit_signal_name):
-        signal_data = (
-            dataset[["underlying_symbol", "quote_date"]]
-            .drop_duplicates()
-            .sort_values(["underlying_symbol", "quote_date"])
-            .reset_index(drop=True)
-        )
+        signal_data = _date_only_fallback(dataset)
 
-    # Resolve entry_signal string -> SignalFunc -> pre-computed entry_dates
-    if entry_signal_name:
-        entry_params = arguments.get("entry_signal_params") or {}
-        sig = SIGNAL_REGISTRY[entry_signal_name](**entry_params)
-        # Wrap with sustained() if entry_signal_days is provided
-        try:
-            days = int(arguments.get("entry_signal_days", 0))
-        except (TypeError, ValueError):
-            days = 0
-        if days > 1:
-            sig = _signals.sustained(sig, days)
-        raw_entry_dates = apply_signal(signal_data, sig)
-        entry_dates = _intersect_with_options_dates(raw_entry_dates, dataset)
-        if entry_dates.empty:
-            opt_min = dataset["quote_date"].min().date()
-            opt_max = dataset["quote_date"].max().date()
-            suggestion = _empty_signal_suggestion(raw_entry_dates, opt_min, opt_max)
-            return _result(
-                f"Entry signal '{entry_signal_name}' produced no dates overlapping "
-                f"the options data ({opt_min} to {opt_max}). {suggestion}"
+    # Resolve inline entry/exit signals via shared helper
+    for sig_name, prefix, dates_key in [
+        (entry_signal_name, "entry", "entry_dates"),
+        (exit_signal_name, "exit", "exit_dates"),
+    ]:
+        if sig_name:
+            dates, err_msg = _resolve_inline_signal(
+                sig_name, arguments, signal_data, dataset, prefix
             )
-        strat_kwargs["entry_dates"] = entry_dates
-
-    # Resolve exit_signal string -> SignalFunc -> pre-computed exit_dates
-    if exit_signal_name:
-        exit_params = arguments.get("exit_signal_params") or {}
-        exit_sig = SIGNAL_REGISTRY[exit_signal_name](**exit_params)
-        try:
-            exit_days = int(arguments.get("exit_signal_days", 0))
-        except (TypeError, ValueError):
-            exit_days = 0
-        if exit_days > 1:
-            exit_sig = _signals.sustained(exit_sig, exit_days)
-        raw_exit_dates = apply_signal(signal_data, exit_sig)
-        exit_dates = _intersect_with_options_dates(raw_exit_dates, dataset)
-        if exit_dates.empty:
-            opt_min = dataset["quote_date"].min().date()
-            opt_max = dataset["quote_date"].max().date()
-            suggestion = _empty_signal_suggestion(raw_exit_dates, opt_min, opt_max)
-            return _result(
-                f"Exit signal '{exit_signal_name}' produced no dates overlapping "
-                f"the options data ({opt_min} to {opt_max}). {suggestion}"
-            )
-        strat_kwargs["exit_dates"] = exit_dates
+            if err_msg:
+                return _result(err_msg)
+            strat_kwargs[dates_key] = dates
     result_df, err = _run_one_strategy(strategy_name, dataset, strat_kwargs)
     if err:
         return _result(f"Error running {strategy_name}: {err}")
@@ -780,7 +707,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             f"Unknown strategies: {invalid}. " f"Available: {', '.join(STRATEGY_NAMES)}"
         )
 
-    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
 
@@ -808,20 +735,14 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             )
             continue
 
-        strat_kwargs = {
-            "max_entry_dte": max_dte,
-            "exit_dte": exit_dte,
-            "max_otm_pct": max_otm,
-            "slippage": slippage,
-        }
-        result_df, err = _run_one_strategy(strat, active_ds, strat_kwargs)
-
         combo_args = {
             "max_entry_dte": max_dte,
             "exit_dte": exit_dte,
             "max_otm_pct": max_otm,
             "slippage": slippage,
         }
+        result_df, err = _run_one_strategy(strat, active_ds, combo_args)
+
         if err:
             errors.append(
                 f"{strat}(dte={max_dte},exit={exit_dte},otm={max_otm:.2f}): {err}"
@@ -974,16 +895,15 @@ def _handle_inspect_cache(arguments, dataset, signals, datasets, results, _resul
 def _handle_clear_cache(arguments, dataset, signals, datasets, results, _result):
     symbol = arguments.get("symbol", "").strip().upper() or None
     cache = ParquetCache()
+    target = f" for {symbol}" if symbol else ""
     size_before = cache.total_size_bytes()
     count = cache.clear(symbol)
     size_after = cache.total_size_bytes()
     freed_mb = round((size_before - size_after) / 1_048_576, 2)
 
     if count == 0:
-        target = f" for {symbol}" if symbol else ""
         return _result(f"No cached files found{target}. Nothing to clear.")
 
-    target = f" for {symbol}" if symbol else ""
     summary = f"Cleared {count} cached file(s){target}. Freed {freed_mb} MB."
     return _result(summary)
 
