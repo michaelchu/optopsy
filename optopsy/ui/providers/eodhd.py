@@ -389,7 +389,8 @@ class EODHDProvider(DataProvider):
                 if next_start is None:
                     break
                 next_start = next_start + timedelta(days=1)
-                if gap_end and next_start > _parse_date(gap_end):
+                _gap_end_date = _parse_date(gap_end) if gap_end else None
+                if _gap_end_date and next_start > _gap_end_date:
                     break
                 base_params["filter[tradetime_from]"] = str(next_start)
                 window += 1

@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 from typing import Any
 
@@ -559,8 +560,14 @@ class OptopsyAgent:
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
-                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, dss=self.datasets, rs=self.results: (
-                        execute_tool(fn, a, ds, sg, dss, rs)
+                    functools.partial(
+                        execute_tool,
+                        func_name,
+                        args,
+                        self.dataset,
+                        self.signals,
+                        self.datasets,
+                        self.results,
                     ),
                 )
                 self.dataset = result.dataset
