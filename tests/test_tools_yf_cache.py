@@ -200,10 +200,6 @@ def test_multi_symbol_independent_cache_entries(tmp_path):
     )
     cache = ParquetCache(str(tmp_path))
 
-    date_min = pd.to_datetime("2025-12-16").date()
-    date_max = pd.to_datetime("2025-12-17").date()
-    padded_start = date_min - timedelta(days=365)
-
     call_count = {"n": 0}
 
     def fake_download(symbol, start, end, progress):
@@ -241,9 +237,6 @@ def test_failed_symbol_does_not_block_other(tmp_path):
         }
     )
     cache = ParquetCache(str(tmp_path))
-
-    date_min = pd.to_datetime("2025-12-16").date()
-    padded_start = date_min - timedelta(days=365)
 
     def fake_download(symbol, start, end, progress):
         if symbol == "SPY":

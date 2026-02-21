@@ -1,3 +1,5 @@
+target-version = "py312"
+
 [lint]
 select = ["E", "F", "I"]
 ignore = ["E501"]
@@ -8,5 +10,5 @@ ignore = ["E501"]
 "optopsy/ui/app.py" = ["E402"]
 # __init__.py files re-export symbols
 "**/__init__.py" = ["F401"]
-# Test files use star imports, lambdas, explicit True/False asserts
-"tests/*" = ["F403", "F405", "E712", "E731", "F841"]
+# Test files use star imports and explicit True/False asserts
+"tests/*" = ["F403", "F405", "E712"]
