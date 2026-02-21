@@ -3,6 +3,10 @@ import logging
 import os
 from pathlib import Path
 
+from optopsy.ui._compat import import_optional_dependency
+
+import_optional_dependency("dotenv")
+
 from dotenv import load_dotenv, find_dotenv
 
 logging.basicConfig(
