@@ -499,6 +499,41 @@ class TestEmptyResult:
 # ---------------------------------------------------------------------------
 
 
+class TestExitDte:
+    def test_nonzero_exit_dte(self):
+        """When exit_dte > 0, exit_date = expiration - exit_dte and days_held adjusts."""
+        exp_date = datetime.datetime(2018, 1, 31)
+        entry = datetime.datetime(2018, 1, 1)
+        # exit_dte=7 means exit 7 days before expiration → Jan 24
+        exit_day = datetime.datetime(2018, 1, 24)
+        cols = [
+            "underlying_symbol",
+            "underlying_price",
+            "option_type",
+            "expiration",
+            "quote_date",
+            "strike",
+            "bid",
+            "ask",
+        ]
+        d = [
+            ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45],
+            ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05],
+            ["SPX", 218.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55],
+            ["SPX", 218.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05],
+        ]
+        df = pd.DataFrame(data=d, columns=cols)
+
+        exit_dte = 7
+        result = simulate(df, op.long_calls, selector="first", exit_dte=exit_dte)
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        expected_exit = pd.Timestamp("2018-01-24")
+        assert pd.Timestamp(trade["exit_date"]) == expected_exit
+        expected_days = (expected_exit - pd.Timestamp("2018-01-01")).days
+        assert trade["days_held"] == expected_days
+
+
 class TestCalendarStrategies:
     def test_calendar_simulation(self, calendar_data):
         result = simulate(

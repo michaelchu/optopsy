@@ -1,6 +1,7 @@
 import itertools as _itertools
 import json as _json
 import logging
+import os
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -909,13 +910,17 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
             key_parts.append(f"{k}={arguments[k]}")
     sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
 
-    # Store in results (include trade_log for later retrieval)
+    # Persist trade log to disk; keep only summary stats in session memory
+    _sim_cache = ParquetCache(
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "simulations")
+    )
+    _sim_cache.write("runs", sim_key, result.trade_log)
+
     updated_results = dict(results)
     updated_results[sim_key] = {
         "type": "simulation",
         "strategy": strategy_name,
         "summary": s,
-        "trade_log": result.trade_log,
     }
 
     # Format output
@@ -998,8 +1003,11 @@ def _handle_get_simulation_trades(
             return _result("No simulations run yet. Use simulate first.")
         sim_key, entry = sim_entries[-1]
 
-    trade_log = entry["trade_log"]
-    if trade_log.empty:
+    _sim_cache = ParquetCache(
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "simulations")
+    )
+    trade_log = _sim_cache.read("runs", sim_key)
+    if trade_log is None or trade_log.empty:
         return _result(f"Simulation '{sim_key}' has no trades.")
 
     from ._helpers import _df_to_markdown

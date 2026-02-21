@@ -104,7 +104,7 @@ def _is_calendar(columns: pd.Index) -> bool:
 
 
 def _normalise_trades(
-    raw: pd.DataFrame, *, is_short_single: bool = False
+    raw: pd.DataFrame, *, is_short_single: bool = False, exit_dte: int = 0
 ) -> pd.DataFrame:
     """Map raw strategy output to a uniform schema for the simulation loop.
 
@@ -116,15 +116,24 @@ def _normalise_trades(
     flows*: negative means cash outflow (paid), positive means cash inflow
     (received).  For multi-leg strategies the raw output already encodes this.
     For single-leg short strategies, the unsigned option prices are negated.
+
+    When *exit_dte* > 0, exit_date is set to ``expiration - exit_dte`` days
+    instead of expiration itself.
     """
     cols = raw.columns
 
     if _is_single_leg(cols):
-        return _normalise_single_leg(raw, negate=is_short_single)
-    if _is_calendar(cols):
-        return _normalise_calendar(raw)
-    # Multi-leg (spreads, butterflies, condors, straddles, strangles)
-    return _normalise_multi_leg(raw)
+        df = _normalise_single_leg(raw, negate=is_short_single)
+    elif _is_calendar(cols):
+        df = _normalise_calendar(raw)
+    else:
+        # Multi-leg (spreads, butterflies, condors, straddles, strangles)
+        df = _normalise_multi_leg(raw)
+
+    if exit_dte > 0:
+        df["exit_date"] = df["expiration"] - pd.Timedelta(days=exit_dte)
+
+    return df
 
 
 def _normalise_single_leg(raw: pd.DataFrame, *, negate: bool = False) -> pd.DataFrame:
@@ -494,7 +503,10 @@ def simulate(
     is_short_single = strategy_name in _SHORT_SINGLE_LEG
 
     # Normalise to uniform schema
-    trades = _normalise_trades(selected_raw, is_short_single=is_short_single)
+    exit_dte = int(strategy_kwargs.get("exit_dte", 0))
+    trades = _normalise_trades(
+        selected_raw, is_short_single=is_short_single, exit_dte=exit_dte
+    )
     trades = trades.sort_values("entry_date").reset_index(drop=True)
 
     # Simulation loop
