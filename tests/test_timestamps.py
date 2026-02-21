@@ -1,83 +1,60 @@
-"""Tests for cross-source timestamp normalization.
+"""Tests for cross-source date normalization.
 
 Verifies that signal dates from one provider (e.g. yfinance) reliably match
 option chain dates from another provider (e.g. EODHD, CSV) regardless of
-timezone awareness, sub-day time components, or resolution differences.
+timezone awareness or time-of-day differences.
 """
 
 import datetime
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from optopsy.timestamps import normalize_timestamps, DEFAULT_RESOLUTION
+from optopsy.timestamps import normalize_dates
 from optopsy.signals import apply_signal, day_of_week
 from optopsy.strategies import long_calls
 
 # ============================================================================
-# normalize_timestamps unit tests
+# normalize_dates unit tests
 # ============================================================================
 
 
-class TestNormalizeTimestamps:
-    """Unit tests for the normalize_timestamps utility."""
+class TestNormalizeDates:
+    """Unit tests for the normalize_dates utility."""
 
     def test_naive_midnight_passthrough(self):
-        """Naive midnight timestamps are unchanged at daily resolution."""
+        """Naive midnight timestamps are unchanged."""
         s = pd.Series(pd.to_datetime(["2024-01-15", "2024-01-16"]))
-        result = normalize_timestamps(s, "D")
+        result = normalize_dates(s)
         pd.testing.assert_series_equal(result, s)
 
     def test_strips_timezone(self):
         """Timezone-aware timestamps are converted to naive."""
         s = pd.Series(pd.to_datetime(["2024-01-15", "2024-01-16"]).tz_localize("UTC"))
-        result = normalize_timestamps(s, "D")
+        result = normalize_dates(s)
         assert result.dt.tz is None
         expected = pd.Series(pd.to_datetime(["2024-01-15", "2024-01-16"]))
         pd.testing.assert_series_equal(result, expected)
 
     def test_strips_non_utc_timezone(self):
-        """Non-UTC timezone-aware timestamps are stripped (not converted)."""
+        """Non-UTC timezone-aware timestamps are stripped."""
         s = pd.Series(pd.to_datetime(["2024-01-15 10:00:00"]).tz_localize("Etc/GMT+5"))
-        result = normalize_timestamps(s, "D")
+        result = normalize_dates(s)
         assert result.dt.tz is None
-        # 10:00 floored to day = 2024-01-15
         expected = pd.Series(pd.to_datetime(["2024-01-15"]))
         pd.testing.assert_series_equal(result, expected)
 
     def test_floors_time_component(self):
-        """Sub-day time components are floored to midnight at daily resolution."""
+        """Sub-day time components are removed."""
         s = pd.Series(pd.to_datetime(["2024-01-15 16:30:00", "2024-01-16 09:30:00"]))
-        result = normalize_timestamps(s, "D")
+        result = normalize_dates(s)
         expected = pd.Series(pd.to_datetime(["2024-01-15", "2024-01-16"]))
-        pd.testing.assert_series_equal(result, expected)
-
-    def test_hourly_resolution(self):
-        """Hourly resolution preserves hours but floors minutes/seconds."""
-        s = pd.Series(pd.to_datetime(["2024-01-15 16:30:45"]))
-        result = normalize_timestamps(s, "h")
-        expected = pd.Series(pd.to_datetime(["2024-01-15 16:00:00"]))
-        pd.testing.assert_series_equal(result, expected)
-
-    def test_minute_resolution(self):
-        """Minute resolution preserves hours and minutes but floors seconds."""
-        s = pd.Series(pd.to_datetime(["2024-01-15 16:30:45"]))
-        result = normalize_timestamps(s, "min")
-        expected = pd.Series(pd.to_datetime(["2024-01-15 16:30:00"]))
-        pd.testing.assert_series_equal(result, expected)
-
-    def test_default_resolution(self):
-        """None resolution uses DEFAULT_RESOLUTION (daily)."""
-        s = pd.Series(pd.to_datetime(["2024-01-15 16:30:00"]))
-        result = normalize_timestamps(s)
-        expected = pd.Series(pd.to_datetime(["2024-01-15"]))
         pd.testing.assert_series_equal(result, expected)
 
     def test_combined_tz_and_time_component(self):
         """Timezone + time component: both are handled together."""
         s = pd.Series(pd.to_datetime(["2024-01-15 16:30:00"]).tz_localize("UTC"))
-        result = normalize_timestamps(s, "D")
+        result = normalize_dates(s)
         assert result.dt.tz is None
         expected = pd.Series(pd.to_datetime(["2024-01-15"]))
         pd.testing.assert_series_equal(result, expected)
@@ -86,7 +63,7 @@ class TestNormalizeTimestamps:
         """Input Series is not modified in place."""
         s = pd.Series(pd.to_datetime(["2024-01-15 16:30:00"]).tz_localize("UTC"))
         original = s.copy()
-        normalize_timestamps(s, "D")
+        normalize_dates(s)
         pd.testing.assert_series_equal(s, original)
 
 
@@ -150,7 +127,6 @@ class TestCrossSourceDateMatching:
     def test_naive_midnight_matches_naive_midnight(self, option_data):
         """Baseline: matching sources still work after normalization."""
         signal_data = self._make_signal_data()
-        # Thursday = day 3 in Python (Monday=0)
         entry_dates = apply_signal(signal_data, day_of_week(3))
         result = long_calls(option_data, entry_dates=entry_dates, raw=True)
         assert len(result) > 0
@@ -208,45 +184,6 @@ class TestCrossSourceDateMatching:
         assert len(result) == 1
         assert result["value"].iloc[0] == 100
 
-    def test_date_resolution_parameter_passed_through(self, option_data):
-        """date_resolution parameter is accepted by strategy functions."""
-        signal_data = self._make_signal_data(tz="UTC", hour=16, minute=30)
-        entry_dates = apply_signal(signal_data, day_of_week(3))
-        result = long_calls(
-            option_data,
-            entry_dates=entry_dates,
-            date_resolution="D",
-            raw=True,
-        )
-        assert len(result) > 0
-
-    def test_hourly_resolution_differentiates_hours(self):
-        """With hourly resolution, different hours on the same day don't match."""
-        # Signal dates at 10:00
-        signal_dates = pd.DataFrame(
-            {
-                "underlying_symbol": ["SPX"],
-                "quote_date": pd.to_datetime(["2024-01-15 10:00:00"]),
-            }
-        )
-        # Data at 16:00
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": ["SPX"],
-                "quote_date": pd.to_datetime(["2024-01-15 16:00:00"]),
-                "value": [100],
-            }
-        )
-        from optopsy.core import _apply_signal_filter
-
-        # At daily resolution: should match
-        result_daily = _apply_signal_filter(data, signal_dates, date_resolution="D")
-        assert len(result_daily) == 1
-
-        # At hourly resolution: should NOT match
-        result_hourly = _apply_signal_filter(data, signal_dates, date_resolution="h")
-        assert len(result_hourly) == 0
-
 
 class TestApplySignalNormalization:
     """Tests for normalization within apply_signal itself."""
@@ -286,23 +223,3 @@ class TestApplySignalNormalization:
         )
         result = apply_signal(data, lambda df: pd.Series(True, index=df.index))
         assert result["quote_date"].dt.tz is None
-
-    def test_hourly_resolution_preserves_hours(self):
-        """apply_signal with hourly resolution keeps hour granularity."""
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": ["SPX"] * 2,
-                "quote_date": pd.to_datetime(
-                    ["2024-01-15 10:30:00", "2024-01-15 14:45:00"]
-                ),
-                "close": [100, 101],
-            }
-        )
-        result = apply_signal(
-            data,
-            lambda df: pd.Series(True, index=df.index),
-            date_resolution="h",
-        )
-        assert len(result) == 2
-        assert result["quote_date"].iloc[0].hour == 10
-        assert result["quote_date"].iloc[1].hour == 14

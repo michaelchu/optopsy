@@ -30,12 +30,12 @@ Example:
 """
 
 import operator
-from typing import Callable, Optional
+from typing import Callable
 
 import pandas as pd
 import pandas_ta as ta
 
-from .timestamps import normalize_timestamps
+from .timestamps import normalize_dates
 
 # Signal function type: takes a DataFrame with (underlying_symbol, quote_date,
 # underlying_price) and returns a boolean Series indicating valid entry/exit dates.
@@ -705,11 +705,7 @@ def signal(func: SignalFunc) -> Signal:
 # ---------------------------------------------------------------------------
 
 
-def apply_signal(
-    data: pd.DataFrame,
-    signal_func: SignalFunc,
-    date_resolution: Optional[str] = None,
-) -> pd.DataFrame:
+def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
     """
     Run a signal function on data and return valid (symbol, date) pairs.
 
@@ -717,9 +713,9 @@ def apply_signal(
     before running a strategy and pass the result as ``entry_dates`` or
     ``exit_dates``.
 
-    The returned ``quote_date`` values are normalized to *date_resolution*
-    (default daily) so that they reliably match option chain dates from any
-    provider, regardless of timezone or sub-day time component differences.
+    The returned ``quote_date`` values are normalized to date-only so that
+    they reliably match option chain dates from any provider, regardless
+    of timezone or time-of-day differences.
 
     Args:
         data: DataFrame with at least ``underlying_symbol`` and ``quote_date``.
@@ -729,14 +725,10 @@ def apply_signal(
               ``low``, ``volume``.
         signal_func: Callable that takes a DataFrame and returns a boolean
                      Series indicating which dates are valid.
-        date_resolution: Pandas frequency string for timestamp alignment
-            (``"D"``, ``"h"``, ``"min"``, …).  Defaults to ``None`` which
-            uses :data:`timestamps.DEFAULT_RESOLUTION` (``"D"``).
 
     Returns:
         DataFrame with columns ``(underlying_symbol, quote_date)`` for
-        dates where the signal is True.  ``quote_date`` is normalized to
-        *date_resolution*.
+        dates where the signal is True.
 
     Example:
         >>> import optopsy as op
@@ -757,7 +749,7 @@ def apply_signal(
     df = data.copy()
     if "underlying_price" not in df.columns and "close" in df.columns:
         df["underlying_price"] = df["close"]
-    df["quote_date"] = normalize_timestamps(df["quote_date"], date_resolution)
+    df["quote_date"] = normalize_dates(df["quote_date"])
     df = (
         df.drop_duplicates(["underlying_symbol", "quote_date"])
         .sort_values(["underlying_symbol", "quote_date"])

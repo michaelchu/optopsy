@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from .definitions import evaluated_cols, describe_cols
 from .checks import _run_checks, _run_calendar_checks
-from .timestamps import normalize_timestamps, DEFAULT_RESOLUTION
+from .timestamps import normalize_dates
 
 pd.set_option("expand_frame_repr", False)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
@@ -125,21 +125,17 @@ def _apply_signal_filter(
     data: pd.DataFrame,
     valid_dates: pd.DataFrame,
     date_col: str = "quote_date",
-    date_resolution: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Filter data to only include rows matching valid (symbol, date) pairs.
 
-    Both sides are normalized to *date_resolution* before merging so that
-    timezone and sub-resolution time differences (e.g. midnight vs market
-    close) do not cause silent join failures.
+    Both sides are normalized to date-only before merging so that timezone
+    and time-of-day differences do not cause silent join failures.
 
     Args:
         data: DataFrame to filter
         valid_dates: DataFrame with (underlying_symbol, quote_date) of valid dates
         date_col: Name of the date column in data to match against (default: quote_date)
-        date_resolution: Pandas frequency string for timestamp alignment
-            (default ``None`` → uses :data:`timestamps.DEFAULT_RESOLUTION`).
 
     Returns:
         Filtered DataFrame
@@ -150,8 +146,8 @@ def _apply_signal_filter(
 
     # Normalize both sides so cross-source dates align
     data = data.copy()
-    data[date_col] = normalize_timestamps(data[date_col], date_resolution)
-    valid_dates[date_col] = normalize_timestamps(valid_dates[date_col], date_resolution)
+    data[date_col] = normalize_dates(data[date_col])
+    valid_dates[date_col] = normalize_dates(valid_dates[date_col])
 
     return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
 
@@ -290,7 +286,6 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     # Pre-computed signal date DataFrames (from apply_signal)
     entry_dates = kwargs.get("entry_dates")
     exit_dates = kwargs.get("exit_dates")
-    date_resolution = kwargs.get("date_resolution")
 
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
@@ -302,16 +297,14 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
     # Apply entry date filtering (only to entries, exits are unaffected)
     if entry_dates is not None:
-        entries = _apply_signal_filter(
-            entries, entry_dates, date_resolution=date_resolution
-        )
+        entries = _apply_signal_filter(entries, entry_dates)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
     exits = _get_exits(data, kwargs["exit_dte"], kwargs.get("exit_dte_tolerance", 0))
 
     # Apply exit date filtering (only to exits, entries are unaffected)
     if exit_dates is not None:
-        exits = _apply_signal_filter(exits, exit_dates, date_resolution=date_resolution)
+        exits = _apply_signal_filter(exits, exit_dates)
 
     # Determine merge columns
     merge_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
@@ -628,7 +621,6 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             delta_interval=context["params"].get("delta_interval"),
             entry_dates=context["params"].get("entry_dates"),
             exit_dates=context["params"].get("exit_dates"),
-            date_resolution=context["params"].get("date_resolution"),
         )
         .pipe(
             _strategy_engine,
@@ -805,7 +797,6 @@ def _find_calendar_exit_prices(
     exit_dte: int,
     same_strike: bool,
     exit_dte_tolerance: int = 0,
-    date_resolution: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Find exit prices for calendar/diagonal spread positions.
@@ -816,8 +807,6 @@ def _find_calendar_exit_prices(
         exit_dte: Days before front expiration to exit
         same_strike: True for calendar spreads, False for diagonal
         exit_dte_tolerance: Maximum days of deviation from target exit date (default 0)
-        date_resolution: Pandas frequency string for timestamp alignment
-            (default ``None`` → uses :data:`timestamps.DEFAULT_RESOLUTION`).
 
     Returns:
         DataFrame with exit prices merged in, or empty DataFrame if no exit data
@@ -828,9 +817,9 @@ def _find_calendar_exit_prices(
     merged["exit_date"] = merged["expiration_leg1"] - pd.Timedelta(days=exit_dte)
 
     # Normalize both sides so computed exit dates match quote_dates from data
-    merged["exit_date"] = normalize_timestamps(merged["exit_date"], date_resolution)
+    merged["exit_date"] = normalize_dates(merged["exit_date"])
     data = data.copy()
-    data["quote_date"] = normalize_timestamps(data["quote_date"], date_resolution)
+    data["quote_date"] = normalize_dates(data["quote_date"])
 
     all_exit_dates = merged["exit_date"].unique()
 
@@ -1029,11 +1018,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
 
     # Apply entry date filtering to calendar/diagonal spreads
     entry_dates = params.get("entry_dates")
-    date_resolution = params.get("date_resolution")
     if entry_dates is not None and not merged.empty:
-        merged = _apply_signal_filter(
-            merged, entry_dates, date_resolution=date_resolution
-        )
+        merged = _apply_signal_filter(merged, entry_dates)
 
     if merged.empty:
         return _fmt(merged)
@@ -1045,7 +1031,6 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params["exit_dte"],
         same_strike,
         params.get("exit_dte_tolerance", 0),
-        date_resolution=date_resolution,
     )
 
     if merged.empty:
@@ -1054,12 +1039,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     # Apply exit date filtering to calendar/diagonal spreads
     exit_dates = params.get("exit_dates")
     if exit_dates is not None and not merged.empty:
-        merged = _apply_signal_filter(
-            merged,
-            exit_dates,
-            date_col="exit_date",
-            date_resolution=date_resolution,
-        )
+        merged = _apply_signal_filter(merged, exit_dates, date_col="exit_date")
 
     if merged.empty:
         return _fmt(merged)

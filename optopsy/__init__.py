@@ -59,7 +59,7 @@ from .strategies import (
 )
 from .datafeeds import csv_data
 from .types import StrategyParams, CalendarStrategyParams
-from .timestamps import normalize_timestamps, DEFAULT_RESOLUTION
+from .timestamps import normalize_dates
 from .signals import (
     apply_signal,
     rsi_below,
@@ -144,6 +144,5 @@ __all__ = [
     "Signal",
     "signal",
     # Timestamp utilities
-    "normalize_timestamps",
-    "DEFAULT_RESOLUTION",
+    "normalize_dates",
 ]
