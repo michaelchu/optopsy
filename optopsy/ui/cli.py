@@ -51,6 +51,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
     config.run.headless = args.headless
     config.run.debug = args.debug
     config.run.watch = args.watch
+    config.ui.language = "en-US"
 
     from chainlit.cli import run_chainlit
 
