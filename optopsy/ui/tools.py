@@ -691,6 +691,32 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     return pd.concat(frames, ignore_index=True)
 
 
+def _intersect_with_options_dates(
+    signal_dates: pd.DataFrame, options: pd.DataFrame
+) -> pd.DataFrame:
+    """Filter signal dates to only those present in the options dataset.
+
+    yfinance data extends ~1 year before the options date range (for indicator
+    warmup), so signals may fire on dates that have no options data. This
+    intersection ensures entry/exit dates always correspond to actual trading
+    days in the options dataset.
+    """
+    if signal_dates.empty or options.empty:
+        return signal_dates
+    opt_dates = (
+        options[["underlying_symbol", "quote_date"]]
+        .drop_duplicates()
+        .assign(
+            quote_date=lambda df: pd.to_datetime(df["quote_date"]).dt.normalize()
+        )
+    )
+    sd = signal_dates.assign(
+        quote_date=lambda df: pd.to_datetime(df["quote_date"]).dt.normalize()
+    )
+    merged = sd.merge(opt_dates, on=["underlying_symbol", "quote_date"], how="inner")
+    return merged.reset_index(drop=True)
+
+
 MAX_ROWS = 50
 
 
@@ -1012,8 +1038,10 @@ def execute_tool(
         else:
             combined = _signals.and_signals(*built_signals)
 
-        # Compute valid dates
-        valid_dates = apply_signal(signal_data, combined)
+        # Compute valid dates, intersected with actual options dates
+        valid_dates = _intersect_with_options_dates(
+            apply_signal(signal_data, combined), dataset
+        )
 
         # Store in signals dict
         updated_signals = dict(signals)
@@ -1031,6 +1059,15 @@ def execute_tool(
             date_min = valid_dates["quote_date"].min().date()
             date_max = valid_dates["quote_date"].max().date()
             display_lines.append(f"Date range: {date_min} to {date_max}")
+        else:
+            opt_min = dataset["quote_date"].min().date()
+            opt_max = dataset["quote_date"].max().date()
+            display_lines.append(
+                f"WARNING: Signal produced no dates overlapping the options data "
+                f"({opt_min} to {opt_max}). The signal may fire outside this window. "
+                f"Fetch options data for the period when the signal fires, or adjust "
+                f"signal parameters."
+            )
         display = "\n".join(display_lines)
         return _result(summary, user_display=display, sigs=updated_signals)
 
@@ -1188,7 +1225,20 @@ def execute_tool(
                 days = 0
             if days > 1:
                 sig = _signals.sustained(sig, days)
-            strat_kwargs["entry_dates"] = apply_signal(signal_data, sig)
+            entry_dates = _intersect_with_options_dates(
+                apply_signal(signal_data, sig), dataset
+            )
+            if entry_dates.empty:
+                opt_min = dataset["quote_date"].min().date()
+                opt_max = dataset["quote_date"].max().date()
+                return _result(
+                    f"Entry signal '{entry_signal_name}' produced no dates that overlap "
+                    f"with the options data ({opt_min} to {opt_max}). "
+                    f"The signal fired on historical price dates outside this window. "
+                    f"Try fetching options data for the period when the signal fires, "
+                    f"or use a signal that matches your options date range."
+                )
+            strat_kwargs["entry_dates"] = entry_dates
 
         # Resolve exit_signal string -> SignalFunc -> pre-computed exit_dates
         if exit_signal_name:
@@ -1200,7 +1250,9 @@ def execute_tool(
                 exit_days = 0
             if exit_days > 1:
                 exit_sig = _signals.sustained(exit_sig, exit_days)
-            strat_kwargs["exit_dates"] = apply_signal(signal_data, exit_sig)
+            strat_kwargs["exit_dates"] = _intersect_with_options_dates(
+                apply_signal(signal_data, exit_sig), dataset
+            )
         try:
             result = func(dataset, **strat_kwargs)
             if result.empty:

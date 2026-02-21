@@ -135,24 +135,28 @@ async def on_message(message: cl.Message):
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
 
-    # Intermediate LLM reasoning streams into response_msg live so the user
-    # can see it.  When tool calls are confirmed, the message is cleared so
-    # the final answer starts clean.
-    response_msg = cl.Message(content="")
-    await response_msg.send()
+    # Delay creating the response message until after all tool steps finish,
+    # so the final answer always appears below the tool step items.
+    response_msg: cl.Message | None = None
+    final_tokens: list[str] = []
 
     async def on_thinking_token(token: str):
-        await response_msg.stream_token(token)
+        # Intermediate reasoning — silently discard; we only show the final answer.
+        pass
 
     async def on_token(token: str):
+        nonlocal response_msg
+        if response_msg is None:
+            response_msg = cl.Message(content="")
+            await response_msg.send()
         await response_msg.stream_token(token)
 
-    # When the LLM emits tool_calls, clear the thinking text from the message
-    # so the final answer isn't prefixed with intermediate reasoning.
     async def on_assistant_tool_calls(tool_calls: list[dict]):
-        response_msg.content = ""
-        response_msg.metadata = {"tool_calls": tool_calls}
-        await response_msg.update()
+        # Store tool_calls metadata for session resume; no message to clear.
+        nonlocal response_msg
+        if response_msg is not None:
+            response_msg.metadata = {"tool_calls": tool_calls}
+            await response_msg.update()
 
     try:
         result_text, updated_messages = await agent.chat(
@@ -162,13 +166,21 @@ async def on_message(message: cl.Message):
             on_thinking_token=on_thinking_token,
             on_assistant_tool_calls=on_assistant_tool_calls,
         )
-        # Finalize the streamed message
-        response_msg.content = result_text
-        await response_msg.update()
+        # If on_token never fired (e.g. result came back all at once), send now.
+        if response_msg is None:
+            response_msg = cl.Message(content=result_text)
+            await response_msg.send()
+        else:
+            response_msg.content = result_text
+            await response_msg.update()
         cl.user_session.set("messages", updated_messages)
     except Exception as e:
-        response_msg.content = f"Error: {e}"
-        await response_msg.update()
+        if response_msg is None:
+            response_msg = cl.Message(content=f"Error: {e}")
+            await response_msg.send()
+        else:
+            response_msg.content = f"Error: {e}"
+            await response_msg.update()
 
 
 def main():
