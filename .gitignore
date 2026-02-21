@@ -36,6 +36,7 @@ MANIFEST
 .vscode
 
 /tests/.pytest_cache/
+.coverage
 
 *.swp
 *.swo
