@@ -66,16 +66,22 @@
 
 ## 2. Bug Potential
 
-### ✅ 2.1 — `setup.py` missing `optopsy.ui.tools` package
+### ✅ 2.1 — `setup.py` UI packages separated from core
 
-**File:** `setup.py:20`
-**Status:** **COMPLETE** — Implemented in commit `95bd464`.
+**File:** `setup.py`
+**Status:** **COMPLETE** — Implemented across commits `95bd464` and subsequent update.
 
-**Problem:** The `packages` list does not include `"optopsy.ui.tools"`. When installed via `pip install`, the `tools/` subpackage (`_executor.py`, `_helpers.py`, `_schemas.py`) would be missing entirely, causing the chat UI to crash on startup with an `ImportError`.
+**Problem (original):** The hard-coded `packages` list did not include `"optopsy.ui.tools"`, causing the chat UI to crash with `ImportError` on non-editable installs.
 
-**Risk:** Critical — the UI is completely broken when installed from PyPI or via `pip install .` (as opposed to `pip install -e .` which uses the source tree directly and happens to work).
+**Problem (follow-up):** The initial fix (`find_packages(exclude=["tests", "tests.*", "samples"])`) bundled all UI subpackages (`optopsy.ui.tools`, `optopsy.ui.providers`) unconditionally, even for users who only install the core library. The `tools` and `providers` packages should conceptually only be installed when the user opts into the `[ui]` extra.
 
-**What was done:** Replaced the hard-coded `packages` list with `find_packages(exclude=["tests", "tests.*", "samples"])`, which automatically discovers all subpackages including `optopsy.ui.tools`.
+**Risk:** Critical (original); Medium (follow-up — unnecessary files shipped to core-only users).
+
+**What was done:** Replaced the single `find_packages()` call with two explicit package lists:
+- `_core_packages`: discovered via `find_packages(exclude=[..., "optopsy.ui", "optopsy.ui.*"])` — always installed.
+- `_ui_packages`: explicitly listed (`optopsy.ui`, `optopsy.ui.tools`, `optopsy.ui.providers`) — conceptually tied to the `[ui]` extra.
+
+Both lists are combined in `packages=_core_packages + _ui_packages`. This is because **setuptools `extras_require` only controls dependencies, not which packages are included in a wheel/sdist**. True conditional package exclusion would require splitting into a separate distribution (e.g., `optopsy-ui`). The current approach ensures `pip install optopsy[ui]` works correctly for both editable and non-editable installs, while clearly documenting the core/UI boundary. The `console_scripts` entry point is gated with `[ui]` so the `optopsy-chat` command is only registered when UI dependencies are present.
 
 ---
 
@@ -322,7 +328,7 @@ for target_date in all_exit_dates:
 | 1.3 | Mid-price computed unconditionally | 🟡 | Deferred |
 | 1.4 | `suggest_strategy_params` copy | 🟡 | ✅ Done |
 | 1.5 | Python loop in signals | 🟢 | N/A (acceptable) |
-| 2.1 | `setup.py` missing package | 🔴 | ✅ Done |
+| 2.1 | `setup.py` UI packages separated | 🔴 | ✅ Done |
 | 2.2 | `pd.set_option` side effects | 🔴 | ✅ Done |
 | 2.3 | `isinstance` check order | 🟡 | ✅ Done |
 | 2.4 | BB column name comment | 🟡 | ✅ Done |
