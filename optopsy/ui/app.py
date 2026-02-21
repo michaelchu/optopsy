@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from pathlib import Path
@@ -16,13 +17,119 @@ _env_path = find_dotenv() or str(Path(__file__).resolve().parent.parent.parent /
 load_dotenv(_env_path, override=True)
 
 import chainlit as cl
+from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
 from optopsy.ui.agent import OptopsyAgent
 from optopsy.ui.providers import get_provider_names
 
+DB_PATH = Path("~/.optopsy/chat.db").expanduser()
+
+_DB_SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL UNIQUE,
+    "createdAt" TEXT NOT NULL,
+    metadata TEXT DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS threads (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT,
+    "userIdentifier" TEXT,
+    "createdAt" TEXT,
+    name TEXT,
+    metadata TEXT,
+    tags TEXT,
+    FOREIGN KEY("userId") REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS steps (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    type TEXT,
+    "threadId" TEXT NOT NULL,
+    "parentId" TEXT,
+    streaming INTEGER DEFAULT 0,
+    "waitForAnswer" INTEGER,
+    "isError" INTEGER,
+    metadata TEXT DEFAULT '{}',
+    tags TEXT,
+    input TEXT,
+    output TEXT,
+    "createdAt" TEXT,
+    start TEXT,
+    "end" TEXT,
+    generation TEXT DEFAULT '{}',
+    "defaultOpen" INTEGER DEFAULT 0,
+    "showInput" TEXT,
+    language TEXT,
+    FOREIGN KEY("threadId") REFERENCES threads(id)
+);
+CREATE TABLE IF NOT EXISTS feedbacks (
+    id TEXT PRIMARY KEY,
+    "forId" TEXT NOT NULL,
+    value REAL,
+    comment TEXT,
+    FOREIGN KEY("forId") REFERENCES steps(id)
+);
+CREATE TABLE IF NOT EXISTS elements (
+    id TEXT PRIMARY KEY,
+    "threadId" TEXT NOT NULL,
+    type TEXT,
+    "chainlitKey" TEXT,
+    url TEXT,
+    "objectKey" TEXT,
+    name TEXT,
+    display TEXT,
+    size TEXT,
+    language TEXT,
+    page TEXT,
+    "forId" TEXT,
+    mime TEXT,
+    props TEXT DEFAULT '{}',
+    "autoPlay" TEXT,
+    "playerConfig" TEXT,
+    FOREIGN KEY("threadId") REFERENCES threads(id)
+);
+"""
+
+_db_initialized = False
+
+
+async def _init_db() -> None:
+    global _db_initialized
+    if _db_initialized:
+        return
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    import aiosqlite
+
+    async with aiosqlite.connect(DB_PATH) as conn:
+        await conn.executescript(_DB_SCHEMA)
+        # Add columns introduced in newer Chainlit versions (safe to run repeatedly).
+        for col, definition in [
+            ("defaultOpen", "INTEGER DEFAULT 0"),
+            ("waitForAnswer", "INTEGER"),
+        ]:
+            try:
+                await conn.execute(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
+            except Exception:
+                pass  # column already exists
+        await conn.commit()
+    _db_initialized = True
+
+
+@cl.data_layer
+def get_data_layer() -> SQLAlchemyDataLayer:
+    return SQLAlchemyDataLayer(conninfo=f"sqlite+aiosqlite:///{DB_PATH}")
+
+
+@cl.header_auth_callback
+async def header_auth_callback(headers) -> cl.User:
+    # Single-user local app — auto-authenticate without a login form.
+    return cl.User(identifier="local", metadata={"role": "user"})
+
 
 @cl.on_chat_start
 async def on_chat_start():
+    await _init_db()
     model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
     agent = OptopsyAgent(model=model)
     cl.user_session.set("agent", agent)
@@ -77,6 +184,16 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
     #   "user_message"      -> role: user
     #   "assistant_message" -> role: assistant  (may embed tool_calls metadata)
     #   "tool"              -> role: tool        (tool result)
+    def _parse_meta(step: dict) -> dict:
+        """SQLite stores metadata as a JSON string; parse it to a dict."""
+        raw = step.get("metadata") or {}
+        if isinstance(raw, str):
+            try:
+                return json.loads(raw)
+            except (ValueError, TypeError):
+                return {}
+        return raw
+
     messages: list[dict] = []
     for step in thread.get("steps", []):
         step_type = step.get("type")
@@ -85,12 +202,12 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
         elif step_type == "assistant_message":
             msg: dict = {"role": "assistant", "content": step.get("output", "")}
             # Restore tool_calls array if stored in step metadata
-            tool_calls = (step.get("metadata") or {}).get("tool_calls")
+            tool_calls = _parse_meta(step).get("tool_calls")
             if tool_calls:
                 msg["tool_calls"] = tool_calls
             messages.append(msg)
         elif step_type == "tool":
-            meta = step.get("metadata") or {}
+            meta = _parse_meta(step)
             tool_call_id = meta.get("tool_call_id", step.get("id", ""))
             messages.append(
                 {
@@ -122,6 +239,16 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
 async def on_message(message: cl.Message):
     agent: OptopsyAgent = cl.user_session.get("agent")
     messages: list = cl.user_session.get("messages")
+
+    # Guard: session state is missing (e.g. user deleted the thread then typed).
+    # Re-initialize in-place rather than redirecting so the message isn't lost.
+    if agent is None or messages is None:
+        await _init_db()
+        model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
+        agent = OptopsyAgent(model=model)
+        messages = []
+        cl.user_session.set("agent", agent)
+        cl.user_session.set("messages", messages)
 
     messages.append({"role": "user", "content": message.content})
 
