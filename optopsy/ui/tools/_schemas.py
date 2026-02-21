@@ -349,41 +349,6 @@ def get_tool_schemas() -> list[dict]:
         {
             "type": "function",
             "function": {
-                "name": "load_csv_data",
-                "description": (
-                    "Load option chain data from a CSV file in the data directory."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "filename": {
-                            "type": "string",
-                            "description": "CSV filename to load",
-                        },
-                        "start_date": {
-                            "type": "string",
-                            "description": "Start date filter (YYYY-MM-DD)",
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "description": "End date filter (YYYY-MM-DD)",
-                        },
-                    },
-                    "required": ["filename"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_data_files",
-                "description": "List available CSV files in the data directory.",
-                "parameters": {"type": "object", "properties": {}, "required": []},
-            },
-        },
-        {
-            "type": "function",
-            "function": {
                 "name": "preview_data",
                 "description": (
                     "Show shape, columns, date range, and sample rows of a dataset. "

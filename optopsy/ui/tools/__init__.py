@@ -1,13 +1,11 @@
 from ._executor import execute_tool
 from ._helpers import (
-    DATA_DIR,
     ToolResult,
     _YF_CACHE_CATEGORY,
     _empty_signal_suggestion,
     _fetch_stock_data_for_signals,
     _intersect_with_options_dates,
     _yf_cache,
-    ensure_data_dir,
 )
 from ._schemas import (
     CALENDAR_STRATEGIES,

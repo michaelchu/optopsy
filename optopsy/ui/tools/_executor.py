@@ -1,7 +1,6 @@
 import itertools as _itertools
 import json as _json
 import logging
-import os
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -15,7 +14,6 @@ from optopsy.signals import apply_signal
 from ..providers import get_provider_for_tool
 from ..providers.cache import ParquetCache
 from ._helpers import (
-    DATA_DIR,
     _DATE_ONLY_SIGNALS,
     _YF_CACHE_CATEGORY,
     _YF_DEDUP_COLS,
@@ -31,7 +29,6 @@ from ._helpers import (
     _strategy_llm_summary,
     _yf_cache,
     _yf_compute_gaps,
-    ensure_data_dir,
 )
 from ._helpers import ToolResult
 from ._schemas import (
@@ -108,44 +105,6 @@ def _require_dataset(
 # ---------------------------------------------------------------------------
 # Tool handler implementations
 # ---------------------------------------------------------------------------
-
-
-@_register("load_csv_data")
-def _handle_load_csv(arguments, dataset, signals, datasets, results, _result):
-    filename = arguments["filename"]
-    filepath = os.path.realpath(os.path.join(DATA_DIR, filename))
-    if not filepath.startswith(os.path.realpath(DATA_DIR)):
-        return _result("Access denied: path outside data directory.")
-    if not os.path.exists(filepath):
-        available = os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else []
-        return _result(
-            f"File '{filename}' not found. Available files: {available}",
-        )
-    kwargs: dict[str, Any] = {}
-    if arguments.get("start_date"):
-        kwargs["start_date"] = arguments["start_date"]
-    if arguments.get("end_date"):
-        kwargs["end_date"] = arguments["end_date"]
-    try:
-        df = op.csv_data(filepath, **kwargs)
-        label = filename
-        updated_datasets = {**datasets, label: df}
-        summary = _df_summary(df, f"Loaded '{label}'")
-        if len(updated_datasets) > 1:
-            summary += f"\nActive datasets: {list(updated_datasets.keys())}"
-        display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
-        return _result(summary, df, display, dss=updated_datasets, active_name=label)
-    except Exception as e:
-        return _result(f"Error loading '{filename}': {e}")
-
-
-@_register("list_data_files")
-def _handle_list_data_files(arguments, dataset, signals, datasets, results, _result):
-    ensure_data_dir()
-    files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
-    if not files:
-        return _result("No CSV files found in the data directory.")
-    return _result(f"Available files: {files}")
 
 
 @_register("preview_data")

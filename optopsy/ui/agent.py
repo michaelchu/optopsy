@@ -27,7 +27,8 @@ This loads the data directly into memory — no file step needed.
 with NO `start_date` or `end_date` — this returns cached data without hitting the API.
   - If the user doesn't mention dates and doesn't refer to cached data, pick a reasonable \
 3-month window ending today and provide both `start_date` and `end_date`.
-- Alternatively, use `list_data_files` and `load_csv_data` to load from local CSV files.
+- Users can also drag-and-drop CSV files directly into the chat to load them. When a CSV is uploaded, \
+it is automatically loaded and set as the active dataset — no tool call needed.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
 - Only tools that appear in your tool list are available. If a data provider tool is not listed, \

@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import date, timedelta
 
 import pandas as pd
@@ -8,8 +7,6 @@ from ..providers.cache import ParquetCache, compute_date_gaps
 from ._schemas import STRATEGIES, _DATE_ONLY_SIGNALS
 
 _log = logging.getLogger(__name__)
-
-DATA_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "data")
 
 # Cache for yfinance OHLCV data (category="yf_stocks", one file per symbol).
 # Deliberately distinct from EODHD's "stocks" category to avoid schema collisions.
@@ -243,10 +240,6 @@ def _df_to_markdown(df: pd.DataFrame, max_rows: int = MAX_ROWS) -> str:
     if truncated:
         table += f"\n\n*... showing {max_rows} of {total} rows*"
     return table
-
-
-def ensure_data_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
 
 
 class ToolResult:

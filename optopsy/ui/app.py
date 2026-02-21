@@ -19,6 +19,8 @@ load_dotenv(_env_path, override=True)
 import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
+import optopsy as op
+
 from optopsy.ui.agent import OptopsyAgent
 from optopsy.ui.providers import get_provider_names
 
@@ -151,14 +153,15 @@ async def on_chat_start():
         content=(
             "Welcome to **Optopsy Chat** — your options strategy backtesting assistant.\n\n"
             "**Getting started:**\n"
-            "1. Fetch options data or load an existing file\n"
+            "1. Fetch options data or drop a CSV file into the chat\n"
             "2. Preview the data\n"
             "3. Run any of 28 options strategies — just describe what you want\n\n"
             "**Example prompts:**\n"
             '- *"Fetch AAPL options data from the last 6 months"*\n'
-            '- *"Load my file and show me what\'s in it"*\n'
             '- *"Run a long call spread with 60 DTE entry"*\n'
             '- *"Compare iron condors vs iron butterflies"*\n\n'
+            "CSV format: `underlying_symbol, underlying_price, option_type, "
+            "expiration, quote_date, strike, bid, ask`\n\n"
             f"{provider_line}"
             f"Using model: `{model}` (set `OPTOPSY_MODEL` env var to change)"
         )
@@ -249,6 +252,37 @@ async def on_message(message: cl.Message):
         messages = []
         cl.user_session.set("agent", agent)
         cl.user_session.set("messages", messages)
+
+    # Handle CSV file uploads via drag-and-drop
+    csv_elements = [
+        el for el in (message.elements or [])
+        if el.name and el.name.lower().endswith(".csv") and el.path
+    ]
+    for el in csv_elements:
+        try:
+            df = op.csv_data(el.path)
+            label = el.name
+            agent.datasets[label] = df
+            agent.dataset = df
+
+            date_range = ""
+            if "quote_date" in df.columns:
+                d_min = df["quote_date"].min().date()
+                d_max = df["quote_date"].max().date()
+                date_range = f"Date range: {d_min} to {d_max}\n"
+
+            await cl.Message(
+                content=(
+                    f"Loaded **{label}** — "
+                    f"{len(df):,} rows, {len(df.columns)} columns\n"
+                    f"{date_range}"
+                    f"```\n{df.head().to_string()}\n```"
+                )
+            ).send()
+        except Exception as e:
+            await cl.Message(
+                content=f"Failed to load **{el.name}**: {e}"
+            ).send()
 
     messages.append({"role": "user", "content": message.content})
 
