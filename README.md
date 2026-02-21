@@ -70,9 +70,9 @@ optopsy-chat cache clear SPY     # clear a specific symbol
 ```
 
 **Example prompts:**
-- *"Fetch AAPL options from the last 3 months and run a short put spread"*
-- *"Compare iron condors vs iron butterflies on SPY"*
-- *"Show me covered call performance with 30-delta entries"*
+- *"Fetch SPY options from 2024-01-01 to 2024-06-30 and run short puts with max 45 DTE, exit at 7 DTE"*
+- *"Compare iron condors vs iron butterflies on SPY from 2023-06-01 to 2024-01-01 with 30 and 60 day max entry DTE"*
+- *"Run short puts on SPY from 2024-01-01 to 2024-12-31 with RSI below 30 sustained for 3 days as the entry signal"*
 
 ## Installation
 
@@ -193,20 +193,23 @@ results = op.long_call_diagonal(data, raw=True)
 
 ## Entry Signals
 
-Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta). All 28 strategies accept optional `entry_signal`, `exit_signal`, and `stock_data` parameters.
+Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
 
 ```python
-from optopsy import long_calls, rsi_below, sustained, signal, day_of_week
+from optopsy import long_calls, apply_signal, rsi_below, sustained, signal, day_of_week
 
 # Enter only when RSI(14) is below 30
-results = long_calls(data, entry_signal=rsi_below(14, 30))
+entry_dates = apply_signal(data, rsi_below(14, 30))
+results = long_calls(data, entry_dates=entry_dates)
 
 # Require RSI below 30 for 5 consecutive days
-results = long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
+entry_dates = apply_signal(data, sustained(rsi_below(14, 30), days=5))
+results = long_calls(data, entry_dates=entry_dates)
 
 # Compose signals with & and |
 sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))  # Oversold + Thursday
-results = long_calls(data, entry_signal=sig)
+entry_dates = apply_signal(data, sig)
+results = long_calls(data, entry_dates=entry_dates)
 ```
 
 ### Available Signals
@@ -236,62 +239,66 @@ results = long_calls(data, entry_signal=sig)
 
 ```python
 import optopsy as op
-from optopsy import rsi_below, rsi_above
+from optopsy import apply_signal, rsi_below, rsi_above
 
-results = op.long_calls(
-    data,
-    entry_signal=rsi_below(period=14, threshold=30),
-    exit_signal=rsi_above(period=14, threshold=70),
-)
+entry_dates = apply_signal(data, rsi_below(period=14, threshold=30))
+exit_dates = apply_signal(data, rsi_above(period=14, threshold=70))
+results = op.long_calls(data, entry_dates=entry_dates, exit_dates=exit_dates)
 ```
 
 **SMA — trend filter (only enter when price is above its 50-day moving average):**
 
 ```python
-from optopsy import sma_above
+from optopsy import apply_signal, sma_above
 
-results = op.short_puts(data, entry_signal=sma_above(period=50))
+entry_dates = apply_signal(data, sma_above(period=50))
+results = op.short_puts(data, entry_dates=entry_dates)
 ```
 
 **MACD — enter on bullish crossover:**
 
 ```python
-from optopsy import macd_cross_above
+from optopsy import apply_signal, macd_cross_above
 
-results = op.long_call_spread(data, entry_signal=macd_cross_above(fast=12, slow=26, signal_period=9))
+entry_dates = apply_signal(data, macd_cross_above(fast=12, slow=26, signal_period=9))
+results = op.long_call_spread(data, entry_dates=entry_dates)
 ```
 
 **Bollinger Bands — mean reversion when price dips below the lower band:**
 
 ```python
-from optopsy import bb_below_lower
+from optopsy import apply_signal, bb_below_lower
 
-results = op.long_puts(data, entry_signal=bb_below_lower(length=20, std=2.0))
+entry_dates = apply_signal(data, bb_below_lower(length=20, std=2.0))
+results = op.long_puts(data, entry_dates=entry_dates)
 ```
 
 **EMA Crossover — golden cross (fast EMA crosses above slow EMA):**
 
 ```python
-from optopsy import ema_cross_above
+from optopsy import apply_signal, ema_cross_above
 
-results = op.long_calls(data, entry_signal=ema_cross_above(fast=10, slow=50))
+entry_dates = apply_signal(data, ema_cross_above(fast=10, slow=50))
+results = op.long_calls(data, entry_dates=entry_dates)
 ```
 
 **ATR — only sell premium in low-volatility regimes:**
 
 ```python
-from optopsy import atr_below
+from optopsy import apply_signal, atr_below
 
-results = op.iron_condor(data, entry_signal=atr_below(period=14, multiplier=0.75))
+entry_dates = apply_signal(data, atr_below(period=14, multiplier=0.75))
+results = op.iron_condor(data, entry_dates=entry_dates)
 ```
 
 **Calendar — restrict entries to specific days of the week:**
 
 ```python
-from optopsy import day_of_week
+from optopsy import apply_signal, day_of_week
 
 # Enter only on Mondays and Fridays
-results = op.short_straddles(data, entry_signal=day_of_week(0, 4))
+entry_dates = apply_signal(data, day_of_week(0, 4))
+results = op.short_straddles(data, entry_dates=entry_dates)
 ```
 
 ### Combining Multiple Signals
@@ -299,21 +306,24 @@ results = op.short_straddles(data, entry_signal=day_of_week(0, 4))
 Use the `Signal` class with `&` (AND) and `|` (OR) operators, or the functional `and_signals` / `or_signals` helpers:
 
 ```python
-from optopsy import signal, rsi_below, sma_above, atr_below, day_of_week
+from optopsy import apply_signal, signal, rsi_below, sma_above, atr_below, day_of_week
 from optopsy import and_signals, or_signals
 
 # Fluent API: oversold + uptrend + low volatility
 entry = signal(rsi_below(14, 30)) & signal(sma_above(50)) & signal(atr_below(14, 0.75))
-results = op.long_calls(data, entry_signal=entry)
+entry_dates = apply_signal(data, entry)
+results = op.long_calls(data, entry_dates=entry_dates)
 
 # Functional API: same logic
 entry = and_signals(rsi_below(14, 30), sma_above(50), atr_below(14, 0.75))
-results = op.long_calls(data, entry_signal=entry)
+entry_dates = apply_signal(data, entry)
+results = op.long_calls(data, entry_dates=entry_dates)
 
 # OR: enter when EITHER condition fires
 from optopsy import macd_cross_above, bb_below_lower
 entry = or_signals(macd_cross_above(), bb_below_lower())
-results = op.long_call_spread(data, entry_signal=entry)
+entry_dates = apply_signal(data, entry)
+results = op.long_call_spread(data, entry_dates=entry_dates)
 ```
 
 ### Sustained Signals
@@ -321,35 +331,36 @@ results = op.long_call_spread(data, entry_signal=entry)
 Require a condition to persist for multiple consecutive days before triggering:
 
 ```python
-from optopsy import sustained, rsi_below, bb_below_lower
+from optopsy import apply_signal, sustained, rsi_below, bb_below_lower
 
 # RSI must stay below 30 for 5 straight days
-results = op.long_calls(data, entry_signal=sustained(rsi_below(14, 30), days=5))
+entry_dates = apply_signal(data, sustained(rsi_below(14, 30), days=5))
+results = op.long_calls(data, entry_dates=entry_dates)
 
 # Bollinger Band breach sustained for 3 days
-results = op.long_puts(data, entry_signal=sustained(bb_below_lower(20, 2.0), days=3))
+entry_dates = apply_signal(data, sustained(bb_below_lower(20, 2.0), days=3))
+results = op.long_puts(data, entry_dates=entry_dates)
 ```
 
 ### Using Stock OHLCV Data
 
-By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially ATR, which benefits from real high/low data), pass a separate stock OHLCV DataFrame via the `stock_data` parameter:
+By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially ATR, which benefits from real high/low data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
 
 ```python
 import pandas as pd
 import optopsy as op
-from optopsy import atr_above, ema_cross_above, signal
+from optopsy import apply_signal, atr_above, ema_cross_above, signal
 
 # Load OHLCV stock data (must have: underlying_symbol, quote_date, close;
 # optional: open, high, low, volume)
 stock_df = pd.read_csv("SPX_daily_ohlcv.csv", parse_dates=["quote_date"])
 
-# ATR uses real high/low for true range when stock_data is provided
+# Compute entry dates from stock data using real high/low for ATR
 entry = signal(atr_above(period=14, multiplier=1.5)) & signal(ema_cross_above(10, 50))
-results = op.long_straddles(
-    data,
-    entry_signal=entry,
-    stock_data=stock_df,
-)
+entry_dates = apply_signal(stock_df, entry)
+
+# Pass pre-computed dates to the strategy
+results = op.long_straddles(data, entry_dates=entry_dates)
 ```
 
 ### Custom Signal Functions
@@ -358,18 +369,19 @@ Any function matching the signature `(pd.DataFrame) -> pd.Series[bool]` can be u
 
 ```python
 import optopsy as op
+from optopsy import apply_signal, signal, rsi_below
 
 # Custom: only enter when underlying price is above 4000
 def price_above_4000(data):
     return data["underlying_price"] > 4000
 
-results = op.iron_condor(data, entry_signal=price_above_4000)
+entry_dates = apply_signal(data, price_above_4000)
+results = op.iron_condor(data, entry_dates=entry_dates)
 
 # Combine custom signals with built-in ones
-from optopsy import signal, rsi_below
-
 entry = signal(price_above_4000) & signal(rsi_below(14, 30))
-results = op.long_calls(data, entry_signal=entry)
+entry_dates = apply_signal(data, entry)
+results = op.long_calls(data, entry_dates=entry_dates)
 ```
 
 ## Greeks Support
