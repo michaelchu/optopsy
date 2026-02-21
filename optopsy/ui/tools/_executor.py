@@ -114,8 +114,121 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
         return err
     label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
     summary = _df_summary(active_ds, label)
-    display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(active_ds.head())}"
+
+    rows = int(arguments.get("rows", 5))
+    sample = bool(arguments.get("sample", False))
+    position = arguments.get("position", "head")
+
+    if sample:
+        preview = active_ds.sample(min(rows, len(active_ds)))
+        pos_label = f"Random sample of {len(preview)} rows"
+    elif position == "tail":
+        preview = active_ds.tail(rows)
+        pos_label = f"Last {len(preview)} rows"
+    else:
+        preview = active_ds.head(rows)
+        pos_label = f"First {len(preview)} rows"
+
+    display = f"{summary}\n\n{pos_label}:\n{_df_to_markdown(preview)}"
     return _result(summary, user_display=display)
+
+
+@_register("describe_data")
+def _handle_describe_data(arguments, dataset, signals, datasets, results, _result):
+    active_ds, ds_name, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+    label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
+
+    columns = arguments.get("columns")
+    if columns:
+        missing = [c for c in columns if c not in active_ds.columns]
+        if missing:
+            return _result(
+                f"Columns not found: {missing}. "
+                f"Available: {list(active_ds.columns)}"
+            )
+        df = active_ds[columns]
+    else:
+        df = active_ds
+
+    # Shape
+    shape = f"{len(df):,} rows x {len(df.columns)} columns"
+
+    # Dtypes
+    dtype_lines = [f"| {c} | {df[c].dtype} |" for c in df.columns]
+    dtype_table = "| Column | Dtype |\n|---|---|\n" + "\n".join(dtype_lines)
+
+    # NaN counts
+    nan_counts = df.isna().sum()
+    nan_nonzero = nan_counts[nan_counts > 0]
+    if nan_nonzero.empty:
+        nan_section = "No missing values."
+    else:
+        nan_lines = [f"| {c} | {n:,} |" for c, n in nan_nonzero.items()]
+        nan_section = "| Column | Missing |\n|---|---|\n" + "\n".join(nan_lines)
+
+    # Numeric describe
+    numeric_cols = df.select_dtypes(include="number")
+    if not numeric_cols.empty:
+        desc = numeric_cols.describe().round(4)
+        numeric_section = _df_to_markdown(
+            desc.reset_index().rename(columns={"index": "stat"})
+        )
+    else:
+        numeric_section = "No numeric columns."
+
+    # Categorical distributions for key columns
+    cat_cols = [c for c in ("underlying_symbol", "option_type") if c in df.columns]
+    cat_sections = []
+    for c in cat_cols:
+        vc = df[c].value_counts().head(10)
+        vc_lines = [f"| {v} | {cnt:,} |" for v, cnt in vc.items()]
+        cat_sections.append(
+            f"**{c}** value_counts (top 10)\n\n"
+            f"| Value | Count |\n|---|---|\n" + "\n".join(vc_lines)
+        )
+
+    # Date column ranges
+    date_cols = [c for c in ("quote_date", "expiration") if c in df.columns]
+    date_sections = []
+    for c in date_cols:
+        dates = pd.to_datetime(df[c])
+        date_sections.append(
+            f"**{c}**: {dates.min().date()} to {dates.max().date()} "
+            f"({dates.dt.date.nunique():,} unique)"
+        )
+
+    # LLM summary (compact)
+    llm_parts = [f"describe_data({label}): {shape}"]
+    if not nan_nonzero.empty:
+        llm_parts.append(f"NaN columns: {dict(nan_nonzero)}")
+    if not numeric_cols.empty:
+        for c in numeric_cols.columns:
+            col = numeric_cols[c]
+            llm_parts.append(
+                f"{c}: min={col.min():.4f}, max={col.max():.4f}, "
+                f"mean={col.mean():.4f}"
+            )
+    for d in date_sections:
+        llm_parts.append(d)
+    llm_summary = "\n".join(llm_parts)
+
+    # User display (full markdown)
+    display_parts = [
+        f"### Dataset: {label}\n",
+        f"**Shape:** {shape}\n",
+        f"**Data Types**\n\n{dtype_table}\n",
+        f"**Missing Values**\n\n{nan_section}\n",
+        f"**Numeric Summary**\n\n{numeric_section}\n",
+    ]
+    for cs in cat_sections:
+        display_parts.append(cs + "\n")
+    for ds in date_sections:
+        display_parts.append(ds + "\n")
+
+    user_display = "\n".join(display_parts)
+    return _result(llm_summary, user_display=user_display)
 
 
 @_register("suggest_strategy_params")
@@ -355,6 +468,53 @@ def _handle_preview_signal(arguments, dataset, signals, datasets, results, _resu
     # Show a sample of dates in the user display
     display = f"{summary}\n\n{_df_to_markdown(valid_dates, max_rows=30)}"
     return _result(summary, user_display=display)
+
+
+@_register("list_signals")
+def _handle_list_signals(arguments, dataset, signals, datasets, results, _result):
+    if not signals:
+        return _result("No signals built yet.")
+
+    rows = []
+    for slot, valid_dates in signals.items():
+        n_dates = len(valid_dates)
+        if n_dates == 0:
+            rows.append(
+                {
+                    "slot": slot,
+                    "dates": 0,
+                    "symbols": "",
+                    "date_from": "",
+                    "date_to": "",
+                }
+            )
+        else:
+            symbols = valid_dates["underlying_symbol"].unique().tolist()
+            date_min = valid_dates["quote_date"].min().date()
+            date_max = valid_dates["quote_date"].max().date()
+            rows.append(
+                {
+                    "slot": slot,
+                    "dates": n_dates,
+                    "symbols": ", ".join(str(s) for s in symbols),
+                    "date_from": str(date_min),
+                    "date_to": str(date_max),
+                }
+            )
+
+    result_df = pd.DataFrame(rows)
+    llm_lines = [f"list_signals: {len(rows)} signal slot(s)"]
+    for r in rows:
+        if r["dates"] > 0:
+            llm_lines.append(
+                f"'{r['slot']}': {r['dates']} dates, symbols={r['symbols']}, "
+                f"range={r['date_from']} to {r['date_to']}"
+            )
+        else:
+            llm_lines.append(f"'{r['slot']}': 0 dates")
+    llm_summary = "\n".join(llm_lines)
+    user_display = f"### Signal Slots ({len(rows)})\n\n{_df_to_markdown(result_df)}"
+    return _result(llm_summary, user_display=user_display)
 
 
 @_register("fetch_stock_data")
@@ -790,6 +950,24 @@ def _handle_inspect_cache(arguments, dataset, signals, datasets, results, _resul
         f"{_df_to_markdown(result_df)}"
     )
     return _result(llm_summary, user_display=user_display)
+
+
+@_register("clear_cache")
+def _handle_clear_cache(arguments, dataset, signals, datasets, results, _result):
+    symbol = arguments.get("symbol", "").strip().upper() or None
+    cache = ParquetCache()
+    size_before = cache.total_size_bytes()
+    count = cache.clear(symbol)
+    size_after = cache.total_size_bytes()
+    freed_mb = round((size_before - size_after) / 1_048_576, 2)
+
+    if count == 0:
+        target = f" for {symbol}" if symbol else ""
+        return _result(f"No cached files found{target}. Nothing to clear.")
+
+    target = f" for {symbol}" if symbol else ""
+    summary = f"Cleared {count} cached file(s){target}. " f"Freed {freed_mb} MB."
+    return _result(summary)
 
 
 @_register("list_results")
