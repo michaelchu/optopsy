@@ -1,8 +1,6 @@
 """Tests for utility tools: clear_cache, describe_data, list_signals, enhanced preview_data."""
 
 import datetime
-import os
-import tempfile
 from unittest.mock import patch
 
 import pandas as pd
@@ -155,6 +153,28 @@ class TestDescribeData:
         display = result.user_display
         assert "quote_date" in display
         assert "expiration" in display
+        # Verify actual date range values
+        assert "2018-01-01" in display
+        assert "2018-01-31" in display
+        assert "2 unique" in display
+        assert "1 unique" in display
+
+    def test_describe_data_date_columns_with_nat(self):
+        """Date columns containing NaT values are handled without error."""
+        df = pd.DataFrame(
+            {
+                "quote_date": [
+                    pd.Timestamp("2020-01-01"),
+                    pd.NaT,
+                    pd.Timestamp("2020-01-03"),
+                ],
+                "strike": [100.0, 200.0, 300.0],
+            }
+        )
+        result = execute_tool("describe_data", {}, df)
+        assert "quote_date" in result.user_display
+        assert "2020-01-01" in result.user_display
+        assert "2020-01-03" in result.user_display
 
 
 # ---------------------------------------------------------------------------

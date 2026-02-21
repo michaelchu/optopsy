@@ -115,7 +115,12 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
     label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
     summary = _df_summary(active_ds, label)
 
-    rows = int(arguments.get("rows", 5))
+    try:
+        rows = int(arguments.get("rows", 5))
+    except (TypeError, ValueError):
+        rows = 5
+    if rows <= 0:
+        rows = 5
     sample = bool(arguments.get("sample", False))
     position = arguments.get("position", "head")
 
@@ -193,11 +198,14 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     date_cols = [c for c in ("quote_date", "expiration") if c in df.columns]
     date_sections = []
     for c in date_cols:
-        dates = pd.to_datetime(df[c])
-        date_sections.append(
-            f"**{c}**: {dates.min().date()} to {dates.max().date()} "
-            f"({dates.dt.date.nunique():,} unique)"
-        )
+        dates = pd.to_datetime(df[c]).dropna()
+        if dates.empty:
+            date_sections.append(f"**{c}**: no valid dates")
+        else:
+            date_sections.append(
+                f"**{c}**: {dates.min().date()} to {dates.max().date()} "
+                f"({dates.dt.date.nunique():,} unique)"
+            )
 
     # LLM summary (compact)
     llm_parts = [f"describe_data({label}): {shape}"]
@@ -966,7 +974,7 @@ def _handle_clear_cache(arguments, dataset, signals, datasets, results, _result)
         return _result(f"No cached files found{target}. Nothing to clear.")
 
     target = f" for {symbol}" if symbol else ""
-    summary = f"Cleared {count} cached file(s){target}. " f"Freed {freed_mb} MB."
+    summary = f"Cleared {count} cached file(s){target}. Freed {freed_mb} MB."
     return _result(summary)
 
 
