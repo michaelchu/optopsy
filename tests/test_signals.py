@@ -294,7 +294,9 @@ class TestSMASignals:
 class TestSignalCombinators:
     def test_and_signals(self, price_data, always_true_signal):
         """and_signals should require all signals to be True."""
-        always_false = lambda data: pd.Series(False, index=data.index)
+
+        def always_false(data):
+            return pd.Series(False, index=data.index)
 
         result = and_signals(always_true_signal, always_true_signal)(price_data)
         assert result.all()
@@ -304,7 +306,9 @@ class TestSignalCombinators:
 
     def test_or_signals(self, price_data, always_true_signal):
         """or_signals should require at least one signal to be True."""
-        always_false = lambda data: pd.Series(False, index=data.index)
+
+        def always_false(data):
+            return pd.Series(False, index=data.index)
 
         result = or_signals(always_true_signal, always_false)(price_data)
         assert result.all()
@@ -564,9 +568,11 @@ class TestExitSignalIntegration:
 
     def test_exit_dates_price_based(self, option_data_entry_exit, stock_data_spx):
         """exit_dates based on price threshold should filter correctly."""
+
         # Exit only when underlying price > 215
         # Exit date has underlying_price=220, so this should pass
-        price_above_215 = lambda data: data["underlying_price"] > 215
+        def price_above_215(data):
+            return data["underlying_price"] > 215
 
         exit_dates = apply_signal(stock_data_spx, price_above_215)
         results = long_calls(
@@ -591,9 +597,11 @@ class TestExitSignalIntegration:
         self, option_data_entry_exit, stock_data_spx
     ):
         """exit_dates with price condition that fails should filter trades."""
+
         # Exit only when underlying price > 225
         # Exit date has underlying_price=220, so this should filter everything
-        price_above_225 = lambda data: data["underlying_price"] > 225
+        def price_above_225(data):
+            return data["underlying_price"] > 225
 
         exit_dates = apply_signal(stock_data_spx, price_above_225)
         results = long_calls(
@@ -1181,7 +1189,10 @@ class TestSignalClass:
 
     def test_signal_combined_with_callable(self, option_data_entry_exit):
         """Signal combined with another Signal and used via apply_signal works."""
-        always_true = lambda data: pd.Series(True, index=data.index)
+
+        def always_true(data):
+            return pd.Series(True, index=data.index)
+
         sig = Signal(day_of_week(3)) & Signal(always_true)
         entry_dates = apply_signal(option_data_entry_exit, sig)
         results = long_calls(
@@ -1250,7 +1261,10 @@ class TestSustainedSignal:
         """Should be False when streak is shorter than required days."""
         # Always-True signal, but only 4 bars, days=5 → all False
         data = _make_data([100.0] * 4)
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         result = sustained(always_true, days=5)(data)
         assert not result.any()
 
@@ -1258,7 +1272,10 @@ class TestSustainedSignal:
         """Should be True on the Nth consecutive True bar (exactly days bars)."""
         # 6 bars of always-True, days=5 → bars 4 and 5 (0-indexed) should fire
         data = _make_data([100.0] * 6)
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         result = sustained(always_true, days=5)(data)
         # First 4 bars False (warmup), last 2 True
         assert not result.iloc[:4].any()
@@ -1270,7 +1287,10 @@ class TestSustainedSignal:
         # True*4, False, True*5 — streak resets; only last 5 bars should fire
         inner_bools = [True] * 4 + [False] + [True] * 5
         data = _make_data([100.0] * len(inner_bools))
-        inner = lambda d: pd.Series(inner_bools, index=d.index)
+
+        def inner(d):
+            return pd.Series(inner_bools, index=d.index)
+
         result = sustained(inner, days=5)(data)
         # All bars before the streak of 5 is complete should be False
         assert not result.iloc[:8].any()
@@ -1280,7 +1300,10 @@ class TestSustainedSignal:
     def test_sustained_all_false_returns_all_false(self):
         """Wrapping an always-False signal stays all False regardless of days."""
         data = _make_data([100.0] * 20)
-        always_false = lambda d: pd.Series(False, index=d.index)
+
+        def always_false(d):
+            return pd.Series(False, index=d.index)
+
         result = sustained(always_false, days=3)(data)
         assert not result.any()
 
@@ -1289,7 +1312,10 @@ class TestSustainedSignal:
         days = 4
         n = 10
         data = _make_data([100.0] * n)
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         result = sustained(always_true, days=days)(data)
         assert not result.iloc[: days - 1].any()
         assert result.iloc[days - 1 :].all()
@@ -1333,7 +1359,10 @@ class TestSustainedSignal:
 
     def test_sustained_accepted_via_apply_signal(self, option_data_entry_exit):
         """sustained() output is accepted by apply_signal and used as entry_dates."""
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         sig = sustained(always_true, days=1)
         entry_dates = apply_signal(option_data_entry_exit, sig)
         results = long_calls(
@@ -1376,7 +1405,10 @@ class TestApplySignal:
 
     def test_apply_signal_returns_dates_dataframe(self, ohlcv_stock_data):
         """apply_signal should return a DataFrame with (underlying_symbol, quote_date)."""
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         result = apply_signal(ohlcv_stock_data, always_true)
         assert isinstance(result, pd.DataFrame)
         assert "underlying_symbol" in result.columns
@@ -1392,7 +1424,10 @@ class TestApplySignal:
 
     def test_apply_signal_all_true_returns_all_dates(self, ohlcv_stock_data):
         """apply_signal with always-true signal returns all unique dates."""
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         result = apply_signal(ohlcv_stock_data, always_true)
         n_unique = ohlcv_stock_data.drop_duplicates(
             ["underlying_symbol", "quote_date"]
@@ -1401,7 +1436,10 @@ class TestApplySignal:
 
     def test_apply_signal_all_false_returns_empty(self, ohlcv_stock_data):
         """apply_signal with always-false signal returns empty DataFrame."""
-        always_false = lambda d: pd.Series(False, index=d.index)
+
+        def always_false(d):
+            return pd.Series(False, index=d.index)
+
         result = apply_signal(ohlcv_stock_data, always_false)
         assert len(result) == 0
         assert "underlying_symbol" in result.columns
@@ -1418,7 +1456,10 @@ class TestApplySignal:
         self, option_data_entry_exit, ohlcv_stock_data
     ):
         """entry_dates from apply_signal are accepted by strategy functions."""
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         entry_dates = apply_signal(ohlcv_stock_data, always_true)
         results = long_calls(
             option_data_entry_exit,
@@ -1431,7 +1472,10 @@ class TestApplySignal:
 
     def test_apply_signal_with_combined_signal(self, ohlcv_stock_data):
         """apply_signal works with combined signals (and_signals, Signal class)."""
-        always_true = lambda d: pd.Series(True, index=d.index)
+
+        def always_true(d):
+            return pd.Series(True, index=d.index)
+
         combined = and_signals(day_of_week(0, 1, 2, 3, 4), always_true)
         result = apply_signal(ohlcv_stock_data, combined)
         assert isinstance(result, pd.DataFrame)
