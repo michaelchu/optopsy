@@ -476,10 +476,111 @@ def get_tool_schemas() -> list[dict]:
                                 "Omit or set to 1 for no sustained requirement (default behavior)."
                             ),
                         },
+                        "entry_signal_slot": {
+                            "type": "string",
+                            "description": (
+                                "Name of a pre-built signal slot (from build_signal) to "
+                                "use as entry date filter. Use this for composite signals. "
+                                "Cannot be combined with entry_signal."
+                            ),
+                        },
+                        "exit_signal_slot": {
+                            "type": "string",
+                            "description": (
+                                "Name of a pre-built signal slot (from build_signal) to "
+                                "use as exit date filter. Use this for composite signals. "
+                                "Cannot be combined with exit_signal."
+                            ),
+                        },
                         **STRATEGY_PARAMS_SCHEMA,
                         **CALENDAR_EXTRA_PARAMS,
                     },
                     "required": ["strategy_name"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "build_signal",
+                "description": (
+                    "Build a TA signal (or compose multiple signals) and store the "
+                    "resulting valid dates under a named slot. Use this to create "
+                    "composite signals (e.g. RSI < 30 AND price above SMA 200) that "
+                    "can then be passed to run_strategy via entry_signal_slot / "
+                    "exit_signal_slot. Requires data to be loaded first."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "slot": {
+                            "type": "string",
+                            "description": (
+                                "Name for this signal (e.g. 'entry', 'exit', "
+                                "'oversold_uptrend'). Used to reference the signal "
+                                "in run_strategy or combine with other slots."
+                            ),
+                        },
+                        "signals": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "enum": SIGNAL_NAMES,
+                                        "description": "Signal type name",
+                                    },
+                                    "params": {
+                                        "type": "object",
+                                        "description": (
+                                            "Optional parameter overrides for this signal"
+                                        ),
+                                    },
+                                    "days": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "description": (
+                                            "Optional: require signal True for N "
+                                            "consecutive days (sustained)"
+                                        ),
+                                    },
+                                },
+                                "required": ["name"],
+                            },
+                            "minItems": 1,
+                            "description": "One or more signals to combine with AND logic",
+                        },
+                        "combine": {
+                            "type": "string",
+                            "enum": ["and", "or"],
+                            "description": (
+                                "How to combine multiple signals: 'and' (all must be True, "
+                                "default) or 'or' (any must be True)"
+                            ),
+                        },
+                    },
+                    "required": ["slot", "signals"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "preview_signal",
+                "description": (
+                    "Show the valid dates stored in a named signal slot. "
+                    "Use after build_signal to inspect how many dates matched."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "slot": {
+                            "type": "string",
+                            "description": "Signal slot name to preview",
+                        },
+                    },
+                    "required": ["slot"],
                 },
             },
         },
@@ -584,19 +685,22 @@ class ToolResult:
     ``llm_summary`` is a short string sent to the LLM so it can reason about
     what happened without blowing up the token budget.
     ``user_display`` is the richer version (with full tables) shown in the UI.
+    ``signals`` carries named signal date DataFrames across tool calls.
     """
 
-    __slots__ = ("llm_summary", "user_display", "dataset")
+    __slots__ = ("llm_summary", "user_display", "dataset", "signals")
 
     def __init__(
         self,
         llm_summary: str,
         dataset: pd.DataFrame | None,
         user_display: str | None = None,
+        signals: dict[str, pd.DataFrame] | None = None,
     ):
         self.llm_summary = llm_summary
         self.user_display = user_display or llm_summary
         self.dataset = dataset
+        self.signals = signals
 
 
 def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
@@ -655,25 +759,42 @@ def _strategy_llm_summary(df: pd.DataFrame, strategy_name: str, mode: str) -> st
 
 
 def execute_tool(
-    tool_name: str, arguments: dict[str, Any], dataset: pd.DataFrame | None
+    tool_name: str,
+    arguments: dict[str, Any],
+    dataset: pd.DataFrame | None,
+    signals: dict[str, pd.DataFrame] | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
 
     The ToolResult contains a concise ``llm_summary`` (sent to the LLM) and a
     richer ``user_display`` (shown in the chat UI).  The ``dataset`` field
-    carries the currently-active DataFrame forward.
+    carries the currently-active DataFrame forward.  The ``signals`` dict
+    carries named signal date DataFrames across tool calls.
     """
+    if signals is None:
+        signals = {}
+
+    # Helper to build a ToolResult that always carries signals forward.
+    def _result(
+        llm_summary: str,
+        ds: pd.DataFrame | None = dataset,
+        user_display: str | None = None,
+        sigs: dict[str, pd.DataFrame] | None = None,
+    ) -> ToolResult:
+        return ToolResult(
+            llm_summary, ds, user_display, sigs if sigs is not None else signals
+        )
+
     if tool_name == "load_csv_data":
         filename = arguments["filename"]
         filepath = os.path.realpath(os.path.join(DATA_DIR, filename))
         if not filepath.startswith(os.path.realpath(DATA_DIR)):
-            return ToolResult("Access denied: path outside data directory.", dataset)
+            return _result("Access denied: path outside data directory.")
         if not os.path.exists(filepath):
             available = os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else []
-            return ToolResult(
+            return _result(
                 f"File '{filename}' not found. Available files: {available}",
-                dataset,
             )
         kwargs: dict[str, Any] = {}
         if arguments.get("start_date"):
@@ -684,16 +805,16 @@ def execute_tool(
             df = op.csv_data(filepath, **kwargs)
             summary = _df_summary(df, f"Loaded '{filename}'")
             display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
-            return ToolResult(summary, df, display)
+            return _result(summary, df, display)
         except Exception as e:
-            return ToolResult(f"Error loading '{filename}': {e}", dataset)
+            return _result(f"Error loading '{filename}': {e}")
 
     if tool_name == "list_data_files":
         ensure_data_dir()
         files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
         if not files:
-            return ToolResult("No CSV files found in the data directory.", dataset)
-        return ToolResult(f"Available files: {files}", dataset)
+            return _result("No CSV files found in the data directory.")
+        return _result(f"Available files: {files}")
 
     # Generic data-provider dispatch
     provider = get_provider_for_tool(tool_name)
@@ -705,32 +826,152 @@ def execute_tool(
                     # Display-only tool (e.g. stock prices) — show but keep
                     # the current active dataset unchanged.
                     display = f"{summary}\n\n{_df_to_markdown(df)}"
-                    return ToolResult(summary, dataset, display)
+                    return _result(summary, user_display=display)
                 display = (
                     f"{summary}\n\nFirst 5 rows:\n" f"{_df_to_markdown(df.head())}"
                 )
-                return ToolResult(summary, df, display)
-            return ToolResult(summary, dataset)
+                return _result(summary, df, display)
+            return _result(summary)
         except Exception as e:
-            return ToolResult(f"Error running {tool_name}: {e}", dataset)
+            return _result(f"Error running {tool_name}: {e}")
 
     if tool_name == "preview_data":
         if dataset is None:
-            return ToolResult("No dataset loaded. Use load_csv_data first.", dataset)
+            return _result("No dataset loaded. Use load_csv_data first.")
         summary = _df_summary(dataset)
         display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(dataset.head())}"
-        return ToolResult(summary, dataset, display)
+        return _result(summary, user_display=display)
 
+    # -----------------------------------------------------------------
+    # build_signal — create/compose TA signals and store as named slots
+    # -----------------------------------------------------------------
+    if tool_name == "build_signal":
+        slot = arguments.get("slot", "").strip()
+        if not slot:
+            return _result("Missing required 'slot' name for the signal.")
+        if dataset is None:
+            return _result("No dataset loaded. Load data first.")
+
+        signal_specs = arguments.get("signals")
+        if not signal_specs or not isinstance(signal_specs, list):
+            return _result("'signals' must be a non-empty array of signal specs.")
+
+        # Determine if any signal needs OHLCV data
+        needs_stock = any(s.get("name") not in _DATE_ONLY_SIGNALS for s in signal_specs)
+
+        signal_data = None
+        if needs_stock:
+            signal_data = _fetch_stock_data_for_signals(dataset)
+            if signal_data is None:
+                return _result(
+                    "TA signals require stock price data but yfinance is not "
+                    "installed or the fetch failed. Install yfinance "
+                    "(`pip install yfinance`) and try again.",
+                )
+
+        # Fallback for date-only signals
+        if signal_data is None:
+            signal_data = (
+                dataset[["underlying_symbol", "quote_date"]]
+                .drop_duplicates()
+                .sort_values(["underlying_symbol", "quote_date"])
+                .reset_index(drop=True)
+            )
+
+        # Build individual signal functions
+        built_signals = []
+        descriptions = []
+        for spec in signal_specs:
+            name = spec.get("name")
+            if not name or name not in SIGNAL_REGISTRY:
+                return _result(
+                    f"Unknown signal '{name}'. Available: {', '.join(SIGNAL_NAMES)}"
+                )
+            params = spec.get("params") or {}
+            sig = SIGNAL_REGISTRY[name](**params)
+            try:
+                sig_days = int(spec.get("days", 0))
+            except (TypeError, ValueError):
+                sig_days = 0
+            if sig_days > 1:
+                sig = _signals.sustained(sig, sig_days)
+                descriptions.append(f"{name}(sustained {sig_days}d)")
+            else:
+                param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+                descriptions.append(f"{name}({param_str})" if param_str else name)
+            built_signals.append(sig)
+
+        # Combine signals
+        combine = arguments.get("combine", "and")
+        if len(built_signals) == 1:
+            combined = built_signals[0]
+        elif combine == "or":
+            combined = _signals.or_signals(*built_signals)
+        else:
+            combined = _signals.and_signals(*built_signals)
+
+        # Compute valid dates
+        valid_dates = apply_signal(signal_data, combined)
+
+        # Store in signals dict
+        updated_signals = dict(signals)
+        updated_signals[slot] = valid_dates
+
+        combiner = f" {combine.upper()} " if len(descriptions) > 1 else ""
+        desc = combiner.join(descriptions)
+        n_dates = len(valid_dates)
+        symbols = valid_dates["underlying_symbol"].unique().tolist() if n_dates else []
+        summary = (
+            f"Signal '{slot}' built: {desc} → {n_dates} valid dates " f"for {symbols}"
+        )
+        display_lines = [summary]
+        if n_dates > 0:
+            date_min = valid_dates["quote_date"].min().date()
+            date_max = valid_dates["quote_date"].max().date()
+            display_lines.append(f"Date range: {date_min} to {date_max}")
+        display = "\n".join(display_lines)
+        return _result(summary, user_display=display, sigs=updated_signals)
+
+    # -----------------------------------------------------------------
+    # preview_signal — inspect stored signal dates
+    # -----------------------------------------------------------------
+    if tool_name == "preview_signal":
+        slot = arguments.get("slot", "").strip()
+        if not slot:
+            return _result("Missing required 'slot' name.")
+        if slot not in signals:
+            available_slots = list(signals.keys()) if signals else []
+            return _result(
+                f"No signal named '{slot}'. "
+                f"Available slots: {available_slots or 'none — use build_signal first'}"
+            )
+        valid_dates = signals[slot]
+        n_dates = len(valid_dates)
+        if n_dates == 0:
+            return _result(f"Signal '{slot}' has 0 valid dates.")
+        symbols = valid_dates["underlying_symbol"].unique().tolist()
+        date_min = valid_dates["quote_date"].min().date()
+        date_max = valid_dates["quote_date"].max().date()
+        summary = (
+            f"Signal '{slot}': {n_dates} valid dates, "
+            f"symbols={symbols}, range={date_min} to {date_max}"
+        )
+        # Show a sample of dates in the user display
+        display = f"{summary}\n\n{_df_to_markdown(valid_dates, max_rows=30)}"
+        return _result(summary, user_display=display)
+
+    # -----------------------------------------------------------------
+    # run_strategy
+    # -----------------------------------------------------------------
     if tool_name == "run_strategy":
         strategy_name = arguments.get("strategy_name")
         if not strategy_name or strategy_name not in STRATEGIES:
-            return ToolResult(
+            return _result(
                 f"Unknown strategy '{strategy_name}'. "
                 f"Available: {', '.join(STRATEGY_NAMES)}",
-                dataset,
             )
         if dataset is None:
-            return ToolResult("No dataset loaded. Load data first.", dataset)
+            return _result("No dataset loaded. Load data first.")
         func, _, _ = STRATEGIES[strategy_name]
         # Build a clean kwargs dict without mutating the original arguments.
         # Strip signal params — handled separately below.
@@ -742,6 +983,8 @@ def execute_tool(
             "exit_signal",
             "exit_signal_params",
             "exit_signal_days",
+            "entry_signal_slot",
+            "exit_signal_slot",
         }
         strat_kwargs = {
             k: v
@@ -749,22 +992,55 @@ def execute_tool(
             if k not in _signal_keys
             and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
         }
-        # Resolve entry/exit signals to pre-computed date DataFrames
+
+        # --- Resolve entry dates ---
+        entry_slot = arguments.get("entry_signal_slot")
         entry_signal_name = arguments.get("entry_signal")
+
+        if entry_slot and entry_signal_name:
+            return _result(
+                "Cannot use both entry_signal and entry_signal_slot. Pick one."
+            )
+
+        # Use pre-built slot if provided
+        if entry_slot:
+            if entry_slot not in signals:
+                return _result(
+                    f"No signal slot '{entry_slot}'. "
+                    f"Build it first with build_signal. "
+                    f"Available: {list(signals.keys()) or 'none'}"
+                )
+            strat_kwargs["entry_dates"] = signals[entry_slot]
+
+        # --- Resolve exit dates ---
+        exit_slot = arguments.get("exit_signal_slot")
         exit_signal_name = arguments.get("exit_signal")
 
+        if exit_slot and exit_signal_name:
+            return _result(
+                "Cannot use both exit_signal and exit_signal_slot. Pick one."
+            )
+
+        if exit_slot:
+            if exit_slot not in signals:
+                return _result(
+                    f"No signal slot '{exit_slot}'. "
+                    f"Build it first with build_signal. "
+                    f"Available: {list(signals.keys()) or 'none'}"
+                )
+            strat_kwargs["exit_dates"] = signals[exit_slot]
+
+        # --- Inline signal resolution (single signal, no slot) ---
         # Validate signal names early, before fetching stock data
         if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
-            return ToolResult(
+            return _result(
                 f"Unknown entry_signal '{entry_signal_name}'. "
                 f"Available: {', '.join(SIGNAL_NAMES)}",
-                dataset,
             )
         if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
-            return ToolResult(
+            return _result(
                 f"Unknown exit_signal '{exit_signal_name}'. "
                 f"Available: {', '.join(SIGNAL_NAMES)}",
-                dataset,
             )
 
         # Determine if we need OHLCV stock data for signal computation
@@ -776,11 +1052,10 @@ def execute_tool(
         if needs_stock:
             signal_data = _fetch_stock_data_for_signals(dataset)
             if signal_data is None:
-                return ToolResult(
+                return _result(
                     "TA signals require stock price data but yfinance is not "
                     "installed or the fetch failed. Install yfinance "
                     "(`pip install yfinance`) and try again.",
-                    dataset,
                 )
 
         # For date-only signals, extract unique dates from the option dataset
@@ -822,10 +1097,9 @@ def execute_tool(
                 params_used = {
                     k: v for k, v in arguments.items() if k != "strategy_name"
                 }
-                return ToolResult(
+                return _result(
                     f"{strategy_name} returned no results with parameters: "
                     f"{params_used or 'defaults'}.",
-                    dataset,
                 )
             is_raw = arguments.get("raw", False)
             mode = "raw trades" if is_raw else "aggregated stats"
@@ -834,11 +1108,16 @@ def execute_tool(
             # LLM gets a compact summary instead of a full table to save tokens.
             # The user already sees the full table via user_display.
             llm_summary = _strategy_llm_summary(result, strategy_name, mode)
-            return ToolResult(llm_summary, dataset, display)
+            return _result(llm_summary, user_display=display)
         except Exception as e:
-            return ToolResult(f"Error running {strategy_name}: {e}", dataset)
+            return _result(f"Error running {strategy_name}: {e}")
 
-    available = ["load_csv_data", "list_data_files", "preview_data", "run_strategy"]
-    return ToolResult(
-        f"Unknown tool: {tool_name}. Available: {', '.join(available)}", dataset
-    )
+    available = [
+        "load_csv_data",
+        "list_data_files",
+        "preview_data",
+        "build_signal",
+        "preview_signal",
+        "run_strategy",
+    ]
+    return _result(f"Unknown tool: {tool_name}. Available: {', '.join(available)}")

@@ -139,12 +139,7 @@ entry_dates = apply_signal(stock, rsi_below(14, 30))
 results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 ```
 
-### Using signals via the `run_strategy` tool
-
-Pass `entry_signal` and/or `exit_signal` as parameters. Only one signal per side (entry/exit) \
-can be specified per run.
-
-**Available signals** — pick the signal type, then optionally tune with `entry_signal_params`:
+### Available signals
 
 | Signal | Type | Default params | Notes |
 |---|---|---|---|
@@ -163,19 +158,32 @@ can be specified per run.
 | `day_of_week` | calendar | days=[4] | Fri by default; pass days=[0..4] for others (Mon-Fri) |
 
 **State-based** signals are True on every bar meeting the condition. \
-**Event-based** signals fire only on the crossover bar — use `entry_signal_days` to require persistence.
+**Event-based** signals fire only on the crossover bar.
 
-**`entry_signal_params`** (optional object): Override any default parameter for the chosen signal. \
-Examples: `{"threshold": 40}`, `{"period": 200}`, `{"fast": 5, "slow": 20}`, `{"days": [3, 4]}`.
+### Using signals — two approaches
 
-**`entry_signal_days`** (optional integer): Require the signal to be True for N consecutive trading \
-days before entering. Uses `sustained()` internally. Omit for single-bar behavior (default).
+**Approach 1: Inline (single signal)** — pass `entry_signal` / `exit_signal` directly on `run_strategy`. \
+Quick for single-condition filters.
 
-**`exit_signal`** / **`exit_signal_params`** / **`exit_signal_days`**: Same as above but gate exits.
+- `entry_signal` / `exit_signal`: signal name from the table above
+- `entry_signal_params` / `exit_signal_params`: optional param overrides, e.g. `{"threshold": 40}`
+- `entry_signal_days` / `exit_signal_days`: require N consecutive True bars (sustained)
+
+**Approach 2: Build + Slot (composite signals)** — use `build_signal` to create a named signal \
+(including AND/OR composition of multiple indicators), then reference it in `run_strategy` via \
+`entry_signal_slot` / `exit_signal_slot`. Use this when the user wants multiple conditions combined.
+
+Workflow:
+1. Call `build_signal` with a slot name and one or more signal specs → stores valid dates
+2. Optionally call `preview_signal` to inspect the dates
+3. Call `run_strategy` with `entry_signal_slot="slot_name"` (or `exit_signal_slot`)
+
+`entry_signal_slot` / `exit_signal_slot` **cannot** be combined with `entry_signal` / `exit_signal` — \
+pick one approach per side.
 
 ### Signal data requirements
 
-- Most TA signals need **OHLCV price data** for the underlying. The tool fetches this \
+- Most TA signals need **OHLCV price data** for the underlying. The tools fetch this \
 automatically via yfinance with ~1 year of padding for indicator warmup.
 - `day_of_week` is **calendar-only** — it needs no price data and works with just the \
 option chain dates.
@@ -184,28 +192,31 @@ option chain dates.
 
 ### Composing signals (library API)
 
-When users want to combine multiple conditions programmatically, optopsy supports:
+When users ask how to combine signals programmatically (outside the chat), optopsy supports:
 - `and_signals(sig1, sig2, ...)` — all conditions must be True
 - `or_signals(sig1, sig2, ...)` — any condition is True
 - `sustained(signal_func, days=5)` — require N consecutive True bars
 - Fluent API: `signal(rsi_below(14, 30)) & signal(day_of_week(3))`
 
-Note: the `run_strategy` tool supports one signal per side. For combined signals, users \
-should use the library API directly.
-
 ### Typical use-cases
+
+**Single signal (inline):**
 - "Sell puts only when oversold" → `entry_signal="rsi_below"`
-- "RSI below 40 (custom threshold)" → `entry_signal="rsi_below"`, `entry_signal_params={"threshold": 40}`
+- "RSI below 40" → `entry_signal="rsi_below"`, `entry_signal_params={"threshold": 40}`
 - "200-day SMA trend filter" → `entry_signal="sma_above"`, `entry_signal_params={"period": 200}`
 - "MACD bullish cross" → `entry_signal="macd_cross_above"`
-- "MACD fast settings (5/20/5)" → `entry_signal="macd_cross_above"`, `entry_signal_params={"fast": 5, "slow": 20, "signal_period": 5}`
-- "Low-vol iron condor entries" → `entry_signal="atr_below"`
-- "High-vol ATR > 2×" → `entry_signal="atr_above"`, `entry_signal_params={"multiplier": 2.0}`
 - "Enter only on Thursdays" → `entry_signal="day_of_week"`, `entry_signal_params={"days": [3]}`
-- "Enter on Tuesdays and Thursdays" → `entry_signal="day_of_week"`, `entry_signal_params={"days": [1, 3]}`
-- "RSI below 30 for 5 consecutive days" → `entry_signal="rsi_below"`, `entry_signal_days=5`
-- "Exit when RSI overbought" → `exit_signal="rsi_above"`
-- "Exit after MACD bearish cross holds 3 days" → `exit_signal="macd_cross_below"`, `exit_signal_days=3`
+- "RSI below 30 for 5 days" → `entry_signal="rsi_below"`, `entry_signal_days=5`
+- "Exit when overbought" → `exit_signal="rsi_above"`
+
+**Composite signal (build_signal + slot):**
+- "Enter when RSI < 30 AND above 200-day SMA" → `build_signal(slot="entry", \
+signals=[{name: "rsi_below"}, {name: "sma_above", params: {period: 200}}])` then \
+`run_strategy(..., entry_signal_slot="entry")`
+- "Enter on low-vol Fridays" → `build_signal(slot="entry", \
+signals=[{name: "atr_below"}, {name: "day_of_week"}])`
+- "Enter on MACD cross OR RSI oversold" → `build_signal(slot="entry", \
+signals=[{name: "macd_cross_above"}, {name: "rsi_below"}], combine="or")`
 
 ## Guidelines
 - Always load data before running strategies.
@@ -283,6 +294,7 @@ class OptopsyAgent:
         self.model = model
         self.tools = get_tool_schemas()
         self.dataset: pd.DataFrame | None = None
+        self.signals: dict[str, pd.DataFrame] = {}
 
     async def chat(
         self,
@@ -385,11 +397,13 @@ class OptopsyAgent:
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
-                    lambda fn=func_name, a=args, ds=self.dataset: execute_tool(
-                        fn, a, ds
+                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals: execute_tool(
+                        fn, a, ds, sg
                     ),
                 )
                 self.dataset = result.dataset
+                if result.signals is not None:
+                    self.signals = result.signals
 
                 # Show the rich version to the user in the UI
                 if on_tool_call:
