@@ -367,6 +367,7 @@ def get_tool_schemas() -> list[dict]:
                         "rows": {
                             "type": "integer",
                             "description": "Number of rows to show (default: 5)",
+                            "minimum": 1,
                         },
                         "position": {
                             "type": "string",

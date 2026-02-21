@@ -121,7 +121,13 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
         rows = 5
     if rows <= 0:
         rows = 5
-    sample = bool(arguments.get("sample", False))
+    raw_sample = arguments.get("sample", False)
+    if isinstance(raw_sample, bool):
+        sample = raw_sample
+    elif isinstance(raw_sample, str):
+        sample = raw_sample.strip().lower() == "true"
+    else:
+        sample = False
     position = arguments.get("position", "head")
 
     if sample:
@@ -146,6 +152,10 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     label = ds_name or (list(datasets.keys())[-1] if datasets else "Dataset")
 
     columns = arguments.get("columns")
+    if isinstance(columns, str):
+        columns = [columns]
+    elif columns is not None and not isinstance(columns, (list, tuple)):
+        return _result("`columns` must be a string or a list of strings.")
     if columns:
         missing = [c for c in columns if c not in active_ds.columns]
         if missing:
@@ -198,7 +208,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     date_cols = [c for c in ("quote_date", "expiration") if c in df.columns]
     date_sections = []
     for c in date_cols:
-        dates = pd.to_datetime(df[c]).dropna()
+        dates = pd.to_datetime(df[c], errors="coerce").dropna()
         if dates.empty:
             date_sections.append(f"**{c}**: no valid dates")
         else:
