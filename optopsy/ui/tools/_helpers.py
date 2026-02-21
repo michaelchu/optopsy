@@ -8,7 +8,7 @@ import optopsy.signals as _signals
 from optopsy.signals import apply_signal
 
 from ..providers.cache import ParquetCache, compute_date_gaps
-from ._schemas import SIGNAL_NAMES, SIGNAL_REGISTRY, STRATEGIES, _DATE_ONLY_SIGNALS
+from ._schemas import SIGNAL_REGISTRY, STRATEGIES, _DATE_ONLY_SIGNALS
 
 _log = logging.getLogger(__name__)
 
