@@ -167,10 +167,11 @@ def csv_data(
             column_mapping.append((params[col], col))
 
     try:
+        # Only read the columns we need from the CSV to save memory and I/O
+        col_indices = sorted(c for c, _ in column_mapping if c is not None)
         return (
-            pd.read_csv(file_path)
+            pd.read_csv(file_path, usecols=col_indices)
             .pipe(_standardize_cols, column_mapping)
-            .pipe(_trim_cols, column_mapping)
             .pipe(_infer_date_cols)
             .pipe(_trim_dates, params["start_date"], params["end_date"])
         )

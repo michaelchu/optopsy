@@ -110,19 +110,19 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
 
 def _check_positive_integer(key: str, value: Any) -> None:
     """Validate that value is a positive integer."""
-    if value <= 0 or not isinstance(value, int):
+    if not isinstance(value, int) or value <= 0:
         raise ValueError(f"Invalid setting for {key}, must be positive integer")
 
 
 def _check_positive_integer_inclusive(key: str, value: Any) -> None:
     """Validate that value is a non-negative integer (zero allowed)."""
-    if value < 0 or not isinstance(value, int):
+    if not isinstance(value, int) or value < 0:
         raise ValueError(f"Invalid setting for {key}, must be positive integer, or 0")
 
 
 def _check_positive_float(key: str, value: Any) -> None:
     """Validate that value is a positive float."""
-    if value <= 0 or not isinstance(value, float):
+    if not isinstance(value, float) or value <= 0:
         raise ValueError(f"Invalid setting for {key}, must be positive float type")
 
 

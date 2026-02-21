@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="optopsy",
@@ -17,7 +17,7 @@ setup(
         "Programming Language :: Python :: 3.13",
     ],
     python_requires=">=3.12,<3.14",
-    packages=["optopsy", "optopsy.ui", "optopsy.ui.providers"],
+    packages=find_packages(exclude=["tests", "tests.*", "samples"]),
     package_data={"optopsy.ui": ["public/*"]},
     install_requires=[
         "pandas",
