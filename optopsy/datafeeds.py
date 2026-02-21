@@ -51,8 +51,13 @@ def _standardize_cols(
     data: pd.DataFrame, column_mapping: List[Tuple[Optional[int], str]]
 ) -> pd.DataFrame:
     """Rename columns to standardized names."""
-    col_names = list(data.columns)
-    cols = {col_names[idx]: label for idx, label in column_mapping if idx is not None}
+    # When usecols is used, data.columns contains the original CSV header
+    # names for only the selected columns, in their original CSV order.
+    # Map each sorted original index to its current column name, then rename.
+    idx_to_label = {idx: label for idx, label in column_mapping if idx is not None}
+    sorted_indices = sorted(idx_to_label)
+    idx_to_colname = dict(zip(sorted_indices, data.columns))
+    cols = {idx_to_colname[idx]: label for idx, label in column_mapping if idx is not None}
     return data.rename(columns=cols)
 
 
