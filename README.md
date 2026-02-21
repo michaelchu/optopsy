@@ -10,7 +10,7 @@ A fast, flexible backtesting library for options strategies in Python.
 
 Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* or *"What delta range produces the best results for covered calls?"* by generating comprehensive performance statistics from historical options data.
 
-📖 **[Full Documentation](https://michaelchu.github.io/optopsy/)** | [中文版](https://michaelchu.github.io/optopsy/zh/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
+[Full Documentation](https://michaelchu.github.io/optopsy/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
 
 ## Features
 
@@ -21,59 +21,20 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
+- **AI Chat UI** - Interactive AI-powered interface for running backtests with natural language
 
-## 🤖 AI Chat UI ✨ NEW (Beta)
+## AI Chat UI (Beta)
 
-Optopsy now includes an AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language — no code required.
+An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
 
 ![AI Chat UI](docs/images/chat-ui.png)
 
-**What it does:**
-- Fetches historical options data via the [EODHD US Stock Options Data API (1.0.0)](https://eodhd.com/financial-apis/options-data-api) (API key required)
-- Runs any of the 28 built-in strategies via conversational prompts
-- Explains results and compares strategies side by side
-- Works with any OpenAI-compatible LLM (GPT-4o, Claude, Llama, etc. via [LiteLLM](https://github.com/BerriAI/litellm))
-
-**Install and run:**
-
 ```bash
 pip install optopsy[ui]
-```
-
-Create a `.env` file with your API keys (see `.env.example`):
-
-```
-ANTHROPIC_API_KEY=sk-...   # or OPENAI_API_KEY for OpenAI models
-EODHD_API_KEY=...
-```
-
-Defaults to Claude Haiku 4.5 for its low cost and generous rate limits. To use a different model, set `OPTOPSY_MODEL` and the matching API key:
-
-```
-OPTOPSY_MODEL=gpt-4o
-OPENAI_API_KEY=sk-...
-```
-
-Then launch:
-
-```bash
 optopsy-chat
 ```
 
-Your conversations are saved automatically and available in the sidebar. Fetched options data is cached locally so subsequent requests for the same symbol skip the API call.
-
-**Cache management:**
-
-```bash
-optopsy-chat cache size          # show disk usage
-optopsy-chat cache clear         # clear all cached data
-optopsy-chat cache clear SPY     # clear a specific symbol
-```
-
-**Example prompts:**
-- *"Fetch SPY options from 2024-01-01 to 2024-06-30 and run short puts with max 45 DTE, exit at 7 DTE"*
-- *"Compare iron condors vs iron butterflies on SPY from 2023-06-01 to 2024-01-01 with 30 and 60 day max entry DTE"*
-- *"Run short puts on SPY from 2024-01-01 to 2024-12-31 with RSI below 30 sustained for 3 days as the entry signal"*
+See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for setup and configuration details.
 
 ## Installation
 
@@ -85,7 +46,7 @@ pip install optopsy
 pip install optopsy[ui]
 ```
 
-**Requirements:** Python 3.12–3.13, Pandas 2.0+, NumPy 1.26+
+**Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
 
 ## Quick Start
 
@@ -135,440 +96,19 @@ Results are grouped by DTE (days to expiration) and OTM% (out-of-the-money perce
 | **Calendar Spreads** | `long_call_calendar`, `short_call_calendar`, `long_put_calendar`, `short_put_calendar` |
 | **Diagonal Spreads** | `long_call_diagonal`, `short_call_diagonal`, `long_put_diagonal`, `short_put_diagonal` |
 
-## Configuration Options
-
-All strategy functions accept these optional parameters:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `dte_interval` | 7 | Group results by DTE intervals (days) |
-| `max_entry_dte` | 90 | Maximum days to expiration at entry |
-| `exit_dte` | 0 | Target DTE for exit (0 = expiration) |
-| `otm_pct_interval` | 0.05 | OTM percentage interval for grouping |
-| `max_otm_pct` | 0.5 | Maximum OTM percentage to consider |
-| `min_bid_ask` | 0.05 | Minimum bid/ask to filter out worthless options |
-| `raw` | False | Return individual trades instead of grouped stats |
-| `slippage` | "mid" | Slippage mode: "mid", "spread", or "liquidity" |
-| `fill_ratio` | 0.5 | Base fill ratio for liquidity mode (0.0-1.0) |
-| `reference_volume` | 1000 | Volume threshold for liquid options |
-
-### Example: Custom Parameters
-
-```python
-# Short puts with 30-60 DTE, held to expiration
-results = op.short_puts(
-    data,
-    dte_interval=30,
-    max_entry_dte=60,
-    exit_dte=0,
-    otm_pct_interval=0.10,
-)
-```
-
-### Calendar and Diagonal Spread Parameters
-
-Calendar and diagonal spreads use different parameters to manage two expirations:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `front_dte_min` | 20 | Minimum DTE for front (near-term) leg |
-| `front_dte_max` | 40 | Maximum DTE for front leg |
-| `back_dte_min` | 50 | Minimum DTE for back (longer-term) leg |
-| `back_dte_max` | 90 | Maximum DTE for back leg |
-| `exit_dte` | 7 | Days before front expiration to exit |
-
-```python
-# Long call calendar: short front-month, long back-month at same strike
-results = op.long_call_calendar(
-    data,
-    front_dte_min=25,
-    front_dte_max=35,
-    back_dte_min=50,
-    back_dte_max=70,
-    exit_dte=7,
-)
-
-# Diagonal spread: different strikes and expirations
-results = op.long_call_diagonal(data, raw=True)
-```
-
-## Entry Signals
-
-Filter entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
-
-```python
-from optopsy import long_calls, apply_signal, rsi_below, sustained, signal, day_of_week
-
-# Enter only when RSI(14) is below 30
-entry_dates = apply_signal(data, rsi_below(14, 30))
-results = long_calls(data, entry_dates=entry_dates)
-
-# Require RSI below 30 for 5 consecutive days
-entry_dates = apply_signal(data, sustained(rsi_below(14, 30), days=5))
-results = long_calls(data, entry_dates=entry_dates)
-
-# Compose signals with & and |
-sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))  # Oversold + Thursday
-entry_dates = apply_signal(data, sig)
-results = long_calls(data, entry_dates=entry_dates)
-```
-
-### Available Signals
-
-| Category | Signals | Default Parameters |
-|----------|---------|-------------------|
-| **RSI** | `rsi_below`, `rsi_above` | `period=14`, `threshold=30` / `70` |
-| **SMA** | `sma_below`, `sma_above` | `period=20` |
-| **MACD** | `macd_cross_above`, `macd_cross_below` | `fast=12`, `slow=26`, `signal_period=9` |
-| **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` | `length=20`, `std=2.0` |
-| **EMA Crossover** | `ema_cross_above`, `ema_cross_below` | `fast=10`, `slow=50` |
-| **ATR Volatility** | `atr_above`, `atr_below` | `period=14`, `multiplier=1.5` / `0.75` |
-| **Calendar** | `day_of_week` | Days: `0`=Mon ... `4`=Fri |
-
-### Combinators
-
-| Function | Description |
-|----------|-------------|
-| `sustained(signal, days=5)` | Require signal True for N consecutive bars |
-| `and_signals(sig1, sig2, ...)` | All signals must be True |
-| `or_signals(sig1, sig2, ...)` | At least one signal must be True |
-| `Signal` class with `&` / `\|` | Fluent operator chaining |
-
-### Signal Examples
-
-**RSI — enter on oversold, exit on overbought:**
-
-```python
-import optopsy as op
-from optopsy import apply_signal, rsi_below, rsi_above
-
-entry_dates = apply_signal(data, rsi_below(period=14, threshold=30))
-exit_dates = apply_signal(data, rsi_above(period=14, threshold=70))
-results = op.long_calls(data, entry_dates=entry_dates, exit_dates=exit_dates)
-```
-
-**SMA — trend filter (only enter when price is above its 50-day moving average):**
-
-```python
-from optopsy import apply_signal, sma_above
-
-entry_dates = apply_signal(data, sma_above(period=50))
-results = op.short_puts(data, entry_dates=entry_dates)
-```
-
-**MACD — enter on bullish crossover:**
-
-```python
-from optopsy import apply_signal, macd_cross_above
-
-entry_dates = apply_signal(data, macd_cross_above(fast=12, slow=26, signal_period=9))
-results = op.long_call_spread(data, entry_dates=entry_dates)
-```
-
-**Bollinger Bands — mean reversion when price dips below the lower band:**
-
-```python
-from optopsy import apply_signal, bb_below_lower
-
-entry_dates = apply_signal(data, bb_below_lower(length=20, std=2.0))
-results = op.long_puts(data, entry_dates=entry_dates)
-```
-
-**EMA Crossover — golden cross (fast EMA crosses above slow EMA):**
-
-```python
-from optopsy import apply_signal, ema_cross_above
-
-entry_dates = apply_signal(data, ema_cross_above(fast=10, slow=50))
-results = op.long_calls(data, entry_dates=entry_dates)
-```
-
-**ATR — only sell premium in low-volatility regimes:**
-
-```python
-from optopsy import apply_signal, atr_below
-
-entry_dates = apply_signal(data, atr_below(period=14, multiplier=0.75))
-results = op.iron_condor(data, entry_dates=entry_dates)
-```
-
-**Calendar — restrict entries to specific days of the week:**
-
-```python
-from optopsy import apply_signal, day_of_week
-
-# Enter only on Mondays and Fridays
-entry_dates = apply_signal(data, day_of_week(0, 4))
-results = op.short_straddles(data, entry_dates=entry_dates)
-```
-
-### Combining Multiple Signals
-
-Use the `Signal` class with `&` (AND) and `|` (OR) operators, or the functional `and_signals` / `or_signals` helpers:
-
-```python
-from optopsy import apply_signal, signal, rsi_below, sma_above, atr_below, day_of_week
-from optopsy import and_signals, or_signals
-
-# Fluent API: oversold + uptrend + low volatility
-entry = signal(rsi_below(14, 30)) & signal(sma_above(50)) & signal(atr_below(14, 0.75))
-entry_dates = apply_signal(data, entry)
-results = op.long_calls(data, entry_dates=entry_dates)
-
-# Functional API: same logic
-entry = and_signals(rsi_below(14, 30), sma_above(50), atr_below(14, 0.75))
-entry_dates = apply_signal(data, entry)
-results = op.long_calls(data, entry_dates=entry_dates)
-
-# OR: enter when EITHER condition fires
-from optopsy import macd_cross_above, bb_below_lower
-entry = or_signals(macd_cross_above(), bb_below_lower())
-entry_dates = apply_signal(data, entry)
-results = op.long_call_spread(data, entry_dates=entry_dates)
-```
-
-### Sustained Signals
-
-Require a condition to persist for multiple consecutive days before triggering:
-
-```python
-from optopsy import apply_signal, sustained, rsi_below, bb_below_lower
-
-# RSI must stay below 30 for 5 straight days
-entry_dates = apply_signal(data, sustained(rsi_below(14, 30), days=5))
-results = op.long_calls(data, entry_dates=entry_dates)
-
-# Bollinger Band breach sustained for 3 days
-entry_dates = apply_signal(data, sustained(bb_below_lower(20, 2.0), days=3))
-results = op.long_puts(data, entry_dates=entry_dates)
-```
-
-### Using Stock OHLCV Data
-
-By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially ATR, which benefits from real high/low data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
-
-```python
-import pandas as pd
-import optopsy as op
-from optopsy import apply_signal, atr_above, ema_cross_above, signal
-
-# Load OHLCV stock data (must have: underlying_symbol, quote_date, close;
-# optional: open, high, low, volume)
-stock_df = pd.read_csv("SPX_daily_ohlcv.csv", parse_dates=["quote_date"])
-
-# Compute entry dates from stock data using real high/low for ATR
-entry = signal(atr_above(period=14, multiplier=1.5)) & signal(ema_cross_above(10, 50))
-entry_dates = apply_signal(stock_df, entry)
-
-# Pass pre-computed dates to the strategy
-results = op.long_straddles(data, entry_dates=entry_dates)
-```
-
-### Custom Signal Functions
-
-Any function matching the signature `(pd.DataFrame) -> pd.Series[bool]` can be used as a signal:
-
-```python
-import optopsy as op
-from optopsy import apply_signal, signal, rsi_below
-
-# Custom: only enter when underlying price is above 4000
-def price_above_4000(data):
-    return data["underlying_price"] > 4000
-
-entry_dates = apply_signal(data, price_above_4000)
-results = op.iron_condor(data, entry_dates=entry_dates)
-
-# Combine custom signals with built-in ones
-entry = signal(price_above_4000) & signal(rsi_below(14, 30))
-entry_dates = apply_signal(data, entry)
-results = op.long_calls(data, entry_dates=entry_dates)
-```
-
-## Greeks Support
-
-Filter and group options by delta for more precise strategy targeting.
-
-### Loading Data with Greeks
-
-```python
-data = op.csv_data(
-    "options_with_greeks.csv",
-    underlying_symbol=0,
-    underlying_price=1,
-    option_type=2,
-    expiration=3,
-    quote_date=4,
-    strike=5,
-    bid=6,
-    ask=7,
-    delta=8,  # Optional: column index for delta
-)
-```
-
-### Delta Filtering
-
-Target specific delta ranges at entry:
-
-```python
-# Only 30-delta calls (delta between 0.25 and 0.35)
-results = op.long_calls(data, delta_min=0.25, delta_max=0.35)
-
-# High-probability short puts (delta >= -0.20)
-results = op.short_puts(data, delta_max=-0.20)
-
-# ATM straddles (delta around 0.50/-0.50)
-results = op.long_straddles(data, delta_min=0.45, delta_max=0.55)
-```
-
-### Delta Grouping
-
-Analyze performance across delta ranges:
-
-```python
-# Group results by 0.10 delta intervals
-results = op.long_calls(data, delta_interval=0.10)
-```
-
-**Output:**
-```
-   delta_range  dte_range  otm_pct_range  count   mean    std
-0   (0.2, 0.3]   (7, 14]  (-0.10, -0.05]     42  -0.15   0.52
-1   (0.3, 0.4]   (7, 14]  (-0.05, -0.00]     48   0.22   0.41
-2   (0.4, 0.5]   (7, 14]  (-0.00,  0.05]     35   0.45   0.33
-...
-```
-
-## Slippage Modeling
-
-Model realistic fill prices with three slippage modes:
-
-| Mode | Description |
-|------|-------------|
-| `mid` | Uses midpoint price (default) |
-| `spread` | Assumes worst-case fill at full bid-ask spread |
-| `liquidity` | Adjusts slippage based on volume |
-
-### Basic Usage
-
-```python
-# Default: mid-price fills (optimistic)
-results = op.long_calls(data)
-
-# Full spread slippage (conservative)
-results = op.long_calls(data, slippage="spread")
-```
-
-### Liquidity-Based Slippage
-
-For more realistic modeling, use volume data to estimate slippage:
-
-```python
-# Load data with volume
-data = op.csv_data(
-    "options_data.csv",
-    underlying_symbol=0,
-    underlying_price=1,
-    option_type=2,
-    expiration=3,
-    quote_date=4,
-    strike=5,
-    bid=6,
-    ask=7,
-    volume=9,  # Volume column
-)
-
-# Liquidity-based slippage
-results = op.iron_condor(
-    data,
-    slippage="liquidity",
-    fill_ratio=0.5,        # Base fill ratio (0.0-1.0)
-    reference_volume=1000,  # Volume threshold for "liquid"
-)
-```
-
-With `liquidity` mode:
-- High-volume options get fills closer to mid-price
-- Low-volume options get fills closer to the spread edge
-- `fill_ratio=0.5` means liquid options fill at 50% of the spread from mid
-
-## Raw Trade Data
-
-Get individual trades instead of grouped statistics:
-
-```python
-trades = op.iron_condor(data, raw=True)
-print(trades.columns)
-# ['underlying_symbol', 'expiration', 'dte_entry', 'strike_leg1',
-#  'strike_leg2', 'strike_leg3', 'strike_leg4', 'total_entry_cost',
-#  'total_exit_proceeds', 'pct_change', ...]
-```
-
-## Data Format
-
-Optopsy expects options chain data with these columns:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `underlying_symbol` | string | Ticker symbol (e.g., "SPX") |
-| `underlying_price` | float | Price of underlying at quote time |
-| `option_type` | string | "call" or "put" (or "c"/"p") |
-| `expiration` | datetime | Option expiration date |
-| `quote_date` | datetime | Date of the quote |
-| `strike` | float | Strike price |
-| `bid` | float | Bid price |
-| `ask` | float | Ask price |
-| `delta` | float | *(Optional)* Delta Greek |
-
-### Using DataFrames Directly
-
-If your data is already in a DataFrame:
-
-```python
-import pandas as pd
-import optopsy as op
-
-# Your DataFrame just needs the required columns
-df = pd.read_csv("my_data.csv")
-df.columns = ['underlying_symbol', 'underlying_price', 'option_type',
-              'expiration', 'quote_date', 'strike', 'bid', 'ask']
-df['expiration'] = pd.to_datetime(df['expiration'])
-df['quote_date'] = pd.to_datetime(df['quote_date'])
-
-# Pass directly to strategy functions
-results = op.short_strangles(df)
-```
-
-## Data Sources
-
-Optopsy works with any historical options data. Some sources:
-
-- [EODHD US Stock Options Data API (1.0.0)](https://eodhd.com/financial-apis/options-data-api) - Built-in integration via the chat UI (API key required)
-- [HistoricalOptionData.com](https://historicaloptiondata.com/) - Free samples available
-- [CBOE DataShop](https://datashop.cboe.com/) - Official exchange data
-- [Polygon.io](https://polygon.io/) - Options data API
-- Your broker's data export
-
 ## Documentation
 
-See the [Wiki](https://github.com/michaelchu/optopsy/wiki) for detailed API reference and examples.
+- [Getting Started](https://michaelchu.github.io/optopsy/getting-started/) - Installation and first backtest
+- [Strategies](https://michaelchu.github.io/optopsy/strategies/) - All 28 strategies explained
+- [Parameters](https://michaelchu.github.io/optopsy/parameters/) - Configuration options reference
+- [Entry Signals](https://michaelchu.github.io/optopsy/entry-signals/) - Technical analysis signal filters
+- [Chat UI](https://michaelchu.github.io/optopsy/chat-ui/) - AI-powered chat interface
+- [Examples](https://michaelchu.github.io/optopsy/examples/) - Common use cases and recipes
+- [API Reference](https://michaelchu.github.io/optopsy/api-reference/) - Complete function documentation
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-```bash
-# Development setup
-git clone https://github.com/michaelchu/optopsy.git
-cd optopsy
-pip install -e ".[ui]"
-
-# Run tests
-pytest tests/ -v
-
-# Format code
-black optopsy/ tests/
-```
+Contributions are welcome! See the [Contributing Guide](https://michaelchu.github.io/optopsy/contributing/) for details.
 
 ## License
 

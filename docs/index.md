@@ -9,11 +9,13 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 ## Key Features
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via [pandas-ta](https://github.com/twopirllc/pandas-ta)
 - **Greeks Filtering** - Filter options by delta to target specific probability ranges
 - **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
 - **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
+- **AI Chat UI** - Interactive [AI-powered chat interface](chat-ui.md) for running backtests with natural language
 
 ## Quick Example
 
@@ -37,16 +39,22 @@ print(results)
 ## Installation
 
 ```bash
+# Core library
 pip install optopsy
+
+# With AI Chat UI
+pip install optopsy[ui]
 ```
 
-**Requirements:** Python 3.8+, Pandas 2.0+, NumPy 1.26+
+**Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
 
 ## Getting Help
 
 - Check the [Getting Started](getting-started.md) guide for a detailed walkthrough
 - Browse [Strategies](strategies.md) for available options strategies
 - Review [Parameters](parameters.md) for configuration options
+- Learn about [Entry Signals](entry-signals.md) for TA-based entry filtering
+- Try the [AI Chat UI](chat-ui.md) for natural language backtesting
 - See [Examples](examples.md) for common use cases
 - View the [API Reference](api-reference.md) for complete function documentation
 
