@@ -1,17 +1,27 @@
 import os
 from datetime import datetime
 
+import pytest
+
 import optopsy as op
+
+_TEST_DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "test_data")
 
 
 def filepath():
-    curr_file = os.path.abspath(os.path.dirname(__file__))
-    return os.path.join(curr_file, "./test_data/data.csv")
+    return os.path.join(_TEST_DATA_DIR, "data.csv")
 
 
 def filepath_noncontiguous():
-    curr_file = os.path.abspath(os.path.dirname(__file__))
-    return os.path.join(curr_file, "./test_data/data_noncontiguous.csv")
+    return os.path.join(_TEST_DATA_DIR, "data_noncontiguous.csv")
+
+
+def filepath_with_greeks():
+    return os.path.join(_TEST_DATA_DIR, "data_with_greeks.csv")
+
+
+def filepath_empty():
+    return os.path.join(_TEST_DATA_DIR, "empty.csv")
 
 
 def test_import_csv_file():
@@ -165,3 +175,64 @@ def test_import_csv_noncontiguous_columns_with_date_range():
     assert len(data) == 2
     assert data.iloc[0]["expiration"] == datetime(2000, 1, 20)
     assert data.iloc[1]["expiration"] == datetime(2010, 1, 20)
+
+
+# =============================================================================
+# Greek Column Import Tests
+# =============================================================================
+
+
+def test_import_csv_with_delta_column():
+    """Importing CSV with delta Greek column should include it in output."""
+    data = op.datafeeds.csv_data(
+        filepath_with_greeks(),
+        underlying_symbol=0,
+        underlying_price=1,
+        option_type=2,
+        expiration=3,
+        quote_date=4,
+        strike=5,
+        bid=6,
+        ask=7,
+        delta=8,
+    )
+    assert "delta" in data.columns
+    assert len(data) == 4
+    assert data.iloc[0]["delta"] == 0.65
+
+
+# =============================================================================
+# Error Path Tests
+# =============================================================================
+
+
+def test_file_not_found_raises():
+    """Non-existent file should raise FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="CSV file not found"):
+        op.datafeeds.csv_data(
+            "/nonexistent/path/data.csv",
+            underlying_symbol=0,
+            underlying_price=1,
+            option_type=2,
+            expiration=3,
+            quote_date=4,
+            strike=5,
+            bid=6,
+            ask=7,
+        )
+
+
+def test_empty_csv_raises():
+    """Empty CSV file should raise ValueError."""
+    with pytest.raises(ValueError, match="CSV file is empty"):
+        op.datafeeds.csv_data(
+            filepath_empty(),
+            underlying_symbol=0,
+            underlying_price=1,
+            option_type=2,
+            expiration=3,
+            quote_date=4,
+            strike=5,
+            bid=6,
+            ask=7,
+        )
