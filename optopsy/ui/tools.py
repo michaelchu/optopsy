@@ -549,7 +549,7 @@ def get_tool_schemas() -> list[dict]:
                                 "required": ["name"],
                             },
                             "minItems": 1,
-                            "description": "One or more signals to combine with AND logic",
+                            "description": "One or more signals to combine (default: AND)",
                         },
                         "combine": {
                             "type": "string",

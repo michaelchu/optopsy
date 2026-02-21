@@ -211,12 +211,12 @@ When users ask how to combine signals programmatically (outside the chat), optop
 
 **Composite signal (build_signal + slot):**
 - "Enter when RSI < 30 AND above 200-day SMA" → `build_signal(slot="entry", \
-signals=[{name: "rsi_below"}, {name: "sma_above", params: {period: 200}}])` then \
+signals=[{"name": "rsi_below"}, {"name": "sma_above", "params": {"period": 200}}])` then \
 `run_strategy(..., entry_signal_slot="entry")`
 - "Enter on low-vol Fridays" → `build_signal(slot="entry", \
-signals=[{name: "atr_below"}, {name: "day_of_week"}])`
+signals=[{"name": "atr_below"}, {"name": "day_of_week"}])`
 - "Enter on MACD cross OR RSI oversold" → `build_signal(slot="entry", \
-signals=[{name: "macd_cross_above"}, {name: "rsi_below"}], combine="or")`
+signals=[{"name": "macd_cross_above"}, {"name": "rsi_below"}], combine="or")`
 
 ## Guidelines
 - Always load data before running strategies.
