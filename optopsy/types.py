@@ -35,6 +35,10 @@ class StrategyParams(TypedDict, total=False):
     entry_dates: Optional[pd.DataFrame]
     exit_dates: Optional[pd.DataFrame]
 
+    # Timestamp resolution for cross-source date matching (default "D" for
+    # daily).  Use "h", "min", "s" for intraday granularity.
+    date_resolution: Optional[str]
+
     # Slippage settings
     slippage: Literal["mid", "spread", "liquidity"]
     fill_ratio: float

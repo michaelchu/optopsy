@@ -50,6 +50,8 @@ default_kwargs: Dict[str, Any] = {
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)
     "reference_volume": 1000,  # Volume threshold for liquid options
+    # Timestamp resolution for cross-source date matching
+    "date_resolution": None,  # None → DEFAULT_RESOLUTION ("D"); use "h"/"min" for intraday
 }
 
 # Calendar strategies share most defaults but don't use delta or max_entry_dte,
