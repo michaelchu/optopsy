@@ -111,13 +111,40 @@ A debit strategy (you pay to enter) has negative total_entry_cost. \
 A credit strategy (you receive premium) has positive total_entry_cost. \
 Positive pct_change = profit, negative = loss.
 
-## Entry & Exit Signals
+## Technical Analysis (TA) Signals
 
-The `run_strategy` tool accepts optional `entry_signal` and `exit_signal` parameters that filter \
-which dates are eligible for trade entry/exit based on technical analysis of the underlying price \
-history. Only one signal per side (entry/exit) can be specified per run.
+Optopsy has a **decoupled signal system** — TA indicators are computed independently from the \
+strategy engine. Signals produce a list of valid (symbol, date) pairs, which the strategy engine \
+uses to filter entry/exit dates. This separation means signals can come from any source: built-in \
+TA indicators, custom logic, model predictions, or even manual date lists.
 
-**Available signals** — pick the signal type, then optionally tune it with `entry_signal_params`:
+### How it works (architecture)
+1. A **signal function** (e.g. `rsi_below(14, 30)`) evaluates a condition on OHLCV price data
+2. `apply_signal(data, signal_func)` runs the signal and returns a DataFrame of valid \
+`(underlying_symbol, quote_date)` pairs
+3. The strategy receives these as **`entry_dates`** or **`exit_dates`** — pre-computed date \
+filters that restrict which dates are eligible for trade entry/exit
+
+The `run_strategy` tool handles this automatically: pass `entry_signal` / `exit_signal` and the \
+tool computes the dates behind the scenes. But when users ask how to use the library \
+programmatically, explain the decoupled pattern:
+
+```python
+from optopsy.signals import rsi_below, apply_signal
+import optopsy as op
+
+data = op.csv_data('./SPX_2018.csv')
+stock = load_ohlcv_data(...)  # OHLCV DataFrame for the underlying
+entry_dates = apply_signal(stock, rsi_below(14, 30))
+results = op.long_calls(data, entry_dates=entry_dates, raw=True)
+```
+
+### Using signals via the `run_strategy` tool
+
+Pass `entry_signal` and/or `exit_signal` as parameters. Only one signal per side (entry/exit) \
+can be specified per run.
+
+**Available signals** — pick the signal type, then optionally tune with `entry_signal_params`:
 
 | Signal | Type | Default params | Notes |
 |---|---|---|---|
@@ -142,17 +169,31 @@ history. Only one signal per side (entry/exit) can be specified per run.
 Examples: `{"threshold": 40}`, `{"period": 200}`, `{"fast": 5, "slow": 20}`, `{"days": [3, 4]}`.
 
 **`entry_signal_days`** (optional integer): Require the signal to be True for N consecutive trading \
-days before entering. Works with any signal. Omit for single-bar behavior (default).
+days before entering. Uses `sustained()` internally. Omit for single-bar behavior (default).
 
 **`exit_signal`** / **`exit_signal_params`** / **`exit_signal_days`**: Same as above but gate exits.
 
-**⚠ Warmup**: MACD needs ~50 bars; EMA cross needs `slow` bars of history. Use state-based signals \
+### Signal data requirements
+
+- Most TA signals need **OHLCV price data** for the underlying. The tool fetches this \
+automatically via yfinance with ~1 year of padding for indicator warmup.
+- `day_of_week` is **calendar-only** — it needs no price data and works with just the \
+option chain dates.
+- MACD needs ~50 bars of warmup; EMA cross needs `slow` bars. Use state-based signals \
 (RSI, SMA) for shorter datasets.
 
-**Signal data source**: TA signals automatically fetch OHLCV data via yfinance. `day_of_week` does \
-not require yfinance.
+### Composing signals (library API)
 
-**Typical use-cases**:
+When users want to combine multiple conditions programmatically, optopsy supports:
+- `and_signals(sig1, sig2, ...)` — all conditions must be True
+- `or_signals(sig1, sig2, ...)` — any condition is True
+- `sustained(signal_func, days=5)` — require N consecutive True bars
+- Fluent API: `signal(rsi_below(14, 30)) & signal(day_of_week(3))`
+
+Note: the `run_strategy` tool supports one signal per side. For combined signals, users \
+should use the library API directly.
+
+### Typical use-cases
 - "Sell puts only when oversold" → `entry_signal="rsi_below"`
 - "RSI below 40 (custom threshold)" → `entry_signal="rsi_below"`, `entry_signal_params={"threshold": 40}`
 - "200-day SMA trend filter" → `entry_signal="sma_above"`, `entry_signal_params={"period": 200}`
