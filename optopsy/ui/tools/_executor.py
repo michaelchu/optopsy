@@ -853,6 +853,159 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     return _result(llm_summary, user_display=user_display, res=scan_results)
 
 
+@_register("simulate")
+def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
+    from optopsy.simulator import simulate as _simulate
+
+    strategy_name = arguments.get("strategy_name")
+    if not strategy_name or strategy_name not in STRATEGIES:
+        return _result(
+            f"Unknown strategy '{strategy_name}'. "
+            f"Available: {', '.join(STRATEGY_NAMES)}",
+        )
+
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+
+    func, _, _ = STRATEGIES[strategy_name]
+
+    # Extract simulation-specific params
+    sim_params: dict = {}
+    for key in ("capital", "quantity", "max_positions", "multiplier", "selector"):
+        if key in arguments:
+            sim_params[key] = arguments[key]
+
+    # Build strategy kwargs (same logic as run_strategy)
+    _sim_keys = {
+        "strategy_name",
+        "dataset_name",
+        "capital",
+        "quantity",
+        "max_positions",
+        "multiplier",
+        "selector",
+    }
+    strat_kwargs = {
+        k: v
+        for k, v in arguments.items()
+        if k not in _sim_keys
+        and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
+    }
+
+    try:
+        result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
+    except Exception as e:
+        return _result(f"Error running simulation: {e}")
+
+    s = result.summary
+    if s["total_trades"] == 0:
+        return _result(f"simulate({strategy_name}): no trades generated.")
+
+    # Build result key
+    dte = arguments.get("max_entry_dte", 90)
+    sim_key = f"sim:{strategy_name}:dte={dte}"
+
+    # Store in results (include trade_log for later retrieval)
+    updated_results = dict(results)
+    updated_results[sim_key] = {
+        "type": "simulation",
+        "strategy": strategy_name,
+        "summary": s,
+        "trade_log": result.trade_log,
+    }
+
+    # Format output
+    llm_summary = (
+        f"simulate({strategy_name}): {s['total_trades']} trades, "
+        f"win_rate={s['win_rate']:.1%}, "
+        f"total_return={s['total_return']:.2%}, "
+        f"max_drawdown={s['max_drawdown']:.2%}, "
+        f"profit_factor={s['profit_factor']:.2f}"
+    )
+
+    from ._helpers import _df_to_markdown
+
+    # Summary stats table
+    stats_rows = [
+        ("Total Trades", s["total_trades"]),
+        ("Winning Trades", s["winning_trades"]),
+        ("Losing Trades", s["losing_trades"]),
+        ("Win Rate", f"{s['win_rate']:.1%}"),
+        ("Total P&L", f"${s['total_pnl']:,.2f}"),
+        ("Total Return", f"{s['total_return']:.2%}"),
+        ("Avg P&L", f"${s['avg_pnl']:,.2f}"),
+        ("Avg Win", f"${s['avg_win']:,.2f}"),
+        ("Avg Loss", f"${s['avg_loss']:,.2f}"),
+        ("Max Win", f"${s['max_win']:,.2f}"),
+        ("Max Loss", f"${s['max_loss']:,.2f}"),
+        ("Profit Factor", f"{s['profit_factor']:.2f}"),
+        ("Max Drawdown", f"{s['max_drawdown']:.2%}"),
+        ("Avg Days in Trade", f"{s['avg_days_in_trade']:.1f}"),
+    ]
+    stats_table = "| Metric | Value |\n|---|---|\n"
+    stats_table += "\n".join(f"| {m} | {v} |" for m, v in stats_rows)
+
+    # Trade log preview
+    preview_cols = [
+        "trade_id",
+        "entry_date",
+        "exit_date",
+        "days_held",
+        "entry_cost",
+        "exit_proceeds",
+        "realized_pnl",
+        "equity",
+    ]
+    available_cols = [c for c in preview_cols if c in result.trade_log.columns]
+    preview = result.trade_log[available_cols].head(20)
+
+    user_display = (
+        f"### Simulation: {strategy_name}\n\n"
+        f"{stats_table}\n\n"
+        f"**Trade Log** (first {min(20, len(result.trade_log))} of "
+        f"{len(result.trade_log)} trades)\n\n"
+        f"{_df_to_markdown(preview)}"
+    )
+
+    return _result(llm_summary, user_display=user_display, res=updated_results)
+
+
+@_register("get_simulation_trades")
+def _handle_get_simulation_trades(
+    arguments, dataset, signals, datasets, results, _result
+):
+    sim_key = arguments.get("simulation_key")
+
+    # Find the simulation result
+    if sim_key:
+        entry = results.get(sim_key)
+        if entry is None or entry.get("type") != "simulation":
+            sim_keys = [k for k, v in results.items() if v.get("type") == "simulation"]
+            return _result(
+                f"No simulation found for key '{sim_key}'. "
+                f"Available: {sim_keys or 'none — run simulate first'}"
+            )
+    else:
+        # Find most recent simulation
+        sim_entries = [
+            (k, v) for k, v in results.items() if v.get("type") == "simulation"
+        ]
+        if not sim_entries:
+            return _result("No simulations run yet. Use simulate first.")
+        sim_key, entry = sim_entries[-1]
+
+    trade_log = entry["trade_log"]
+    if trade_log.empty:
+        return _result(f"Simulation '{sim_key}' has no trades.")
+
+    from ._helpers import _df_to_markdown
+
+    llm_summary = f"get_simulation_trades({sim_key}): {len(trade_log)} trades"
+    user_display = f"### Trade Log: {sim_key}\n\n{_df_to_markdown(trade_log)}"
+    return _result(llm_summary, user_display=user_display)
+
+
 @_register("inspect_cache")
 def _handle_inspect_cache(arguments, dataset, signals, datasets, results, _result):
     filter_symbol = arguments.get("symbol", "").strip().upper() or None

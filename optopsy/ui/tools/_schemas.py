@@ -840,6 +840,98 @@ def get_tool_schemas() -> list[dict]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "simulate",
+                "description": (
+                    "Run a chronological simulation of an options strategy. "
+                    "Walks through trades sequentially with capital tracking, "
+                    "position limits, and equity curve generation. Returns "
+                    "trade log, equity curve, and summary stats (win rate, "
+                    "max drawdown, profit factor, etc.)."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "strategy_name": {
+                            "type": "string",
+                            "enum": STRATEGY_NAMES,
+                            "description": "Name of the strategy to simulate",
+                        },
+                        "capital": {
+                            "type": "number",
+                            "description": "Starting capital in dollars (default: 100000)",
+                        },
+                        "quantity": {
+                            "type": "integer",
+                            "description": "Number of contracts per trade (default: 1)",
+                            "minimum": 1,
+                        },
+                        "max_positions": {
+                            "type": "integer",
+                            "description": "Maximum concurrent open positions (default: 1)",
+                            "minimum": 1,
+                        },
+                        "multiplier": {
+                            "type": "integer",
+                            "description": "Contract multiplier (default: 100)",
+                            "minimum": 1,
+                        },
+                        "selector": {
+                            "type": "string",
+                            "enum": [
+                                "nearest",
+                                "highest_premium",
+                                "lowest_premium",
+                                "first",
+                            ],
+                            "description": (
+                                "How to pick one trade when multiple candidates "
+                                "exist for a date. 'nearest' = closest to ATM, "
+                                "'highest_premium' = most credit, "
+                                "'lowest_premium' = cheapest debit, "
+                                "'first' = first row. Default: 'nearest'."
+                            ),
+                        },
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Name of the dataset to simulate on. "
+                                "Omit to use the most-recently-loaded dataset."
+                            ),
+                        },
+                        **STRATEGY_PARAMS_SCHEMA,
+                        **CALENDAR_EXTRA_PARAMS,
+                    },
+                    "required": ["strategy_name"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_simulation_trades",
+                "description": (
+                    "Show the full trade log from a previous simulation. "
+                    "Use after 'simulate' when the user asks to see "
+                    "detailed trades."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "simulation_key": {
+                            "type": "string",
+                            "description": (
+                                "Key of the simulation result to retrieve. "
+                                "Omit to use the most recent simulation."
+                            ),
+                        },
+                    },
+                    "required": [],
+                },
+            },
+        },
     ]
 
     # Data provider tools (only added when API keys are configured)
