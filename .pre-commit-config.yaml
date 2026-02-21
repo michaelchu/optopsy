@@ -8,6 +8,20 @@ repos:
 
   - repo: local
     hooks:
+      - id: mypy
+        name: mypy
+        entry: venv/bin/mypy optopsy/
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: vulture
+        name: vulture
+        entry: venv/bin/vulture optopsy/ vulture_whitelist.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: pytest
         name: pytest
         entry: venv/bin/pytest tests/ -q

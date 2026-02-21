@@ -42,6 +42,15 @@ ruff check optopsy/ tests/ setup.py
 
 # Lint and auto-fix
 ruff check --fix optopsy/ tests/ setup.py
+
+# Type check
+mypy optopsy/
+
+# Run tests with coverage
+pytest tests/ -v --cov=optopsy --cov-report=term-missing
+
+# Check for dead code
+vulture optopsy/ vulture_whitelist.py
 ```
 
 ## Architecture Overview
