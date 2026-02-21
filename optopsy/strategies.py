@@ -43,11 +43,9 @@ default_kwargs: Dict[str, Any] = {
     "delta_max": None,
     # Greeks grouping (optional)
     "delta_interval": None,
-    # Signal filtering (optional)
-    "entry_signal": None,
-    "exit_signal": None,
-    # External stock data for signal computation (optional)
-    "stock_data": None,
+    # Pre-computed signal dates (optional) — use apply_signal() to generate
+    "entry_dates": None,
+    "exit_dates": None,
     # Slippage settings
     "slippage": "mid",  # "mid", "spread", or "liquidity"
     "fill_ratio": 0.5,  # Base fill ratio for liquidity mode (0.0-1.0)

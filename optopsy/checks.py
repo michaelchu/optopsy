@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Tuple
 import pandas as pd
 
 expected_types: Dict[str, Tuple[str, ...]] = {
@@ -164,14 +164,8 @@ def _check_fill_ratio(key: str, value: Any) -> None:
         raise ValueError(f"Invalid setting for {key}, must be a number between 0 and 1")
 
 
-def _check_callable_or_none(key: str, value: Any) -> None:
-    """Validate that value is a callable or None."""
-    if value is not None and not callable(value):
-        raise ValueError(f"Invalid setting for {key}, must be a callable or None")
-
-
-def _check_stock_data(key: str, value: Any) -> None:
-    """Validate that value is a DataFrame with required columns, or None."""
+def _check_dates_dataframe(key: str, value: Any) -> None:
+    """Validate that value is a DataFrame with (underlying_symbol, quote_date), or None."""
     if value is None:
         return
     if not isinstance(value, pd.DataFrame):
@@ -180,12 +174,9 @@ def _check_stock_data(key: str, value: Any) -> None:
     missing = required - set(value.columns)
     if missing:
         raise ValueError(
-            f"stock_data missing required columns: {missing}. "
-            f"Expected at least: underlying_symbol, quote_date, "
-            f"and close (or underlying_price)."
+            f"{key} missing required columns: {missing}. "
+            f"Expected at least: underlying_symbol, quote_date."
         )
-    if "close" not in value.columns and "underlying_price" not in value.columns:
-        raise ValueError("stock_data must have a 'close' or 'underlying_price' column.")
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
@@ -288,11 +279,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "front_dte_max": _check_positive_integer,
     "back_dte_min": _check_positive_integer,
     "back_dte_max": _check_positive_integer,
-    # Signal filtering
-    "entry_signal": _check_callable_or_none,
-    "exit_signal": _check_callable_or_none,
-    # External stock data for signals
-    "stock_data": _check_stock_data,
+    # Pre-computed signal dates
+    "entry_dates": _check_dates_dataframe,
+    "exit_dates": _check_dates_dataframe,
     # Slippage parameters
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,

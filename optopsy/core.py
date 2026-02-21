@@ -120,100 +120,6 @@ def _cut_options_by_otm(
     return data
 
 
-def _extract_signal_dates(data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Extract unique (symbol, quote_date) pairs from option chain data.
-
-    This provides only date-level information for signals that don't need
-    price data (e.g. day_of_week).  TA signals that reference
-    ``underlying_price`` will fail with a clear KeyError — users must
-    provide ``stock_data`` for those.
-
-    Args:
-        data: DataFrame containing option data (may have multiple rows per quote_date)
-
-    Returns:
-        DataFrame with one row per (underlying_symbol, quote_date),
-        sorted by symbol and date
-    """
-    return (
-        data[["underlying_symbol", "quote_date"]]
-        .drop_duplicates()
-        .sort_values(["underlying_symbol", "quote_date"])
-        .reset_index(drop=True)
-    )
-
-
-def _prepare_stock_data(stock_data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Prepare user-provided OHLCV stock data for signal computation.
-
-    Ensures the DataFrame has the ``underlying_price`` column (mapped from
-    ``close`` if necessary) so that existing signal functions that reference
-    ``underlying_price`` keep working.  Extra OHLCV columns (``open``,
-    ``high``, ``low``, ``volume``) are passed through so signals like ATR
-    can use real high/low data.
-
-    Args:
-        stock_data: DataFrame with at least (underlying_symbol, quote_date)
-                    and either ``close`` or ``underlying_price``
-
-    Returns:
-        Sorted DataFrame ready for signal functions
-    """
-    if "underlying_price" not in stock_data.columns and "close" in stock_data.columns:
-        df = stock_data.copy()
-        df["underlying_price"] = df["close"]
-    else:
-        df = stock_data
-    return (
-        df.drop_duplicates(["underlying_symbol", "quote_date"])
-        .sort_values(["underlying_symbol", "quote_date"])
-        .reset_index(drop=True)
-    )
-
-
-def _resolve_signal_data(params: dict, fallback_data: pd.DataFrame) -> pd.DataFrame:
-    """
-    Build the DataFrame that signal functions will receive.
-
-    When ``stock_data`` is provided in *params*, returns prepared OHLCV data.
-    Otherwise falls back to date-only extraction from *fallback_data* (sufficient
-    for date-based signals like ``day_of_week``).
-
-    TA signals that reference ``underlying_price`` will fail with a
-    ``KeyError`` on the date-only fallback — callers should provide
-    ``stock_data`` when using price-based signals.
-
-    Args:
-        params: Strategy kwargs/params dict (must support ``.get("stock_data")``)
-        fallback_data: Option-chain (or merged) DataFrame used when no stock_data
-    """
-    stock_data = params.get("stock_data")
-    if stock_data is not None:
-        return _prepare_stock_data(stock_data)
-    return _extract_signal_dates(fallback_data)
-
-
-def _get_signal_valid_dates(
-    signal_data: pd.DataFrame, signal_func: Callable
-) -> pd.DataFrame:
-    """
-    Run a signal function and return valid (symbol, quote_date) pairs.
-
-    Args:
-        signal_data: DataFrame passed to the signal function. When stock_data
-            is provided this contains OHLCV columns; otherwise only
-            (underlying_symbol, quote_date) for date-based signals.
-        signal_func: Callable that takes a DataFrame and returns a boolean Series
-
-    Returns:
-        DataFrame with (underlying_symbol, quote_date) rows where signal is True
-    """
-    mask = signal_func(signal_data)
-    return signal_data.loc[mask, ["underlying_symbol", "quote_date"]]
-
-
 def _apply_signal_filter(
     data: pd.DataFrame,
     valid_dates: pd.DataFrame,
@@ -366,16 +272,9 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     delta_min = kwargs.get("delta_min")
     delta_max = kwargs.get("delta_max")
 
-    # Build signal data for entry/exit signal computation.
-    # When stock_data is provided, signals get proper OHLCV data.
-    # Otherwise, signals only get (symbol, quote_date) — enough for
-    # date-based signals like day_of_week.  TA signals that need
-    # underlying_price will KeyError; callers must provide stock_data.
-    entry_signal = kwargs.get("entry_signal")
-    exit_signal = kwargs.get("exit_signal")
-    signal_data = None
-    if entry_signal is not None or exit_signal is not None:
-        signal_data = _resolve_signal_data(kwargs, data)
+    # Pre-computed signal date DataFrames (from apply_signal)
+    entry_dates = kwargs.get("entry_dates")
+    exit_dates = kwargs.get("exit_dates")
 
     # remove option chains that are worthless, it's unrealistic to enter
     # trades with worthless options
@@ -385,18 +284,16 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     if has_delta and (delta_min is not None or delta_max is not None):
         entries = _filter_by_delta(entries, delta_min, delta_max)
 
-    # Apply entry signal filtering (only to entries, exits are unaffected)
-    if entry_signal is not None:
-        valid_entry_dates = _get_signal_valid_dates(signal_data, entry_signal)
-        entries = _apply_signal_filter(entries, valid_entry_dates)
+    # Apply entry date filtering (only to entries, exits are unaffected)
+    if entry_dates is not None:
+        entries = _apply_signal_filter(entries, entry_dates)
 
     # to reduce unnecessary computation, filter for options with the desired exit DTE
     exits = _get_exits(data, kwargs["exit_dte"], kwargs.get("exit_dte_tolerance", 0))
 
-    # Apply exit signal filtering (only to exits, entries are unaffected)
-    if exit_signal is not None:
-        valid_exit_dates = _get_signal_valid_dates(signal_data, exit_signal)
-        exits = _apply_signal_filter(exits, valid_exit_dates)
+    # Apply exit date filtering (only to exits, entries are unaffected)
+    if exit_dates is not None:
+        exits = _apply_signal_filter(exits, exit_dates)
 
     # Determine merge columns
     merge_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
@@ -711,9 +608,8 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             delta_min=context["params"].get("delta_min"),
             delta_max=context["params"].get("delta_max"),
             delta_interval=context["params"].get("delta_interval"),
-            entry_signal=context["params"].get("entry_signal"),
-            exit_signal=context["params"].get("exit_signal"),
-            stock_data=context["params"].get("stock_data"),
+            entry_dates=context["params"].get("entry_dates"),
+            exit_dates=context["params"].get("exit_dates"),
         )
         .pipe(
             _strategy_engine,
@@ -1104,12 +1000,10 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     if rules is not None:
         merged = rules(merged, leg_def)
 
-    # Apply entry signal filtering to calendar/diagonal spreads
-    entry_signal = params.get("entry_signal")
-    if entry_signal is not None and not merged.empty:
-        signal_data = _resolve_signal_data(params, merged)
-        valid_dates = _get_signal_valid_dates(signal_data, entry_signal)
-        merged = _apply_signal_filter(merged, valid_dates)
+    # Apply entry date filtering to calendar/diagonal spreads
+    entry_dates = params.get("entry_dates")
+    if entry_dates is not None and not merged.empty:
+        merged = _apply_signal_filter(merged, entry_dates)
 
     if merged.empty:
         return _fmt(merged)
@@ -1126,12 +1020,10 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     if merged.empty:
         return _fmt(merged)
 
-    # Apply exit signal filtering to calendar/diagonal spreads
-    exit_signal = params.get("exit_signal")
-    if exit_signal is not None and not merged.empty:
-        signal_data = _resolve_signal_data(params, data)
-        valid_exit_dates = _get_signal_valid_dates(signal_data, exit_signal)
-        merged = _apply_signal_filter(merged, valid_exit_dates, date_col="exit_date")
+    # Apply exit date filtering to calendar/diagonal spreads
+    exit_dates = params.get("exit_dates")
+    if exit_dates is not None and not merged.empty:
+        merged = _apply_signal_filter(merged, exit_dates, date_col="exit_date")
 
     if merged.empty:
         return _fmt(merged)

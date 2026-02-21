@@ -1,5 +1,5 @@
 """
-Entry signal filters for controlling when option positions are entered or exited.
+Entry/exit signal filters for controlling when option positions are entered or exited.
 
 Signals are functions that take a DataFrame of underlying price data
 (with columns: underlying_symbol, quote_date, underlying_price) and
@@ -8,30 +8,25 @@ return a boolean Series indicating which dates are valid for entry/exit.
 Built-in signals can be combined with and_signals() / or_signals(), or with
 the fluent Signal class using & and | operators.
 
+Use ``apply_signal()`` to run a signal function on data and get back a
+DataFrame of valid ``(underlying_symbol, quote_date)`` pairs to pass as
+``entry_dates`` or ``exit_dates`` to any strategy.
+
 Example:
-    >>> from optopsy.signals import rsi_below, day_of_week, and_signals, signal
+    >>> from optopsy.signals import rsi_below, day_of_week, and_signals, apply_signal
     >>> import optopsy as op
     >>> data = op.csv_data('./SPX_2018.csv')
+    >>> stock = load_stock_data(...)  # OHLCV DataFrame
 
-    >>> # Enter long calls only on Thursdays when RSI(14) < 30
-    >>> results = op.long_calls(
-    ...     data,
-    ...     max_entry_dte=1,
-    ...     exit_dte=0,
-    ...     entry_signal=and_signals(
-    ...         rsi_below(period=14, threshold=30),
-    ...         day_of_week(3),  # Thursday
-    ...     ),
-    ...     raw=True,
-    ... )
+    >>> # Compute entry dates: Thursdays when RSI(14) < 30
+    >>> sig = and_signals(rsi_below(14, 30), day_of_week(3))
+    >>> entry_dates = apply_signal(stock, sig)
+    >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 
     >>> # Fluent API with Signal class
     >>> sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))
-    >>> results = op.long_calls(data, entry_signal=sig, raw=True)
-
-    >>> # MACD + low-vol regime filter
-    >>> sig = signal(macd_cross_above()) & signal(atr_below(14, 0.75))
-    >>> results = op.iron_condor(data, entry_signal=sig)
+    >>> entry_dates = apply_signal(stock, sig)
+    >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 """
 
 import operator
@@ -476,8 +471,8 @@ def atr_above(period: int = 14, multiplier: float = 1.0) -> SignalFunc:
     Use to filter entries to high-volatility regimes (e.g. multiplier=1.5
     means ATR is 50% above its historical median — elevated vol environment).
 
-    When the signal receives OHLCV data (via ``stock_data`` parameter), uses
-    real high/low prices. Falls back to close-to-close proxy otherwise.
+    When the signal receives OHLCV data, uses real high/low prices.
+    Falls back to close-to-close proxy otherwise.
 
     Args:
         period: ATR lookback period (default 14)
@@ -496,8 +491,8 @@ def atr_below(period: int = 14, multiplier: float = 1.0) -> SignalFunc:
     Use to filter entries to low-volatility / calm market regimes (e.g.
     multiplier=0.75 means ATR is 25% below its historical median).
 
-    When the signal receives OHLCV data (via ``stock_data`` parameter), uses
-    real high/low prices. Falls back to close-to-close proxy otherwise.
+    When the signal receives OHLCV data, uses real high/low prices.
+    Falls back to close-to-close proxy otherwise.
 
     Args:
         period: ATR lookback period (default 14)
@@ -609,7 +604,8 @@ def sustained(signal_func: SignalFunc, days: int = 5) -> SignalFunc:
     Example:
         >>> # Enter only after RSI has been below 30 for 5+ consecutive days
         >>> sig = sustained(rsi_below(14, 30), days=5)
-        >>> results = op.long_calls(data, entry_signal=sig)
+        >>> entry_dates = apply_signal(stock, sig)
+        >>> results = op.long_calls(data, entry_dates=entry_dates)
 
         >>> # Compose with Signal class
         >>> sig = signal(sustained(rsi_below(14, 30), days=5)) & signal(day_of_week(3))
@@ -642,15 +638,16 @@ class Signal:
     Wrapping a signal function in Signal enables fluent chaining without
     nesting and_signals() / or_signals() calls. A Signal instance is itself
     callable with the correct SignalFunc signature, so it can be passed
-    directly to entry_signal= or exit_signal= in any strategy.
+    directly to ``apply_signal()`` to compute valid dates.
 
     Example:
-        >>> from optopsy.signals import Signal, signal, rsi_below, day_of_week
+        >>> from optopsy.signals import Signal, signal, rsi_below, day_of_week, apply_signal
         >>> import optopsy as op
         >>>
         >>> # Fluent AND
         >>> sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))
-        >>> results = op.long_calls(data, entry_signal=sig)
+        >>> entry_dates = apply_signal(stock, sig)
+        >>> results = op.long_calls(data, entry_dates=entry_dates)
         >>>
         >>> # Chain multiple conditions
         >>> sig = (
@@ -658,7 +655,7 @@ class Signal:
         ...     & signal(atr_below(14, 0.75))
         ...     & signal(sma_above(50))
         ... )
-        >>> results = op.iron_condor(data, entry_signal=sig)
+        >>> entry_dates = apply_signal(stock, sig)
     """
 
     def __init__(self, func: SignalFunc) -> None:
@@ -695,6 +692,61 @@ def signal(func: SignalFunc) -> Signal:
 
     Example:
         >>> sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))
-        >>> results = op.long_calls(data, entry_signal=sig)
+        >>> entry_dates = apply_signal(stock, sig)
+        >>> results = op.long_calls(data, entry_dates=entry_dates)
     """
     return Signal(func)
+
+
+# ---------------------------------------------------------------------------
+# apply_signal — public helper to compute valid dates from a signal
+# ---------------------------------------------------------------------------
+
+
+def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
+    """
+    Run a signal function on data and return valid (symbol, date) pairs.
+
+    This decouples signal computation from the strategy engine.  Call this
+    before running a strategy and pass the result as ``entry_dates`` or
+    ``exit_dates``.
+
+    Args:
+        data: DataFrame with at least ``underlying_symbol`` and ``quote_date``.
+              For price-based signals (RSI, SMA, MACD, etc.), also needs
+              ``underlying_price`` (or ``close``, which is auto-mapped).
+              For OHLCV signals (ATR), also needs ``open``, ``high``,
+              ``low``, ``volume``.
+        signal_func: Callable that takes a DataFrame and returns a boolean
+                     Series indicating which dates are valid.
+
+    Returns:
+        DataFrame with columns ``(underlying_symbol, quote_date)`` for
+        dates where the signal is True.
+
+    Example:
+        >>> import optopsy as op
+        >>> from optopsy.signals import rsi_below, day_of_week, apply_signal
+        >>>
+        >>> data = op.csv_data('./SPX_2018.csv')
+        >>> stock = load_stock_data(...)  # OHLCV DataFrame
+        >>>
+        >>> # Compute entry dates where RSI < 30
+        >>> entry_dates = apply_signal(stock, rsi_below(14, 30))
+        >>>
+        >>> # Pass pre-computed dates to the strategy
+        >>> results = op.long_calls(data, entry_dates=entry_dates)
+        >>>
+        >>> # Date-only signals work with minimal data
+        >>> friday_dates = apply_signal(data, day_of_week(4))
+    """
+    df = data.copy()
+    if "underlying_price" not in df.columns and "close" in df.columns:
+        df["underlying_price"] = df["close"]
+    df = (
+        df.drop_duplicates(["underlying_symbol", "quote_date"])
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+    mask = signal_func(df)
+    return df.loc[mask, ["underlying_symbol", "quote_date"]].reset_index(drop=True)
