@@ -807,9 +807,7 @@ def _intersect_with_options_dates(
     opt_dates = (
         options[["underlying_symbol", "quote_date"]]
         .drop_duplicates()
-        .assign(
-            quote_date=lambda df: pd.to_datetime(df["quote_date"]).dt.normalize()
-        )
+        .assign(quote_date=lambda df: pd.to_datetime(df["quote_date"]).dt.normalize())
     )
     sd = signal_dates.assign(
         quote_date=lambda df: pd.to_datetime(df["quote_date"]).dt.normalize()
@@ -1288,7 +1286,9 @@ def execute_tool(
                     else (end_dt + timedelta(days=1))
                 )
                 try:
-                    raw = yf.download(symbol, start=yf_start, end=yf_end, progress=False)
+                    raw = yf.download(
+                        symbol, start=yf_start, end=yf_end, progress=False
+                    )
                     if not raw.empty:
                         new_frames.append(_normalise_yf_df(raw, symbol))
                 except (OSError, ValueError) as exc:

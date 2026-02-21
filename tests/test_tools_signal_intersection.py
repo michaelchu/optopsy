@@ -12,7 +12,6 @@ from optopsy.ui.tools import (
     execute_tool,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -147,7 +146,9 @@ def test_suggestion_data_gap_within_window():
     """Signal fired inside the options window but dates weren't in the dataset."""
     # Fired dates are within [OPT_MIN, OPT_MAX] but not in the options data —
     # this triggers the data-gap branch.
-    raw = _make_signal_dates("SPY", ["2025-12-25"])  # Christmas — likely a market holiday
+    raw = _make_signal_dates(
+        "SPY", ["2025-12-25"]
+    )  # Christmas — likely a market holiday
     msg = _empty_signal_suggestion(raw, OPT_MIN, OPT_MAX)
     assert "data gap" in msg.lower() or "not present" in msg.lower()
 

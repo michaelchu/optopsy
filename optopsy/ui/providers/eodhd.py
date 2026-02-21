@@ -112,12 +112,12 @@ class EODHDProvider(DataProvider):
         return [self._options_schema()]
 
     def get_tool_names(self) -> list[str]:
-        return ["fetch_eodhd_options"]
+        return ["fetch_options_data"]
 
     def execute(
         self, tool_name: str, arguments: dict[str, Any]
     ) -> tuple[str, pd.DataFrame | None]:
-        if tool_name == "fetch_eodhd_options":
+        if tool_name == "fetch_options_data":
             return self._fetch_options(
                 symbol=arguments["symbol"],
                 start_date=arguments.get("start_date"),
@@ -519,11 +519,11 @@ class EODHDProvider(DataProvider):
         return {
             "type": "function",
             "function": {
-                "name": "fetch_eodhd_options",
+                "name": "fetch_options_data",
                 "description": (
-                    "Fetch historical end-of-day options chain data from EODHD "
-                    "for a US stock symbol. Returns data ready for optopsy "
-                    "strategy backtesting."
+                    "Fetch historical end-of-day options chain data for a US "
+                    "stock symbol. Returns data ready for optopsy strategy "
+                    "backtesting."
                 ),
                 "parameters": {
                     "type": "object",
@@ -555,5 +555,3 @@ class EODHDProvider(DataProvider):
                 },
             },
         }
-
-

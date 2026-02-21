@@ -9,7 +9,6 @@ import pytest
 from optopsy.ui.providers.cache import ParquetCache
 from optopsy.ui.tools import _fetch_stock_data_for_signals, _YF_CACHE_CATEGORY
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -206,7 +205,9 @@ def test_multi_symbol_independent_cache_entries(tmp_path):
 
     def fake_download(symbol, start, end, progress):
         call_count["n"] += 1
-        return _make_yf_download_result(pd.Timestamp(start).date(), pd.Timestamp(end).date() - timedelta(days=1))
+        return _make_yf_download_result(
+            pd.Timestamp(start).date(), pd.Timestamp(end).date() - timedelta(days=1)
+        )
 
     with (
         patch("optopsy.ui.tools._yf_cache", cache),
@@ -256,4 +257,6 @@ def test_failed_symbol_does_not_block_other(tmp_path):
     # QQQ should succeed even though SPY failed
     assert result is not None
     assert set(result["underlying_symbol"].unique()) == {"QQQ"}
-    assert cache.read(_YF_CACHE_CATEGORY, "SPY") is None  # nothing cached for failed symbol
+    assert (
+        cache.read(_YF_CACHE_CATEGORY, "SPY") is None
+    )  # nothing cached for failed symbol
