@@ -181,3 +181,79 @@ def test_empty_dataset_returns_none():
         result = _fetch_stock_data_for_signals(pd.DataFrame())
     assert result is None
     mock_dl.assert_not_called()
+
+
+def test_multi_symbol_independent_cache_entries(tmp_path):
+    """Two symbols produce separate cache files and are both present in output."""
+    dataset = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPY", "SPY", "QQQ", "QQQ"],
+            "quote_date": pd.to_datetime(
+                ["2025-12-16", "2025-12-17", "2025-12-16", "2025-12-17"]
+            ),
+            "strike": 100.0,
+            "bid": 1.0,
+            "ask": 1.1,
+        }
+    )
+    cache = ParquetCache(str(tmp_path))
+
+    date_min = pd.to_datetime("2025-12-16").date()
+    date_max = pd.to_datetime("2025-12-17").date()
+    padded_start = date_min - timedelta(days=365)
+
+    call_count = {"n": 0}
+
+    def fake_download(symbol, start, end, progress):
+        call_count["n"] += 1
+        return _make_yf_download_result(pd.Timestamp(start).date(), pd.Timestamp(end).date() - timedelta(days=1))
+
+    with (
+        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("yfinance.download", side_effect=fake_download),
+    ):
+        result = _fetch_stock_data_for_signals(dataset)
+
+    assert result is not None
+    assert set(result["underlying_symbol"].unique()) == {"SPY", "QQQ"}
+    # Each symbol fetched once (cold cache)
+    assert call_count["n"] == 2
+    # Separate cache files written
+    assert cache.read(_YF_CACHE_CATEGORY, "SPY") is not None
+    assert cache.read(_YF_CACHE_CATEGORY, "QQQ") is not None
+
+
+def test_failed_symbol_does_not_block_other(tmp_path):
+    """When one symbol fetch fails (OSError/ValueError), the other symbol still succeeds."""
+    dataset = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPY", "SPY", "QQQ", "QQQ"],
+            "quote_date": pd.to_datetime(
+                ["2025-12-16", "2025-12-17", "2025-12-16", "2025-12-17"]
+            ),
+            "strike": 100.0,
+            "bid": 1.0,
+            "ask": 1.1,
+        }
+    )
+    cache = ParquetCache(str(tmp_path))
+
+    date_min = pd.to_datetime("2025-12-16").date()
+    padded_start = date_min - timedelta(days=365)
+
+    def fake_download(symbol, start, end, progress):
+        if symbol == "SPY":
+            raise OSError("network error")
+        date_end = pd.Timestamp(end).date() - timedelta(days=1)
+        return _make_yf_download_result(pd.Timestamp(start).date(), date_end)
+
+    with (
+        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("yfinance.download", side_effect=fake_download),
+    ):
+        result = _fetch_stock_data_for_signals(dataset)
+
+    # QQQ should succeed even though SPY failed
+    assert result is not None
+    assert set(result["underlying_symbol"].unique()) == {"QQQ"}
+    assert cache.read(_YF_CACHE_CATEGORY, "SPY") is None  # nothing cached for failed symbol

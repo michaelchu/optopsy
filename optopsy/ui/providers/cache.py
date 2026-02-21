@@ -1,11 +1,80 @@
 import logging
 import os
+from datetime import date, timedelta
 
 import pandas as pd
 
 _log = logging.getLogger(__name__)
 
 _CACHE_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
+
+# Gaps smaller than this many calendar days are treated as market holidays /
+# weekends and are NOT re-fetched.  Gaps larger than this indicate missing data.
+_INTERIOR_GAP_THRESHOLD = 5
+
+
+def compute_date_gaps(
+    cached_df: pd.DataFrame | None,
+    start_dt: date | None,
+    end_dt: date | None,
+    date_column: str = "quote_date",
+) -> list[tuple[str | None, str | None]]:
+    """Compute date ranges missing from *cached_df* that need to be fetched.
+
+    Checks three kinds of gaps:
+
+    1. **Before** — requested start is earlier than the cached min.
+    2. **After** — requested end is later than the cached max (or open-ended).
+    3. **Interior** — consecutive cached dates within the requested range are
+       more than ``_INTERIOR_GAP_THRESHOLD`` calendar days apart, suggesting
+       missing data (e.g. a partial fetch failure).
+
+    Returns ``[(None, None)]`` to mean "fetch everything" (no cache), or a
+    list of ``(start_str, end_str)`` tuples for each missing range.
+    """
+    if cached_df is None or cached_df.empty or date_column not in cached_df.columns:
+        return [
+            (str(start_dt) if start_dt else None, str(end_dt) if end_dt else None)
+        ]
+
+    cached_dates = pd.to_datetime(cached_df[date_column]).dt.date
+    cached_min = cached_dates.min()
+    cached_max = cached_dates.max()
+
+    gaps: list[tuple[str | None, str | None]] = []
+
+    # Gap before cached range
+    if start_dt and start_dt < cached_min:
+        gaps.append((str(start_dt), str(cached_min - timedelta(days=1))))
+
+    # Interior gaps — check consecutive cached dates for holes that overlap
+    # with the requested range.  A gap between (prev, curr) is relevant when
+    # it *intersects* [overlap_start, overlap_end].
+    overlap_start = max(start_dt, cached_min) if start_dt else cached_min
+    overlap_end = min(end_dt, cached_max) if end_dt else cached_max
+    if overlap_start <= overlap_end:
+        unique_dates = sorted(cached_dates.unique())
+        for prev, curr in zip(unique_dates, unique_dates[1:]):
+            day_gap = (curr - prev).days
+            if day_gap <= _INTERIOR_GAP_THRESHOLD:
+                continue
+            hole_start = prev + timedelta(days=1)
+            hole_end = curr - timedelta(days=1)
+            clamped_start = max(hole_start, overlap_start)
+            clamped_end = min(hole_end, overlap_end)
+            if clamped_start <= clamped_end:
+                gaps.append((str(clamped_start), str(clamped_end)))
+
+    # Gap after cached range
+    if end_dt and end_dt > cached_max:
+        gaps.append((str(cached_max + timedelta(days=1)), str(end_dt)))
+    elif end_dt is None:
+        gap_start_date = cached_max + timedelta(days=1)
+        if start_dt:
+            gap_start_date = max(gap_start_date, start_dt)
+        gaps.append((str(gap_start_date), None))
+
+    return gaps
 
 
 class ParquetCache:
