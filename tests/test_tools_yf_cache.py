@@ -74,7 +74,7 @@ def test_cache_miss_fetches_yfinance_and_writes_cache(tmp_path):
     cache = ParquetCache(str(tmp_path))
 
     with (
-        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
         # Return a realistic yfinance result
@@ -112,7 +112,7 @@ def test_full_cache_hit_skips_yfinance(tmp_path):
     cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
     with (
-        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
         result = _fetch_stock_data_for_signals(dataset)
@@ -145,7 +145,7 @@ def test_partial_cache_hit_fetches_only_gap(tmp_path):
         return _make_yf_download_result(fetch_start, fetch_end)
 
     with (
-        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download", side_effect=fake_download),
     ):
         result = _fetch_stock_data_for_signals(dataset)
@@ -169,7 +169,7 @@ def test_result_uses_quote_date_column(tmp_path):
     cached_df = _make_cached_df("SPY", padded_start, date_max)
     cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
-    with patch("optopsy.ui.tools._yf_cache", cache):
+    with patch("optopsy.ui.tools._helpers._yf_cache", cache):
         result = _fetch_stock_data_for_signals(dataset)
 
     assert result is not None
@@ -213,7 +213,7 @@ def test_multi_symbol_independent_cache_entries(tmp_path):
         )
 
     with (
-        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download", side_effect=fake_download),
     ):
         result = _fetch_stock_data_for_signals(dataset)
@@ -252,7 +252,7 @@ def test_failed_symbol_does_not_block_other(tmp_path):
         return _make_yf_download_result(pd.Timestamp(start).date(), date_end)
 
     with (
-        patch("optopsy.ui.tools._yf_cache", cache),
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download", side_effect=fake_download),
     ):
         result = _fetch_stock_data_for_signals(dataset)
