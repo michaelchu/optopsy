@@ -559,12 +559,9 @@ class OptopsyAgent:
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
-                    lambda fn=func_name,
-                    a=args,
-                    ds=self.dataset,
-                    sg=self.signals,
-                    dss=self.datasets,
-                    rs=self.results: execute_tool(fn, a, ds, sg, dss, rs),
+                    lambda fn=func_name, a=args, ds=self.dataset, sg=self.signals, dss=self.datasets, rs=self.results: (
+                        execute_tool(fn, a, ds, sg, dss, rs)
+                    ),
                 )
                 self.dataset = result.dataset
                 if result.signals is not None:
