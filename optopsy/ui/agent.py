@@ -189,6 +189,12 @@ automatically via yfinance with ~1 year of padding for indicator warmup.
 option chain dates.
 - MACD needs ~50 bars of warmup; EMA cross needs `slow` bars. Use state-based signals \
 (RSI, SMA) for shorter datasets.
+- **Signal date alignment**: Signal dates are automatically intersected with the loaded \
+options data — only dates where both signal AND options data exist are used as entry/exit \
+dates. If you see "0 valid dates" or an "overlap" warning, it means the signal fired on \
+historical price dates that fall outside the options data window. Fix by fetching options \
+data for the period when the signal fires (e.g. if RSI was oversold in 2024, fetch options \
+from 2024), or adjust signal parameters so the signal triggers within the options date range.
 
 ### Composing signals (library API)
 
