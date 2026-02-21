@@ -10,16 +10,16 @@ import optopsy.signals as _signals
 from optopsy.signals import apply_signal
 
 from .providers import get_all_provider_tool_schemas, get_provider_for_tool
-from .providers.cache import ParquetCache
-from .providers.eodhd import EODHDProvider
+from .providers.cache import ParquetCache, compute_date_gaps
 
 _log = logging.getLogger(__name__)
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "data")
 
-# Cache for yfinance OHLCV data (category="stocks", one file per symbol)
+# Cache for yfinance OHLCV data (category="yf_stocks", one file per symbol).
+# Deliberately distinct from EODHD's "stocks" category to avoid schema collisions.
 _yf_cache = ParquetCache()
-_YF_CACHE_CATEGORY = "stocks"
+_YF_CACHE_CATEGORY = "yf_stocks"
 _YF_DEDUP_COLS = ["date"]
 
 STRATEGY_PARAMS_SCHEMA = {
@@ -637,12 +637,10 @@ def _yf_compute_gaps(
 ) -> list[tuple[str | None, str | None]]:
     """Compute date gaps for the yfinance stock cache.
 
-    Delegates to EODHDProvider._compute_date_gaps using ``date`` as the date
-    column (matching how yfinance rows are stored in the cache).
+    Wraps :func:`compute_date_gaps` using ``date`` as the date column
+    (matching how yfinance rows are stored in the cache).
     """
-    return EODHDProvider._compute_date_gaps(
-        cached_df, start_dt, end_dt, date_column="date"
-    )
+    return compute_date_gaps(cached_df, start_dt, end_dt, date_column="date")
 
 
 def _normalise_yf_df(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
@@ -756,7 +754,7 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
                         ]
                     ]
                 )
-        except Exception as exc:
+        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
             _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
 
     if not frames:

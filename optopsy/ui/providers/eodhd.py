@@ -11,7 +11,7 @@ import requests
 import yfinance as yf
 
 from .base import DataProvider
-from .cache import ParquetCache
+from .cache import ParquetCache, compute_date_gaps
 
 _log = logging.getLogger(__name__)
 
@@ -58,11 +58,6 @@ _STOCK_NUMERIC_COLS = ["open", "high", "low", "close", "adjusted_close", "volume
 
 _OPTIONS_DEDUP_COLS = ["quote_date", "expiration", "strike", "option_type"]
 _STOCK_DEDUP_COLS = ["date"]
-
-# Calendar-day gap between consecutive cached dates that triggers a re-fetch.
-# Markets close for weekends (2 days) and occasional 3-day weekends.  A gap
-# of >5 calendar days strongly suggests missing data rather than a holiday.
-_INTERIOR_GAP_THRESHOLD = 5
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -233,63 +228,10 @@ class EODHDProvider(DataProvider):
     ) -> list[tuple[str | None, str | None]]:
         """Compute date ranges missing from cache that need to be fetched.
 
-        Checks three kinds of gaps:
-        1. **Before** — requested start is earlier than the cached min.
-        2. **After** — requested end is later than the cached max (or open-ended).
-        3. **Interior** — consecutive cached dates within the requested range are
-           more than ``_INTERIOR_GAP_THRESHOLD`` calendar days apart, suggesting
-           missing data (e.g. a partial fetch failure).
-
-        A return value of ``[(None, None)]`` means "fetch everything".
+        Delegates to :func:`cache.compute_date_gaps`.  Kept as a static method
+        for backward compatibility.
         """
-        if cached_df is None or cached_df.empty or date_column not in cached_df.columns:
-            return [
-                (str(start_dt) if start_dt else None, str(end_dt) if end_dt else None)
-            ]
-
-        cached_dates = pd.to_datetime(cached_df[date_column]).dt.date
-        cached_min = cached_dates.min()
-        cached_max = cached_dates.max()
-
-        gaps: list[tuple[str | None, str | None]] = []
-
-        # Gap before cached range
-        if start_dt and start_dt < cached_min:
-            gaps.append((str(start_dt), str(cached_min - timedelta(days=1))))
-
-        # Interior gaps — check consecutive cached dates for holes that
-        # overlap with the requested range.  A gap between (prev, curr) is
-        # relevant when it *intersects* [overlap_start, overlap_end], not
-        # only when both endpoints fall inside the overlap.
-        overlap_start = max(start_dt, cached_min) if start_dt else cached_min
-        overlap_end = min(end_dt, cached_max) if end_dt else cached_max
-        if overlap_start <= overlap_end:
-            unique_dates = sorted(cached_dates.unique())
-            for prev, curr in zip(unique_dates, unique_dates[1:]):
-                day_gap = (curr - prev).days
-                if day_gap <= _INTERIOR_GAP_THRESHOLD:
-                    continue
-                # The hole runs from prev+1 to curr-1.  Clamp to the
-                # overlap region so we never fetch outside the request.
-                hole_start = prev + timedelta(days=1)
-                hole_end = curr - timedelta(days=1)
-                clamped_start = max(hole_start, overlap_start)
-                clamped_end = min(hole_end, overlap_end)
-                if clamped_start <= clamped_end:
-                    gaps.append((str(clamped_start), str(clamped_end)))
-
-        # Gap after cached range
-        if end_dt and end_dt > cached_max:
-            gaps.append((str(cached_max + timedelta(days=1)), str(end_dt)))
-        elif end_dt is None:
-            # No end date — open-ended fetch starting from the later of
-            # the day after the cache max or the requested start date.
-            gap_start_date = cached_max + timedelta(days=1)
-            if start_dt:
-                gap_start_date = max(gap_start_date, start_dt)
-            gaps.append((str(gap_start_date), None))
-
-        return gaps
+        return compute_date_gaps(cached_df, start_dt, end_dt, date_column)
 
     # -- cache-aware fetch orchestrator --
 
