@@ -714,8 +714,8 @@ class PlotVolSurfaceArgs(BaseModel):
             "Omit for the latest date in the dataset."
         ),
     )
-    option_type: Literal["call", "put"] | None = Field(
-        None,
+    option_type: Literal["call", "put"] = Field(
+        "call",
         description="Option type to plot. Default: 'call'.",
     )
     figsize_width: int | None = Field(

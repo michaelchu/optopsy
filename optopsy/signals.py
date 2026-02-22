@@ -634,13 +634,19 @@ def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
             return pd.Series(False, index=data.index)
         rank = _compute_iv_rank_series(atm_iv, window)
         # Map rank back to original data rows via (symbol, quote_date)
-        rank_map = atm_iv[["underlying_symbol", "quote_date"]].copy()
-        rank_map["_iv_rank"] = rank.values
-        merged = data[["underlying_symbol", "quote_date"]].merge(
-            rank_map, on=["underlying_symbol", "quote_date"], how="left"
+        rank_lookup = pd.Series(
+            rank.values,
+            index=pd.MultiIndex.from_arrays(
+                [atm_iv["underlying_symbol"], atm_iv["quote_date"]]
+            ),
         )
-        return (merged["_iv_rank"] > threshold).fillna(False)
+        keys = pd.MultiIndex.from_arrays(
+            [data["underlying_symbol"], data["quote_date"]]
+        )
+        iv_rank_for_rows = pd.Series(rank_lookup.reindex(keys).values, index=data.index)
+        return (iv_rank_for_rows > threshold).fillna(False)
 
+    _signal.requires_per_strike = True  # type: ignore[attr-defined]
     return _signal
 
 
@@ -669,13 +675,19 @@ def iv_rank_below(threshold: float = 0.5, window: int = 252) -> SignalFunc:
         if atm_iv.empty:
             return pd.Series(False, index=data.index)
         rank = _compute_iv_rank_series(atm_iv, window)
-        rank_map = atm_iv[["underlying_symbol", "quote_date"]].copy()
-        rank_map["_iv_rank"] = rank.values
-        merged = data[["underlying_symbol", "quote_date"]].merge(
-            rank_map, on=["underlying_symbol", "quote_date"], how="left"
+        rank_lookup = pd.Series(
+            rank.values,
+            index=pd.MultiIndex.from_arrays(
+                [atm_iv["underlying_symbol"], atm_iv["quote_date"]]
+            ),
         )
-        return (merged["_iv_rank"] < threshold).fillna(False)
+        keys = pd.MultiIndex.from_arrays(
+            [data["underlying_symbol"], data["quote_date"]]
+        )
+        iv_rank_for_rows = pd.Series(rank_lookup.reindex(keys).values, index=data.index)
+        return (iv_rank_for_rows < threshold).fillna(False)
 
+    _signal.requires_per_strike = True  # type: ignore[attr-defined]
     return _signal
 
 
@@ -924,15 +936,19 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
         df["underlying_price"] = df["close"]
     df["quote_date"] = normalize_dates(df["quote_date"])
     # IV-rank signals need multiple strikes per (symbol, date) to compute
-    # ATM IV.  Only deduplicate when the data lacks per-strike option rows.
-    if "implied_volatility" not in df.columns:
+    # ATM IV.  Only skip dedup when the signal explicitly requires per-strike
+    # rows (via the requires_per_strike attribute).  Other signals (RSI, SMA,
+    # MACD, ATR, etc.) must always see deduplicated rows even when the
+    # dataset happens to contain an implied_volatility column.
+    requires_per_strike = getattr(signal_func, "requires_per_strike", False)
+    if requires_per_strike:
+        df = df.sort_values(["underlying_symbol", "quote_date"]).reset_index(drop=True)
+    else:
         df = (
             df.drop_duplicates(["underlying_symbol", "quote_date"])
             .sort_values(["underlying_symbol", "quote_date"])
             .reset_index(drop=True)
         )
-    else:
-        df = df.sort_values(["underlying_symbol", "quote_date"]).reset_index(drop=True)
     mask = signal_func(df)
     return (
         df.loc[mask, ["underlying_symbol", "quote_date"]]

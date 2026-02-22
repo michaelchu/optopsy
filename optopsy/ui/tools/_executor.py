@@ -412,11 +412,16 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     # data. Combining them in a single build_signal call is not supported
     # because each type requires a different dataset shape.
     if has_iv_signal and needs_stock:
-        iv_names = [s["name"] for s in signal_specs if s.get("name") in _IV_SIGNALS]
-        stock_names = [
-            s["name"]
+        iv_names = [
+            s.get("name")
             for s in signal_specs
-            if s.get("name") not in _DATE_ONLY_SIGNALS
+            if s.get("name") and s.get("name") in _IV_SIGNALS
+        ]
+        stock_names = [
+            s.get("name")
+            for s in signal_specs
+            if s.get("name")
+            and s.get("name") not in _DATE_ONLY_SIGNALS
             and s.get("name") not in _IV_SIGNALS
         ]
         return _result(
@@ -1701,9 +1706,9 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
                 f"Try quote_date='{closest}'."
             )
     else:
-        latest = ds["quote_date"].max()
-        df = ds[ds["quote_date"] == latest].copy()
-        quote_date_str = str(latest.date())
+        latest_day = ds["quote_date"].dt.normalize().max()
+        df = ds[ds["quote_date"].dt.normalize() == latest_day].copy()
+        quote_date_str = str(latest_day.date())
 
     option_type = arguments.get("option_type", "call")
     ot = option_type.lower()[:1]
@@ -1784,9 +1789,10 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
                 f"Try quote_date='{closest}'."
             )
     else:
-        latest = ds["quote_date"].max()
-        df = ds[ds["quote_date"] == latest].copy()
-        quote_date_str = str(latest.date())
+        normalized_dates = ds["quote_date"].dt.normalize()
+        latest_day = normalized_dates.max()
+        df = ds[normalized_dates == latest_day].copy()
+        quote_date_str = str(latest_day.date())
 
     df = df.dropna(subset=["implied_volatility", "underlying_price"])
 
