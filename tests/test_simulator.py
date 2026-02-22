@@ -434,6 +434,11 @@ class TestSimulateSmoke:
             "profit_factor",
             "max_drawdown",
             "avg_days_in_trade",
+            "sharpe_ratio",
+            "sortino_ratio",
+            "var_95",
+            "cvar_95",
+            "calmar_ratio",
         }
         assert expected_keys == set(result.summary.keys())
 
@@ -633,6 +638,7 @@ class TestSummaryStats:
             {
                 "realized_pnl": [100.0, 0.0, -50.0],
                 "equity": [100_100.0, 100_100.0, 100_050.0],
+                "pct_change": [0.10, 0.0, -0.05],
                 "days_held": [30, 30, 30],
             }
         )
@@ -649,11 +655,37 @@ class TestSummaryStats:
             {
                 "realized_pnl": [0.0, 0.0],
                 "equity": [100_000.0, 100_000.0],
+                "pct_change": [0.0, 0.0],
                 "days_held": [30, 30],
             }
         )
         s = _compute_summary(trade_log, 100_000.0)
         assert s["profit_factor"] == 0.0
+
+    def test_duplicate_exit_dates_handled(self):
+        """Multiple trades exiting on the same date should not cause resample errors."""
+        from optopsy.simulator import _compute_summary
+
+        trade_log = pd.DataFrame(
+            {
+                "entry_date": pd.to_datetime(
+                    ["2018-01-10", "2018-01-10", "2018-01-11", "2018-01-12"]
+                ),
+                "exit_date": pd.to_datetime(
+                    ["2018-01-15", "2018-01-15", "2018-01-16", "2018-01-20"]
+                ),
+                "realized_pnl": [100.0, 100.0, -50.0, 200.0],
+                "equity": [100_100.0, 100_200.0, 100_150.0, 100_350.0],
+                "pct_change": [0.001, 0.001, -0.0005, 0.002],
+                "days_held": [5, 5, 5, 8],
+            }
+        )
+        s = _compute_summary(trade_log, 100_000.0)
+        assert s["total_trades"] == 4
+        assert s["winning_trades"] == 3
+        assert s["losing_trades"] == 1
+        assert "sharpe_ratio" in s
+        assert "sortino_ratio" in s
 
 
 # ---------------------------------------------------------------------------
