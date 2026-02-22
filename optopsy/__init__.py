@@ -42,6 +42,7 @@ from .signals import (
     sma_below,
     sustained,
 )
+from .simulator import SimulationResult, simulate
 from .strategies import (
     # Covered strategies
     covered_call,
@@ -143,6 +144,9 @@ __all__ = [
     "sustained",
     "Signal",
     "signal",
+    # Simulation
+    "simulate",
+    "SimulationResult",
     # Timestamp utilities
     "normalize_dates",
 ]

@@ -1,6 +1,7 @@
 import itertools as _itertools
 import json as _json
 import logging
+import os
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -851,6 +852,257 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     table = _df_to_markdown(leaderboard)
     user_display = f"### Strategy Scan Results\n\n{llm_summary}\n\n{table}"
     return _result(llm_summary, user_display=user_display, res=scan_results)
+
+
+@_register("simulate")
+def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
+    from optopsy.simulator import simulate as _simulate
+
+    strategy_name = arguments.get("strategy_name")
+    if not strategy_name or strategy_name not in STRATEGIES:
+        return _result(
+            f"Unknown strategy '{strategy_name}'. "
+            f"Available: {', '.join(STRATEGY_NAMES)}",
+        )
+
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+
+    func, _, _ = STRATEGIES[strategy_name]
+
+    # Extract simulation-specific params
+    sim_params: dict = {}
+    for key in ("capital", "quantity", "max_positions", "multiplier", "selector"):
+        if key in arguments:
+            sim_params[key] = arguments[key]
+
+    # Build strategy kwargs — strip sim-specific and signal keys
+    _non_strat_keys = {
+        "strategy_name",
+        "dataset_name",
+        "capital",
+        "quantity",
+        "max_positions",
+        "multiplier",
+        "selector",
+        "entry_signal",
+        "entry_signal_params",
+        "entry_signal_days",
+        "exit_signal",
+        "exit_signal_params",
+        "exit_signal_days",
+        "entry_signal_slot",
+        "exit_signal_slot",
+    }
+    strat_kwargs = {
+        k: v
+        for k, v in arguments.items()
+        if k not in _non_strat_keys
+        and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
+    }
+
+    # --- Resolve entry dates ---
+    entry_slot = arguments.get("entry_signal_slot")
+    entry_signal_name = arguments.get("entry_signal")
+
+    if entry_slot and entry_signal_name:
+        return _result("Cannot use both entry_signal and entry_signal_slot. Pick one.")
+
+    if entry_slot:
+        if entry_slot not in signals:
+            return _result(
+                f"No signal slot '{entry_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        strat_kwargs["entry_dates"] = signals[entry_slot]
+
+    # --- Resolve exit dates ---
+    exit_slot = arguments.get("exit_signal_slot")
+    exit_signal_name = arguments.get("exit_signal")
+
+    if exit_slot and exit_signal_name:
+        return _result("Cannot use both exit_signal and exit_signal_slot. Pick one.")
+
+    if exit_slot:
+        if exit_slot not in signals:
+            return _result(
+                f"No signal slot '{exit_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        strat_kwargs["exit_dates"] = signals[exit_slot]
+
+    # --- Inline signal resolution ---
+    if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
+        return _result(
+            f"Unknown entry_signal '{entry_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}",
+        )
+    if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
+        return _result(
+            f"Unknown exit_signal '{exit_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}",
+        )
+
+    needs_stock = (
+        entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+
+    signal_data = None
+    if needs_stock:
+        signal_data = _fetch_stock_data_for_signals(active_ds)
+        if signal_data is None:
+            return _result(
+                "TA signals require stock price data but yfinance is not "
+                "installed or the fetch failed. Install yfinance "
+                "(`pip install yfinance`) and try again.",
+            )
+
+    if signal_data is None and (entry_signal_name or exit_signal_name):
+        signal_data = _date_only_fallback(active_ds)
+
+    for sig_name, prefix, dates_key in [
+        (entry_signal_name, "entry", "entry_dates"),
+        (exit_signal_name, "exit", "exit_dates"),
+    ]:
+        if sig_name:
+            dates, err_msg = _resolve_inline_signal(
+                sig_name, arguments, signal_data, active_ds, prefix
+            )
+            if err_msg:
+                return _result(err_msg)
+            strat_kwargs[dates_key] = dates
+
+    try:
+        result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
+    except Exception as e:
+        return _result(f"Error running simulation: {e}")
+
+    s = result.summary
+    if s["total_trades"] == 0:
+        return _result(f"simulate({strategy_name}): no trades generated.")
+
+    # Build result key — include all params that affect output
+    key_parts = [f"sim:{strategy_name}"]
+    for k in sorted(arguments.keys()):
+        if k not in ("strategy_name", "dataset_name"):
+            key_parts.append(f"{k}={arguments[k]}")
+    sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
+
+    # Persist trade log to disk; keep only summary stats in session memory
+    # Sanitize key for filesystem safety (replace :, =, and other problematic chars)
+    import re
+
+    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
+    _sim_cache = ParquetCache(
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
+    )
+    _sim_cache.write("simulations", fs_key, result.trade_log)
+
+    updated_results = dict(results)
+    updated_results[sim_key] = {
+        "type": "simulation",
+        "strategy": strategy_name,
+        "summary": s,
+    }
+
+    # Format output
+    llm_summary = (
+        f"simulate({strategy_name}): {s['total_trades']} trades, "
+        f"win_rate={s['win_rate']:.1%}, "
+        f"total_return={s['total_return']:.2%}, "
+        f"max_drawdown={s['max_drawdown']:.2%}, "
+        f"profit_factor={s['profit_factor']:.2f}"
+    )
+
+    from ._helpers import _df_to_markdown
+
+    # Summary stats table
+    stats_rows = [
+        ("Total Trades", s["total_trades"]),
+        ("Winning Trades", s["winning_trades"]),
+        ("Losing Trades", s["losing_trades"]),
+        ("Win Rate", f"{s['win_rate']:.1%}"),
+        ("Total P&L", f"${s['total_pnl']:,.2f}"),
+        ("Total Return", f"{s['total_return']:.2%}"),
+        ("Avg P&L", f"${s['avg_pnl']:,.2f}"),
+        ("Avg Win", f"${s['avg_win']:,.2f}"),
+        ("Avg Loss", f"${s['avg_loss']:,.2f}"),
+        ("Max Win", f"${s['max_win']:,.2f}"),
+        ("Max Loss", f"${s['max_loss']:,.2f}"),
+        ("Profit Factor", f"{s['profit_factor']:.2f}"),
+        ("Max Drawdown", f"{s['max_drawdown']:.2%}"),
+        ("Avg Days in Trade", f"{s['avg_days_in_trade']:.1f}"),
+    ]
+    stats_table = "| Metric | Value |\n|---|---|\n"
+    stats_table += "\n".join(f"| {m} | {v} |" for m, v in stats_rows)
+
+    # Trade log preview
+    preview_cols = [
+        "trade_id",
+        "entry_date",
+        "exit_date",
+        "days_held",
+        "entry_cost",
+        "exit_proceeds",
+        "realized_pnl",
+        "equity",
+    ]
+    available_cols = [c for c in preview_cols if c in result.trade_log.columns]
+    preview = result.trade_log[available_cols].head(20)
+
+    user_display = (
+        f"### Simulation: {strategy_name}\n\n"
+        f"{stats_table}\n\n"
+        f"**Trade Log** (first {min(20, len(result.trade_log))} of "
+        f"{len(result.trade_log)} trades)\n\n"
+        f"{_df_to_markdown(preview)}"
+    )
+
+    return _result(llm_summary, user_display=user_display, res=updated_results)
+
+
+@_register("get_simulation_trades")
+def _handle_get_simulation_trades(
+    arguments, dataset, signals, datasets, results, _result
+):
+    sim_key = arguments.get("simulation_key")
+
+    # Find the simulation result
+    if sim_key:
+        entry = results.get(sim_key)
+        if entry is None or entry.get("type") != "simulation":
+            sim_keys = [k for k, v in results.items() if v.get("type") == "simulation"]
+            return _result(
+                f"No simulation found for key '{sim_key}'. "
+                f"Available: {sim_keys or 'none — run simulate first'}"
+            )
+    else:
+        # Find most recent simulation
+        sim_entries = [
+            (k, v) for k, v in results.items() if v.get("type") == "simulation"
+        ]
+        if not sim_entries:
+            return _result("No simulations run yet. Use simulate first.")
+        sim_key, entry = sim_entries[-1]
+
+    _sim_cache = ParquetCache(
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
+    )
+    import re
+
+    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
+    trade_log = _sim_cache.read("simulations", fs_key)
+    if trade_log is None or trade_log.empty:
+        return _result(f"Simulation '{sim_key}' has no trades.")
+
+    from ._helpers import _df_to_markdown
+
+    llm_summary = f"get_simulation_trades({sim_key}): {len(trade_log)} trades"
+    user_display = f"### Trade Log: {sim_key}\n\n{_df_to_markdown(trade_log)}"
+    return _result(llm_summary, user_display=user_display)
 
 
 @_register("inspect_cache")
