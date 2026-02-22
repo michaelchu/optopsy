@@ -242,12 +242,24 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     "day_of_week": lambda **kw: _signals.day_of_week(
         *_normalize_days_param(kw.get("days", [4]))
     ),
+    # IV rank — defaults: threshold=0.5, window=252
+    # Require options data with implied_volatility column
+    "iv_rank_above": lambda **kw: _signals.iv_rank_above(
+        kw.get("threshold", 0.5), kw.get("window", 252)
+    ),
+    "iv_rank_below": lambda **kw: _signals.iv_rank_below(
+        kw.get("threshold", 0.5), kw.get("window", 252)
+    ),
 }
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
 _DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
+
+# Signals that require options data (with implied_volatility column)
+# rather than stock OHLCV data.
+_IV_SIGNALS = frozenset({"iv_rank_above", "iv_rank_below"})
 
 # Maps strategy name -> required option_type for data fetching.
 # "call"/"put" means only that type is needed; None means both are needed.
@@ -385,6 +397,16 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "simulation trade logs, datasets, or signals. Use this to "
         "visualize equity curves, return distributions, strategy "
         "comparisons, and heatmaps."
+    ),
+    "plot_vol_surface": (
+        "Plot a volatility surface (heatmap of implied volatility by "
+        "strike and expiration) for a given date. Requires a dataset "
+        "with implied_volatility column (e.g. from EODHD)."
+    ),
+    "iv_term_structure": (
+        "Plot the IV term structure (ATM implied volatility across "
+        "expirations) for a given date. Shows how IV varies by "
+        "time to expiration. Requires implied_volatility in the dataset."
     ),
 }
 

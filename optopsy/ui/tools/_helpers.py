@@ -507,6 +507,28 @@ def _date_only_fallback(dataset: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
+    """Extract columns needed for IV rank signals from the options dataset.
+
+    Returns the dataset subset with required columns for IV rank computation,
+    or None if the dataset lacks ``implied_volatility``.
+    """
+    if "implied_volatility" not in dataset.columns:
+        return None
+    keep = [
+        "underlying_symbol",
+        "quote_date",
+        "underlying_price",
+        "strike",
+        "option_type",
+        "implied_volatility",
+    ]
+    cols = [c for c in keep if c in dataset.columns]
+    if len(cols) < len(keep):
+        return None
+    return dataset[cols].copy()
+
+
 def _resolve_inline_signal(
     signal_name: str,
     arguments: dict[str, Any],
