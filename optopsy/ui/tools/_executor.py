@@ -1164,6 +1164,252 @@ def _handle_clear_cache(arguments, dataset, signals, datasets, results, _result)
     return _result(summary)
 
 
+@_register("compare_results")
+def _handle_compare_results(arguments, dataset, signals, datasets, results, _result):
+    if not results:
+        return _result(
+            "No strategy runs in this session yet. "
+            "Use run_strategy or scan_strategies first, then compare_results."
+        )
+
+    result_keys = arguments.get("result_keys")
+    if result_keys:
+        missing = [k for k in result_keys if k not in results]
+        if missing:
+            return _result(
+                f"Result key(s) not found: {missing}. Available: {list(results.keys())}"
+            )
+        selected = {k: results[k] for k in result_keys}
+    else:
+        selected = dict(results)
+
+    if len(selected) < 2:
+        return _result(
+            "Need at least 2 results to compare. "
+            f"Currently have {len(selected)}. Run more strategies first."
+        )
+
+    sort_by = arguments.get("sort_by", "mean_return")
+    include_chart = arguments.get("include_chart", True)
+    if isinstance(include_chart, str):
+        include_chart = include_chart.strip().lower() == "true"
+
+    # Build comparison rows from both strategy and simulation results
+    rows = []
+    for key, entry in selected.items():
+        is_sim = entry.get("type") == "simulation"
+        if is_sim:
+            s = entry.get("summary", {})
+            row = {
+                "label": key,
+                "strategy": entry.get("strategy", "?"),
+                "type": "simulation",
+                "count": s.get("total_trades", 0),
+                "mean_return": (
+                    round(s["total_return"] / max(s["total_trades"], 1), 4)
+                    if s.get("total_return") is not None and s.get("total_trades")
+                    else None
+                ),
+                "win_rate": s.get("win_rate"),
+                "max_drawdown": s.get("max_drawdown"),
+                "profit_factor": s.get("profit_factor"),
+            }
+        else:
+            pct_mean = entry.get("mean_return")
+            pct_std = entry.get("std")
+            win_rate = entry.get("win_rate")
+            count = entry.get("count", 0)
+
+            # Compute approximate Sharpe ratio from aggregated stats
+            # Annualized assuming ~252 trading days. Since these are trade-level
+            # returns (not daily), use sqrt(count) scaling when count is known.
+            sharpe = None
+            if pct_mean is not None and pct_std and pct_std > 0:
+                sharpe = round(float(pct_mean / pct_std), 4)
+
+            # Profit factor: approximate from mean & win_rate when raw data
+            # is unavailable.  With win_rate=w and mean_return=m,
+            # avg_win ~ m/w and avg_loss ~ m/(1-w) doesn't hold exactly,
+            # so we only report it for simulation results.
+            row = {
+                "label": key,
+                "strategy": entry.get("strategy", "?"),
+                "type": "backtest",
+                "count": count,
+                "mean_return": pct_mean,
+                "std": pct_std,
+                "win_rate": win_rate,
+                "sharpe": sharpe,
+                "max_drawdown": None,
+                "profit_factor": None,
+            }
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    # Determine valid sort column
+    valid_sort_cols = [
+        "mean_return",
+        "win_rate",
+        "sharpe",
+        "max_drawdown",
+        "profit_factor",
+        "count",
+    ]
+    if sort_by not in valid_sort_cols or sort_by not in df.columns:
+        sort_by = "mean_return"
+
+    # Sort — max_drawdown is "lower is better" so sort ascending for it
+    ascending = sort_by == "max_drawdown"
+    if sort_by in df.columns and df[sort_by].notna().any():
+        df = df.sort_values(sort_by, ascending=ascending, na_position="last")
+    df = df.reset_index(drop=True)
+
+    # Build verdict row — best value for each metric
+    verdict = {}
+    metric_cols = {
+        "mean_return": "highest",
+        "win_rate": "highest",
+        "sharpe": "highest",
+        "count": "highest",
+        "max_drawdown": "lowest_abs",
+        "profit_factor": "highest",
+    }
+    for col, direction in metric_cols.items():
+        if col not in df.columns or df[col].isna().all():
+            continue
+        valid = df[df[col].notna()]
+        if valid.empty:
+            continue
+        if direction == "lowest_abs":
+            # For max_drawdown, closest to 0 (least negative) is best
+            best_idx = valid[col].abs().idxmin()
+        else:
+            best_idx = valid[col].idxmax()
+        verdict[col] = valid.loc[best_idx, "label"]
+
+    # Format display columns
+    display_cols = ["label", "strategy", "type", "count"]
+    for c in [
+        "mean_return",
+        "std",
+        "win_rate",
+        "sharpe",
+        "max_drawdown",
+        "profit_factor",
+    ]:
+        if c in df.columns and df[c].notna().any():
+            display_cols.append(c)
+    display_df = df[[c for c in display_cols if c in df.columns]].copy()
+
+    # Format percentage columns for user display
+    format_df = display_df.copy()
+    for col in ["mean_return", "std"]:
+        if col in format_df.columns:
+            format_df[col] = format_df[col].apply(
+                lambda x: f"{x:.4f}" if pd.notna(x) else "—"
+            )
+    for col in ["win_rate", "max_drawdown"]:
+        if col in format_df.columns:
+            format_df[col] = format_df[col].apply(
+                lambda x: f"{x:.2%}" if pd.notna(x) else "—"
+            )
+    if "sharpe" in format_df.columns:
+        format_df["sharpe"] = format_df["sharpe"].apply(
+            lambda x: f"{x:.4f}" if pd.notna(x) else "—"
+        )
+    if "profit_factor" in format_df.columns:
+        format_df["profit_factor"] = format_df["profit_factor"].apply(
+            lambda x: f"{x:.2f}" if pd.notna(x) else "—"
+        )
+
+    table = _df_to_markdown(format_df, max_rows=100)
+
+    # Build verdict line
+    if verdict:
+        verdict_parts = []
+        for metric, label in verdict.items():
+            verdict_parts.append(f"**{metric}**: {label}")
+        verdict_line = "**Best on each metric:** " + " · ".join(verdict_parts)
+    else:
+        verdict_line = ""
+
+    # LLM summary — compact
+    llm_lines = [f"compare_results: {len(df)} results compared, sorted by {sort_by}"]
+    for _, row in df.head(5).iterrows():
+        parts = [str(row["label"])]
+        if pd.notna(row.get("mean_return")):
+            parts.append(f"mean={row['mean_return']:.4f}")
+        if pd.notna(row.get("win_rate")):
+            parts.append(f"wr={row['win_rate']:.2%}")
+        if pd.notna(row.get("sharpe")):
+            parts.append(f"sharpe={row['sharpe']:.4f}")
+        if pd.notna(row.get("max_drawdown")):
+            parts.append(f"mdd={row['max_drawdown']:.2%}")
+        if pd.notna(row.get("profit_factor")):
+            parts.append(f"pf={row['profit_factor']:.2f}")
+        llm_lines.append(" | ".join(parts))
+    if verdict:
+        llm_lines.append(
+            "Best: " + ", ".join(f"{m}→{lbl}" for m, lbl in verdict.items())
+        )
+    llm_summary = "\n".join(llm_lines)
+
+    # User display
+    user_display = (
+        f"### Strategy Comparison ({len(df)} results)\n\n"
+        f"*Sorted by {sort_by}*\n\n"
+        f"{table}\n\n"
+        f"{verdict_line}"
+    )
+
+    # Optional grouped bar chart
+    chart_figure = None
+    if include_chart and len(df) >= 2:
+        try:
+            import plotly.graph_objects as go
+
+            chart_metrics = []
+            for m in ["mean_return", "win_rate", "sharpe", "profit_factor"]:
+                if m in df.columns and df[m].notna().any():
+                    chart_metrics.append(m)
+
+            if chart_metrics:
+                fig = go.Figure()
+                labels = df["label"].tolist()
+                # Truncate long labels for chart readability
+                short_labels = [
+                    (lbl[:30] + "…") if len(lbl) > 30 else lbl for lbl in labels
+                ]
+                for metric in chart_metrics:
+                    fig.add_trace(
+                        go.Bar(
+                            name=metric,
+                            x=short_labels,
+                            y=df[metric].tolist(),
+                            text=[
+                                f"{v:.4f}" if pd.notna(v) else "" for v in df[metric]
+                            ],
+                            textposition="auto",
+                        )
+                    )
+                fig.update_layout(
+                    barmode="group",
+                    xaxis_title="Strategy Run",
+                    yaxis_title="Value",
+                    template="plotly_white",
+                    width=max(600, len(df) * 120),
+                    height=500,
+                    margin=dict(l=40, r=20, t=10, b=80),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                chart_figure = fig
+        except ImportError:
+            pass  # plotly not available, skip chart
+
+    return _result(llm_summary, user_display=user_display, chart_figure=chart_figure)
+
+
 @_register("list_results")
 def _handle_list_results(arguments, dataset, signals, datasets, results, _result):
     filter_name = arguments.get("strategy_name")
