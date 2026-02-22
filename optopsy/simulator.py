@@ -420,11 +420,27 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     equity = trade_log["equity"]
     max_dd = _max_drawdown(equity)
 
-    # Derive daily returns from the equity curve for annualised metrics
-    # (Sharpe, Sortino, Calmar).  Per-trade returns are NOT daily, so
-    # annualising them with trading_days=252 would materially overstate
-    # ratios when trades occur less frequently than daily.
-    daily_returns = equity.pct_change().dropna()
+    # Derive true daily returns from the equity curve for annualised
+    # metrics (Sharpe, Sortino, Calmar).  The equity curve is indexed by
+    # trade exit dates which are NOT evenly spaced.  Resampling to daily
+    # frequency with forward-fill ensures pct_change() produces genuine
+    # daily returns suitable for the 252-day annualisation factor.
+    _has_dates = "exit_date" in trade_log.columns and "entry_date" in trade_log.columns
+    if _has_dates:
+        equity_daily = trade_log.set_index("exit_date")["equity"].copy()
+        equity_daily.index = pd.to_datetime(equity_daily.index)
+        # Prepend initial capital at the first entry date so the full
+        # period is represented (including flat days before first exit).
+        first_entry = pd.to_datetime(trade_log["entry_date"].iloc[0])
+        if first_entry not in equity_daily.index:
+            equity_daily.loc[first_entry] = capital
+            equity_daily = equity_daily.sort_index()
+        equity_daily = equity_daily.resample("D").ffill()
+        daily_returns = equity_daily.pct_change().dropna()
+    else:
+        # Fallback for minimal trade logs (e.g. unit tests) without date
+        # columns — use inter-trade equity changes.
+        daily_returns = equity.pct_change().dropna()
 
     # Per-trade returns are still correct for VaR/CVaR (no annualisation).
     per_trade_returns = trade_log["pct_change"]
