@@ -127,6 +127,12 @@ def _check_positive_float(key: str, value: Any) -> None:
         raise ValueError(f"Invalid setting for {key}, must be positive float type")
 
 
+def _check_positive_number(key: str, value: Any) -> None:
+    """Validate that value is a positive int or float."""
+    if not isinstance(value, (int, float)) or value <= 0:
+        raise ValueError(f"Invalid setting for {key}, must be a positive number")
+
+
 def _check_side(key: str, value: Any) -> None:
     """Validate that value is either 'long' or 'short'."""
     if value != "long" and value != "short":
@@ -287,4 +293,9 @@ param_checks: Dict[str, Callable[[str, Any], None]] = {
     "slippage": _check_slippage,
     "fill_ratio": _check_fill_ratio,
     "reference_volume": _check_positive_integer,
+    # Simulator parameters
+    "capital": _check_positive_number,
+    "quantity": _check_positive_integer,
+    "max_positions": _check_positive_integer,
+    "multiplier": _check_positive_integer,
 }
