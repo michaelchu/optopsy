@@ -113,9 +113,10 @@ def _normalise_trades(
         entry_cost, exit_proceeds, pct_change, description
 
     After normalisation, ``entry_cost`` and ``exit_proceeds`` are *signed cash
-    flows*: negative means cash outflow (paid), positive means cash inflow
-    (received).  For multi-leg strategies the raw output already encodes this.
-    For single-leg short strategies, the unsigned option prices are negated.
+    flows* using Optopsy's convention: negative values are credits received
+    (cash inflow), positive values are debits/amounts paid (cash outflow).
+    For multi-leg strategies the raw output already encodes this; for
+    single-leg short strategies, the unsigned option prices are negated.
 
     When *exit_dte* > 0, exit_date is set to ``expiration - exit_dte`` days
     instead of expiration itself.
@@ -279,18 +280,49 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
 def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
     """Select the trade closest to ATM (lowest absolute OTM%)."""
     otm_col = _find_otm_col(candidates)
-    if otm_col is None:
-        return candidates.iloc[0]
-    idx = candidates[otm_col].abs().idxmin()
-    result = candidates.loc[idx]
-    assert isinstance(result, pd.Series)
-    return result
+    if otm_col is not None:
+        idx = candidates[otm_col].abs().idxmin()
+        result = candidates.loc[idx]
+        assert isinstance(result, pd.Series)
+        return result
+
+    # Fallback: use strike - underlying_price distance
+    strike_col = "strike" if "strike" in candidates.columns else None
+    if strike_col is None and "strike_leg1" in candidates.columns:
+        strike_col = "strike_leg1"
+
+    underlying_col = "underlying_price_entry"
+    if underlying_col not in candidates.columns:
+        if "underlying_price_entry_leg1" in candidates.columns:
+            underlying_col = "underlying_price_entry_leg1"
+        else:
+            underlying_col = None  # type: ignore[assignment]
+
+    if strike_col is not None and underlying_col is not None:
+        distance = (candidates[strike_col] - candidates[underlying_col]).abs()
+        idx = distance.idxmin()
+        result = candidates.loc[idx]
+        assert isinstance(result, pd.Series)
+        return result
+
+    return candidates.iloc[0]
 
 
 def _select_highest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
-    """Select the trade with the highest credit (most negative entry cost)."""
+    """Select the trade with the highest credit (most negative entry cost).
+
+    For multi-leg strategies, ``total_entry_cost`` is already signed (negative
+    = credit), so ``idxmin`` picks the largest credit.  For single-leg
+    strategies, ``entry`` is an unsigned option price, so ``idxmax`` picks the
+    highest premium.
+    """
     cost_col = _find_cost_col(candidates)
-    idx = candidates[cost_col].idxmin()
+    if cost_col == "entry":
+        # Unsigned prices: highest premium = max value
+        idx = candidates[cost_col].idxmax()
+    else:
+        # Signed costs: highest credit = most negative = min value
+        idx = candidates[cost_col].idxmin()
     result = candidates.loc[idx]
     assert isinstance(result, pd.Series)
     return result
@@ -569,14 +601,11 @@ def simulate(
     else:
         select_fn = selector
 
-    # Generate raw trades
-    try:
-        raw = strategy(data, raw=True, **strategy_kwargs)
-    except Exception:
-        _log.debug(
-            "Strategy raised an exception, returning empty result", exc_info=True
-        )
+    # Generate raw trades — return empty result for empty input
+    if data.empty:
         raw = pd.DataFrame()
+    else:
+        raw = strategy(data, raw=True, **strategy_kwargs)
 
     if raw.empty:
         empty_log = pd.DataFrame(columns=_TRADE_LOG_COLUMNS)

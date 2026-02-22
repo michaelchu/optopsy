@@ -901,7 +901,11 @@ def get_tool_schemas() -> list[dict]:
                                 "Omit to use the most-recently-loaded dataset."
                             ),
                         },
-                        **STRATEGY_PARAMS_SCHEMA,
+                        **{
+                            k: v
+                            for k, v in STRATEGY_PARAMS_SCHEMA.items()
+                            if k != "raw"
+                        },
                         **CALENDAR_EXTRA_PARAMS,
                     },
                     "required": ["strategy_name"],

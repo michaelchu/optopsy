@@ -911,10 +911,14 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
 
     # Persist trade log to disk; keep only summary stats in session memory
+    # Sanitize key for filesystem safety (replace :, =, and other problematic chars)
+    import re
+
+    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
     _sim_cache = ParquetCache(
         cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "simulations")
     )
-    _sim_cache.write("runs", sim_key, result.trade_log)
+    _sim_cache.write("runs", fs_key, result.trade_log)
 
     updated_results = dict(results)
     updated_results[sim_key] = {

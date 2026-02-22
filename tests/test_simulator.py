@@ -255,19 +255,11 @@ class TestSingleTrade:
 
 class TestPositionLimits:
     def test_max_positions_one_prevents_overlap(self, multi_entry_data):
-        result_limited = simulate(
+        result = simulate(
             multi_entry_data, op.long_calls, max_positions=1, selector="first"
         )
-        result_unlimited = simulate(
-            multi_entry_data, op.long_calls, max_positions=5, selector="first"
-        )
-        # With max_positions=1, the second trade (entering while first is open)
-        # should be skipped, giving fewer trades than unlimited.
-        assert (
-            result_limited.summary["total_trades"]
-            < result_unlimited.summary["total_trades"]
-            or result_limited.summary["total_trades"] == 1
-        )
+        # With max_positions=1, the second trade overlaps the first and is skipped
+        assert result.summary["total_trades"] == 1
 
     def test_max_positions_greater_allows_concurrent(self, multi_entry_data):
         result = simulate(
@@ -356,43 +348,43 @@ class TestCreditStrategy:
     def test_short_call_entry_cost_negative(self, data):
         """Short single-leg strategies should have negative entry_cost (credit)."""
         result = simulate(data, op.short_calls, selector="first")
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            # After normalisation, short single-leg entry_cost is negative
-            assert trade["entry_cost"] < 0
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        # After normalisation, short single-leg entry_cost is negative
+        assert trade["entry_cost"] < 0
 
     def test_short_call_pnl_formula(self, data):
         """P&L = (exit_proceeds - entry_cost) * qty * mult for all strategies."""
         result = simulate(data, op.short_calls, selector="first")
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            expected_pnl = (
-                (trade["exit_proceeds"] - trade["entry_cost"])
-                * trade["quantity"]
-                * trade["multiplier"]
-            )
-            assert trade["realized_pnl"] == pytest.approx(expected_pnl)
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        expected_pnl = (
+            (trade["exit_proceeds"] - trade["entry_cost"])
+            * trade["quantity"]
+            * trade["multiplier"]
+        )
+        assert trade["realized_pnl"] == pytest.approx(expected_pnl)
 
     def test_short_call_losing_trade_negative_pnl(self, data):
         """Short call where underlying goes up should lose money."""
         # Data has underlying going from 213.93 to 220 — calls go up
         result = simulate(data, op.short_calls, selector="first")
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            # Option went up: bad for short seller → negative P&L
-            assert trade["realized_pnl"] < 0
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        # Option went up: bad for short seller → negative P&L
+        assert trade["realized_pnl"] < 0
 
     def test_short_put_spread_pnl(self, data):
         """Short put spread (credit spread) P&L = (exit - entry) * qty * mult."""
         result = simulate(data, op.short_put_spread, selector="first")
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            expected_pnl = (
-                (trade["exit_proceeds"] - trade["entry_cost"])
-                * trade["quantity"]
-                * trade["multiplier"]
-            )
-            assert trade["realized_pnl"] == pytest.approx(expected_pnl)
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        expected_pnl = (
+            (trade["exit_proceeds"] - trade["entry_cost"])
+            * trade["quantity"]
+            * trade["multiplier"]
+        )
+        assert trade["realized_pnl"] == pytest.approx(expected_pnl)
 
 
 # ---------------------------------------------------------------------------
@@ -404,11 +396,11 @@ class TestCapitalTracking:
     def test_equity_equals_capital_plus_pnl(self, data):
         capital = 50_000.0
         result = simulate(data, op.long_calls, capital=capital, selector="first")
-        if not result.trade_log.empty:
-            last_trade = result.trade_log.iloc[-1]
-            assert last_trade["equity"] == pytest.approx(
-                capital + last_trade["cumulative_pnl"]
-            )
+        assert result.summary["total_trades"] == 1
+        last_trade = result.trade_log.iloc[-1]
+        assert last_trade["equity"] == pytest.approx(
+            capital + last_trade["cumulative_pnl"]
+        )
 
     def test_low_capital_trade_still_executes(self, data):
         """Trades execute regardless of capital; no pre-trade capital gate."""
@@ -423,10 +415,11 @@ class TestCapitalTracking:
         result2 = simulate(
             data, op.long_calls, quantity=2, multiplier=100, selector="first"
         )
-        if result1.summary["total_trades"] > 0 and result2.summary["total_trades"] > 0:
-            cost1 = result1.trade_log.iloc[0]["dollar_cost"]
-            cost2 = result2.trade_log.iloc[0]["dollar_cost"]
-            assert cost2 == pytest.approx(cost1 * 2)
+        assert result1.summary["total_trades"] == 1
+        assert result2.summary["total_trades"] == 1
+        cost1 = result1.trade_log.iloc[0]["dollar_cost"]
+        cost2 = result2.trade_log.iloc[0]["dollar_cost"]
+        assert cost2 == pytest.approx(cost1 * 2)
 
 
 # ---------------------------------------------------------------------------
