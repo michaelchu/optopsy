@@ -935,6 +935,152 @@ def get_tool_schemas() -> list[dict]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_chart",
+                "description": (
+                    "Create an interactive Plotly chart from strategy results, "
+                    "simulation trade logs, datasets, or signals. Use this to "
+                    "visualize equity curves, return distributions, strategy "
+                    "comparisons, and heatmaps."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "chart_type": {
+                            "type": "string",
+                            "enum": [
+                                "line",
+                                "bar",
+                                "scatter",
+                                "histogram",
+                                "heatmap",
+                                "candlestick",
+                            ],
+                            "description": (
+                                "Type of chart: 'line' for time series/equity curves, "
+                                "'bar' for comparisons, 'scatter' for correlation plots, "
+                                "'histogram' for return distributions, "
+                                "'heatmap' for 2D aggregated grids, "
+                                "'candlestick' for OHLC stock price charts."
+                            ),
+                        },
+                        "data_source": {
+                            "type": "string",
+                            "enum": [
+                                "dataset",
+                                "result",
+                                "simulation",
+                                "signal",
+                                "stock",
+                            ],
+                            "description": (
+                                "Where to pull data from: 'dataset' (active or named "
+                                "dataset — use dataset_name to pick a specific one), "
+                                "'result' (strategy run summary from results registry), "
+                                "'simulation' (trade log from a simulation run), "
+                                "'signal' (signal slot dates), "
+                                "'stock' (cached OHLCV stock data from fetch_stock_data — "
+                                "use with candlestick charts)."
+                            ),
+                        },
+                        "x": {
+                            "type": "string",
+                            "description": (
+                                "Column name for the x-axis. Required for line, bar, "
+                                "scatter, and heatmap charts. For histogram, use as "
+                                "the data column. For candlestick, optionally override "
+                                "the date column (auto-detects 'date' or 'quote_date')."
+                            ),
+                        },
+                        "y": {
+                            "type": "string",
+                            "description": (
+                                "Column name for the y-axis. Required for line, bar, "
+                                "scatter, and heatmap charts."
+                            ),
+                        },
+                        "heatmap_col": {
+                            "type": "string",
+                            "description": (
+                                "Column name for heatmap cell values (aggregated with "
+                                "mean). Required only for heatmap chart_type."
+                            ),
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Chart title. Auto-generated if omitted.",
+                        },
+                        "xlabel": {
+                            "type": "string",
+                            "description": "X-axis label. Defaults to column name.",
+                        },
+                        "ylabel": {
+                            "type": "string",
+                            "description": "Y-axis label. Defaults to column name.",
+                        },
+                        "result_key": {
+                            "type": "string",
+                            "description": (
+                                "Key of a strategy result to chart (from list_results). "
+                                "Only used when data_source='result'. Omit for most recent."
+                            ),
+                        },
+                        "simulation_key": {
+                            "type": "string",
+                            "description": (
+                                "Key of a simulation to chart. Only used when "
+                                "data_source='simulation'. Omit for most recent."
+                            ),
+                        },
+                        "signal_slot": {
+                            "type": "string",
+                            "description": (
+                                "Signal slot name. Only used when data_source='signal'."
+                            ),
+                        },
+                        "dataset_name": {
+                            "type": "string",
+                            "description": (
+                                "Name of a specific dataset (ticker or filename). "
+                                "Used with data_source='dataset'. Omit to use the "
+                                "most-recently-loaded dataset."
+                            ),
+                        },
+                        "symbol": {
+                            "type": "string",
+                            "description": (
+                                "Stock ticker symbol (e.g. 'SPY'). Required when "
+                                "data_source='stock'. Reads from the yfinance cache "
+                                "(use fetch_stock_data first)."
+                            ),
+                        },
+                        "bins": {
+                            "type": "integer",
+                            "description": (
+                                "Number of bins for histogram. Omit for auto."
+                            ),
+                        },
+                        "color": {
+                            "type": "string",
+                            "description": (
+                                "Color for the chart traces (e.g. 'blue', '#1f77b4')."
+                            ),
+                        },
+                        "figsize_width": {
+                            "type": "integer",
+                            "description": "Chart width in pixels (default: 800).",
+                        },
+                        "figsize_height": {
+                            "type": "integer",
+                            "description": "Chart height in pixels (default: 500).",
+                        },
+                    },
+                    "required": ["chart_type", "data_source"],
+                },
+            },
+        },
     ]
 
     # Data provider tools (only added when API keys are configured)

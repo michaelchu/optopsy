@@ -58,6 +58,7 @@ setup(
             "sqlalchemy>=2.0.0,<3.0.0",
             "aiosqlite>=0.17.0,<1.0.0",
             "greenlet>=3.0.0",
+            "plotly>=5.0.0,<7.0.0",
         ],
     },
     entry_points={

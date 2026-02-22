@@ -1,7 +1,6 @@
 import itertools as _itertools
 import json as _json
 import logging
-import os
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -31,6 +30,8 @@ from ._helpers import (
     _signal_slot_summary,
     _strategy_llm_summary,
     _yf_cache,
+    read_sim_trade_log,
+    write_sim_trade_log,
 )
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
@@ -976,14 +977,7 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
 
     # Persist trade log to disk; keep only summary stats in session memory
-    # Sanitize key for filesystem safety (replace :, =, and other problematic chars)
-    import re
-
-    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
-    _sim_cache = ParquetCache(
-        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
-    )
-    _sim_cache.write("simulations", fs_key, result.trade_log)
+    write_sim_trade_log(sim_key, result.trade_log)
 
     updated_results = dict(results)
     updated_results[sim_key] = {
@@ -1072,17 +1066,9 @@ def _handle_get_simulation_trades(
             return _result("No simulations run yet. Use simulate first.")
         sim_key, entry = sim_entries[-1]
 
-    _sim_cache = ParquetCache(
-        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
-    )
-    import re
-
-    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
-    trade_log = _sim_cache.read("simulations", fs_key)
-    if trade_log is None or trade_log.empty:
+    trade_log = read_sim_trade_log(sim_key)
+    if trade_log is None:
         return _result(f"Simulation '{sim_key}' has no trades.")
-
-    from ._helpers import _df_to_markdown
 
     llm_summary = f"get_simulation_trades({sim_key}): {len(trade_log)} trades"
     user_display = f"### Trade Log: {sim_key}\n\n{_df_to_markdown(trade_log)}"
@@ -1250,6 +1236,256 @@ def _handle_list_results(arguments, dataset, signals, datasets, results, _result
     return _result(llm_summary, user_display=user_display)
 
 
+def _resolve_chart_data(
+    data_source: str,
+    arguments: dict[str, Any],
+    dataset: pd.DataFrame | None,
+    datasets: dict[str, pd.DataFrame],
+    results: dict[str, dict],
+    signals: dict[str, pd.DataFrame],
+) -> tuple[pd.DataFrame | None, str, str | None]:
+    """Resolve chart data source to a DataFrame.
+
+    Returns ``(df, source_label, error_msg)``.  When ``error_msg`` is not
+    None the caller should return it as a tool result immediately.
+    """
+    if data_source in ("dataset", "named_dataset"):
+        ds_name = arguments.get("dataset_name")
+        df = _resolve_dataset(ds_name, dataset, datasets)
+        label = ds_name or "active dataset"
+        if df is None:
+            if ds_name and datasets:
+                return (
+                    None,
+                    label,
+                    (
+                        f"Dataset '{ds_name}' not found. "
+                        f"Available: {list(datasets.keys())}"
+                    ),
+                )
+            return None, label, "No dataset loaded. Load data first."
+        return df, label, None
+
+    if data_source == "result":
+        result_key = arguments.get("result_key")
+        if not result_key:
+            if not results:
+                return None, "", "No strategy results available. Run a strategy first."
+            result_key = list(results.keys())[-1]
+        entry = results.get(result_key)
+        if entry is None:
+            return (
+                None,
+                result_key,
+                (f"Result '{result_key}' not found. Available: {list(results.keys())}"),
+            )
+        return pd.DataFrame([entry]), result_key, None
+
+    if data_source == "simulation":
+        sim_key = arguments.get("simulation_key")
+        if not sim_key:
+            sim_entries = [
+                k for k, v in results.items() if v.get("type") == "simulation"
+            ]
+            if not sim_entries:
+                return None, "", "No simulations run yet. Use simulate first."
+            sim_key = sim_entries[-1]
+        trade_log = read_sim_trade_log(sim_key)
+        if trade_log is None:
+            return None, sim_key, f"Simulation '{sim_key}' has no trade log data."
+        return trade_log, sim_key, None
+
+    if data_source == "signal":
+        slot = arguments.get("signal_slot")
+        if not slot or slot not in signals:
+            available = list(signals.keys()) if signals else []
+            return (
+                None,
+                f"signal:{slot}",
+                (
+                    f"Signal slot '{slot}' not found. "
+                    f"Available: {available or 'none — use build_signal first'}"
+                ),
+            )
+        return signals[slot], f"signal:{slot}", None
+
+    if data_source == "stock":
+        symbol = arguments.get("symbol", "").strip().upper()
+        if not symbol:
+            return None, "", "data_source='stock' requires a 'symbol' parameter."
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+        if cached is None or cached.empty:
+            return (
+                None,
+                f"stock:{symbol}",
+                (f"No cached stock data for {symbol}. Use fetch_stock_data first."),
+            )
+        return cached, f"stock:{symbol}", None
+
+    return (
+        None,
+        "",
+        (
+            f"Unknown data_source '{data_source}'. "
+            "Use: dataset, result, simulation, signal, or stock."
+        ),
+    )
+
+
+def _check_xy_columns(
+    df: pd.DataFrame, x: str | None, y: str | None, chart_type: str
+) -> str | None:
+    """Validate that x and y columns exist. Returns error message or None."""
+    if not x or not y:
+        return f"{chart_type.title()} chart requires 'x' and 'y' column names."
+    missing = [c for c in (x, y) if c not in df.columns]
+    if missing:
+        return f"Column(s) {missing} not found. Available: {list(df.columns)}"
+    return None
+
+
+@_register("create_chart")
+def _handle_create_chart(arguments, dataset, signals, datasets, results, _result):
+    import plotly.graph_objects as go
+
+    chart_type = arguments.get("chart_type")
+    if not chart_type:
+        return _result("Missing required parameter 'chart_type'.")
+
+    data_source = arguments.get("data_source")
+    if not data_source:
+        return _result("Missing required parameter 'data_source'.")
+
+    df, source_label, err = _resolve_chart_data(
+        data_source, arguments, dataset, datasets, results, signals
+    )
+    if err:
+        return _result(err)
+    if df is None or df.empty:
+        return _result(f"Data source '{source_label}' is empty.")
+
+    x = arguments.get("x")
+    y = arguments.get("y")
+    heatmap_col = arguments.get("heatmap_col")
+    title = arguments.get("title", "")
+    xlabel = arguments.get("xlabel", "")
+    ylabel = arguments.get("ylabel", "")
+    color = arguments.get("color")
+    bins = arguments.get("bins")
+    figsize_width = arguments.get("figsize_width", 800)
+    figsize_height = arguments.get("figsize_height", 500)
+
+    fig = go.Figure()
+
+    if chart_type in ("line", "bar", "scatter"):
+        col_err = _check_xy_columns(df, x, y, chart_type)
+        if col_err:
+            return _result(col_err)
+        if chart_type == "line":
+            fig.add_trace(
+                go.Scatter(
+                    x=df[x],
+                    y=df[y],
+                    mode="lines",
+                    name=y,
+                    line={"color": color} if color else {},
+                )
+            )
+        elif chart_type == "bar":
+            fig.add_trace(go.Bar(x=df[x], y=df[y], name=y, marker_color=color))
+        else:
+            fig.add_trace(
+                go.Scatter(
+                    x=df[x],
+                    y=df[y],
+                    mode="markers",
+                    name=y,
+                    marker={"color": color} if color else {},
+                )
+            )
+
+    elif chart_type == "histogram":
+        col = x or y
+        if not col:
+            return _result("Histogram requires 'x' (or 'y') column name.")
+        if col not in df.columns:
+            return _result(f"Column '{col}' not found. Available: {list(df.columns)}")
+        hist_kwargs: dict[str, Any] = {"x": df[col], "name": col}
+        if bins:
+            hist_kwargs["nbinsx"] = int(bins)
+        if color:
+            hist_kwargs["marker_color"] = color
+        fig.add_trace(go.Histogram(**hist_kwargs))
+
+    elif chart_type == "heatmap":
+        if not x or not y or not heatmap_col:
+            return _result("Heatmap requires 'x', 'y', and 'heatmap_col' column names.")
+        for col_name in (x, y, heatmap_col):
+            if col_name not in df.columns:
+                return _result(
+                    f"Column '{col_name}' not found. Available: {list(df.columns)}"
+                )
+        pivot = df.pivot_table(index=y, columns=x, values=heatmap_col, aggfunc="mean")
+        fig.add_trace(
+            go.Heatmap(
+                z=pivot.values,
+                x=[str(c) for c in pivot.columns],
+                y=[str(r) for r in pivot.index],
+                colorscale="RdYlGn",
+            )
+        )
+
+    elif chart_type == "candlestick":
+        date_col = x or next(
+            (c for c in ("date", "quote_date") if c in df.columns), None
+        )
+        if date_col is None or date_col not in df.columns:
+            return _result(
+                f"Candlestick chart needs a date column. Available: {list(df.columns)}"
+            )
+        for required in ("open", "high", "low", "close"):
+            if required not in df.columns:
+                return _result(
+                    f"Candlestick chart requires 'open', 'high', 'low', 'close' "
+                    f"columns. Missing: '{required}'. "
+                    f"Available: {list(df.columns)}"
+                )
+        sorted_df = df.sort_values(date_col)
+        fig.add_trace(
+            go.Candlestick(
+                x=sorted_df[date_col],
+                open=sorted_df["open"],
+                high=sorted_df["high"],
+                low=sorted_df["low"],
+                close=sorted_df["close"],
+            )
+        )
+        fig.update_layout(xaxis_rangeslider_visible=False)
+
+    else:
+        return _result(
+            f"Unknown chart_type '{chart_type}'. "
+            "Use: line, bar, scatter, histogram, heatmap, or candlestick."
+        )
+
+    if not title:
+        title = f"{chart_type.title()} chart — {source_label}"
+    fig.update_layout(
+        title=title,
+        xaxis_title=xlabel or x or "",
+        yaxis_title=ylabel or y or "",
+        width=figsize_width,
+        height=figsize_height,
+        template="plotly_white",
+    )
+
+    caption = f"Chart: {title}"
+    llm_summary = (
+        f"Created {chart_type} chart from {source_label}. {len(df)} data points."
+    )
+    return _result(llm_summary, user_display=caption, chart_figure=fig)
+
+
 # ---------------------------------------------------------------------------
 # Main dispatcher
 # ---------------------------------------------------------------------------
@@ -1290,6 +1526,7 @@ def execute_tool(
         dss: dict[str, pd.DataFrame] | None = None,
         active_name: str | None = None,
         res: dict[str, dict] | None = None,
+        chart_figure: Any = None,
     ) -> ToolResult:
         return ToolResult(
             llm_summary,
@@ -1299,6 +1536,7 @@ def execute_tool(
             dss if dss is not None else datasets,
             active_name,
             res if res is not None else results,
+            chart_figure=chart_figure,
         )
 
     # Check the handler registry first

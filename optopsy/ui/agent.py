@@ -357,8 +357,9 @@ class OptopsyAgent:
         Run the agent loop: send messages to LLM, execute any tool calls,
         and return (final_response_text, updated_messages).
 
-        on_tool_call: async callback(tool_name, arguments, result, tool_call_id)
-                      — UI step display.
+        on_tool_call: async callback(tool_name, arguments, result: ToolResult, tool_call_id)
+                      — UI step display.  ``result`` is a ToolResult instance
+                      (may carry ``chart_figure`` for Plotly rendering).
         on_token: async callback(token_str) — called for each streamed token on
                   the *final* response (the one shown to the user).
         on_thinking_token: async callback(token_str) — called for streamed tokens
@@ -580,7 +581,7 @@ class OptopsyAgent:
 
                 # Show the rich version to the user in the UI
                 if on_tool_call:
-                    await on_tool_call(func_name, args, result.user_display, tc_id)
+                    await on_tool_call(func_name, args, result, tc_id)
 
                 # Send only the concise summary to the LLM
                 full_messages.append(

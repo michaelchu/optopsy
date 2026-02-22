@@ -290,7 +290,14 @@ async def on_message(message: cl.Message):
     async def on_tool_call(tool_name, arguments, result, tool_call_id=""):
         async with cl.Step(name=tool_name, type="tool") as step:
             step.input = str(arguments)
-            step.output = result
+            step.output = result.user_display
+            if result.chart_figure is not None:
+                chart_el = cl.Plotly(
+                    name="chart",
+                    figure=result.chart_figure,
+                    display="inline",
+                )
+                step.elements = [chart_el]
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
 
