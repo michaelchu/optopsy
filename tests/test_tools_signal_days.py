@@ -149,4 +149,5 @@ class TestEntrySignalDaysExecutor:
             },
             option_data_entry_exit,
         )
-        assert "unknown entry_signal" in result.llm_summary.lower()
+        summary = result.llm_summary.lower()
+        assert "unknown" in summary or "invalid" in summary

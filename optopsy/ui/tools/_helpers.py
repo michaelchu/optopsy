@@ -423,8 +423,12 @@ def _make_result_summary(
     Stores only scalar stats — never full DataFrames — so memory usage stays
     proportional to the number of runs rather than data volume.  Handles both
     raw-mode (``pct_change`` column) and aggregated-mode (``mean`` column).
+
+    Uses :class:`StrategyResultSummary` to validate and type the output.
     """
-    summary: dict = {
+    from ._models import StrategyResultSummary
+
+    base = {
         "strategy": strategy_name,
         "max_entry_dte": arguments.get("max_entry_dte", 90),
         "exit_dte": arguments.get("exit_dte", 0),
@@ -434,7 +438,7 @@ def _make_result_summary(
     }
     if "pct_change" in result_df.columns:
         pct = result_df["pct_change"]
-        summary.update(
+        base.update(
             {
                 "count": len(pct),
                 "mean_return": round(float(pct.mean()), 4),
@@ -449,7 +453,7 @@ def _make_result_summary(
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
-        summary.update(
+        base.update(
             {
                 "count": total,
                 "mean_return": round(wt_mean, 4),
@@ -462,7 +466,7 @@ def _make_result_summary(
             }
         )
     else:
-        summary.update(
+        base.update(
             {
                 "count": len(result_df),
                 "mean_return": None,
@@ -470,7 +474,7 @@ def _make_result_summary(
                 "win_rate": None,
             }
         )
-    return summary
+    return StrategyResultSummary(**base).model_dump()
 
 
 def _signal_slot_summary(

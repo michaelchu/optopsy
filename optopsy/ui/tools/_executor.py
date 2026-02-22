@@ -33,6 +33,7 @@ from ._helpers import (
     read_sim_trade_log,
     write_sim_trade_log,
 )
+from ._models import TOOL_ARG_MODELS
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
     CALENDAR_EXTRA_PARAMS,
@@ -1613,6 +1614,27 @@ def execute_tool(
         datasets = {}
     if results is None:
         results = {}
+
+    # --- Pydantic validation gate ---
+    model_cls = TOOL_ARG_MODELS.get(tool_name)
+    if model_cls is None:
+        provider = get_provider_for_tool(tool_name)
+        if provider is not None:
+            model_cls = provider.get_arg_model(tool_name)
+    if model_cls is not None:
+        from pydantic import ValidationError
+
+        try:
+            validated = model_cls.model_validate(arguments)
+            arguments = validated.model_dump(exclude_none=True)
+        except ValidationError as e:
+            return ToolResult(
+                f"Invalid arguments for {tool_name}: {e}",
+                dataset,
+                signals=signals,
+                datasets=datasets,
+                results=results,
+            )
 
     # Helper to build a ToolResult that always carries state forward.
     def _result(
