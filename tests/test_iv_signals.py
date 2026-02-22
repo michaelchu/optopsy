@@ -1,8 +1,11 @@
-"""Tests for IV rank signal functions and IV surface/term structure tools."""
+"""Tests for IV rank signal functions, IV surface/term structure tools, and IV passthrough."""
+
+import datetime
 
 import pandas as pd
 import pytest
 
+import optopsy as op
 from optopsy.signals import (
     _compute_atm_iv,
     _compute_iv_rank_series,
@@ -338,3 +341,111 @@ class TestApplySignalWithIVRank:
             options_data_with_iv, iv_rank_above(threshold=0.8, window=20)
         )
         assert len(dates_80) <= len(dates_50)
+
+
+# ============================================================================
+# Tests for IV passthrough in strategy pipeline
+# ============================================================================
+
+
+@pytest.fixture
+def strategy_data_with_iv():
+    """Minimal options data with implied_volatility suitable for strategy backtesting.
+
+    Two quote dates (entry + exit) so that _evaluate_options can build
+    entry/exit pairs.  The IV column should survive the pipeline and
+    appear in raw output as ``implied_volatility_entry``.
+    """
+    exp_date = datetime.datetime(2018, 1, 31)
+    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "implied_volatility",
+    ]
+    d = [
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.22],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.24],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, 0.21],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, 0.23],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.18],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.20],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, 0.19],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, 0.17],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture
+def strategy_data_no_iv():
+    """Same structure without implied_volatility — raw output should not contain IV."""
+    exp_date = datetime.datetime(2018, 1, 31)
+    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+    d = [
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+class TestIVPassthroughInStrategyOutput:
+    """Verify that implied_volatility flows through to raw strategy results."""
+
+    def test_single_leg_raw_output_has_iv(self, strategy_data_with_iv):
+        """long_calls raw output should include implied_volatility_entry."""
+        result = op.long_calls(strategy_data_with_iv, raw=True)
+        assert not result.empty
+        assert "implied_volatility_entry" in result.columns
+        assert result["implied_volatility_entry"].notna().all()
+
+    def test_single_leg_raw_output_no_iv_when_absent(self, strategy_data_no_iv):
+        """long_calls raw output should not have IV when input lacks it."""
+        result = op.long_calls(strategy_data_no_iv, raw=True)
+        assert not result.empty
+        assert "implied_volatility_entry" not in result.columns
+
+    def test_put_strategy_raw_output_has_iv(self, strategy_data_with_iv):
+        """short_puts raw output should include implied_volatility_entry."""
+        result = op.short_puts(strategy_data_with_iv, raw=True)
+        assert not result.empty
+        assert "implied_volatility_entry" in result.columns
+
+    def test_aggregated_output_unaffected(self, strategy_data_with_iv):
+        """Aggregated (non-raw) output should still work with IV data."""
+        result = op.long_calls(strategy_data_with_iv, raw=False)
+        assert not result.empty
+        # Aggregated output uses describe() columns, not raw columns
+        assert "mean" in result.columns
+
+    def test_iv_values_match_entry_data(self, strategy_data_with_iv):
+        """IV values in output should correspond to entry-day values."""
+        result = op.long_calls(strategy_data_with_iv, raw=True)
+        assert not result.empty
+        # Entry IV for calls at strike 212.5 should be 0.22
+        row_212 = result[result["strike"] == 212.5]
+        if not row_212.empty:
+            assert row_212["implied_volatility_entry"].iloc[0] == pytest.approx(
+                0.22, abs=0.01
+            )

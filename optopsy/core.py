@@ -320,6 +320,10 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     if has_delta and "delta_entry" in result.columns:
         output_cols = output_cols + ["delta_entry"]
 
+    # Include implied volatility if present (for IV-aware analysis)
+    if "implied_volatility_entry" in result.columns:
+        output_cols = output_cols + ["implied_volatility_entry"]
+
     # Include volume if present (for liquidity-based slippage)
     if "volume_entry" in result.columns:
         output_cols = output_cols + ["volume_entry"]
@@ -1144,7 +1148,12 @@ def _format_output(
         Formatted DataFrame with either raw data or descriptive statistics
     """
     if params["raw"]:
-        return data[internal_cols].reset_index(drop=True)
+        cols = internal_cols.copy()
+        # Conditionally include optional columns when present in data
+        for opt_col in ("implied_volatility_entry", "delta_entry"):
+            if opt_col in data.columns and opt_col not in cols:
+                cols.append(opt_col)
+        return data[cols].reset_index(drop=True)
 
     return data.pipe(
         _group_by_intervals, external_cols, params["drop_nan"]
