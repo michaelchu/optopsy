@@ -299,6 +299,87 @@ SIGNAL_REGISTRY: dict[str, Any] = {
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
+# Signal-related properties shared by run_strategy and simulate tool schemas.
+SIGNAL_PARAMS_SCHEMA = {
+    "entry_signal": {
+        "type": "string",
+        "enum": SIGNAL_NAMES,
+        "description": (
+            "Optional TA signal that gates entry. Only enters trades on "
+            "dates where the signal is True for the underlying symbol. "
+            "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
+            "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
+            "bb_below_lower, bb_above_upper. "
+            "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
+            "Volatility: atr_above (default ATR > 1.5× median), atr_below (default ATR < 0.75× median). "
+            "Calendar: day_of_week (default Friday). "
+            "Use entry_signal_params to override defaults."
+        ),
+    },
+    "entry_signal_params": {
+        "type": "object",
+        "description": (
+            "Optional parameters for entry_signal. Keys by signal type: "
+            "rsi_below/rsi_above → {period: int, threshold: float}; "
+            "sma_below/sma_above → {period: int}; "
+            "macd_cross_above/macd_cross_below → {fast: int, slow: int, signal_period: int}; "
+            "bb_above_upper/bb_below_lower → {length: int, std: float}; "
+            "ema_cross_above/ema_cross_below → {fast: int, slow: int}; "
+            "atr_above/atr_below → {period: int, multiplier: float}; "
+            "day_of_week → {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
+        ),
+    },
+    "entry_signal_days": {
+        "type": "integer",
+        "minimum": 1,
+        "description": (
+            "Optional: require the entry_signal to be True for this many consecutive "
+            "trading days before entering. Works with any signal. "
+            "Omit or set to 1 for single-bar behavior (default)."
+        ),
+    },
+    "exit_signal": {
+        "type": "string",
+        "enum": SIGNAL_NAMES,
+        "description": (
+            "Optional TA signal that gates exit. Only exits trades on "
+            "dates where the signal is True. Same signal names as entry_signal."
+        ),
+    },
+    "exit_signal_params": {
+        "type": "object",
+        "description": (
+            "Optional parameters for exit_signal. Same keys as entry_signal_params."
+        ),
+    },
+    "exit_signal_days": {
+        "type": "integer",
+        "minimum": 1,
+        "description": (
+            "Optional: require the exit_signal condition to hold for this "
+            "many consecutive trading days before exiting. Works the same as "
+            "entry_signal_days but for the exit signal. "
+            "Omit or set to 1 for no sustained requirement (default behavior)."
+        ),
+    },
+    "entry_signal_slot": {
+        "type": "string",
+        "description": (
+            "Name of a pre-built signal slot (from build_signal) to "
+            "use as entry date filter. Use this for composite signals. "
+            "Cannot be combined with entry_signal."
+        ),
+    },
+    "exit_signal_slot": {
+        "type": "string",
+        "description": (
+            "Name of a pre-built signal slot (from build_signal) to "
+            "use as exit date filter. Use this for composite signals. "
+            "Cannot be combined with exit_signal."
+        ),
+    },
+}
+
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
 _DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
 
@@ -467,83 +548,7 @@ def get_tool_schemas() -> list[dict]:
                             "enum": STRATEGY_NAMES,
                             "description": "Name of the strategy to run",
                         },
-                        "entry_signal": {
-                            "type": "string",
-                            "enum": SIGNAL_NAMES,
-                            "description": (
-                                "Optional TA signal that gates entry. Only enters trades on "
-                                "dates where the signal is True for the underlying symbol. "
-                                "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
-                                "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
-                                "bb_below_lower, bb_above_upper. "
-                                "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
-                                "Volatility: atr_above (default ATR > 1.5× median), atr_below (default ATR < 0.75× median). "
-                                "Calendar: day_of_week (default Friday). "
-                                "Use entry_signal_params to override defaults."
-                            ),
-                        },
-                        "entry_signal_params": {
-                            "type": "object",
-                            "description": (
-                                "Optional parameters for entry_signal. Keys by signal type: "
-                                "rsi_below/rsi_above → {period: int, threshold: float}; "
-                                "sma_below/sma_above → {period: int}; "
-                                "macd_cross_above/macd_cross_below → {fast: int, slow: int, signal_period: int}; "
-                                "bb_above_upper/bb_below_lower → {length: int, std: float}; "
-                                "ema_cross_above/ema_cross_below → {fast: int, slow: int}; "
-                                "atr_above/atr_below → {period: int, multiplier: float}; "
-                                "day_of_week → {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
-                            ),
-                        },
-                        "entry_signal_days": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "description": (
-                                "Optional: require the entry_signal to be True for this many consecutive "
-                                "trading days before entering. Works with any signal. "
-                                "Omit or set to 1 for single-bar behavior (default)."
-                            ),
-                        },
-                        "exit_signal": {
-                            "type": "string",
-                            "enum": SIGNAL_NAMES,
-                            "description": (
-                                "Optional TA signal that gates exit. Only exits trades on "
-                                "dates where the signal is True. Same signal names as entry_signal."
-                            ),
-                        },
-                        "exit_signal_params": {
-                            "type": "object",
-                            "description": (
-                                "Optional parameters for exit_signal. Same keys as entry_signal_params."
-                            ),
-                        },
-                        "exit_signal_days": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "description": (
-                                "Optional: require the exit_signal condition to hold for this "
-                                "many consecutive trading days before exiting. Works the same as "
-                                "entry_signal_days but for the exit signal. "
-                                "Omit or set to 1 for no sustained requirement (default behavior)."
-                            ),
-                        },
-                        "entry_signal_slot": {
-                            "type": "string",
-                            "description": (
-                                "Name of a pre-built signal slot (from build_signal) to "
-                                "use as entry date filter. Use this for composite signals. "
-                                "Cannot be combined with entry_signal."
-                            ),
-                        },
-                        "exit_signal_slot": {
-                            "type": "string",
-                            "description": (
-                                "Name of a pre-built signal slot (from build_signal) to "
-                                "use as exit date filter. Use this for composite signals. "
-                                "Cannot be combined with exit_signal."
-                            ),
-                        },
+                        **SIGNAL_PARAMS_SCHEMA,
                         "dataset_name": {
                             "type": "string",
                             "description": (
@@ -894,6 +899,7 @@ def get_tool_schemas() -> list[dict]:
                                 "'first' = first row. Default: 'nearest'."
                             ),
                         },
+                        **SIGNAL_PARAMS_SCHEMA,
                         "dataset_name": {
                             "type": "string",
                             "description": (

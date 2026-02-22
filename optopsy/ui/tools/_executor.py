@@ -877,8 +877,8 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         if key in arguments:
             sim_params[key] = arguments[key]
 
-    # Build strategy kwargs (same logic as run_strategy)
-    _sim_keys = {
+    # Build strategy kwargs — strip sim-specific and signal keys
+    _non_strat_keys = {
         "strategy_name",
         "dataset_name",
         "capital",
@@ -886,13 +886,94 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         "max_positions",
         "multiplier",
         "selector",
+        "entry_signal",
+        "entry_signal_params",
+        "entry_signal_days",
+        "exit_signal",
+        "exit_signal_params",
+        "exit_signal_days",
+        "entry_signal_slot",
+        "exit_signal_slot",
     }
     strat_kwargs = {
         k: v
         for k, v in arguments.items()
-        if k not in _sim_keys
+        if k not in _non_strat_keys
         and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
     }
+
+    # --- Resolve entry dates ---
+    entry_slot = arguments.get("entry_signal_slot")
+    entry_signal_name = arguments.get("entry_signal")
+
+    if entry_slot and entry_signal_name:
+        return _result("Cannot use both entry_signal and entry_signal_slot. Pick one.")
+
+    if entry_slot:
+        if entry_slot not in signals:
+            return _result(
+                f"No signal slot '{entry_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        strat_kwargs["entry_dates"] = signals[entry_slot]
+
+    # --- Resolve exit dates ---
+    exit_slot = arguments.get("exit_signal_slot")
+    exit_signal_name = arguments.get("exit_signal")
+
+    if exit_slot and exit_signal_name:
+        return _result("Cannot use both exit_signal and exit_signal_slot. Pick one.")
+
+    if exit_slot:
+        if exit_slot not in signals:
+            return _result(
+                f"No signal slot '{exit_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        strat_kwargs["exit_dates"] = signals[exit_slot]
+
+    # --- Inline signal resolution ---
+    if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
+        return _result(
+            f"Unknown entry_signal '{entry_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}",
+        )
+    if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
+        return _result(
+            f"Unknown exit_signal '{exit_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}",
+        )
+
+    needs_stock = (
+        entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+
+    signal_data = None
+    if needs_stock:
+        signal_data = _fetch_stock_data_for_signals(active_ds)
+        if signal_data is None:
+            return _result(
+                "TA signals require stock price data but yfinance is not "
+                "installed or the fetch failed. Install yfinance "
+                "(`pip install yfinance`) and try again.",
+            )
+
+    if signal_data is None and (entry_signal_name or exit_signal_name):
+        signal_data = _date_only_fallback(active_ds)
+
+    for sig_name, prefix, dates_key in [
+        (entry_signal_name, "entry", "entry_dates"),
+        (exit_signal_name, "exit", "exit_dates"),
+    ]:
+        if sig_name:
+            dates, err_msg = _resolve_inline_signal(
+                sig_name, arguments, signal_data, active_ds, prefix
+            )
+            if err_msg:
+                return _result(err_msg)
+            strat_kwargs[dates_key] = dates
 
     try:
         result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
