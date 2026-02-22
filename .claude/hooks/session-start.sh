@@ -23,10 +23,10 @@ source "$VENV_DIR/bin/activate"
 # Prefer uv for speed, fall back to pip
 if command -v uv &>/dev/null; then
   uv pip install -e .
-  uv pip install ruff mypy pytest pytest-cov pre-commit types-requests
+  uv pip install ruff mypy pytest pytest-cov pre-commit pandas-stubs types-requests
 else
   pip install -e .
-  pip install ruff mypy pytest pytest-cov pre-commit types-requests
+  pip install ruff mypy pytest pytest-cov pre-commit pandas-stubs types-requests
 fi
 
 # Install pre-commit hooks into the git repo
