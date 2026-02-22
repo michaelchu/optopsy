@@ -36,59 +36,226 @@ _CHAIN_COLS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Fixture factories — each takes a direction and returns a DataFrame.
+# Entry rows are constant across directions; only exit rows vary.
+# ---------------------------------------------------------------------------
+
+
+def _make_standard_data(direction):
+    """2 strikes, calls+puts — entry identical, exit varies by direction."""
+    exp_date = datetime.datetime(2018, 1, 31)
+    entry = datetime.datetime(2018, 1, 1)
+    exit_day = datetime.datetime(2018, 1, 31)
+    rows = [
+        ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45],
+        ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "put", exp_date, entry, 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp_date, entry, 215.0, 7.10, 7.20],
+    ]
+    if direction == "up":
+        rows += [
+            ["SPX", 220.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55],
+            ["SPX", 220.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05],
+            ["SPX", 220.0, "put", exp_date, exit_day, 212.5, 0.0, 0.0],
+            ["SPX", 220.0, "put", exp_date, exit_day, 215.0, 0.0, 0.0],
+        ]
+    elif direction == "down":
+        rows += [
+            ["SPX", 207.0, "call", exp_date, exit_day, 212.5, 0.10, 0.20],
+            ["SPX", 207.0, "call", exp_date, exit_day, 215.0, 0.02, 0.08],
+            ["SPX", 207.0, "put", exp_date, exit_day, 212.5, 5.30, 5.50],
+            ["SPX", 207.0, "put", exp_date, exit_day, 215.0, 7.80, 8.00],
+        ]
+    else:  # sideways
+        rows += [
+            ["SPX", 214.0, "call", exp_date, exit_day, 212.5, 2.00, 2.20],
+            ["SPX", 214.0, "call", exp_date, exit_day, 215.0, 0.50, 0.70],
+            ["SPX", 214.0, "put", exp_date, exit_day, 212.5, 1.00, 1.20],
+            ["SPX", 214.0, "put", exp_date, exit_day, 215.0, 2.40, 2.60],
+        ]
+    return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
+
+
+def _make_multi_strike_data(direction):
+    """5 strikes, calls+puts — entry identical, exit varies by direction."""
+    exp_date = datetime.datetime(2018, 1, 31)
+    entry = datetime.datetime(2018, 1, 1)
+    exit_day = datetime.datetime(2018, 1, 31)
+    rows = [
+        # Entry — Calls
+        ["SPX", 212.5, "call", exp_date, entry, 207.5, 6.90, 7.00],
+        ["SPX", 212.5, "call", exp_date, entry, 210.0, 4.90, 5.00],
+        ["SPX", 212.5, "call", exp_date, entry, 212.5, 3.00, 3.10],
+        ["SPX", 212.5, "call", exp_date, entry, 215.0, 1.50, 1.60],
+        ["SPX", 212.5, "call", exp_date, entry, 217.5, 0.60, 0.70],
+        # Entry — Puts
+        ["SPX", 212.5, "put", exp_date, entry, 207.5, 0.40, 0.50],
+        ["SPX", 212.5, "put", exp_date, entry, 210.0, 1.40, 1.50],
+        ["SPX", 212.5, "put", exp_date, entry, 212.5, 3.00, 3.10],
+        ["SPX", 212.5, "put", exp_date, entry, 215.0, 5.00, 5.10],
+        ["SPX", 212.5, "put", exp_date, entry, 217.5, 7.00, 7.10],
+    ]
+    if direction == "up":
+        rows += [
+            ["SPX", 215.0, "call", exp_date, exit_day, 207.5, 7.45, 7.55],
+            ["SPX", 215.0, "call", exp_date, exit_day, 210.0, 4.95, 5.05],
+            ["SPX", 215.0, "call", exp_date, exit_day, 212.5, 2.45, 2.55],
+            ["SPX", 215.0, "call", exp_date, exit_day, 215.0, 0.0, 0.10],
+            ["SPX", 215.0, "call", exp_date, exit_day, 217.5, 0.0, 0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 207.5, 0.0, 0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 210.0, 0.0, 0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 212.5, 0.0, 0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 215.0, 0.0, 0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 217.5, 2.45, 2.55],
+        ]
+    elif direction == "down":
+        rows += [
+            ["SPX", 208.0, "call", exp_date, exit_day, 207.5, 0.80, 0.90],
+            ["SPX", 208.0, "call", exp_date, exit_day, 210.0, 0.10, 0.20],
+            ["SPX", 208.0, "call", exp_date, exit_day, 212.5, 0.02, 0.08],
+            ["SPX", 208.0, "call", exp_date, exit_day, 215.0, 0.01, 0.05],
+            ["SPX", 208.0, "call", exp_date, exit_day, 217.5, 0.0, 0.04],
+            ["SPX", 208.0, "put", exp_date, exit_day, 207.5, 0.30, 0.40],
+            ["SPX", 208.0, "put", exp_date, exit_day, 210.0, 1.90, 2.10],
+            ["SPX", 208.0, "put", exp_date, exit_day, 212.5, 4.40, 4.60],
+            ["SPX", 208.0, "put", exp_date, exit_day, 215.0, 6.90, 7.10],
+            ["SPX", 208.0, "put", exp_date, exit_day, 217.5, 9.40, 9.60],
+        ]
+    else:  # sideways
+        rows += [
+            ["SPX", 212.5, "call", exp_date, exit_day, 207.5, 5.40, 5.60],
+            ["SPX", 212.5, "call", exp_date, exit_day, 210.0, 3.00, 3.20],
+            ["SPX", 212.5, "call", exp_date, exit_day, 212.5, 1.00, 1.20],
+            ["SPX", 212.5, "call", exp_date, exit_day, 215.0, 0.20, 0.40],
+            ["SPX", 212.5, "call", exp_date, exit_day, 217.5, 0.05, 0.15],
+            ["SPX", 212.5, "put", exp_date, exit_day, 207.5, 0.20, 0.30],
+            ["SPX", 212.5, "put", exp_date, exit_day, 210.0, 0.80, 1.00],
+            ["SPX", 212.5, "put", exp_date, exit_day, 212.5, 2.40, 2.60],
+            ["SPX", 212.5, "put", exp_date, exit_day, 215.0, 4.80, 5.00],
+            ["SPX", 212.5, "put", exp_date, exit_day, 217.5, 7.20, 7.40],
+        ]
+    return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
+
+
+def _make_calendar_data(direction):
+    """Call calendar data — entry identical, exit varies by direction."""
+    front_exp = datetime.datetime(2018, 1, 31)
+    back_exp = datetime.datetime(2018, 3, 2)
+    entry_date = datetime.datetime(2018, 1, 1)
+    exit_date = datetime.datetime(2018, 1, 24)
+    rows = [
+        # Entry — Front month calls
+        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50],
+        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00],
+        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80],
+        # Entry — Back month calls
+        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50],
+        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00],
+        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70],
+    ]
+    if direction == "up":
+        rows += [
+            # Exit — Front month
+            ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50],
+            ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10],
+            ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90],
+            # Exit — Back month
+            ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00],
+            ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10],
+            ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
+        ]
+    elif direction == "down":
+        rows += [
+            # Exit — Front month
+            ["SPX", 209.0, "call", front_exp, exit_date, 210.0, 1.00, 1.20],
+            ["SPX", 209.0, "call", front_exp, exit_date, 212.5, 0.20, 0.40],
+            ["SPX", 209.0, "call", front_exp, exit_date, 215.0, 0.05, 0.15],
+            # Exit — Back month (retains more time value)
+            ["SPX", 209.0, "call", back_exp, exit_date, 210.0, 3.00, 3.20],
+            ["SPX", 209.0, "call", back_exp, exit_date, 212.5, 1.80, 2.00],
+            ["SPX", 209.0, "call", back_exp, exit_date, 215.0, 0.90, 1.10],
+        ]
+    else:  # sideways
+        rows += [
+            # Exit — Front month
+            ["SPX", 212.5, "call", front_exp, exit_date, 210.0, 3.20, 3.40],
+            ["SPX", 212.5, "call", front_exp, exit_date, 212.5, 1.20, 1.40],
+            ["SPX", 212.5, "call", front_exp, exit_date, 215.0, 0.30, 0.50],
+            # Exit — Back month (retains more time value)
+            ["SPX", 212.5, "call", back_exp, exit_date, 210.0, 5.20, 5.40],
+            ["SPX", 212.5, "call", back_exp, exit_date, 212.5, 3.40, 3.60],
+            ["SPX", 212.5, "call", back_exp, exit_date, 215.0, 2.00, 2.20],
+        ]
+    return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
+
+
+def _make_calendar_put_data(direction):
+    """Put calendar data — entry identical, exit varies by direction."""
+    front_exp = datetime.datetime(2018, 1, 31)
+    back_exp = datetime.datetime(2018, 3, 2)
+    entry_date = datetime.datetime(2018, 1, 1)
+    exit_date = datetime.datetime(2018, 1, 24)
+    rows = [
+        # Entry — Front month puts
+        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50],
+        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10],
+        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50],
+        # Entry — Back month puts
+        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50],
+        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00],
+        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50],
+    ]
+    if direction == "up":
+        rows += [
+            # Exit — Front month
+            ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30],
+            ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50],
+            ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50],
+            # Exit — Back month
+            ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50],
+            ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00],
+            ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50],
+        ]
+    elif direction == "down":
+        rows += [
+            # Exit — Front month
+            ["SPX", 209.0, "put", front_exp, exit_date, 210.0, 2.80, 3.00],
+            ["SPX", 209.0, "put", front_exp, exit_date, 212.5, 4.80, 5.00],
+            ["SPX", 209.0, "put", front_exp, exit_date, 215.0, 7.00, 7.20],
+            # Exit — Back month (retains more time value)
+            ["SPX", 209.0, "put", back_exp, exit_date, 210.0, 4.40, 4.60],
+            ["SPX", 209.0, "put", back_exp, exit_date, 212.5, 6.20, 6.40],
+            ["SPX", 209.0, "put", back_exp, exit_date, 215.0, 8.20, 8.40],
+        ]
+    else:  # sideways
+        rows += [
+            # Exit — Front month
+            ["SPX", 212.5, "put", front_exp, exit_date, 210.0, 0.80, 1.00],
+            ["SPX", 212.5, "put", front_exp, exit_date, 212.5, 2.00, 2.20],
+            ["SPX", 212.5, "put", front_exp, exit_date, 215.0, 3.80, 4.00],
+            # Exit — Back month (retains more time value)
+            ["SPX", 212.5, "put", back_exp, exit_date, 210.0, 3.00, 3.20],
+            ["SPX", 212.5, "put", back_exp, exit_date, 212.5, 4.60, 4.80],
+            ["SPX", 212.5, "put", back_exp, exit_date, 215.0, 6.20, 6.40],
+        ]
+    return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures — static (up-market) datasets derived from factories
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="module")
 def data():
-    """Basic option chain data with one entry date and one exit date."""
-    exp_date = datetime.datetime(2018, 1, 31)
-    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
-    d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
-    ]
-    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+    """Basic option chain data with one entry date and one exit date (up market)."""
+    return _make_standard_data("up")
 
 
 @pytest.fixture(scope="module")
 def multi_strike_data():
-    """Data with 5 strikes for testing multi-leg strategies."""
-    exp_date = datetime.datetime(2018, 1, 31)
-    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
-    d = [
-        # Entry day - Calls
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70],
-        # Entry day - Puts
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10],
-        # Exit day
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 215.0, 0.0, 0.10],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 217.5, 0.0, 0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55],
-    ]
-    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+    """Data with 5 strikes for testing multi-leg strategies (up market)."""
+    return _make_multi_strike_data("up")
 
 
 @pytest.fixture(scope="module")
@@ -119,58 +286,14 @@ def multi_entry_data():
 
 @pytest.fixture(scope="module")
 def calendar_data():
-    """Calendar spread test data."""
-    front_exp = datetime.datetime(2018, 1, 31)
-    back_exp = datetime.datetime(2018, 3, 2)
-    entry_date = datetime.datetime(2018, 1, 1)
-    exit_date = datetime.datetime(2018, 1, 24)
-    d = [
-        # Entry — Front month calls
-        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50],
-        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00],
-        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80],
-        # Entry — Back month calls
-        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50],
-        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00],
-        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70],
-        # Exit — Front month
-        ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50],
-        ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10],
-        ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90],
-        # Exit — Back month
-        ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00],
-        ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10],
-        ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
-    ]
-    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+    """Calendar spread test data with calls (up market)."""
+    return _make_calendar_data("up")
 
 
 @pytest.fixture(scope="module")
 def calendar_put_data():
-    """Calendar spread test data with puts."""
-    front_exp = datetime.datetime(2018, 1, 31)
-    back_exp = datetime.datetime(2018, 3, 2)
-    entry_date = datetime.datetime(2018, 1, 1)
-    exit_date = datetime.datetime(2018, 1, 24)
-    d = [
-        # Entry — Front month puts
-        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50],
-        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50],
-        # Entry — Back month puts
-        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50],
-        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00],
-        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50],
-        # Exit — Front month
-        ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30],
-        ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50],
-        ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50],
-        # Exit — Back month
-        ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50],
-        ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00],
-        ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50],
-    ]
-    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+    """Calendar spread test data with puts (up market)."""
+    return _make_calendar_put_data("up")
 
 
 # ---------------------------------------------------------------------------
@@ -393,38 +516,6 @@ class TestSelectors:
 
 
 # ---------------------------------------------------------------------------
-# Multi-leg strategies
-# ---------------------------------------------------------------------------
-
-
-class TestMultiLeg:
-    def test_spread_simulation(self, data):
-        result = simulate(data, op.long_call_spread, selector="first")
-        assert isinstance(result, SimulationResult)
-        assert result.summary["total_trades"] >= 1
-
-    def test_straddle_simulation(self, data):
-        result = simulate(data, op.long_straddles, selector="first")
-        assert isinstance(result, SimulationResult)
-        assert result.summary["total_trades"] >= 1
-
-    def test_butterfly_simulation(self, multi_strike_data):
-        result = simulate(multi_strike_data, op.long_call_butterfly, selector="first")
-        assert isinstance(result, SimulationResult)
-        assert result.summary["total_trades"] >= 1
-        trade = result.trade_log.iloc[0]
-        assert trade["dollar_cost"] > 0
-
-    def test_iron_condor_simulation(self, multi_strike_data):
-        result = simulate(multi_strike_data, op.iron_condor, selector="first")
-        assert isinstance(result, SimulationResult)
-        assert result.summary["total_trades"] >= 1
-        trade = result.trade_log.iloc[0]
-        assert trade["dollar_cost"] > 0
-        assert trade["days_held"] >= 0
-
-
-# ---------------------------------------------------------------------------
 # Credit strategy P&L
 # ---------------------------------------------------------------------------
 
@@ -637,24 +728,6 @@ class TestExitDte:
         assert trade["days_held"] == expected_days
 
 
-class TestCalendarStrategies:
-    def test_calendar_simulation(self, calendar_data):
-        result = simulate(
-            calendar_data,
-            op.long_call_calendar,
-            selector="first",
-            front_dte_min=20,
-            front_dte_max=40,
-            back_dte_min=50,
-            back_dte_max=90,
-            exit_dte=7,
-        )
-        assert isinstance(result, SimulationResult)
-        # Calendar may or may not produce trades depending on data alignment
-        # but it should not error
-        assert result.summary["total_trades"] >= 0
-
-
 # ---------------------------------------------------------------------------
 # Column detection helpers
 # ---------------------------------------------------------------------------
@@ -860,37 +933,6 @@ class TestFilterTrades:
 
 
 # ---------------------------------------------------------------------------
-# Parametrized smoke tests — all 28 strategies
-# ---------------------------------------------------------------------------
-
-
-class TestAllStrategiesSmoke:
-    """Behavioural-trait assertions for every strategy."""
-
-    @pytest.mark.parametrize("spec", _STANDARD_SPECS, ids=_spec_id)
-    def test_standard(self, data, spec):
-        result = simulate(data, spec.fn, selector="first")
-        _assert_strategy_traits(result, spec.entry_sign)
-
-    @pytest.mark.parametrize("spec", _MULTI_STRIKE_SPECS, ids=_spec_id)
-    def test_multi_strike(self, multi_strike_data, spec):
-        result = simulate(multi_strike_data, spec.fn, selector="first")
-        _assert_strategy_traits(result, spec.entry_sign)
-
-    @pytest.mark.parametrize("spec", _CALL_CALENDAR_SPECS, ids=_spec_id)
-    def test_call_calendar(self, calendar_data, spec):
-        result = simulate(calendar_data, spec.fn, selector="first", **_CALENDAR_KWARGS)
-        _assert_strategy_traits(result, spec.entry_sign)
-
-    @pytest.mark.parametrize("spec", _PUT_CALENDAR_SPECS, ids=_spec_id)
-    def test_put_calendar(self, calendar_put_data, spec):
-        result = simulate(
-            calendar_put_data, spec.fn, selector="first", **_CALENDAR_KWARGS
-        )
-        _assert_strategy_traits(result, spec.entry_sign)
-
-
-# ---------------------------------------------------------------------------
 # Spot-check P&L for representative shapes
 # ---------------------------------------------------------------------------
 
@@ -977,3 +1019,239 @@ class TestSpotCheckPnl:
         assert trade["entry_cost"] == pytest.approx(-2.50)
         assert trade["exit_proceeds"] == pytest.approx(-2.45)
         assert trade["realized_pnl"] == pytest.approx(5.0)
+
+
+# ---------------------------------------------------------------------------
+# Directional fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["up", "down", "sideways"], scope="module")
+def directional_data(request):
+    return _make_standard_data(request.param), request.param
+
+
+@pytest.fixture(params=["up", "down", "sideways"], scope="module")
+def directional_multi_strike_data(request):
+    return _make_multi_strike_data(request.param), request.param
+
+
+@pytest.fixture(params=["up", "down", "sideways"], scope="module")
+def directional_calendar_data(request):
+    return _make_calendar_data(request.param), request.param
+
+
+@pytest.fixture(params=["up", "down", "sideways"], scope="module")
+def directional_calendar_put_data(request):
+    return _make_calendar_put_data(request.param), request.param
+
+
+# ---------------------------------------------------------------------------
+# Parametrized smoke tests — all 28 strategies × 3 directions
+# ---------------------------------------------------------------------------
+
+
+class TestAllStrategiesDirectional:
+    """Behavioural-trait assertions across up/down/sideways markets."""
+
+    @pytest.mark.parametrize("spec", _STANDARD_SPECS, ids=_spec_id)
+    def test_standard(self, directional_data, spec):
+        df, _direction = directional_data
+        result = simulate(df, spec.fn, selector="first")
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _MULTI_STRIKE_SPECS, ids=_spec_id)
+    def test_multi_strike(self, directional_multi_strike_data, spec):
+        df, _direction = directional_multi_strike_data
+        result = simulate(df, spec.fn, selector="first")
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _CALL_CALENDAR_SPECS, ids=_spec_id)
+    def test_call_calendar(self, directional_calendar_data, spec):
+        df, _direction = directional_calendar_data
+        result = simulate(df, spec.fn, selector="first", **_CALENDAR_KWARGS)
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _PUT_CALENDAR_SPECS, ids=_spec_id)
+    def test_put_calendar(self, directional_calendar_put_data, spec):
+        df, _direction = directional_calendar_put_data
+        result = simulate(df, spec.fn, selector="first", **_CALENDAR_KWARGS)
+        _assert_strategy_traits(result, spec.entry_sign)
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: covered call and protective put
+# ---------------------------------------------------------------------------
+
+
+class TestSpotCheckCoveredProtective:
+    """Hand-calculated P&L for covered call and protective put."""
+
+    def test_covered_call_pnl(self, data):
+        """Covered call from ``data`` fixture (UP market, selector=first).
+
+        Covered call: long call (lower strike) + short call (upper strike).
+        Strikes 212.5 / 215.0:
+          leg1 (long call 212.5):  entry mid = (7.35+7.45)/2 = 7.40
+          leg2 (short call 215.0): entry mid = -(6.00+6.05)/2 = -6.025
+          total_entry_cost = 7.40 + (-6.025) = 1.375  (debit)
+
+        Exit (underlying 220):
+          leg1 (long call 212.5):  exit mid = (7.45+7.55)/2 = 7.50
+          leg2 (short call 215.0): exit mid = -(4.96+5.05)/2 = -5.005
+          total_exit_proceeds = 7.50 + (-5.005) = 2.495
+
+        realized_pnl = (2.495 - 1.375) * 1 * 100 = 112.0
+        """
+        result = simulate(data, op.covered_call, selector="first")
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(1.375)
+        assert trade["exit_proceeds"] == pytest.approx(2.495)
+        assert trade["realized_pnl"] == pytest.approx(112.0)
+
+    def test_protective_put_pnl(self, data):
+        """Protective put from ``data`` fixture (UP market, selector=first).
+
+        Protective put: long call (lower strike) + long put (upper strike).
+        Strikes 212.5 / 215.0:
+          leg1 (long call 212.5):  entry mid = (7.35+7.45)/2 = 7.40
+          leg2 (long put 215.0):   entry mid = (7.10+7.20)/2 = 7.15
+          total_entry_cost = 7.40 + 7.15 = 14.55  (debit)
+
+        Exit (underlying 220):
+          leg1 (long call 212.5):  exit mid = (7.45+7.55)/2 = 7.50
+          leg2 (long put 215.0):   exit mid = (0.0+0.0)/2 = 0.0
+          total_exit_proceeds = 7.50 + 0.0 = 7.50
+
+        realized_pnl = (7.50 - 14.55) * 1 * 100 = -705.0
+        """
+        result = simulate(data, op.protective_put, selector="first")
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(14.55)
+        assert trade["exit_proceeds"] == pytest.approx(7.50)
+        assert trade["realized_pnl"] == pytest.approx(-705.0)
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: calendar strategies
+# ---------------------------------------------------------------------------
+
+
+class TestSpotCheckCalendar:
+    """Hand-calculated P&L for calendar spreads."""
+
+    def test_long_call_calendar_pnl(self, calendar_data):
+        """Long call calendar from ``calendar_data`` (UP, selector=first → strike 210).
+
+        Front (short call 210): entry mid = -(4.40+4.50)/2 = -4.45
+        Back (long call 210):   entry mid = (6.40+6.50)/2 = 6.45
+        total_entry_cost = -4.45 + 6.45 = 2.00
+
+        Exit:
+        Front (short call 210): exit mid = -(5.40+5.50)/2 = -5.45
+        Back (long call 210):   exit mid = (6.90+7.00)/2 = 6.95
+        total_exit_proceeds = -5.45 + 6.95 = 1.50
+
+        realized_pnl = (1.50 - 2.00) * 1 * 100 = -50.0
+        """
+        result = simulate(
+            calendar_data, op.long_call_calendar, selector="first", **_CALENDAR_KWARGS
+        )
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(2.00)
+        assert trade["exit_proceeds"] == pytest.approx(1.50)
+        assert trade["realized_pnl"] == pytest.approx(-50.0)
+
+    def test_long_put_calendar_pnl(self, calendar_put_data):
+        """Long put calendar from ``calendar_put_data`` (UP, selector=first → strike 210).
+
+        Front (short put 210): entry mid = -(1.40+1.50)/2 = -1.45
+        Back (long put 210):   entry mid = (3.40+3.50)/2 = 3.45
+        total_entry_cost = -1.45 + 3.45 = 2.00
+
+        Exit:
+        Front (short put 210): exit mid = -(0.20+0.30)/2 = -0.25
+        Back (long put 210):   exit mid = (2.40+2.50)/2 = 2.45
+        total_exit_proceeds = -0.25 + 2.45 = 2.20
+
+        realized_pnl = (2.20 - 2.00) * 1 * 100 = 20.0
+        """
+        result = simulate(
+            calendar_put_data,
+            op.long_put_calendar,
+            selector="first",
+            **_CALENDAR_KWARGS,
+        )
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(2.00)
+        assert trade["exit_proceeds"] == pytest.approx(2.20)
+        assert trade["realized_pnl"] == pytest.approx(20.0)
+
+
+# ---------------------------------------------------------------------------
+# Multi-trade spread test
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def multi_entry_spread_data():
+    """2 non-overlapping entry dates with puts at 2 strikes each."""
+    exp1 = datetime.datetime(2018, 1, 31)
+    exp2 = datetime.datetime(2018, 3, 2)
+    entry1 = datetime.datetime(2018, 1, 1)
+    entry2 = datetime.datetime(2018, 2, 1)
+    exit1 = datetime.datetime(2018, 1, 31)
+    exit2 = datetime.datetime(2018, 3, 2)
+    d = [
+        # Entry 1 — exp1
+        ["SPX", 213.93, "put", exp1, entry1, 212.5, 5.70, 5.80],
+        ["SPX", 213.93, "put", exp1, entry1, 215.0, 7.10, 7.20],
+        # Exit 1
+        ["SPX", 220.0, "put", exp1, exit1, 212.5, 0.10, 0.20],
+        ["SPX", 220.0, "put", exp1, exit1, 215.0, 0.05, 0.15],
+        # Entry 2 — exp2
+        ["SPX", 214.0, "put", exp2, entry2, 212.5, 4.80, 4.90],
+        ["SPX", 214.0, "put", exp2, entry2, 215.0, 6.80, 6.90],
+        # Exit 2
+        ["SPX", 218.0, "put", exp2, exit2, 212.5, 0.20, 0.30],
+        ["SPX", 218.0, "put", exp2, exit2, 215.0, 0.10, 0.20],
+    ]
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+
+
+@pytest.fixture(scope="module")
+def multi_trade_spread_result(multi_entry_spread_data):
+    """Shared simulation result for TestMultiTradeSpread."""
+    return simulate(
+        multi_entry_spread_data,
+        op.short_put_spread,
+        capital=100_000.0,
+        max_positions=5,
+        selector="first",
+    )
+
+
+class TestMultiTradeSpread:
+    """Multi-trade tests for a spread strategy."""
+
+    def test_two_trades_execute(self, multi_trade_spread_result):
+        assert multi_trade_spread_result.summary["total_trades"] == 2
+
+    def test_cumulative_pnl_is_cumsum(self, multi_trade_spread_result):
+        log = multi_trade_spread_result.trade_log
+        assert len(log) == 2
+        assert log.iloc[0]["cumulative_pnl"] == pytest.approx(
+            log.iloc[0]["realized_pnl"]
+        )
+        assert log.iloc[1]["cumulative_pnl"] == pytest.approx(
+            log.iloc[0]["realized_pnl"] + log.iloc[1]["realized_pnl"]
+        )
+
+    def test_equity_equals_capital_plus_cumulative(self, multi_trade_spread_result):
+        log = multi_trade_spread_result.trade_log
+        for _, row in log.iterrows():
+            assert row["equity"] == pytest.approx(100_000.0 + row["cumulative_pnl"])
