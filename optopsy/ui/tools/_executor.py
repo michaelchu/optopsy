@@ -1256,8 +1256,10 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
     if sort_by not in valid_sort_cols or sort_by not in df.columns:
         sort_by = "mean_return"
 
-    # Sort — max_drawdown is "lower is better" so sort ascending for it
-    ascending = sort_by == "max_drawdown"
+    # Sort — higher is better for most metrics; for max_drawdown (negative
+    # values where closer to zero is better) we also sort descending so the
+    # best (least negative) values appear first.
+    ascending = False
     if sort_by in df.columns and df[sort_by].notna().any():
         df = df.sort_values(sort_by, ascending=ascending, na_position="last")
     df = df.reset_index(drop=True)
@@ -1365,6 +1367,7 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
     if include_chart and len(df) >= 2:
         try:
             import plotly.graph_objects as go
+            from plotly.subplots import make_subplots
 
             chart_metrics = []
             for m in ["mean_return", "win_rate", "sharpe", "profit_factor"]:
@@ -1372,13 +1375,20 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                     chart_metrics.append(m)
 
             if chart_metrics:
-                fig = go.Figure()
                 labels = df["label"].tolist()
-                # Truncate long labels for chart readability
                 short_labels = [
                     (lbl[:30] + "…") if len(lbl) > 30 else lbl for lbl in labels
                 ]
-                for metric in chart_metrics:
+
+                # Use separate subplots so metrics with different scales
+                # are each readable on their own y-axis.
+                fig = make_subplots(
+                    rows=len(chart_metrics),
+                    cols=1,
+                    subplot_titles=chart_metrics,
+                    vertical_spacing=0.08,
+                )
+                for i, metric in enumerate(chart_metrics, start=1):
                     fig.add_trace(
                         go.Bar(
                             name=metric,
@@ -1388,17 +1398,16 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                                 f"{v:.4f}" if pd.notna(v) else "" for v in df[metric]
                             ],
                             textposition="auto",
-                        )
+                            showlegend=False,
+                        ),
+                        row=i,
+                        col=1,
                     )
                 fig.update_layout(
-                    barmode="group",
-                    xaxis_title="Strategy Run",
-                    yaxis_title="Value",
                     template="plotly_white",
                     width=max(600, len(df) * 120),
-                    height=500,
-                    margin=dict(l=40, r=20, t=10, b=80),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    height=300 * len(chart_metrics),
+                    margin=dict(l=40, r=20, t=30, b=40),
                 )
                 chart_figure = fig
         except ImportError:
