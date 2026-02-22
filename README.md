@@ -110,6 +110,10 @@ Results are grouped by DTE (days to expiration) and OTM% (out-of-the-money perce
 
 Contributions are welcome! See the [Contributing Guide](https://michaelchu.github.io/optopsy/contributing/) for details.
 
+## Disclaimer
+
+Optopsy is intended for research and educational purposes only. Backtest results are based on historical data and simplified assumptions — they do not account for all real-world factors such as liquidity constraints, execution slippage, assignment risk, or changing market conditions. Past performance is not indicative of future results. Always perform your own due diligence before making any trading decisions.
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
