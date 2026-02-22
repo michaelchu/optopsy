@@ -436,13 +436,21 @@ def _make_result_summary(
         "dataset": arguments.get("dataset_name", "default"),
     }
     if "pct_change" in result_df.columns:
-        pct = result_df["pct_change"]
+        pct = result_df["pct_change"].dropna()
+        wins = float(pct[pct > 0].sum())
+        losses = float(pct[pct < 0].sum())
+        if losses == 0:
+            pf = float("inf") if wins > 0 else 0.0
+        else:
+            # Match metrics.profit_factor pattern: abs(wins) / abs(losses)
+            pf = abs(wins) / abs(losses)
         base.update(
             {
                 "count": len(pct),
                 "mean_return": round(float(pct.mean()), 4),
                 "std": round(float(pct.std()), 4),
                 "win_rate": round(float((pct > 0).mean()), 4),
+                "profit_factor": round(pf, 4),
             }
         )
     elif "mean" in result_df.columns:
@@ -452,6 +460,23 @@ def _make_result_summary(
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
+        # Compute aggregated profit_factor by combining gross wins and
+        # losses across all groups, then dividing.  This avoids the
+        # pitfall of weighted-averaging per-group profit factors where
+        # inf values (groups with no losses) would dominate or need
+        # filtering — which would make the aggregate not equal the true
+        # all-trades combined ratio.
+        agg_pf = None
+        if "mean" in result_df.columns and "count" in result_df.columns:
+            group_pnl = result_df["mean"] * result_df["count"]
+            total_wins = float(group_pnl[group_pnl > 0].sum())
+            total_losses = float(group_pnl[group_pnl < 0].sum())
+            if total_losses != 0:
+                agg_pf = round(abs(total_wins) / abs(total_losses), 4)
+            elif total_wins > 0:
+                agg_pf = float("inf")
+            else:
+                agg_pf = 0.0
         base.update(
             {
                 "count": total,
@@ -461,7 +486,17 @@ def _make_result_summary(
                     if "std" in result_df.columns
                     else None
                 ),
-                "win_rate": round(float((result_df["mean"] > 0).mean()), 4),
+                "win_rate": (
+                    round(
+                        float(
+                            (result_df["win_rate"] * result_df["count"]).sum() / total
+                        ),
+                        4,
+                    )
+                    if "win_rate" in result_df.columns and "count" in result_df.columns
+                    else round(float((result_df["mean"] > 0).mean()), 4)
+                ),
+                "profit_factor": agg_pf,
             }
         )
     else:
@@ -471,6 +506,7 @@ def _make_result_summary(
                 "mean_return": None,
                 "std": None,
                 "win_rate": None,
+                "profit_factor": None,
             }
         )
     return StrategyResultSummary(**base).model_dump()

@@ -367,7 +367,30 @@ def _resolve_expiration(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-ar
 
 
 def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
-    """Compute summary statistics from the trade log."""
+    """Compute summary statistics from the trade log.
+
+    Includes both basic trade statistics and risk-adjusted metrics
+    (Sharpe, Sortino, VaR, CVaR, Calmar) from the ``metrics`` module.
+    """
+    from .metrics import (
+        calmar_ratio,
+        conditional_value_at_risk,
+        sharpe_ratio,
+        sortino_ratio,
+        value_at_risk,
+    )
+    from .metrics import (
+        max_drawdown as _max_drawdown,
+    )
+
+    _empty_risk = {
+        "sharpe_ratio": 0.0,
+        "sortino_ratio": 0.0,
+        "var_95": 0.0,
+        "cvar_95": 0.0,
+        "calmar_ratio": 0.0,
+    }
+
     if trade_log.empty:
         return {
             "total_trades": 0,
@@ -384,6 +407,7 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
             "profit_factor": 0.0,
             "max_drawdown": 0.0,
             "avg_days_in_trade": 0.0,
+            **_empty_risk,
         }
 
     pnl = trade_log["realized_pnl"]
@@ -394,9 +418,35 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
 
     # Max drawdown from equity curve
     equity = trade_log["equity"]
-    running_max = equity.cummax()
-    drawdown = (equity - running_max) / running_max
-    max_dd = float(drawdown.min()) if len(drawdown) > 0 else 0.0
+    max_dd = _max_drawdown(equity)
+
+    # Derive true daily returns from the equity curve for annualised
+    # metrics (Sharpe, Sortino, Calmar).  The equity curve is indexed by
+    # trade exit dates which are NOT evenly spaced.  Resampling to daily
+    # frequency with forward-fill ensures pct_change() produces genuine
+    # daily returns suitable for the 252-day annualisation factor.
+    _has_dates = "exit_date" in trade_log.columns and "entry_date" in trade_log.columns
+    if _has_dates:
+        # When multiple trades exit on the same date, use groupby to get
+        # the final equity value for each unique exit date. This ensures
+        # a unique datetime index required by resample("D").
+        equity_daily = trade_log.groupby("exit_date")["equity"].last()
+        equity_daily.index = pd.to_datetime(equity_daily.index)
+        # Prepend initial capital at the first entry date so the full
+        # period is represented (including flat days before first exit).
+        first_entry = pd.to_datetime(trade_log["entry_date"].iloc[0])
+        if first_entry not in equity_daily.index:
+            equity_daily.loc[first_entry] = capital
+            equity_daily = equity_daily.sort_index()
+        equity_daily = equity_daily.resample("D").ffill()
+        daily_returns = equity_daily.pct_change().dropna()
+    else:
+        # Fallback for minimal trade logs (e.g. unit tests) without date
+        # columns — use inter-trade equity changes.
+        daily_returns = equity.pct_change().dropna()
+
+    # Per-trade returns are still correct for VaR/CVaR (no annualisation).
+    per_trade_returns = trade_log["pct_change"]
 
     return {
         "total_trades": len(trade_log),
@@ -417,6 +467,11 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         ),
         "max_drawdown": max_dd,
         "avg_days_in_trade": float(trade_log["days_held"].mean()),
+        "sharpe_ratio": sharpe_ratio(daily_returns),
+        "sortino_ratio": sortino_ratio(daily_returns),
+        "var_95": value_at_risk(per_trade_returns, 0.95),
+        "cvar_95": conditional_value_at_risk(per_trade_returns, 0.95),
+        "calmar_ratio": calmar_ratio(daily_returns),
     }
 
 
