@@ -509,6 +509,165 @@ def atr_below(period: int = 14, multiplier: float = 1.0) -> SignalFunc:
 
 
 # ---------------------------------------------------------------------------
+# IV rank signals
+# ---------------------------------------------------------------------------
+
+
+def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
+    """Compute the ATM implied volatility per (symbol, quote_date).
+
+    For each quote_date, finds the option(s) with strike closest to the
+    underlying price and averages their implied volatility.  Uses both
+    calls and puts (averaging across types when both exist at the ATM
+    strike) for a more stable estimate.
+
+    Args:
+        options_data: DataFrame with columns ``underlying_symbol``,
+            ``quote_date``, ``underlying_price``, ``strike``,
+            ``option_type``, ``implied_volatility``.
+
+    Returns:
+        DataFrame with columns ``(underlying_symbol, quote_date,
+        underlying_price, implied_volatility)`` — one row per
+        symbol/date with the ATM IV.
+    """
+    df = options_data.dropna(subset=["implied_volatility"]).copy()
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "underlying_symbol",
+                "quote_date",
+                "underlying_price",
+                "implied_volatility",
+            ]
+        )
+    df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
+    # For each (symbol, quote_date), keep the strike closest to underlying
+    idx = df.groupby(["underlying_symbol", "quote_date"])["_abs_otm"].idxmin()
+    atm = df.loc[
+        idx, ["underlying_symbol", "quote_date", "underlying_price", "strike"]
+    ].copy()
+    # Average IV across call/put at the ATM strike
+    merged = atm.merge(
+        df.groupby(["underlying_symbol", "quote_date", "strike"])["implied_volatility"]
+        .mean()
+        .reset_index(),
+        on=["underlying_symbol", "quote_date", "strike"],
+        how="left",
+    )
+    return (
+        merged[
+            [
+                "underlying_symbol",
+                "quote_date",
+                "underlying_price",
+                "implied_volatility",
+            ]
+        ]
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+
+
+def _compute_iv_rank_series(atm_iv: pd.DataFrame, window: int = 252) -> pd.Series:
+    """Compute IV rank for each row in an ATM IV DataFrame.
+
+    IV rank is the percentile of the current IV relative to the trailing
+    ``window``-day range:  ``(current - min) / (max - min)``.  Returns
+    values in [0, 1].  When max == min (flat IV), returns 0.5.
+
+    Args:
+        atm_iv: DataFrame with ``underlying_symbol``, ``quote_date``,
+            ``implied_volatility``.
+        window: Trailing lookback in trading days (default 252 ≈ 1 year).
+
+    Returns:
+        Series of IV rank values aligned to ``atm_iv.index``.
+    """
+    result = pd.Series(float("nan"), index=atm_iv.index)
+    for _symbol, group in atm_iv.groupby("underlying_symbol", sort=False):
+        iv = group["implied_volatility"]
+        rolling_min = iv.rolling(window, min_periods=1).min()
+        rolling_max = iv.rolling(window, min_periods=1).max()
+        denom = rolling_max - rolling_min
+        rank = (iv - rolling_min) / denom.replace(0, float("nan"))
+        rank = rank.fillna(0.5)
+        result.loc[group.index] = rank
+    return result
+
+
+def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
+    """True when IV rank exceeds a threshold.
+
+    IV rank is the percentile of current ATM implied volatility relative
+    to its trailing ``window``-day range.  An IV rank of 0.8 means
+    current IV is in the top 20% of the past year.
+
+    Requires a DataFrame with ``implied_volatility`` column (options
+    chain data with IV preserved).
+
+    Args:
+        threshold: IV rank value above which signal fires (default 0.5).
+        window: Trailing lookback in trading days (default 252).
+
+    Returns:
+        Signal function
+    """
+
+    def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
+        if "implied_volatility" not in data.columns:
+            return pd.Series(False, index=data.index)
+        atm_iv = _compute_atm_iv(data)
+        if atm_iv.empty:
+            return pd.Series(False, index=data.index)
+        rank = _compute_iv_rank_series(atm_iv, window)
+        # Map rank back to original data rows via (symbol, quote_date)
+        rank_map = atm_iv[["underlying_symbol", "quote_date"]].copy()
+        rank_map["_iv_rank"] = rank.values
+        merged = data[["underlying_symbol", "quote_date"]].merge(
+            rank_map, on=["underlying_symbol", "quote_date"], how="left"
+        )
+        return (merged["_iv_rank"] > threshold).fillna(False)
+
+    return _signal
+
+
+def iv_rank_below(threshold: float = 0.5, window: int = 252) -> SignalFunc:
+    """True when IV rank is below a threshold.
+
+    IV rank is the percentile of current ATM implied volatility relative
+    to its trailing ``window``-day range.  An IV rank of 0.2 means
+    current IV is in the bottom 20% of the past year.
+
+    Requires a DataFrame with ``implied_volatility`` column (options
+    chain data with IV preserved).
+
+    Args:
+        threshold: IV rank value below which signal fires (default 0.5).
+        window: Trailing lookback in trading days (default 252).
+
+    Returns:
+        Signal function
+    """
+
+    def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
+        if "implied_volatility" not in data.columns:
+            return pd.Series(False, index=data.index)
+        atm_iv = _compute_atm_iv(data)
+        if atm_iv.empty:
+            return pd.Series(False, index=data.index)
+        rank = _compute_iv_rank_series(atm_iv, window)
+        rank_map = atm_iv[["underlying_symbol", "quote_date"]].copy()
+        rank_map["_iv_rank"] = rank.values
+        merged = data[["underlying_symbol", "quote_date"]].merge(
+            rank_map, on=["underlying_symbol", "quote_date"], how="left"
+        )
+        return (merged["_iv_rank"] < threshold).fillna(False)
+
+    return _signal
+
+
+# ---------------------------------------------------------------------------
 # Day-of-week signal
 # ---------------------------------------------------------------------------
 

@@ -165,6 +165,8 @@ class SignalMixin(BaseModel):
             "bb_below_lower, bb_above_upper. "
             "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
             "Volatility: atr_above (default ATR > 1.5x median), atr_below (default ATR < 0.75x median). "
+            "IV rank: iv_rank_above (default >0.5), iv_rank_below (default <0.5) — "
+            "percentile of ATM IV vs trailing 252-day range. Requires dataset with implied_volatility. "
             "Calendar: day_of_week (default Friday). "
             "Use entry_signal_params to override defaults."
         ),
@@ -179,6 +181,7 @@ class SignalMixin(BaseModel):
             "bb_above_upper/bb_below_lower -> {length: int, std: float}; "
             "ema_cross_above/ema_cross_below -> {fast: int, slow: int}; "
             "atr_above/atr_below -> {period: int, multiplier: float}; "
+            "iv_rank_above/iv_rank_below -> {threshold: float, window: int}; "
             "day_of_week -> {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
         ),
     )
@@ -695,6 +698,55 @@ class SimulationResultEntry(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# IV surface tool models
+# ---------------------------------------------------------------------------
+
+
+class PlotVolSurfaceArgs(BaseModel):
+    dataset_name: str | None = Field(
+        None,
+        description="Dataset to use. Omit for most recent.",
+    )
+    quote_date: str | None = Field(
+        None,
+        description=(
+            "Date (YYYY-MM-DD) to show the surface for. "
+            "Omit for the latest date in the dataset."
+        ),
+    )
+    option_type: Literal["call", "put"] | None = Field(
+        None,
+        description="Option type to plot. Default: 'call'.",
+    )
+    figsize_width: int | None = Field(
+        None, description="Chart width in pixels (default: 900)."
+    )
+    figsize_height: int | None = Field(
+        None, description="Chart height in pixels (default: 600)."
+    )
+
+
+class IVTermStructureArgs(BaseModel):
+    dataset_name: str | None = Field(
+        None,
+        description="Dataset to use. Omit for most recent.",
+    )
+    quote_date: str | None = Field(
+        None,
+        description=(
+            "Date (YYYY-MM-DD) to show the term structure for. "
+            "Omit for the latest date in the dataset."
+        ),
+    )
+    figsize_width: int | None = Field(
+        None, description="Chart width in pixels (default: 800)."
+    )
+    figsize_height: int | None = Field(
+        None, description="Chart height in pixels (default: 500)."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool argument model registry
 # ---------------------------------------------------------------------------
 
@@ -712,6 +764,8 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "clear_cache": ClearCacheArgs,
     "fetch_stock_data": FetchStockDataArgs,
     "create_chart": CreateChartArgs,
+    "plot_vol_surface": PlotVolSurfaceArgs,
+    "iv_term_structure": IVTermStructureArgs,
     "simulate": SimulateArgs,
     "get_simulation_trades": GetSimulationTradesArgs,
     "fetch_options_data": FetchOptionsDataArgs,

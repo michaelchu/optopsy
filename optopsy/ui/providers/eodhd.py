@@ -26,7 +26,8 @@ _TIMEOUT = 60
 _MAX_RETRIES = 2
 _FIELDS = (
     "underlying_symbol,type,exp_date,tradetime,strike,bid,ask,"
-    "last,volume,delta,gamma,theta,vega,open_interest,midpoint,expiration_type"
+    "last,volume,delta,gamma,theta,vega,impliedVolatility,"
+    "open_interest,midpoint,expiration_type"
 )
 
 _COLUMN_MAP = {
@@ -42,6 +43,7 @@ _COLUMN_MAP = {
     "gamma": "gamma",
     "theta": "theta",
     "vega": "vega",
+    "impliedVolatility": "implied_volatility",
 }
 
 _OPTIONS_NUMERIC_COLS = [
@@ -54,6 +56,7 @@ _OPTIONS_NUMERIC_COLS = [
     "gamma",
     "theta",
     "vega",
+    "impliedVolatility",
     "open_interest",
     "midpoint",
 ]
@@ -542,7 +545,7 @@ class EODHDProvider(DataProvider):
             "bid",
             "ask",
         ]
-        optional = ["delta", "gamma", "theta", "vega", "volume"]
+        optional = ["delta", "gamma", "theta", "vega", "implied_volatility", "volume"]
         keep.extend([c for c in optional if c in df.columns])
         return df[[c for c in keep if c in df.columns]]
 

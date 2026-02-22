@@ -20,6 +20,7 @@ default_kwargs: Dict[str, Any] = {
     "gamma": None,
     "theta": None,
     "vega": None,
+    "implied_volatility": None,
     # Optional liquidity columns for slippage modeling (set to column index to include)
     "volume": None,
     "open_interest": None,
@@ -90,6 +91,7 @@ def csv_data(
     gamma: Optional[int] = None,
     theta: Optional[int] = None,
     vega: Optional[int] = None,
+    implied_volatility: Optional[int] = None,
     volume: Optional[int] = None,
     open_interest: Optional[int] = None,
 ) -> pd.DataFrame:
@@ -115,6 +117,7 @@ def csv_data(
         gamma: Optional column index containing gamma Greek
         theta: Optional column index containing theta Greek
         vega: Optional column index containing vega Greek
+        implied_volatility: Optional column index containing implied volatility
         volume: Optional column index containing trading volume (used by liquidity slippage)
         open_interest: Optional column index containing open interest (reserved for future use)
 
@@ -142,6 +145,7 @@ def csv_data(
         "gamma": gamma,
         "theta": theta,
         "vega": vega,
+        "implied_volatility": implied_volatility,
         "volume": volume,
         "open_interest": open_interest,
     }
@@ -159,7 +163,7 @@ def csv_data(
     ]
 
     # Add optional Greek columns if specified
-    for greek in ["delta", "gamma", "theta", "vega"]:
+    for greek in ["delta", "gamma", "theta", "vega", "implied_volatility"]:
         if params.get(greek) is not None:
             column_mapping.append((params[greek], greek))
 
