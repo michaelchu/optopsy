@@ -92,29 +92,31 @@ CREATE TABLE IF NOT EXISTS elements (
 );
 """
 
-_db_initialized = False
 
+# Initialize database synchronously at module import time, before Chainlit
+# tries to use it via @cl.data_layer or authentication callbacks.
+def _init_db_sync() -> None:
+    import sqlite3
 
-async def _init_db() -> None:
-    global _db_initialized
-    if _db_initialized:
-        return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    import aiosqlite
-
-    async with aiosqlite.connect(DB_PATH) as conn:
-        await conn.executescript(_DB_SCHEMA)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.executescript(_DB_SCHEMA)
         # Add columns introduced in newer Chainlit versions (safe to run repeatedly).
         for col, definition in [
             ("defaultOpen", "INTEGER DEFAULT 0"),
             ("waitForAnswer", "INTEGER"),
         ]:
             try:
-                await conn.execute(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
+                conn.execute(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
             except Exception:
                 pass  # column already exists
-        await conn.commit()
-    _db_initialized = True
+        conn.commit()
+    finally:
+        conn.close()
+
+
+_init_db_sync()
 
 
 @cl.data_layer
@@ -130,7 +132,6 @@ async def header_auth_callback(headers) -> cl.User:
 
 @cl.on_chat_start
 async def on_chat_start():
-    await _init_db()
     model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
     agent = OptopsyAgent(model=model)
     cl.user_session.set("agent", agent)
@@ -245,7 +246,6 @@ async def on_message(message: cl.Message):
     # Guard: session state is missing (e.g. user deleted the thread then typed).
     # Re-initialize in-place rather than redirecting so the message isn't lost.
     if agent is None or messages is None:
-        await _init_db()
         model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
         agent = OptopsyAgent(model=model)
         messages = []
