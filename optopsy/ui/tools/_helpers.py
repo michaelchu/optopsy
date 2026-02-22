@@ -441,7 +441,7 @@ def _make_result_summary(
         wins = pct[pct > 0].sum()
         losses = pct[pct < 0].sum()
         if losses == 0:
-            pf = np.nan
+            pf = float("inf") if float(wins) > 0 else 0.0
         else:
             pf = abs(float(wins) / float(losses))
         base.update(

@@ -209,28 +209,20 @@ def _group_by_intervals(
     grouped = data.groupby(cols, observed=True)["pct_change"]
     grouped_dataset = grouped.describe()
 
-    # Compute win_rate and profit_factor per group
-    def _extra_metrics(series: pd.Series) -> pd.Series:
-        valid = series.dropna()
-        if len(valid) == 0:
-            return pd.Series({"win_rate": np.nan, "profit_factor": np.nan})
-        wr = float((valid > 0).sum()) / len(valid)
-        wins = valid[valid > 0].sum()
-        losses = valid[valid < 0].sum()
-        if losses == 0:
-            pf = np.nan
-        else:
-            pf = abs(float(wins) / float(losses))
-        return pd.Series({"win_rate": wr, "profit_factor": pf})
+    # Compute win_rate and profit_factor per group using vectorized aggregation
+    win_counts = grouped.agg(lambda s: (s.dropna() > 0).sum())
+    valid_counts = grouped.agg(lambda s: s.dropna().shape[0])
+    gross_wins = grouped.agg(lambda s: s[s > 0].sum())
+    gross_losses = grouped.agg(lambda s: s[s < 0].sum())
 
-    extra = grouped.apply(_extra_metrics)
-    # Single-level groupby: apply returns a DataFrame directly.
-    # Multi-level groupby: apply returns a Series with an extra index level;
-    # unstack() pivots that level into columns to match grouped_dataset shape.
-    if isinstance(extra, pd.DataFrame):
-        grouped_dataset = pd.concat([grouped_dataset, extra], axis=1)
-    else:
-        grouped_dataset = pd.concat([grouped_dataset, extra.unstack()], axis=1)
+    grouped_dataset["win_rate"] = np.where(
+        valid_counts > 0, win_counts / valid_counts, np.nan
+    )
+    grouped_dataset["profit_factor"] = np.where(
+        gross_losses != 0,
+        np.abs(gross_wins / gross_losses),
+        np.where(gross_wins > 0, np.inf, 0.0),
+    )
 
     # if any non-count columns return NaN remove the row
     if drop_na:
