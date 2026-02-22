@@ -1,9 +1,11 @@
 """Tests for Pydantic tool argument models and schema generation."""
 
 import pytest
-from pydantic import ValidationError
 
-from optopsy.ui.tools._models import (
+pydantic = pytest.importorskip("pydantic", reason="UI extras not installed")
+ValidationError = pydantic.ValidationError
+
+from optopsy.ui.tools._models import (  # noqa: E402
     TOOL_ARG_MODELS,
     BuildSignalArgs,
     ClearCacheArgs,
