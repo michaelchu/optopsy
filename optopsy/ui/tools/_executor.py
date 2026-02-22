@@ -1191,9 +1191,6 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
 
     sort_by = arguments.get("sort_by", "mean_return")
     include_chart = arguments.get("include_chart", True)
-    if isinstance(include_chart, str):
-        include_chart = include_chart.strip().lower() == "true"
-
     # Build comparison rows from both strategy and simulation results
     rows = []
     for key, entry in selected.items():
@@ -1206,8 +1203,8 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                 "type": "simulation",
                 "count": s.get("total_trades", 0),
                 "mean_return": (
-                    round(s["total_return"] / max(s["total_trades"], 1), 4)
-                    if s.get("total_return") is not None and s.get("total_trades")
+                    round(s["total_return"], 4)
+                    if s.get("total_return") is not None
                     else None
                 ),
                 "win_rate": s.get("win_rate"),
@@ -1220,9 +1217,9 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
             win_rate = entry.get("win_rate")
             count = entry.get("count", 0)
 
-            # Compute approximate Sharpe ratio from aggregated stats
-            # Annualized assuming ~252 trading days. Since these are trade-level
-            # returns (not daily), use sqrt(count) scaling when count is known.
+            # Simple Sharpe-like ratio from aggregated stats (mean / std).
+            # This is *not* annualized — it is a simple risk-adjusted return
+            # ratio computed from trade-level returns.
             sharpe = None
             if pct_mean is not None and pct_std and pct_std > 0:
                 sharpe = round(float(pct_mean / pct_std), 4)
