@@ -1614,6 +1614,36 @@ def execute_tool(
     if results is None:
         results = {}
 
+    # --- Pydantic validation gate ---
+    # Lazy import: _models pulls in pydantic which is an optional UI dep.
+    from ._models import TOOL_ARG_MODELS
+
+    model_cls = TOOL_ARG_MODELS.get(tool_name)
+    provider = get_provider_for_tool(tool_name)
+    if model_cls is None and provider is not None:
+        model_cls = provider.get_arg_model(tool_name)
+    if model_cls is not None:
+        from pydantic import ValidationError
+
+        try:
+            validated = model_cls.model_validate(arguments)
+            arguments = validated.model_dump(mode="json", exclude_none=True)
+        except ValidationError as e:
+            items = []
+            for err in e.errors():
+                loc = ".".join(str(p) for p in err.get("loc", ())) or "<root>"
+                items.append(f"{loc}: {err.get('msg', 'invalid value')}")
+            error_text = "; ".join(items)
+            if len(error_text) > 500:
+                error_text = f"{error_text[:497]}..."
+            return ToolResult(
+                f"Invalid arguments for {tool_name}: {error_text}",
+                dataset,
+                signals=signals,
+                datasets=datasets,
+                results=results,
+            )
+
     # Helper to build a ToolResult that always carries state forward.
     def _result(
         llm_summary: str,
@@ -1642,7 +1672,6 @@ def execute_tool(
         return handler(arguments, dataset, signals, datasets, results, _result)
 
     # Generic data-provider dispatch (external providers like EODHD)
-    provider = get_provider_for_tool(tool_name)
     if provider is not None:
         try:
             summary, df = provider.execute(tool_name, arguments)

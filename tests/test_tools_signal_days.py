@@ -149,4 +149,6 @@ class TestEntrySignalDaysExecutor:
             },
             option_data_entry_exit,
         )
-        assert "unknown entry_signal" in result.llm_summary.lower()
+        summary = result.llm_summary.lower()
+        assert "invalid arguments for run_strategy" in summary
+        assert "unknown signal" in summary

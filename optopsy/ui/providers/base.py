@@ -70,11 +70,16 @@ Important conventions
   privates in your provider file. See eodhd.py for the pattern.
 """
 
+from __future__ import annotations
+
 import os
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 class DataProvider(ABC):
@@ -127,6 +132,15 @@ class DataProvider(ABC):
         Must exactly match the ``name`` values in ``get_tool_schemas()``.
         """
         ...
+
+    def get_arg_model(self, tool_name: str) -> type[BaseModel] | None:
+        """Return the Pydantic model for validating arguments of *tool_name*.
+
+        Providers can override this to opt into argument validation at the
+        ``execute_tool()`` dispatch boundary.  Return ``None`` (default) to
+        skip Pydantic validation for a given tool.
+        """
+        return None
 
     def replaces_dataset(self, tool_name: str) -> bool:
         """Return True if this tool's DataFrame should replace the active dataset.

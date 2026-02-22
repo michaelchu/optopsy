@@ -1,16 +1,21 @@
+from __future__ import annotations
+
 import logging
 import os
 import re
 import time
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import requests
 
 from .base import DataProvider
 from .cache import ParquetCache, compute_date_gaps
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 _log = logging.getLogger(__name__)
 
@@ -111,6 +116,13 @@ class EODHDProvider(DataProvider):
 
     def get_tool_names(self) -> list[str]:
         return ["fetch_options_data"]
+
+    def get_arg_model(self, tool_name: str) -> type[BaseModel] | None:
+        if tool_name == "fetch_options_data":
+            from ..tools._models import FetchOptionsDataArgs
+
+            return FetchOptionsDataArgs
+        return None
 
     def execute(
         self, tool_name: str, arguments: dict[str, Any]

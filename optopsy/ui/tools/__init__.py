@@ -7,6 +7,11 @@ from ._helpers import (
     _intersect_with_options_dates,
     _yf_cache,
 )
+from ._models import (
+    TOOL_ARG_MODELS,
+    SimulationResultEntry,
+    StrategyResultSummary,
+)
 from ._schemas import (
     CALENDAR_STRATEGIES,
     SIGNAL_NAMES,
@@ -29,4 +34,7 @@ __all__ = [
     "CALENDAR_STRATEGIES",
     "SIGNAL_REGISTRY",
     "SIGNAL_NAMES",
+    "TOOL_ARG_MODELS",
+    "StrategyResultSummary",
+    "SimulationResultEntry",
 ]
