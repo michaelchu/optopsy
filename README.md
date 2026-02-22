@@ -14,14 +14,13 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 ## Features
 
+- **AI Chat UI** - Run backtests, fetch data, and interpret results using natural language
+- **Trade Simulator** - Full trade-by-trade simulation with capital tracking, equity curves, and performance metrics
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
+- **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
 - **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via pandas-ta
-- **Greeks Filtering** - Filter options by delta to target specific probability ranges
-- **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
-- **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
-- **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
-- **AI Chat UI** - Interactive AI-powered interface for running backtests with natural language
 
 ## AI Chat UI (Beta)
 
@@ -48,7 +47,7 @@ pip install optopsy[ui]
 
 **Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
 
-## Quick Start
+## Core Library Quick Start
 
 ```python
 import optopsy as op
@@ -81,6 +80,29 @@ print(results)
 ```
 
 Results are grouped by DTE (days to expiration) and OTM% (out-of-the-money percentage), showing descriptive statistics for percentage returns.
+
+## Simulator
+
+Run a full trade-by-trade simulation with capital tracking, position limits, and performance metrics:
+
+```python
+result = op.simulate(
+    data,
+    op.long_calls,
+    capital=100_000,
+    quantity=1,
+    max_positions=1,
+    selector="nearest",       # "nearest", "highest_premium", "lowest_premium", or custom callable
+    max_entry_dte=45,
+    exit_dte=14,
+)
+
+print(result.summary)         # win rate, profit factor, max drawdown, etc.
+print(result.trade_log)       # per-trade P&L, entry/exit dates, equity
+print(result.equity_curve)    # portfolio value over time
+```
+
+The simulator works with all 28 strategies. It selects one trade per entry date, enforces concurrent position limits, and computes a full equity curve with metrics like win rate, profit factor, max drawdown, and average days in trade.
 
 ## Supported Strategies
 
