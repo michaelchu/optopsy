@@ -916,9 +916,9 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
 
     fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
     _sim_cache = ParquetCache(
-        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "simulations")
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
     )
-    _sim_cache.write("runs", fs_key, result.trade_log)
+    _sim_cache.write("simulations", fs_key, result.trade_log)
 
     updated_results = dict(results)
     updated_results[sim_key] = {
@@ -1008,9 +1008,12 @@ def _handle_get_simulation_trades(
         sim_key, entry = sim_entries[-1]
 
     _sim_cache = ParquetCache(
-        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "simulations")
+        cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
     )
-    trade_log = _sim_cache.read("runs", sim_key)
+    import re
+
+    fs_key = re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
+    trade_log = _sim_cache.read("simulations", fs_key)
     if trade_log is None or trade_log.empty:
         return _result(f"Simulation '{sim_key}' has no trades.")
 

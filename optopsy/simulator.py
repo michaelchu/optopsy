@@ -445,7 +445,9 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         "max_win": float(pnl.max()),
         "max_loss": float(pnl.min()),
         "profit_factor": (
-            abs(total_wins / total_losses) if total_losses != 0 else float("inf")
+            abs(total_wins / total_losses)
+            if total_losses != 0
+            else (float("inf") if total_wins > 0 else 0.0)
         ),
         "max_drawdown": max_dd,
         "avg_days_in_trade": float(trade_log["days_held"].mean()),
@@ -590,6 +592,16 @@ def simulate(
     Returns:
         A :class:`SimulationResult` with trade log, equity curve, and summary.
     """
+    # Validate arguments
+    if capital <= 0:
+        raise ValueError(f"capital must be positive, got {capital}")
+    if quantity < 1:
+        raise ValueError(f"quantity must be >= 1, got {quantity}")
+    if max_positions < 1:
+        raise ValueError(f"max_positions must be >= 1, got {max_positions}")
+    if multiplier < 1:
+        raise ValueError(f"multiplier must be >= 1, got {multiplier}")
+
     # Resolve selector
     if isinstance(selector, str):
         if selector not in _BUILTIN_SELECTORS:
@@ -628,8 +640,15 @@ def simulate(
         raw["_entry_date"] = _derive_entry_date(raw)
         group_col = "_entry_date"
 
+    # Group by symbol + entry date so multi-symbol data picks one trade per
+    # symbol per date, not one trade across all symbols.
+    if "underlying_symbol" in raw.columns:
+        group_cols = ["underlying_symbol", group_col]
+    else:
+        group_cols = [group_col]
+
     selected_rows = []
-    for _, group in raw.groupby(group_col):
+    for _, group in raw.groupby(group_cols):
         row = select_fn(group)
         selected_rows.append(row)
 

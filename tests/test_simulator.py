@@ -464,6 +464,47 @@ class TestSummaryStats:
         assert s["losing_trades"] == 1
         assert s["total_trades"] == 3
 
+    def test_profit_factor_zero_when_all_breakeven(self):
+        """All breakeven trades → profit_factor should be 0, not inf."""
+        from optopsy.simulator import _compute_summary
+
+        trade_log = pd.DataFrame(
+            {
+                "realized_pnl": [0.0, 0.0],
+                "equity": [100_000.0, 100_000.0],
+                "days_held": [30, 30],
+            }
+        )
+        s = _compute_summary(trade_log, 100_000.0)
+        assert s["profit_factor"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Argument validation
+# ---------------------------------------------------------------------------
+
+
+class TestArgumentValidation:
+    def test_zero_capital_raises(self, data):
+        with pytest.raises(ValueError, match="capital must be positive"):
+            simulate(data, op.long_calls, capital=0)
+
+    def test_negative_capital_raises(self, data):
+        with pytest.raises(ValueError, match="capital must be positive"):
+            simulate(data, op.long_calls, capital=-1000)
+
+    def test_zero_quantity_raises(self, data):
+        with pytest.raises(ValueError, match="quantity must be >= 1"):
+            simulate(data, op.long_calls, quantity=0)
+
+    def test_zero_max_positions_raises(self, data):
+        with pytest.raises(ValueError, match="max_positions must be >= 1"):
+            simulate(data, op.long_calls, max_positions=0)
+
+    def test_zero_multiplier_raises(self, data):
+        with pytest.raises(ValueError, match="multiplier must be >= 1"):
+            simulate(data, op.long_calls, multiplier=0)
+
 
 # ---------------------------------------------------------------------------
 # Empty result
