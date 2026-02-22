@@ -820,10 +820,11 @@ def get_tool_schemas() -> list[dict]:
             "function": {
                 "name": "fetch_stock_data",
                 "description": (
-                    "Fetch historical daily OHLCV (open/high/low/close/volume) stock "
-                    "price data for a symbol via yfinance. Results are cached locally. "
-                    "Use this to inspect price history, verify signal dates, or prime "
-                    "the cache before running strategies with TA signals."
+                    "Fetch all available daily OHLCV (open/high/low/close/volume) "
+                    "stock price data for a symbol via yfinance. Always fetches the "
+                    "full history and caches it locally. Use this to inspect price "
+                    "history, verify signal dates, or prime the cache before running "
+                    "strategies with TA signals."
                 ),
                 "parameters": {
                     "type": "object",
@@ -831,14 +832,6 @@ def get_tool_schemas() -> list[dict]:
                         "symbol": {
                             "type": "string",
                             "description": "US stock ticker symbol (e.g. SPY, AAPL, QQQ)",
-                        },
-                        "start_date": {
-                            "type": "string",
-                            "description": "Start date (YYYY-MM-DD). Omit for all available history.",
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "description": "End date (YYYY-MM-DD). Omit for today.",
                         },
                     },
                     "required": ["symbol"],
