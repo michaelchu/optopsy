@@ -24,12 +24,17 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 ## AI Chat UI (Beta)
 
+> **Note:** The AI Chat UI is currently only available in beta pre-releases. Install the latest beta with:
+> ```bash
+> pip install --pre optopsy[ui]
+> ```
+
 An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
 
 ![AI Chat UI](docs/images/chat-ui.png)
 
 ```bash
-pip install optopsy[ui]
+pip install --pre optopsy[ui]
 optopsy-chat
 ```
 
@@ -52,11 +57,11 @@ See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) f
 ## Installation
 
 ```bash
-# Core library only
+# Core library only (latest stable release)
 pip install optopsy
 
-# With AI Chat UI
-pip install optopsy[ui]
+# With AI Chat UI (beta — requires pre-release)
+pip install --pre optopsy[ui]
 ```
 
 **Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
