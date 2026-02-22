@@ -1330,10 +1330,6 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
             if pct_mean is not None and pct_std and pct_std > 0:
                 sharpe = round(float(pct_mean / pct_std), 4)
 
-            # Profit factor: approximate from mean & win_rate when raw data
-            # is unavailable.  With win_rate=w and mean_return=m,
-            # avg_win ~ m/w and avg_loss ~ m/(1-w) doesn't hold exactly,
-            # so we only report it for simulation results.
             row = {
                 "label": key,
                 "strategy": entry.get("strategy", "?"),
@@ -1344,7 +1340,7 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                 "win_rate": win_rate,
                 "sharpe": sharpe,
                 "max_drawdown": None,
-                "profit_factor": None,
+                "profit_factor": entry.get("profit_factor"),
             }
         rows.append(row)
 
