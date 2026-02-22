@@ -31,7 +31,6 @@ from ._helpers import (
     _signal_slot_summary,
     _strategy_llm_summary,
     _yf_cache,
-    _yf_compute_gaps,
 )
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
@@ -542,51 +541,36 @@ def _handle_fetch_stock_data(arguments, dataset, signals, datasets, results, _re
         return _result("yfinance is not installed. Run: pip install yfinance")
 
     symbol = arguments["symbol"].upper()
-    start_date = arguments.get("start_date")
-    end_date = arguments.get("end_date")
-
-    start_dt = pd.Timestamp(start_date).date() if start_date else None
-    end_dt = pd.Timestamp(end_date).date() if end_date else date.today()
-    # When no start date given, fetch the full available history
-    fetch_start = start_dt or date(2000, 1, 1)
 
     cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-    gaps = _yf_compute_gaps(cached, fetch_start, end_dt)
 
-    if gaps:
-        new_frames = []
-        for gap_start, gap_end in gaps:
-            yf_start = gap_start or str(fetch_start)
-            yf_end = str(
-                (pd.Timestamp(gap_end).date() + timedelta(days=1))
-                if gap_end
-                else (end_dt + timedelta(days=1))
-            )
-            try:
-                raw = yf.download(symbol, start=yf_start, end=yf_end, progress=False)
-                if not raw.empty:
-                    new_frames.append(_normalise_yf_df(raw, symbol))
-            except (OSError, ValueError) as exc:
-                _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
-
-        if new_frames:
-            new_data = pd.concat(new_frames, ignore_index=True)
+    try:
+        if cached is None or cached.empty:
+            raw = yf.download(symbol, period="max", progress=False)
+        else:
+            cache_max = pd.to_datetime(cached["date"]).dt.date.max()
+            fetch_start = cache_max + timedelta(days=1)
+            if fetch_start > date.today():
+                raw = pd.DataFrame()
+            else:
+                raw = yf.download(
+                    symbol,
+                    start=str(fetch_start),
+                    end=str(date.today() + timedelta(days=1)),
+                    progress=False,
+                )
+        if not raw.empty:
+            new_data = _normalise_yf_df(raw, symbol)
             cached = _yf_cache.merge_and_save(
                 _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
             )
+    except (OSError, ValueError) as exc:
+        _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
 
     if cached is None or cached.empty:
         return _result(f"No stock data found for {symbol}.")
 
-    # Slice to requested range and rename date → quote_date for display
     df = cached.rename(columns={"date": "quote_date"})
-    if start_dt:
-        df = df[pd.to_datetime(df["quote_date"]).dt.date >= start_dt]
-    df = df[pd.to_datetime(df["quote_date"]).dt.date <= end_dt]
-
-    if df.empty:
-        return _result(f"No stock data for {symbol} in the requested date range.")
-
     d_min = pd.to_datetime(df["quote_date"]).dt.date.min()
     d_max = pd.to_datetime(df["quote_date"]).dt.date.max()
     summary = (
