@@ -427,7 +427,10 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     # daily returns suitable for the 252-day annualisation factor.
     _has_dates = "exit_date" in trade_log.columns and "entry_date" in trade_log.columns
     if _has_dates:
-        equity_daily = trade_log.set_index("exit_date")["equity"].copy()
+        # When multiple trades exit on the same date, use groupby to get
+        # the final equity value for each unique exit date. This ensures
+        # a unique datetime index required by resample("D").
+        equity_daily = trade_log.groupby("exit_date")["equity"].last()
         equity_daily.index = pd.to_datetime(equity_daily.index)
         # Prepend initial capital at the first entry date so the full
         # period is represented (including flat days before first exit).
