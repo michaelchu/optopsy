@@ -218,13 +218,13 @@ def _group_by_intervals(
         wins = valid[valid > 0].sum()
         losses = valid[valid < 0].sum()
         if losses == 0:
-            pf = float("inf") if wins > 0 else 0.0
+            pf = np.nan
         else:
             pf = abs(float(wins) / float(losses))
         return pd.Series({"win_rate": wr, "profit_factor": pf})
 
     extra = grouped.apply(_extra_metrics)
-    # Single-level groupby: apply returns a DataFrame (Series index → columns).
+    # Single-level groupby: apply returns a DataFrame directly.
     # Multi-level groupby: apply returns a Series with an extra index level;
     # unstack() pivots that level into columns to match grouped_dataset shape.
     if isinstance(extra, pd.DataFrame):

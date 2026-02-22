@@ -420,7 +420,11 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     equity = trade_log["equity"]
     max_dd = _max_drawdown(equity)
 
-    # Risk-adjusted metrics from per-trade returns
+    # Risk-adjusted metrics from per-trade returns.
+    # NOTE: These are per-trade returns, not daily returns. The default 252-day
+    # annualisation factor in sharpe/sortino/calmar may overstate ratios when
+    # trades occur less frequently than daily. For more accurate annualised
+    # metrics, pass a trading_days value matching the actual trade cadence.
     returns = trade_log["pct_change"]
 
     return {
