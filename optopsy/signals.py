@@ -531,16 +531,28 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
         underlying_price, implied_volatility)`` — one row per
         symbol/date with the ATM IV.
     """
+    _empty_cols = [
+        "underlying_symbol",
+        "quote_date",
+        "underlying_price",
+        "implied_volatility",
+    ]
     df = options_data.dropna(subset=["implied_volatility"]).copy()
     if df.empty:
-        return pd.DataFrame(
-            columns=[
-                "underlying_symbol",
-                "quote_date",
-                "underlying_price",
-                "implied_volatility",
-            ]
+        return pd.DataFrame(columns=_empty_cols)
+
+    # When multiple expirations exist per (symbol, quote_date), use only
+    # the nearest forward expiration to avoid blending IV across terms.
+    if "expiration" in df.columns:
+        df["_dte"] = (df["expiration"] - df["quote_date"]).dt.days
+        df = df[df["_dte"] > 0]
+        if df.empty:
+            return pd.DataFrame(columns=_empty_cols)
+        nearest_dte = df.groupby(["underlying_symbol", "quote_date"])["_dte"].transform(
+            "min"
         )
+        df = df[df["_dte"] == nearest_dte].drop(columns=["_dte"])
+
     df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
     # For each (symbol, quote_date), keep the strike closest to underlying
     idx = df.groupby(["underlying_symbol", "quote_date"])["_abs_otm"].idxmin()
@@ -911,10 +923,19 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
     if "underlying_price" not in df.columns and "close" in df.columns:
         df["underlying_price"] = df["close"]
     df["quote_date"] = normalize_dates(df["quote_date"])
-    df = (
-        df.drop_duplicates(["underlying_symbol", "quote_date"])
-        .sort_values(["underlying_symbol", "quote_date"])
+    # IV-rank signals need multiple strikes per (symbol, date) to compute
+    # ATM IV.  Only deduplicate when the data lacks per-strike option rows.
+    if "implied_volatility" not in df.columns:
+        df = (
+            df.drop_duplicates(["underlying_symbol", "quote_date"])
+            .sort_values(["underlying_symbol", "quote_date"])
+            .reset_index(drop=True)
+        )
+    else:
+        df = df.sort_values(["underlying_symbol", "quote_date"]).reset_index(drop=True)
+    mask = signal_func(df)
+    return (
+        df.loc[mask, ["underlying_symbol", "quote_date"]]
+        .drop_duplicates()
         .reset_index(drop=True)
     )
-    mask = signal_func(df)
-    return df.loc[mask, ["underlying_symbol", "quote_date"]].reset_index(drop=True)
