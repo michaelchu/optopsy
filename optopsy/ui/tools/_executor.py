@@ -408,6 +408,25 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
         for s in signal_specs
     )
 
+    # IV signals use options data; OHLCV signals (RSI, SMA, etc.) use stock
+    # data. Combining them in a single build_signal call is not supported
+    # because each type requires a different dataset shape.
+    if has_iv_signal and needs_stock:
+        iv_names = [s["name"] for s in signal_specs if s.get("name") in _IV_SIGNALS]
+        stock_names = [
+            s["name"]
+            for s in signal_specs
+            if s.get("name") not in _DATE_ONLY_SIGNALS
+            and s.get("name") not in _IV_SIGNALS
+        ]
+        return _result(
+            f"Cannot combine IV signals ({', '.join(iv_names)}) with "
+            f"OHLCV signals ({', '.join(stock_names)}) in one build_signal "
+            f"call. IV signals use options data while OHLCV signals use "
+            f"stock price data. Build them as separate slots and pass them "
+            f"to run_strategy via entry_signal_slot / exit_signal_slot.",
+        )
+
     signal_data = None
     if has_iv_signal:
         # IV signals need options data with implied_volatility.
@@ -1774,9 +1793,10 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     if df.empty:
         return _result(f"No options with IV data on {quote_date_str}.")
 
-    # Find ATM options: closest strike to underlying_price per expiration
-    underlying_price = df["underlying_price"].iloc[0]
-    df["_abs_otm"] = (df["strike"] - underlying_price).abs()
+    # Find ATM options: closest strike to underlying_price per expiration.
+    # Use per-row underlying_price (vectorized) so multi-symbol datasets
+    # and intra-day price variations are handled correctly.
+    df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
     atm_idx = df.groupby("expiration")["_abs_otm"].idxmin()
     atm_df = df.loc[atm_idx].copy()
 

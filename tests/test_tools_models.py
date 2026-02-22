@@ -334,6 +334,8 @@ class TestSchemaGeneration:
             "simulate",
             "get_simulation_trades",
             "fetch_options_data",
+            "plot_vol_surface",
+            "iv_term_structure",
         }
         assert set(TOOL_ARG_MODELS.keys()) == expected
 
