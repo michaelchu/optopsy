@@ -33,6 +33,20 @@ pip install optopsy[ui]
 optopsy-chat
 ```
 
+### What the agent can do
+
+- **Run any of the 28 strategies** — ask in plain English (e.g. *"Run iron condors on SPY with 30-45 DTE"*) and the agent picks the right function and parameters
+- **Fetch live options data** — pull options chains from EODHD (requires `EODHD_API_KEY`) with smart caching that only re-fetches missing date ranges
+- **Fetch stock price history** — download OHLCV data via yfinance for charting and signal analysis
+- **Load & preview CSV data** — drag-and-drop a CSV into the chat or point to a file on disk; inspect shape, columns, date ranges, and sample rows
+- **Scan & compare strategies** — run up to 50 strategy/parameter combinations in one call and get a ranked leaderboard
+- **Suggest parameters** — analyze your dataset's DTE and OTM% distributions and recommend sensible starting ranges
+- **Build entry/exit signals** — compose technical analysis signals (RSI, MACD, Bollinger Bands, EMA crossovers, SMA, ATR, day-of-week) with AND/OR logic
+- **Simulate trades** — run chronological simulations with starting capital, position limits, and a full equity curve with metrics (win rate, profit factor, max drawdown, etc.)
+- **Create interactive charts** — generate Plotly charts (line, bar, scatter, histogram, heatmap, candlestick with indicator overlays) from results, simulations, or raw data
+- **Multi-dataset sessions** — load multiple symbols, run the same strategy across each, and compare side-by-side
+- **Session memory** — the agent tracks all strategy runs and results so it can reference prior analysis without re-running
+
 See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for setup and configuration details.
 
 ## Installation
