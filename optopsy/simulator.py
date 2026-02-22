@@ -420,12 +420,14 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     equity = trade_log["equity"]
     max_dd = _max_drawdown(equity)
 
-    # Risk-adjusted metrics from per-trade returns.
-    # NOTE: These are per-trade returns, not daily returns. The default 252-day
-    # annualisation factor in sharpe/sortino/calmar may overstate ratios when
-    # trades occur less frequently than daily. For more accurate annualised
-    # metrics, pass a trading_days value matching the actual trade cadence.
-    returns = trade_log["pct_change"]
+    # Derive daily returns from the equity curve for annualised metrics
+    # (Sharpe, Sortino, Calmar).  Per-trade returns are NOT daily, so
+    # annualising them with trading_days=252 would materially overstate
+    # ratios when trades occur less frequently than daily.
+    daily_returns = equity.pct_change().dropna()
+
+    # Per-trade returns are still correct for VaR/CVaR (no annualisation).
+    per_trade_returns = trade_log["pct_change"]
 
     return {
         "total_trades": len(trade_log),
@@ -446,11 +448,11 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         ),
         "max_drawdown": max_dd,
         "avg_days_in_trade": float(trade_log["days_held"].mean()),
-        "sharpe_ratio": sharpe_ratio(returns),
-        "sortino_ratio": sortino_ratio(returns),
-        "var_95": value_at_risk(returns, 0.95),
-        "cvar_95": conditional_value_at_risk(returns, 0.95),
-        "calmar_ratio": calmar_ratio(returns),
+        "sharpe_ratio": sharpe_ratio(daily_returns),
+        "sortino_ratio": sortino_ratio(daily_returns),
+        "var_95": value_at_risk(per_trade_returns, 0.95),
+        "cvar_95": conditional_value_at_risk(per_trade_returns, 0.95),
+        "calmar_ratio": calmar_ratio(daily_returns),
     }
 
 
