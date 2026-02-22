@@ -1694,7 +1694,7 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
     # Ensure quote_date is datetime-like for .dt accessor
     try:
         ds["quote_date"] = pd.to_datetime(ds["quote_date"])
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         return _result(f"Cannot parse quote_date column as datetime: {e}")
 
     quote_date_str = arguments.get("quote_date")
@@ -1783,7 +1783,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     # Ensure quote_date is datetime-like for .dt accessor
     try:
         ds["quote_date"] = pd.to_datetime(ds["quote_date"])
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         return _result(f"Cannot parse quote_date column as datetime: {e}")
 
     quote_date_str = arguments.get("quote_date")
