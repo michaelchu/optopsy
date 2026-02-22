@@ -4,7 +4,6 @@ import re
 from datetime import date, timedelta
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 import optopsy.signals as _signals
@@ -438,12 +437,13 @@ def _make_result_summary(
     }
     if "pct_change" in result_df.columns:
         pct = result_df["pct_change"].dropna()
-        wins = pct[pct > 0].sum()
-        losses = pct[pct < 0].sum()
+        wins = float(pct[pct > 0].sum())
+        losses = float(pct[pct < 0].sum())
         if losses == 0:
-            pf = float("inf") if float(wins) > 0 else 0.0
+            pf = float("inf") if wins > 0 else 0.0
         else:
-            pf = abs(float(wins) / float(losses))
+            # Match metrics.profit_factor pattern: abs(wins) / abs(losses)
+            pf = abs(wins) / abs(losses)
         base.update(
             {
                 "count": len(pct),
@@ -460,23 +460,23 @@ def _make_result_summary(
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
-        # Extract weighted profit_factor from aggregated output if available.
-        # Filter out inf values before averaging — groups with no losses
-        # have inf profit_factor which would dominate a weighted average.
+        # Compute aggregated profit_factor by combining gross wins and
+        # losses across all groups, then dividing.  This avoids the
+        # pitfall of weighted-averaging per-group profit factors where
+        # inf values (groups with no losses) would dominate or need
+        # filtering — which would make the aggregate not equal the true
+        # all-trades combined ratio.
         agg_pf = None
-        if "profit_factor" in result_df.columns and "count" in result_df.columns:
-            valid = result_df[
-                result_df["profit_factor"].notna()
-                & np.isfinite(result_df["profit_factor"])
-            ]
-            if not valid.empty:
-                agg_pf = round(
-                    float(
-                        (valid["profit_factor"] * valid["count"]).sum()
-                        / valid["count"].sum()
-                    ),
-                    4,
-                )
+        if "mean" in result_df.columns and "count" in result_df.columns:
+            group_pnl = result_df["mean"] * result_df["count"]
+            total_wins = float(group_pnl[group_pnl > 0].sum())
+            total_losses = float(group_pnl[group_pnl < 0].sum())
+            if total_losses != 0:
+                agg_pf = round(abs(total_wins) / abs(total_losses), 4)
+            elif total_wins > 0:
+                agg_pf = float("inf")
+            else:
+                agg_pf = 0.0
         base.update(
             {
                 "count": total,

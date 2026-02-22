@@ -209,11 +209,27 @@ def _group_by_intervals(
     grouped = data.groupby(cols, observed=True)["pct_change"]
     grouped_dataset = grouped.describe()
 
-    # Compute win_rate and profit_factor per group using vectorized aggregation
-    win_counts = grouped.agg(lambda s: (s.dropna() > 0).sum())
-    valid_counts = grouped.agg(lambda s: s.dropna().shape[0])
-    gross_wins = grouped.agg(lambda s: s[s > 0].sum())
-    gross_losses = grouped.agg(lambda s: s[s < 0].sum())
+    # Compute win_rate and profit_factor per group using fully vectorized
+    # operations.  Pre-compute boolean/masked columns once, then let
+    # groupby.sum() run at C level — avoids per-group Python lambdas and
+    # repeated dropna() calls.
+    pct = data["pct_change"]
+    _metrics = pd.DataFrame(
+        {
+            "_valid": pct.notna().astype(int),
+            "_win": (pct > 0).astype(int),
+            "_win_amt": pct.where(pct > 0, 0.0).fillna(0.0),
+            "_loss_amt": pct.where(pct < 0, 0.0).fillna(0.0),
+        },
+        index=data.index,
+    )
+    for c in cols:
+        _metrics[c] = data[c]
+    _g = _metrics.groupby(cols, observed=True)
+    valid_counts = _g["_valid"].sum()
+    win_counts = _g["_win"].sum()
+    gross_wins = _g["_win_amt"].sum()
+    gross_losses = _g["_loss_amt"].sum()
 
     grouped_dataset["win_rate"] = np.where(
         valid_counts > 0, win_counts / valid_counts, np.nan
