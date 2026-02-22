@@ -25,9 +25,11 @@ _MAX_OFFSET = 10000  # EODHD rejects offsets beyond ~10K
 _TIMEOUT = 60
 _MAX_RETRIES = 2
 _FIELDS = (
-    "underlying_symbol,type,exp_date,tradetime,strike,bid,ask,"
-    "last,volume,delta,gamma,theta,vega,impliedVolatility,"
-    "open_interest,midpoint,expiration_type"
+    "underlying_symbol,type,exp_date,expiration_type,tradetime,strike,"
+    "bid,ask,last,open,high,low,"
+    "volume,open_interest,"
+    "delta,gamma,theta,vega,rho,volatility,"
+    "midpoint,moneyness,theoretical,dte"
 )
 
 _COLUMN_MAP = {
@@ -43,22 +45,30 @@ _COLUMN_MAP = {
     "gamma": "gamma",
     "theta": "theta",
     "vega": "vega",
-    "impliedVolatility": "implied_volatility",
+    "rho": "rho",
+    "volatility": "implied_volatility",
 }
 
 _OPTIONS_NUMERIC_COLS = [
     "strike",
     "bid",
     "ask",
-    "volume",
     "last",
+    "open",
+    "high",
+    "low",
+    "volume",
+    "open_interest",
     "delta",
     "gamma",
     "theta",
     "vega",
+    "rho",
     "implied_volatility",
-    "open_interest",
     "midpoint",
+    "moneyness",
+    "theoretical",
+    "dte",
 ]
 
 _OPTIONS_DEDUP_COLS = ["quote_date", "expiration", "strike", "option_type"]
@@ -545,7 +555,16 @@ class EODHDProvider(DataProvider):
             "bid",
             "ask",
         ]
-        optional = ["delta", "gamma", "theta", "vega", "implied_volatility", "volume"]
+        optional = [
+            "delta",
+            "gamma",
+            "theta",
+            "vega",
+            "rho",
+            "implied_volatility",
+            "volume",
+            "open_interest",
+        ]
         keep.extend([c for c in optional if c in df.columns])
         return df[[c for c in keep if c in df.columns]]
 
