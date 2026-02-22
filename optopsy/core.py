@@ -198,11 +198,47 @@ def _cut_options_by_delta(
 def _group_by_intervals(
     data: pd.DataFrame, cols: List[str], drop_na: bool
 ) -> pd.DataFrame:
-    """Group options by intervals and calculate descriptive statistics."""
-    # this is a bottleneck, try to optimize
+    """Group options by intervals and calculate descriptive statistics.
+
+    In addition to the standard ``describe()`` output (count, mean, std, min,
+    25%, 50%, 75%, max), this also computes **win_rate** and **profit_factor**
+    per group from the raw ``pct_change`` values.
+    """
     # Use observed=True to only return groups with actual data (avoids pandas 3.0
     # issue where observed=False returns all category combinations as empty rows)
-    grouped_dataset = data.groupby(cols, observed=True)["pct_change"].describe()
+    grouped = data.groupby(cols, observed=True)["pct_change"]
+    grouped_dataset = grouped.describe()
+
+    # Compute win_rate and profit_factor per group using fully vectorized
+    # operations.  Pre-compute boolean/masked columns once, then let
+    # groupby.sum() run at C level — avoids per-group Python lambdas and
+    # repeated dropna() calls.
+    pct = data["pct_change"]
+    _metrics = pd.DataFrame(
+        {
+            "_valid": pct.notna().astype(int),
+            "_win": (pct > 0).astype(int),
+            "_win_amt": pct.where(pct > 0, 0.0).fillna(0.0),
+            "_loss_amt": pct.where(pct < 0, 0.0).fillna(0.0),
+        },
+        index=data.index,
+    )
+    for c in cols:
+        _metrics[c] = data[c]
+    _g = _metrics.groupby(cols, observed=True)
+    valid_counts = _g["_valid"].sum()
+    win_counts = _g["_win"].sum()
+    gross_wins = _g["_win_amt"].sum()
+    gross_losses = _g["_loss_amt"].sum()
+
+    grouped_dataset["win_rate"] = np.where(
+        valid_counts > 0, win_counts / valid_counts, np.nan
+    )
+    grouped_dataset["profit_factor"] = np.where(
+        gross_losses != 0,
+        np.abs(gross_wins / gross_losses),
+        np.where(gross_wins > 0, np.inf, 0.0),
+    )
 
     # if any non-count columns return NaN remove the row
     if drop_na:
