@@ -1627,8 +1627,15 @@ def execute_tool(
             validated = model_cls.model_validate(arguments)
             arguments = validated.model_dump(exclude_none=True)
         except ValidationError as e:
+            items = []
+            for err in e.errors():
+                loc = ".".join(str(p) for p in err.get("loc", ())) or "<root>"
+                items.append(f"{loc}: {err.get('msg', 'invalid value')}")
+            error_text = "; ".join(items)
+            if len(error_text) > 500:
+                error_text = f"{error_text[:497]}..."
             return ToolResult(
-                f"Invalid arguments for {tool_name}: {e}",
+                f"Invalid arguments for {tool_name}: {error_text}",
                 dataset,
                 signals=signals,
                 datasets=datasets,

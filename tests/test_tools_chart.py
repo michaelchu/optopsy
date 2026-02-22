@@ -443,7 +443,7 @@ class TestChartErrors:
         )
         assert result.chart_figure is None
         summary = result.llm_summary.lower()
-        assert "invalid" in summary or "unknown" in summary
+        assert "invalid arguments for create_chart" in summary
 
     def test_unknown_data_source(self, option_data):
         result = execute_tool(
@@ -453,7 +453,7 @@ class TestChartErrors:
         )
         assert result.chart_figure is None
         summary = result.llm_summary.lower()
-        assert "invalid" in summary or "unknown" in summary
+        assert "invalid arguments for create_chart" in summary
 
     def test_empty_dataframe(self):
         empty = pd.DataFrame(columns=["a", "b"])
@@ -667,7 +667,7 @@ class TestIndicatorCharts:
         )
         assert result.chart_figure is None
         summary = result.llm_summary.lower()
-        assert "unknown indicator" in summary or "invalid" in summary
+        assert "invalid arguments for create_chart" in summary
 
     def test_indicators_require_close_column(self):
         """Indicators on data without a close column should error."""

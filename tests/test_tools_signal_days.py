@@ -150,4 +150,5 @@ class TestEntrySignalDaysExecutor:
             option_data_entry_exit,
         )
         summary = result.llm_summary.lower()
-        assert "unknown" in summary or "invalid" in summary
+        assert "invalid arguments for run_strategy" in summary
+        assert "unknown signal" in summary
