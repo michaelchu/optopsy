@@ -42,7 +42,11 @@ MANIFEST
 *.swo
 
 /venv/
-.claude/
+# Claude Code - ignore local user config but track shared settings and hooks
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/**
 
 # Environment variables
 .env
