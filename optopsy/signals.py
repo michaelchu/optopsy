@@ -537,7 +537,9 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
         "underlying_price",
         "implied_volatility",
     ]
-    df = options_data.dropna(subset=["implied_volatility"]).copy()
+    df = options_data.dropna(
+        subset=["implied_volatility", "strike", "underlying_price"]
+    ).copy()
     if df.empty:
         return pd.DataFrame(columns=_empty_cols)
 

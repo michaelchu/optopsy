@@ -522,6 +522,7 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
         "strike",
         "option_type",
         "implied_volatility",
+        "expiration",
     ]
     cols = [c for c in keep if c in dataset.columns]
     if len(cols) < len(keep):
