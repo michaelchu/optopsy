@@ -233,6 +233,18 @@ class TestValidationRejection:
         with pytest.raises(ValidationError):
             FetchStockDataArgs.model_validate({})
 
+    def test_fetch_options_invalid_option_type(self):
+        with pytest.raises(ValidationError):
+            FetchOptionsDataArgs.model_validate(
+                {"symbol": "AAPL", "option_type": "straddle"}
+            )
+
+    def test_fetch_options_invalid_expiration_type(self):
+        with pytest.raises(ValidationError):
+            FetchOptionsDataArgs.model_validate(
+                {"symbol": "AAPL", "expiration_type": "quarterly"}
+            )
+
     def test_create_chart_missing_required(self):
         with pytest.raises(ValidationError):
             CreateChartArgs.model_validate({"chart_type": "line"})

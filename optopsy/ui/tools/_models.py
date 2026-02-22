@@ -651,14 +651,12 @@ class FetchOptionsDataArgs(BaseModel):
         None,
         description="End date (YYYY-MM-DD). Defaults to today.",
     )
-    option_type: str | None = Field(
+    option_type: Literal["call", "put"] | None = Field(
         None,
-        json_schema_extra={"enum": ["call", "put"]},
         description="Filter by option type. Omit for both.",
     )
-    expiration_type: str | None = Field(
+    expiration_type: Literal["monthly", "weekly"] | None = Field(
         None,
-        json_schema_extra={"enum": ["monthly", "weekly"]},
         description=(
             "Filter by expiration cycle. Defaults to 'monthly'. "
             "Use 'weekly' for weekly expirations."
