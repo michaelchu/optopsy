@@ -224,7 +224,9 @@ def _group_by_intervals(
         return pd.Series({"win_rate": wr, "profit_factor": pf})
 
     extra = grouped.apply(_extra_metrics)
-    # Handle both single-index and MultiIndex grouping
+    # Single-level groupby: apply returns a DataFrame (Series index → columns).
+    # Multi-level groupby: apply returns a Series with an extra index level;
+    # unstack() pivots that level into columns to match grouped_dataset shape.
     if isinstance(extra, pd.DataFrame):
         grouped_dataset = pd.concat([grouped_dataset, extra], axis=1)
     else:

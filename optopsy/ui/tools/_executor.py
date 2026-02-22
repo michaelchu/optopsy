@@ -68,6 +68,13 @@ def _register(name: str):
 # ---------------------------------------------------------------------------
 
 
+def _fmt_pf(value: float) -> str:
+    """Format profit_factor for display, handling infinity."""
+    if value == float("inf"):
+        return "∞ (no losses)"
+    return f"{value:.2f}"
+
+
 def _resolve_dataset(
     name: str | None,
     active: pd.DataFrame | None,
@@ -989,12 +996,13 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     }
 
     # Format output
+    pf_str = _fmt_pf(s["profit_factor"])
     llm_summary = (
         f"simulate({strategy_name}): {s['total_trades']} trades, "
         f"win_rate={s['win_rate']:.1%}, "
         f"total_return={s['total_return']:.2%}, "
         f"max_drawdown={s['max_drawdown']:.2%}, "
-        f"profit_factor={s['profit_factor']:.2f}, "
+        f"profit_factor={pf_str}, "
         f"sharpe={s['sharpe_ratio']:.2f}, "
         f"sortino={s['sortino_ratio']:.2f}"
     )
@@ -1014,7 +1022,7 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         ("Avg Loss", f"${s['avg_loss']:,.2f}"),
         ("Max Win", f"${s['max_win']:,.2f}"),
         ("Max Loss", f"${s['max_loss']:,.2f}"),
-        ("Profit Factor", f"{s['profit_factor']:.2f}"),
+        ("Profit Factor", pf_str),
         ("Max Drawdown", f"{s['max_drawdown']:.2%}"),
         ("Avg Days in Trade", f"{s['avg_days_in_trade']:.1f}"),
         ("Sharpe Ratio", f"{s['sharpe_ratio']:.2f}"),

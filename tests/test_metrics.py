@@ -1,6 +1,5 @@
 """Tests for the risk metrics module."""
 
-
 import numpy as np
 import pandas as pd
 import pytest

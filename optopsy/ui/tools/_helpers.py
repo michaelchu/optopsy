@@ -4,6 +4,7 @@ import re
 from datetime import date, timedelta
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 import optopsy.signals as _signals
@@ -459,10 +460,15 @@ def _make_result_summary(
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
-        # Extract weighted profit_factor from aggregated output if available
+        # Extract weighted profit_factor from aggregated output if available.
+        # Filter out inf values before averaging — groups with no losses
+        # have inf profit_factor which would dominate a weighted average.
         agg_pf = None
         if "profit_factor" in result_df.columns and "count" in result_df.columns:
-            valid = result_df[result_df["profit_factor"].notna()]
+            valid = result_df[
+                result_df["profit_factor"].notna()
+                & np.isfinite(result_df["profit_factor"])
+            ]
             if not valid.empty:
                 agg_pf = round(
                     float(
