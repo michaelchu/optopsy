@@ -327,6 +327,7 @@ class TestSchemaGeneration:
             "preview_signal",
             "list_signals",
             "list_results",
+            "compare_results",
             "inspect_cache",
             "clear_cache",
             "fetch_stock_data",

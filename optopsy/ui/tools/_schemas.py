@@ -328,6 +328,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "combination has already been run and avoid redundant calls. "
         "Returns a table sorted by mean_return descending."
     ),
+    "compare_results": (
+        "Compare multiple strategy results side-by-side. Produces a "
+        "structured comparison table with metrics (mean return, win rate, "
+        "Sharpe ratio, max drawdown, profit factor) and highlights the "
+        "best performer on each metric. Use this after running multiple "
+        "strategies to get a clear comparison instead of describing "
+        "differences in prose. Optionally includes a grouped bar chart."
+    ),
     "build_signal": (
         "Build a TA signal (or compose multiple signals) and store the "
         "resulting valid dates under a named slot. Use this to create "

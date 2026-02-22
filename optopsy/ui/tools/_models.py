@@ -634,6 +634,31 @@ class SimulateArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
         return None
 
 
+class CompareResultsArgs(BaseModel):
+    result_keys: list[str] | None = Field(
+        None,
+        description=(
+            "List of result keys to compare (from list_results). "
+            "Omit to compare all results in this session."
+        ),
+    )
+    sort_by: str | None = Field(
+        None,
+        description=(
+            "Metric to sort by: 'mean_return', 'win_rate', 'sharpe', "
+            "'max_drawdown', 'profit_factor', or 'count'. "
+            "Default: 'mean_return'."
+        ),
+    )
+    include_chart: bool | None = Field(
+        None,
+        description=(
+            "If true, attach a grouped bar chart comparing key metrics "
+            "across results. Default: true."
+        ),
+    )
+
+
 class GetSimulationTradesArgs(BaseModel):
     simulation_key: str | None = Field(
         None,
@@ -711,6 +736,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "inspect_cache": InspectCacheArgs,
     "clear_cache": ClearCacheArgs,
     "fetch_stock_data": FetchStockDataArgs,
+    "compare_results": CompareResultsArgs,
     "create_chart": CreateChartArgs,
     "simulate": SimulateArgs,
     "get_simulation_trades": GetSimulationTradesArgs,
