@@ -119,6 +119,12 @@ def chain_csv():
         yield path
 
 
+@pytest.fixture(scope="module")
+def chain_data(chain_csv):
+    """Load the chain CSV into a DataFrame (avoids repeating op.csv_data)."""
+    return op.csv_data(chain_csv)
+
+
 # ---------------------------------------------------------------------------
 # Losing-trade fixture — underlying drops, long calls lose
 #
@@ -150,6 +156,12 @@ def losing_csv():
         yield path
 
 
+@pytest.fixture(scope="module")
+def losing_data(losing_csv):
+    """Load the losing CSV into a DataFrame."""
+    return op.csv_data(losing_csv)
+
+
 # ---------------------------------------------------------------------------
 # E2E: long_calls — hand-calculated P&L
 # ---------------------------------------------------------------------------
@@ -159,27 +171,24 @@ class TestLongCallsE2E:
     """Full pipeline: CSV → csv_data → long_calls → simulate.
 
     With nearest selector and underlying at 212, the 210 strike is nearest.
-    Trade 1: buy ask 4.60, sell bid 6.00.
-      realized_pnl = (6.00 - 4.60) * 1 * 100 = 140.00
+    Trade 1: entry mid=(4.50+4.60)/2=4.55, exit mid=(6.00+6.10)/2=6.05.
+      realized_pnl = (6.05 - 4.55) * 1 * 100 = 150.00
     """
 
-    def test_full_pipeline_returns_simulation_result(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls)
+    def test_full_pipeline_returns_simulation_result(self, chain_data):
+        result = op.simulate(chain_data, op.long_calls)
         assert isinstance(result, SimulationResult)
 
-    def test_trade_log_has_correct_columns(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls)
+    def test_trade_log_has_correct_columns(self, chain_data):
+        result = op.simulate(chain_data, op.long_calls)
         assert set(result.trade_log.columns) == set(_TRADE_LOG_COLUMNS)
 
-    def test_trade_count(self, chain_csv):
-        data = op.csv_data(chain_csv)
+    def test_trade_count(self, chain_data):
         # max_positions=1: trade 2 overlaps trade 1, so only 2 trades execute
-        result = op.simulate(data, op.long_calls, max_positions=1)
+        result = op.simulate(chain_data, op.long_calls, max_positions=1)
         assert len(result.trade_log) == 2
 
-    def test_first_trade_pnl(self, chain_csv):
+    def test_first_trade_pnl(self, chain_data):
         """Verify hand-calculated P&L for the first long call trade.
 
         Nearest selector picks 210 strike (closest to underlying 212).
@@ -187,9 +196,8 @@ class TestLongCallsE2E:
         exit_proceeds = mid = (6.00+6.10)/2 = 6.05
         realized_pnl = (6.05 - 4.55) * 1 * 100 = 150.00
         """
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, capital=100_000, quantity=1, multiplier=100
+            chain_data, op.long_calls, capital=100_000, quantity=1, multiplier=100
         )
         first = result.trade_log.iloc[0]
         assert first["entry_cost"] == pytest.approx(4.55)
@@ -197,25 +205,22 @@ class TestLongCallsE2E:
         assert first["realized_pnl"] == pytest.approx(150.0)
         assert first["dollar_cost"] == pytest.approx(455.0)
 
-    def test_equity_curve_matches_trade_log(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls)
+    def test_equity_curve_matches_trade_log(self, chain_data):
+        result = op.simulate(chain_data, op.long_calls)
         assert len(result.equity_curve) == len(result.trade_log)
         assert result.equity_curve.iloc[-1] == result.trade_log.iloc[-1]["equity"]
 
-    def test_summary_metrics_consistent(self, chain_csv):
+    def test_summary_metrics_consistent(self, chain_data):
         capital = 50_000.0
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, capital=capital)
+        result = op.simulate(chain_data, op.long_calls, capital=capital)
         s = result.summary
 
         assert s["total_trades"] == len(result.trade_log)
         assert s["winning_trades"] + s["losing_trades"] == s["total_trades"]
         assert s["total_return"] == pytest.approx(s["total_pnl"] / capital)
 
-    def test_cumulative_pnl_is_cumsum(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls)
+    def test_cumulative_pnl_is_cumsum(self, chain_data):
+        result = op.simulate(chain_data, op.long_calls)
         log = result.trade_log
         expected_cum = log["realized_pnl"].cumsum()
         pd.testing.assert_series_equal(
@@ -224,10 +229,9 @@ class TestLongCallsE2E:
             check_names=False,
         )
 
-    def test_equity_equals_capital_plus_cumulative_pnl(self, chain_csv):
+    def test_equity_equals_capital_plus_cumulative_pnl(self, chain_data):
         capital = 75_000.0
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, capital=capital)
+        result = op.simulate(chain_data, op.long_calls, capital=capital)
         log = result.trade_log
         expected_equity = capital + log["cumulative_pnl"]
         pd.testing.assert_series_equal(
@@ -251,27 +255,24 @@ class TestLosingTradeE2E:
     realized_pnl = (0.05 - 2.45) * 1 * 100 = -240.00
     """
 
-    def test_losing_trade_negative_pnl(self, losing_csv):
-        data = op.csv_data(losing_csv)
+    def test_losing_trade_negative_pnl(self, losing_data):
         result = op.simulate(
-            data, op.long_calls, capital=100_000, quantity=1, multiplier=100
+            losing_data, op.long_calls, capital=100_000, quantity=1, multiplier=100
         )
         assert len(result.trade_log) == 1
         trade = result.trade_log.iloc[0]
         assert trade["realized_pnl"] == pytest.approx(-240.0)
         assert trade["equity"] == pytest.approx(100_000 - 240.0)
 
-    def test_losing_trade_counted_as_loss(self, losing_csv):
-        data = op.csv_data(losing_csv)
-        result = op.simulate(data, op.long_calls)
+    def test_losing_trade_counted_as_loss(self, losing_data):
+        result = op.simulate(losing_data, op.long_calls)
         assert result.summary["losing_trades"] == 1
         assert result.summary["winning_trades"] == 0
         assert result.summary["win_rate"] == pytest.approx(0.0)
 
-    def test_total_return_reflects_loss(self, losing_csv):
+    def test_total_return_reflects_loss(self, losing_data):
         capital = 100_000.0
-        data = op.csv_data(losing_csv)
-        result = op.simulate(data, op.long_calls, capital=capital)
+        result = op.simulate(losing_data, op.long_calls, capital=capital)
         assert result.summary["total_pnl"] == pytest.approx(-240.0)
         assert result.summary["total_return"] == pytest.approx(-240.0 / capital)
 
@@ -297,24 +298,21 @@ class TestShortPutsE2E:
       realized_pnl = (0.00 - (-2.40)) * 100 = 240
     """
 
-    def test_short_puts_entry_cost_negative(self, chain_csv):
+    def test_short_puts_entry_cost_negative(self, chain_data):
         """Short strategies receive premium → entry_cost is negative."""
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.short_puts)
+        result = op.simulate(chain_data, op.short_puts)
         assert len(result.trade_log) > 0
         assert (result.trade_log["entry_cost"] < 0).all()
 
-    def test_short_puts_winning_when_otm(self, chain_csv):
+    def test_short_puts_winning_when_otm(self, chain_data):
         """Puts expire worthless when underlying rises → positive P&L."""
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.short_puts, capital=100_000)
+        result = op.simulate(chain_data, op.short_puts, capital=100_000)
         first = result.trade_log.iloc[0]
         assert first["realized_pnl"] > 0
 
-    def test_short_puts_losing_when_itm(self, losing_csv):
+    def test_short_puts_losing_when_itm(self, losing_data):
         """Underlying drops → short puts lose money (buy back > premium)."""
-        data = op.csv_data(losing_csv)
-        result = op.simulate(data, op.short_puts, capital=100_000)
+        result = op.simulate(losing_data, op.short_puts, capital=100_000)
         assert len(result.trade_log) == 1
         trade = result.trade_log.iloc[0]
         assert trade["entry_cost"] < 0  # received premium
@@ -329,15 +327,13 @@ class TestShortPutsE2E:
 class TestSpreadE2E:
     """Full pipeline for a multi-leg strategy."""
 
-    def test_long_call_spread_produces_trades(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+    def test_long_call_spread_produces_trades(self, chain_data):
+        result = op.simulate(chain_data, op.long_call_spread)
         assert isinstance(result, SimulationResult)
         assert len(result.trade_log) > 0
 
-    def test_spread_trade_log_complete(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+    def test_spread_trade_log_complete(self, chain_data):
+        result = op.simulate(chain_data, op.long_call_spread)
         log = result.trade_log
         assert set(log.columns) == set(_TRADE_LOG_COLUMNS)
         assert not log["realized_pnl"].isna().any()
@@ -352,19 +348,17 @@ class TestSpreadE2E:
 class TestPositionLimitsE2E:
     """Position limits work correctly through the full pipeline."""
 
-    def test_max_positions_one_no_overlap(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, max_positions=1)
+    def test_max_positions_one_no_overlap(self, chain_data):
+        result = op.simulate(chain_data, op.long_calls, max_positions=1)
         log = result.trade_log
         # With max_positions=1, no two trades should overlap
         for i in range(len(log) - 1):
             assert log.iloc[i + 1]["entry_date"] >= log.iloc[i]["exit_date"]
 
-    def test_higher_position_limit_allows_overlapping_trade(self, chain_csv):
+    def test_higher_position_limit_allows_overlapping_trade(self, chain_data):
         """Trade 2 overlaps trade 1. max_positions=1 skips it; higher allows it."""
-        data = op.csv_data(chain_csv)
-        r1 = op.simulate(data, op.long_calls, max_positions=1)
-        r10 = op.simulate(data, op.long_calls, max_positions=10)
+        r1 = op.simulate(chain_data, op.long_calls, max_positions=1)
+        r10 = op.simulate(chain_data, op.long_calls, max_positions=10)
         assert len(r1.trade_log) == 2  # trades 1 and 3 (trade 2 skipped)
         assert len(r10.trade_log) == 3  # all three trades
 
@@ -377,10 +371,9 @@ class TestPositionLimitsE2E:
 class TestQuantityMultiplierE2E:
     """Verify quantity and multiplier scale dollar amounts correctly."""
 
-    def test_quantity_scales_dollar_cost(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        r1 = op.simulate(data, op.long_calls, quantity=1)
-        r3 = op.simulate(data, op.long_calls, quantity=3)
+    def test_quantity_scales_dollar_cost(self, chain_data):
+        r1 = op.simulate(chain_data, op.long_calls, quantity=1)
+        r3 = op.simulate(chain_data, op.long_calls, quantity=3)
 
         assert len(r1.trade_log) > 0
         assert len(r3.trade_log) > 0
@@ -389,10 +382,9 @@ class TestQuantityMultiplierE2E:
         )
         assert ratio == pytest.approx(3.0)
 
-    def test_multiplier_scales_pnl(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        r100 = op.simulate(data, op.long_calls, multiplier=100)
-        r50 = op.simulate(data, op.long_calls, multiplier=50)
+    def test_multiplier_scales_pnl(self, chain_data):
+        r100 = op.simulate(chain_data, op.long_calls, multiplier=100)
+        r50 = op.simulate(chain_data, op.long_calls, multiplier=50)
 
         assert len(r100.trade_log) > 0
         assert len(r50.trade_log) > 0
@@ -414,19 +406,17 @@ class TestSelectorsE2E:
     @pytest.mark.parametrize(
         "selector", ["nearest", "first", "highest_premium", "lowest_premium"]
     )
-    def test_all_builtin_selectors_produce_results(self, chain_csv, selector):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, selector=selector)
+    def test_all_builtin_selectors_produce_results(self, chain_data, selector):
+        result = op.simulate(chain_data, op.long_calls, selector=selector)
         assert isinstance(result, SimulationResult)
         assert set(result.trade_log.columns) == set(_TRADE_LOG_COLUMNS)
 
-    def test_nearest_vs_highest_premium_select_different_strikes(self, chain_csv):
+    def test_nearest_vs_highest_premium_select_different_strikes(self, chain_data):
         """Nearest picks 210 (closer to underlying 212);
         highest_premium also picks 210 (higher ask). Verify entry costs match
         the expected strikes."""
-        data = op.csv_data(chain_csv)
-        r_nearest = op.simulate(data, op.long_calls, selector="nearest")
-        r_lowest = op.simulate(data, op.long_calls, selector="lowest_premium")
+        r_nearest = op.simulate(chain_data, op.long_calls, selector="nearest")
+        r_lowest = op.simulate(chain_data, op.long_calls, selector="lowest_premium")
         assert len(r_nearest.trade_log) > 0
         assert len(r_lowest.trade_log) > 0
         # Lowest premium picks 215 strike (mid=1.45), nearest picks 210 (mid=4.55)
@@ -445,15 +435,14 @@ class TestSelectorsE2E:
 
 
 @pytest.fixture(scope="module")
-def stock_data(chain_csv):
-    """Build a stock price DataFrame from the chain CSV for signal computation.
+def stock_data(chain_data):
+    """Build a stock price DataFrame from the chain data for signal computation.
 
     apply_signal needs: underlying_symbol, quote_date, underlying_price.
     We extract unique (symbol, date, price) rows from the option chain.
     """
-    data = op.csv_data(chain_csv)
     stock = (
-        data[["underlying_symbol", "quote_date", "underlying_price"]]
+        chain_data[["underlying_symbol", "quote_date", "underlying_price"]]
         .drop_duplicates(["underlying_symbol", "quote_date"])
         .sort_values("quote_date")
         .reset_index(drop=True)
@@ -464,12 +453,11 @@ def stock_data(chain_csv):
 class TestSignalEntryE2E:
     """Signal-filtered entry dates through the full pipeline."""
 
-    def test_day_of_week_filters_entries(self, chain_csv, stock_data):
+    def test_day_of_week_filters_entries(self, chain_data, stock_data):
         """day_of_week(3) = Thursday only allows Feb 1 entry."""
         entry_dates = apply_signal(stock_data, day_of_week(3))  # Thursday
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, entry_dates=entry_dates, max_positions=10
+            chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
         assert len(result.trade_log) == 1
         # The only Thursday entry is Feb 1
@@ -477,63 +465,57 @@ class TestSignalEntryE2E:
         assert pd.Timestamp(entry).day == 1
         assert pd.Timestamp(entry).month == 2
 
-    def test_day_of_week_tuesday_allows_two_entries(self, chain_csv, stock_data):
+    def test_day_of_week_tuesday_allows_two_entries(self, chain_data, stock_data):
         """day_of_week(1) = Tuesday allows Jan 2 and Jan 16 entries."""
         entry_dates = apply_signal(stock_data, day_of_week(1))  # Tuesday
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, entry_dates=entry_dates, max_positions=10
+            chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
         assert len(result.trade_log) == 2
 
-    def test_no_matching_signal_returns_empty(self, chain_csv, stock_data):
+    def test_no_matching_signal_returns_empty(self, chain_data, stock_data):
         """day_of_week(4) = Friday — no entries on Friday → empty result."""
         entry_dates = apply_signal(stock_data, day_of_week(4))  # Friday
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, entry_dates=entry_dates)
+        result = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
         assert len(result.trade_log) == 0
         assert result.summary["total_trades"] == 0
 
-    def test_or_signals_union(self, chain_csv, stock_data):
+    def test_or_signals_union(self, chain_data, stock_data):
         """or_signals(Tuesday, Thursday) allows all 3 entries."""
         sig = or_signals(day_of_week(1), day_of_week(3))
         entry_dates = apply_signal(stock_data, sig)
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, entry_dates=entry_dates, max_positions=10
+            chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
         assert len(result.trade_log) == 3
 
-    def test_and_signals_intersection(self, chain_csv, stock_data):
+    def test_and_signals_intersection(self, chain_data, stock_data):
         """and_signals(Tuesday, Thursday) — impossible, empty result."""
         sig = and_signals(day_of_week(1), day_of_week(3))
         entry_dates = apply_signal(stock_data, sig)
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_calls, entry_dates=entry_dates)
+        result = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
         assert len(result.trade_log) == 0
 
-    def test_signal_with_position_limits(self, chain_csv, stock_data):
+    def test_signal_with_position_limits(self, chain_data, stock_data):
         """Tuesday signal gives 2 entries, but max_positions=1 and they overlap
         (Jan 16 entry < Jan 31 exit), so only 1 trade executes."""
         entry_dates = apply_signal(stock_data, day_of_week(1))
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, entry_dates=entry_dates, max_positions=1
+            chain_data, op.long_calls, entry_dates=entry_dates, max_positions=1
         )
         assert len(result.trade_log) == 1
 
-    def test_signal_pnl_matches_unfiltered(self, chain_csv, stock_data):
+    def test_signal_pnl_matches_unfiltered(self, chain_data, stock_data):
         """Thursday-only signal picks the same trade as the Feb 1 entry
         in the unfiltered run. Verify P&L matches."""
         entry_dates = apply_signal(stock_data, day_of_week(3))
-        data = op.csv_data(chain_csv)
 
         # Signal-filtered: only the Feb 1 trade
-        r_signal = op.simulate(data, op.long_calls, entry_dates=entry_dates)
+        r_signal = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
         assert len(r_signal.trade_log) == 1
 
         # Unfiltered with max_positions=10: all 3 trades
-        r_all = op.simulate(data, op.long_calls, max_positions=10)
+        r_all = op.simulate(chain_data, op.long_calls, max_positions=10)
         assert len(r_all.trade_log) == 3
 
         # The Feb 1 trade should have the same P&L in both runs
@@ -545,7 +527,7 @@ class TestSignalEntryE2E:
         assert len(all_feb) == 1
         assert all_feb.iloc[0]["realized_pnl"] == pytest.approx(signal_pnl)
 
-    def test_sma_signal_with_sufficient_history(self, chain_csv):
+    def test_sma_signal_with_sufficient_history(self, chain_data):
         """sma_above with a short period on synthetic stock data.
 
         Build stock data with enough history for the SMA to compute,
@@ -562,9 +544,8 @@ class TestSignalEntryE2E:
         )
         # SMA(5) on monotonically rising prices → price always above SMA
         entry_dates = apply_signal(stock, sma_above(5))
-        data = op.csv_data(chain_csv)
         result = op.simulate(
-            data, op.long_calls, entry_dates=entry_dates, max_positions=10
+            chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
         # All 3 entry dates should pass the SMA filter since prices always rise
         assert len(result.trade_log) == 3
@@ -673,67 +654,64 @@ def drawdown_csv():
         yield path
 
 
+@pytest.fixture(scope="module")
+def drawdown_data(drawdown_csv):
+    """Load the drawdown CSV into a DataFrame."""
+    return op.csv_data(drawdown_csv)
+
+
 class TestSummaryMetricsE2E:
     """Verify summary metrics with hand-calculated values from drawdown_csv."""
 
-    def test_trade_count(self, drawdown_csv):
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+    def test_trade_count(self, drawdown_data):
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["total_trades"] == 3
 
-    def test_per_trade_pnl(self, drawdown_csv):
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+    def test_per_trade_pnl(self, drawdown_data):
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         pnls = result.trade_log["realized_pnl"].tolist()
         assert pnls[0] == pytest.approx(150.0)
         assert pnls[1] == pytest.approx(-200.0)
         assert pnls[2] == pytest.approx(100.0)
 
-    def test_win_rate(self, drawdown_csv):
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+    def test_win_rate(self, drawdown_data):
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["win_rate"] == pytest.approx(2.0 / 3.0)
         assert result.summary["winning_trades"] == 2
         assert result.summary["losing_trades"] == 1
 
-    def test_max_drawdown(self, drawdown_csv):
+    def test_max_drawdown(self, drawdown_data):
         """Equity: 100150, 99950, 100050. Peak=100150 throughout.
         Max drawdown = (99950 - 100150) / 100150 = -200/100150."""
         capital = 100_000.0
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=capital)
+        result = op.simulate(drawdown_data, op.long_calls, capital=capital)
         expected_dd = -200.0 / (capital + 150.0)
         assert result.summary["max_drawdown"] == pytest.approx(expected_dd)
 
-    def test_profit_factor(self, drawdown_csv):
+    def test_profit_factor(self, drawdown_data):
         """profit_factor = total_wins / |total_losses| = 250 / 200 = 1.25."""
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["profit_factor"] == pytest.approx(1.25)
 
-    def test_total_pnl_and_return(self, drawdown_csv):
+    def test_total_pnl_and_return(self, drawdown_data):
         capital = 100_000.0
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=capital)
+        result = op.simulate(drawdown_data, op.long_calls, capital=capital)
         assert result.summary["total_pnl"] == pytest.approx(50.0)
         assert result.summary["total_return"] == pytest.approx(50.0 / capital)
 
-    def test_avg_win_loss(self, drawdown_csv):
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+    def test_avg_win_loss(self, drawdown_data):
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["avg_win"] == pytest.approx(125.0)  # (150+100)/2
         assert result.summary["avg_loss"] == pytest.approx(-200.0)
 
-    def test_max_win_loss(self, drawdown_csv):
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+    def test_max_win_loss(self, drawdown_data):
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["max_win"] == pytest.approx(150.0)
         assert result.summary["max_loss"] == pytest.approx(-200.0)
 
-    def test_avg_days_in_trade(self, drawdown_csv):
+    def test_avg_days_in_trade(self, drawdown_data):
         """Trade 1: 29 days, Trade 2: 27 days, Trade 3: 28 days. Avg=28."""
-        data = op.csv_data(drawdown_csv)
-        result = op.simulate(data, op.long_calls, capital=100_000)
+        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
         assert result.summary["avg_days_in_trade"] == pytest.approx(28.0)
 
 
@@ -752,28 +730,24 @@ class TestSummaryMetricsE2E:
 class TestSpreadPnlE2E:
     """Hand-calculated P&L for long call spread through full pipeline."""
 
-    def test_spread_entry_cost(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+    def test_spread_entry_cost(self, chain_data):
+        result = op.simulate(chain_data, op.long_call_spread)
         first = result.trade_log.iloc[0]
         assert first["entry_cost"] == pytest.approx(3.10)
 
-    def test_spread_exit_proceeds(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+    def test_spread_exit_proceeds(self, chain_data):
+        result = op.simulate(chain_data, op.long_call_spread)
         first = result.trade_log.iloc[0]
         assert first["exit_proceeds"] == pytest.approx(5.00)
 
-    def test_spread_realized_pnl(self, chain_csv):
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+    def test_spread_realized_pnl(self, chain_data):
+        result = op.simulate(chain_data, op.long_call_spread)
         first = result.trade_log.iloc[0]
         assert first["realized_pnl"] == pytest.approx(190.0)
 
-    def test_spread_debit_entry(self, chain_csv):
+    def test_spread_debit_entry(self, chain_data):
         """Long call spread is a debit strategy — entry_cost > 0."""
-        data = op.csv_data(chain_csv)
-        result = op.simulate(data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread)
         assert (result.trade_log["entry_cost"] > 0).all()
 
 
@@ -808,24 +782,27 @@ def multi_symbol_csv():
         yield path
 
 
+@pytest.fixture(scope="module")
+def multi_symbol_data(multi_symbol_csv):
+    """Load the multi-symbol CSV into a DataFrame."""
+    return op.csv_data(multi_symbol_csv)
+
+
 class TestMultiSymbolE2E:
     """Multi-symbol data processed correctly through full pipeline."""
 
-    def test_both_symbols_in_trade_log(self, multi_symbol_csv):
-        data = op.csv_data(multi_symbol_csv)
-        result = op.simulate(data, op.long_calls, max_positions=10)
+    def test_both_symbols_in_trade_log(self, multi_symbol_data):
+        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
         symbols = set(result.trade_log["underlying_symbol"])
         assert symbols == {"SPX", "AAPL"}
 
-    def test_multi_symbol_trade_count(self, multi_symbol_csv):
-        data = op.csv_data(multi_symbol_csv)
-        result = op.simulate(data, op.long_calls, max_positions=10)
+    def test_multi_symbol_trade_count(self, multi_symbol_data):
+        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
         assert len(result.trade_log) == 2
 
-    def test_per_symbol_pnl(self, multi_symbol_csv):
+    def test_per_symbol_pnl(self, multi_symbol_data):
         """SPX: pnl=150, AAPL: pnl=200."""
-        data = op.csv_data(multi_symbol_csv)
-        result = op.simulate(data, op.long_calls, max_positions=10)
+        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
         log = result.trade_log
         spx = log[log["underlying_symbol"] == "SPX"]
         aapl = log[log["underlying_symbol"] == "AAPL"]
@@ -834,7 +811,6 @@ class TestMultiSymbolE2E:
         assert spx.iloc[0]["realized_pnl"] == pytest.approx(150.0)
         assert aapl.iloc[0]["realized_pnl"] == pytest.approx(200.0)
 
-    def test_total_pnl_sums_both_symbols(self, multi_symbol_csv):
-        data = op.csv_data(multi_symbol_csv)
-        result = op.simulate(data, op.long_calls, max_positions=10)
+    def test_total_pnl_sums_both_symbols(self, multi_symbol_data):
+        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
         assert result.summary["total_pnl"] == pytest.approx(350.0)

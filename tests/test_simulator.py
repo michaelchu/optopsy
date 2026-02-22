@@ -20,6 +20,21 @@ from optopsy.simulator import (
 )
 
 # ---------------------------------------------------------------------------
+# Shared constants
+# ---------------------------------------------------------------------------
+
+_CHAIN_COLS = [
+    "underlying_symbol",
+    "underlying_price",
+    "option_type",
+    "expiration",
+    "quote_date",
+    "strike",
+    "bid",
+    "ask",
+]
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
@@ -29,16 +44,6 @@ def data():
     """Basic option chain data with one entry date and one exit date."""
     exp_date = datetime.datetime(2018, 1, 31)
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
-    cols = [
-        "underlying_symbol",
-        "underlying_price",
-        "option_type",
-        "expiration",
-        "quote_date",
-        "strike",
-        "bid",
-        "ask",
-    ]
     d = [
         ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
         ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
@@ -49,7 +54,7 @@ def data():
         ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
         ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
     ]
-    return pd.DataFrame(data=d, columns=cols)
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
 
 @pytest.fixture(scope="module")
@@ -57,16 +62,6 @@ def multi_strike_data():
     """Data with 5 strikes for testing multi-leg strategies."""
     exp_date = datetime.datetime(2018, 1, 31)
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
-    cols = [
-        "underlying_symbol",
-        "underlying_price",
-        "option_type",
-        "expiration",
-        "quote_date",
-        "strike",
-        "bid",
-        "ask",
-    ]
     d = [
         # Entry day - Calls
         ["SPX", 212.5, "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00],
@@ -92,7 +87,7 @@ def multi_strike_data():
         ["SPX", 215.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05],
         ["SPX", 215.0, "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55],
     ]
-    return pd.DataFrame(data=d, columns=cols)
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
 
 @pytest.fixture(scope="module")
@@ -104,16 +99,6 @@ def multi_entry_data():
     entry2 = datetime.datetime(2018, 1, 15)
     exit1 = datetime.datetime(2018, 1, 31)
     exit2 = datetime.datetime(2018, 2, 28)
-    cols = [
-        "underlying_symbol",
-        "underlying_price",
-        "option_type",
-        "expiration",
-        "quote_date",
-        "strike",
-        "bid",
-        "ask",
-    ]
     d = [
         # Entry 1 — exp1
         ["SPX", 213.93, "call", exp1, entry1, 212.5, 7.35, 7.45],
@@ -128,7 +113,7 @@ def multi_entry_data():
         ["SPX", 222, "call", exp2, exit2, 212.5, 9.50, 9.60],
         ["SPX", 222, "call", exp2, exit2, 215.0, 7.00, 7.10],
     ]
-    return pd.DataFrame(data=d, columns=cols)
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
 
 @pytest.fixture(scope="module")
@@ -138,16 +123,6 @@ def calendar_data():
     back_exp = datetime.datetime(2018, 3, 2)
     entry_date = datetime.datetime(2018, 1, 1)
     exit_date = datetime.datetime(2018, 1, 24)
-    cols = [
-        "underlying_symbol",
-        "underlying_price",
-        "option_type",
-        "expiration",
-        "quote_date",
-        "strike",
-        "bid",
-        "ask",
-    ]
     d = [
         # Entry — Front month calls
         ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50],
@@ -166,7 +141,7 @@ def calendar_data():
         ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10],
         ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
     ]
-    return pd.DataFrame(data=d, columns=cols)
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
 
 # ---------------------------------------------------------------------------
@@ -322,21 +297,17 @@ class TestMultiLeg:
     def test_butterfly_simulation(self, multi_strike_data):
         result = simulate(multi_strike_data, op.long_call_butterfly, selector="first")
         assert isinstance(result, SimulationResult)
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            assert (
-                trade["realized_pnl"] != 0
-                or trade["entry_cost"] != trade["exit_proceeds"]
-            )
-            assert trade["dollar_cost"] > 0
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["dollar_cost"] > 0
 
     def test_iron_condor_simulation(self, multi_strike_data):
         result = simulate(multi_strike_data, op.iron_condor, selector="first")
         assert isinstance(result, SimulationResult)
-        if result.summary["total_trades"] > 0:
-            trade = result.trade_log.iloc[0]
-            assert trade["dollar_cost"] > 0
-            assert trade["days_held"] >= 0
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["dollar_cost"] > 0
+        assert trade["days_held"] >= 0
 
 
 # ---------------------------------------------------------------------------
@@ -431,10 +402,9 @@ class TestSummaryStats:
     def test_win_rate_calculation(self, data):
         result = simulate(data, op.long_calls, selector="first")
         s = result.summary
-        total = s["total_trades"]
-        if total > 0:
-            expected_wr = s["winning_trades"] / total
-            assert s["win_rate"] == pytest.approx(expected_wr)
+        assert s["total_trades"] > 0
+        expected_wr = s["winning_trades"] / s["total_trades"]
+        assert s["win_rate"] == pytest.approx(expected_wr)
 
     def test_total_return_calculation(self, data):
         capital = 100_000.0
@@ -445,8 +415,10 @@ class TestSummaryStats:
     def test_profit_factor_no_losses(self, data):
         result = simulate(data, op.long_calls, selector="first")
         s = result.summary
-        if s["losing_trades"] == 0 and s["winning_trades"] > 0:
-            assert s["profit_factor"] == float("inf")
+        assert s["total_trades"] > 0
+        assert s["losing_trades"] == 0
+        assert s["winning_trades"] > 0
+        assert s["profit_factor"] == float("inf")
 
     def test_breakeven_not_counted_as_loss(self):
         """A trade with $0 P&L should not count as a loss."""
@@ -513,17 +485,7 @@ class TestArgumentValidation:
 
 class TestEmptyResult:
     def test_empty_data_returns_empty_result(self):
-        cols = [
-            "underlying_symbol",
-            "underlying_price",
-            "option_type",
-            "expiration",
-            "quote_date",
-            "strike",
-            "bid",
-            "ask",
-        ]
-        empty = pd.DataFrame(columns=cols)
+        empty = pd.DataFrame(columns=_CHAIN_COLS)
         result = simulate(empty, op.long_calls, selector="first")
         assert isinstance(result, SimulationResult)
         assert result.summary["total_trades"] == 0
@@ -543,23 +505,13 @@ class TestExitDte:
         entry = datetime.datetime(2018, 1, 1)
         # exit_dte=7 means exit 7 days before expiration → Jan 24
         exit_day = datetime.datetime(2018, 1, 24)
-        cols = [
-            "underlying_symbol",
-            "underlying_price",
-            "option_type",
-            "expiration",
-            "quote_date",
-            "strike",
-            "bid",
-            "ask",
-        ]
         d = [
             ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45],
             ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05],
             ["SPX", 218.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55],
             ["SPX", 218.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05],
         ]
-        df = pd.DataFrame(data=d, columns=cols)
+        df = pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
         exit_dte = 7
         result = simulate(df, op.long_calls, selector="first", exit_dte=exit_dte)
