@@ -612,3 +612,229 @@ class TestEdgeCasesE2E:
             result = op.simulate(data, op.long_calls)
             assert isinstance(result, SimulationResult)
             assert len(result.trade_log) == 0
+
+
+# ---------------------------------------------------------------------------
+# Win-loss-win fixture for summary metric verification
+#
+# Trade 1: Jan 2 → Jan 31, underlying 212→216, nearest call 210
+#   entry mid=(4.50+4.60)/2=4.55, exit mid=(6.00+6.10)/2=6.05
+#   realized_pnl = (6.05 - 4.55) * 100 = 150.00
+#
+# Trade 2: Feb 1 → Feb 28, underlying 210→206, nearest call 210
+#   entry mid=(2.00+2.10)/2=2.05, exit mid=(0.00+0.10)/2=0.05
+#   realized_pnl = (0.05 - 2.05) * 100 = -200.00
+#
+# Trade 3: Mar 1 → Mar 29, underlying 212→214, nearest call 210
+#   entry mid=(3.00+3.10)/2=3.05, exit mid=(4.00+4.10)/2=4.05
+#   realized_pnl = (4.05 - 3.05) * 100 = 100.00
+#
+# Equity (capital=100000): 100150, 99950, 100050
+# Peak:                    100150, 100150, 100150
+# Drawdown:                0, -200/100150, -100/100150
+# max_drawdown = -200/100150 ≈ -0.001996
+# profit_factor = (150+100)/200 = 1.25
+# win_rate = 2/3
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def drawdown_csv():
+    """Three non-overlapping trades: win (+150), loss (-200), win (+100)."""
+    rows = [
+        # Entry 1 (Jan 2): underlying 212
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60],
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 215.0, 1.40, 1.50],
+        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50],
+        # Exit 1 (Jan 31): underlying 216
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10],
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 215.0, 1.00, 1.10],
+        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10],
+        # Entry 2 (Feb 1): underlying 210
+        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 210.0, 2.00, 2.10],
+        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 215.0, 0.50, 0.60],
+        ["SPX", 210.0, "put", "2018-02-28", "2018-02-01", 210.0, 1.90, 2.00],
+        # Exit 2 (Feb 28): underlying 206
+        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 210.0, 0.00, 0.10],
+        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 215.0, 0.00, 0.10],
+        ["SPX", 206.0, "put", "2018-02-28", "2018-02-28", 210.0, 3.90, 4.00],
+        # Entry 3 (Mar 1): underlying 212
+        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 210.0, 3.00, 3.10],
+        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 215.0, 0.80, 0.90],
+        ["SPX", 212.0, "put", "2018-03-29", "2018-03-01", 210.0, 1.90, 2.00],
+        # Exit 3 (Mar 29): underlying 214
+        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 210.0, 4.00, 4.10],
+        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 215.0, 0.00, 0.10],
+        ["SPX", 214.0, "put", "2018-03-29", "2018-03-29", 210.0, 0.00, 0.10],
+    ]
+    df = _make_chain(rows)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = _write_csv(df, tmpdir)
+        yield path
+
+
+class TestSummaryMetricsE2E:
+    """Verify summary metrics with hand-calculated values from drawdown_csv."""
+
+    def test_trade_count(self, drawdown_csv):
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["total_trades"] == 3
+
+    def test_per_trade_pnl(self, drawdown_csv):
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        pnls = result.trade_log["realized_pnl"].tolist()
+        assert pnls[0] == pytest.approx(150.0)
+        assert pnls[1] == pytest.approx(-200.0)
+        assert pnls[2] == pytest.approx(100.0)
+
+    def test_win_rate(self, drawdown_csv):
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["win_rate"] == pytest.approx(2.0 / 3.0)
+        assert result.summary["winning_trades"] == 2
+        assert result.summary["losing_trades"] == 1
+
+    def test_max_drawdown(self, drawdown_csv):
+        """Equity: 100150, 99950, 100050. Peak=100150 throughout.
+        Max drawdown = (99950 - 100150) / 100150 = -200/100150."""
+        capital = 100_000.0
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=capital)
+        expected_dd = -200.0 / (capital + 150.0)
+        assert result.summary["max_drawdown"] == pytest.approx(expected_dd)
+
+    def test_profit_factor(self, drawdown_csv):
+        """profit_factor = total_wins / |total_losses| = 250 / 200 = 1.25."""
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["profit_factor"] == pytest.approx(1.25)
+
+    def test_total_pnl_and_return(self, drawdown_csv):
+        capital = 100_000.0
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=capital)
+        assert result.summary["total_pnl"] == pytest.approx(50.0)
+        assert result.summary["total_return"] == pytest.approx(50.0 / capital)
+
+    def test_avg_win_loss(self, drawdown_csv):
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["avg_win"] == pytest.approx(125.0)  # (150+100)/2
+        assert result.summary["avg_loss"] == pytest.approx(-200.0)
+
+    def test_max_win_loss(self, drawdown_csv):
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["max_win"] == pytest.approx(150.0)
+        assert result.summary["max_loss"] == pytest.approx(-200.0)
+
+    def test_avg_days_in_trade(self, drawdown_csv):
+        """Trade 1: 29 days, Trade 2: 27 days, Trade 3: 28 days. Avg=28."""
+        data = op.csv_data(drawdown_csv)
+        result = op.simulate(data, op.long_calls, capital=100_000)
+        assert result.summary["avg_days_in_trade"] == pytest.approx(28.0)
+
+
+# ---------------------------------------------------------------------------
+# E2E: spread P&L hand-verification
+#
+# Using chain_csv Entry 1 (Jan 2, exp Jan 31):
+#   Long 210 call: entry mid=4.55, exit mid=6.05
+#   Short 215 call: entry mid=-1.45, exit mid=-1.05
+#   total_entry_cost = 4.55 + (-1.45) = 3.10 (debit)
+#   total_exit_proceeds = 6.05 + (-1.05) = 5.00
+#   realized_pnl = (5.00 - 3.10) * 1 * 100 = 190.00
+# ---------------------------------------------------------------------------
+
+
+class TestSpreadPnlE2E:
+    """Hand-calculated P&L for long call spread through full pipeline."""
+
+    def test_spread_entry_cost(self, chain_csv):
+        data = op.csv_data(chain_csv)
+        result = op.simulate(data, op.long_call_spread)
+        first = result.trade_log.iloc[0]
+        assert first["entry_cost"] == pytest.approx(3.10)
+
+    def test_spread_exit_proceeds(self, chain_csv):
+        data = op.csv_data(chain_csv)
+        result = op.simulate(data, op.long_call_spread)
+        first = result.trade_log.iloc[0]
+        assert first["exit_proceeds"] == pytest.approx(5.00)
+
+    def test_spread_realized_pnl(self, chain_csv):
+        data = op.csv_data(chain_csv)
+        result = op.simulate(data, op.long_call_spread)
+        first = result.trade_log.iloc[0]
+        assert first["realized_pnl"] == pytest.approx(190.0)
+
+    def test_spread_debit_entry(self, chain_csv):
+        """Long call spread is a debit strategy — entry_cost > 0."""
+        data = op.csv_data(chain_csv)
+        result = op.simulate(data, op.long_call_spread)
+        assert (result.trade_log["entry_cost"] > 0).all()
+
+
+# ---------------------------------------------------------------------------
+# E2E: multi-symbol data
+#
+# SPX: Entry Jan 2, exp Jan 31, underlying 212→216
+#   nearest call 210: entry mid=4.55, exit mid=6.05, pnl=150
+# AAPL: Entry Feb 1, exp Feb 28, underlying 170→175
+#   nearest call 170: entry mid=3.05, exit mid=5.05, pnl=200
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def multi_symbol_csv():
+    """Two symbols (SPX and AAPL) with one trade each on different dates."""
+    rows = [
+        # SPX: Entry Jan 2, exp Jan 31, underlying 212→216
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60],
+        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50],
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10],
+        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10],
+        # AAPL: Entry Feb 1, exp Feb 28, underlying 170→175
+        ["AAPL", 170.0, "call", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10],
+        ["AAPL", 170.0, "put", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10],
+        ["AAPL", 175.0, "call", "2018-02-28", "2018-02-28", 170.0, 5.00, 5.10],
+        ["AAPL", 175.0, "put", "2018-02-28", "2018-02-28", 170.0, 0.00, 0.10],
+    ]
+    df = _make_chain(rows)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = _write_csv(df, tmpdir)
+        yield path
+
+
+class TestMultiSymbolE2E:
+    """Multi-symbol data processed correctly through full pipeline."""
+
+    def test_both_symbols_in_trade_log(self, multi_symbol_csv):
+        data = op.csv_data(multi_symbol_csv)
+        result = op.simulate(data, op.long_calls, max_positions=10)
+        symbols = set(result.trade_log["underlying_symbol"])
+        assert symbols == {"SPX", "AAPL"}
+
+    def test_multi_symbol_trade_count(self, multi_symbol_csv):
+        data = op.csv_data(multi_symbol_csv)
+        result = op.simulate(data, op.long_calls, max_positions=10)
+        assert len(result.trade_log) == 2
+
+    def test_per_symbol_pnl(self, multi_symbol_csv):
+        """SPX: pnl=150, AAPL: pnl=200."""
+        data = op.csv_data(multi_symbol_csv)
+        result = op.simulate(data, op.long_calls, max_positions=10)
+        log = result.trade_log
+        spx = log[log["underlying_symbol"] == "SPX"]
+        aapl = log[log["underlying_symbol"] == "AAPL"]
+        assert len(spx) == 1
+        assert len(aapl) == 1
+        assert spx.iloc[0]["realized_pnl"] == pytest.approx(150.0)
+        assert aapl.iloc[0]["realized_pnl"] == pytest.approx(200.0)
+
+    def test_total_pnl_sums_both_symbols(self, multi_symbol_csv):
+        data = op.csv_data(multi_symbol_csv)
+        result = op.simulate(data, op.long_calls, max_positions=10)
+        assert result.summary["total_pnl"] == pytest.approx(350.0)
