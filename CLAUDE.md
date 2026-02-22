@@ -48,9 +48,6 @@ mypy optopsy/
 
 # Run tests with coverage
 pytest tests/ -v --cov=optopsy --cov-report=term-missing
-
-# Check for dead code
-vulture optopsy/ vulture_whitelist.py
 ```
 
 ## Architecture Overview

@@ -8,64 +8,11 @@ from ..providers import get_all_provider_tool_schemas
 
 _log = logging.getLogger(__name__)
 
-STRATEGY_PARAMS_SCHEMA = {
-    "max_entry_dte": {
-        "type": "integer",
-        "description": "Maximum days to expiration for entry (default: 90)",
-    },
-    "exit_dte": {
-        "type": "integer",
-        "description": "Days to expiration for exit (default: 0)",
-    },
-    "dte_interval": {
-        "type": "integer",
-        "description": "Interval size for DTE grouping in stats (default: 7)",
-    },
-    "max_otm_pct": {
-        "type": "number",
-        "description": "Maximum out-of-the-money percentage (default: 0.5)",
-    },
-    "otm_pct_interval": {
-        "type": "number",
-        "description": "Interval size for OTM grouping in stats (default: 0.05)",
-    },
-    "min_bid_ask": {
-        "type": "number",
-        "description": "Minimum bid/ask price threshold (default: 0.05)",
-    },
-    "raw": {
-        "type": "boolean",
-        "description": "If true, return raw trades instead of aggregated stats (default: false)",
-    },
-    "drop_nan": {
-        "type": "boolean",
-        "description": "If true, remove NaN rows from output (default: true)",
-    },
-    "slippage": {
-        "type": "string",
-        "enum": ["mid", "spread", "liquidity"],
-        "description": "Slippage model: 'mid' (midpoint), 'spread' (full spread), or 'liquidity' (volume-based). Default: 'mid'",
-    },
-}
-
-CALENDAR_EXTRA_PARAMS = {
-    "front_dte_min": {
-        "type": "integer",
-        "description": "Minimum DTE for front (near-term) leg (default: 20)",
-    },
-    "front_dte_max": {
-        "type": "integer",
-        "description": "Maximum DTE for front (near-term) leg (default: 40)",
-    },
-    "back_dte_min": {
-        "type": "integer",
-        "description": "Minimum DTE for back (longer-term) leg (default: 50)",
-    },
-    "back_dte_max": {
-        "type": "integer",
-        "description": "Maximum DTE for back (longer-term) leg (default: 90)",
-    },
-}
+# Set of calendar-specific parameter names, used by _executor.py to filter
+# non-calendar strategies.
+CALENDAR_EXTRA_PARAMS = frozenset(
+    {"front_dte_min", "front_dte_max", "back_dte_min", "back_dte_max"}
+)
 
 # Maps strategy name -> (function, description, is_calendar)
 STRATEGIES = {
@@ -299,87 +246,6 @@ SIGNAL_REGISTRY: dict[str, Any] = {
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
-# Signal-related properties shared by run_strategy and simulate tool schemas.
-SIGNAL_PARAMS_SCHEMA = {
-    "entry_signal": {
-        "type": "string",
-        "enum": SIGNAL_NAMES,
-        "description": (
-            "Optional TA signal that gates entry. Only enters trades on "
-            "dates where the signal is True for the underlying symbol. "
-            "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
-            "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
-            "bb_below_lower, bb_above_upper. "
-            "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
-            "Volatility: atr_above (default ATR > 1.5× median), atr_below (default ATR < 0.75× median). "
-            "Calendar: day_of_week (default Friday). "
-            "Use entry_signal_params to override defaults."
-        ),
-    },
-    "entry_signal_params": {
-        "type": "object",
-        "description": (
-            "Optional parameters for entry_signal. Keys by signal type: "
-            "rsi_below/rsi_above → {period: int, threshold: float}; "
-            "sma_below/sma_above → {period: int}; "
-            "macd_cross_above/macd_cross_below → {fast: int, slow: int, signal_period: int}; "
-            "bb_above_upper/bb_below_lower → {length: int, std: float}; "
-            "ema_cross_above/ema_cross_below → {fast: int, slow: int}; "
-            "atr_above/atr_below → {period: int, multiplier: float}; "
-            "day_of_week → {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
-        ),
-    },
-    "entry_signal_days": {
-        "type": "integer",
-        "minimum": 1,
-        "description": (
-            "Optional: require the entry_signal to be True for this many consecutive "
-            "trading days before entering. Works with any signal. "
-            "Omit or set to 1 for single-bar behavior (default)."
-        ),
-    },
-    "exit_signal": {
-        "type": "string",
-        "enum": SIGNAL_NAMES,
-        "description": (
-            "Optional TA signal that gates exit. Only exits trades on "
-            "dates where the signal is True. Same signal names as entry_signal."
-        ),
-    },
-    "exit_signal_params": {
-        "type": "object",
-        "description": (
-            "Optional parameters for exit_signal. Same keys as entry_signal_params."
-        ),
-    },
-    "exit_signal_days": {
-        "type": "integer",
-        "minimum": 1,
-        "description": (
-            "Optional: require the exit_signal condition to hold for this "
-            "many consecutive trading days before exiting. Works the same as "
-            "entry_signal_days but for the exit signal. "
-            "Omit or set to 1 for no sustained requirement (default behavior)."
-        ),
-    },
-    "entry_signal_slot": {
-        "type": "string",
-        "description": (
-            "Name of a pre-built signal slot (from build_signal) to "
-            "use as entry date filter. Use this for composite signals. "
-            "Cannot be combined with entry_signal."
-        ),
-    },
-    "exit_signal_slot": {
-        "type": "string",
-        "description": (
-            "Name of a pre-built signal slot (from build_signal) to "
-            "use as exit date filter. Use this for composite signals. "
-            "Cannot be combined with exit_signal."
-        ),
-    },
-}
-
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
 _DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
 
@@ -424,692 +290,132 @@ def get_required_option_type(strategy_name: str) -> str | None:
     return STRATEGY_OPTION_TYPE.get(strategy_name)
 
 
+_TOOL_DESCRIPTIONS: dict[str, str] = {
+    "preview_data": (
+        "Show shape, columns, date range, and sample rows of a dataset. "
+        "Omit dataset_name to inspect the most-recently-loaded dataset."
+    ),
+    "describe_data": (
+        "Show summary statistics, data types, missing values, and "
+        "distributions for a dataset. Use for data quality checks "
+        "and debugging."
+    ),
+    "suggest_strategy_params": (
+        "Analyze a loaded dataset and suggest good starting parameters "
+        "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "
+        "and OTM% distributions. Call this before running a strategy when "
+        "the user has not specified explicit parameters, to avoid guessing "
+        "values the data can't satisfy. Returns percentile tables and a "
+        "JSON block of recommended parameter values ready to pass to "
+        "run_strategy or scan_strategies."
+    ),
+    "run_strategy": (
+        "Run an options strategy backtest on the loaded dataset. "
+        "Calendar/diagonal strategies also accept front_dte_min, "
+        "front_dte_max, back_dte_min, back_dte_max."
+    ),
+    "scan_strategies": (
+        "Run multiple strategy/parameter combinations in one call and "
+        "return a ranked leaderboard. Use this instead of calling "
+        "run_strategy repeatedly when the user wants to compare DTE values, "
+        "OTM% values, or multiple strategies on the same dataset. "
+        "Does NOT support signals or calendar strategies — use run_strategy "
+        "for those."
+    ),
+    "list_results": (
+        "List all strategy runs already executed in this session. "
+        "Call this before running a strategy to check whether the same "
+        "combination has already been run and avoid redundant calls. "
+        "Returns a table sorted by mean_return descending."
+    ),
+    "build_signal": (
+        "Build a TA signal (or compose multiple signals) and store the "
+        "resulting valid dates under a named slot. Use this to create "
+        "composite signals (e.g. RSI < 30 AND price above SMA 200) that "
+        "can then be passed to run_strategy via entry_signal_slot / "
+        "exit_signal_slot. Requires data to be loaded first."
+    ),
+    "preview_signal": (
+        "Show the valid dates stored in a named signal slot. "
+        "Use after build_signal to inspect how many dates matched."
+    ),
+    "list_signals": (
+        "List all named signal slots built in this session. "
+        "Shows slot names, date counts, and date ranges."
+    ),
+    "inspect_cache": (
+        "List all locally cached datasets and their date ranges without "
+        "making any network requests. Use this to discover what data is "
+        "already available before deciding whether to fetch more. "
+        "Optionally filter by symbol."
+    ),
+    "clear_cache": (
+        "Delete cached datasets (options chains, stock prices). "
+        "Optionally filter by symbol."
+    ),
+    "fetch_stock_data": (
+        "Fetch all available daily OHLCV (open/high/low/close/volume) "
+        "stock price data for a symbol via yfinance. Always fetches the "
+        "full history and caches it locally. Use this to inspect price "
+        "history, verify signal dates, or prime the cache before running "
+        "strategies with TA signals."
+    ),
+    "simulate": (
+        "Run a chronological simulation of an options strategy. "
+        "Walks through trades sequentially with capital tracking, "
+        "position limits, and equity curve generation. Returns "
+        "trade log, equity curve, and summary stats (win rate, "
+        "max drawdown, profit factor, etc.)."
+    ),
+    "get_simulation_trades": (
+        "Show the full trade log from a previous simulation. "
+        "Use after 'simulate' when the user asks to see "
+        "detailed trades."
+    ),
+    "create_chart": (
+        "Create an interactive Plotly chart from strategy results, "
+        "simulation trade logs, datasets, or signals. Use this to "
+        "visualize equity curves, return distributions, strategy "
+        "comparisons, and heatmaps."
+    ),
+}
+
+# Tools owned by data providers — excluded from core tool schema generation.
+_PROVIDER_TOOLS = frozenset({"fetch_options_data"})
+
+
 def get_tool_schemas() -> list[dict]:
-    """Return OpenAI-compatible tool schemas for all optopsy functions."""
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "preview_data",
-                "description": (
-                    "Show shape, columns, date range, and sample rows of a dataset. "
-                    "Omit dataset_name to inspect the most-recently-loaded dataset."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Name (ticker or filename) of the dataset to preview. "
-                                "Omit to use the most-recently-loaded dataset."
-                            ),
-                        },
-                        "rows": {
-                            "type": "integer",
-                            "description": "Number of rows to show (default: 5)",
-                            "minimum": 1,
-                        },
-                        "position": {
-                            "type": "string",
-                            "enum": ["head", "tail"],
-                            "description": "Show first or last rows (default: head)",
-                        },
-                        "sample": {
-                            "type": "boolean",
-                            "description": "If true, show random sample instead of head/tail",
-                        },
-                    },
-                    "required": [],
+    """Return OpenAI-compatible tool schemas for all optopsy functions.
+
+    Generates parameter schemas from Pydantic models in ``_models.py``
+    and pairs them with prompt-engineered descriptions from
+    ``_TOOL_DESCRIPTIONS``.
+    """
+    from ._models import TOOL_ARG_MODELS, pydantic_to_openai_params
+
+    tools = []
+    for tool_name, model_cls in TOOL_ARG_MODELS.items():
+        if tool_name in _PROVIDER_TOOLS:
+            continue
+        description = _TOOL_DESCRIPTIONS.get(tool_name, f"Execute {tool_name}")
+        # Prepend dynamic strategy list to run_strategy description
+        if tool_name == "run_strategy":
+            description = (
+                "Run an options strategy backtest on the loaded dataset. "
+                "Strategies: " + ", ".join(STRATEGY_NAMES) + ". "
+            ) + description.removeprefix(
+                "Run an options strategy backtest on the loaded dataset. "
+            )
+        tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": tool_name,
+                    "description": description,
+                    "parameters": pydantic_to_openai_params(model_cls),
                 },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "describe_data",
-                "description": (
-                    "Show summary statistics, data types, missing values, and "
-                    "distributions for a dataset. Use for data quality checks "
-                    "and debugging."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "dataset_name": {
-                            "type": "string",
-                            "description": "Dataset to describe. Omit for most recent.",
-                        },
-                        "columns": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": (
-                                "Specific columns to describe. Omit for all."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "suggest_strategy_params",
-                "description": (
-                    "Analyze a loaded dataset and suggest good starting parameters "
-                    "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "
-                    "and OTM% distributions. Call this before running a strategy when "
-                    "the user has not specified explicit parameters, to avoid guessing "
-                    "values the data can't satisfy. Returns percentile tables and a "
-                    "JSON block of recommended parameter values ready to pass to "
-                    "run_strategy or scan_strategies."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Dataset to analyze. "
-                                "Omit to use the most-recently-loaded dataset."
-                            ),
-                        },
-                        "strategy_name": {
-                            "type": "string",
-                            "enum": STRATEGY_NAMES,
-                            "description": (
-                                "Optional: tailor suggestions for a specific strategy. "
-                                "Iron condors and multi-leg strategies get tighter DTE/OTM% "
-                                "defaults. Calendar strategies receive front/back DTE "
-                                "recommendations instead of max_entry_dte."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "run_strategy",
-                "description": (
-                    "Run an options strategy backtest on the loaded dataset. "
-                    "Strategies: " + ", ".join(STRATEGY_NAMES) + ". "
-                    "Calendar/diagonal strategies also accept front_dte_min, "
-                    "front_dte_max, back_dte_min, back_dte_max."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "strategy_name": {
-                            "type": "string",
-                            "enum": STRATEGY_NAMES,
-                            "description": "Name of the strategy to run",
-                        },
-                        **SIGNAL_PARAMS_SCHEMA,
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Name (ticker or filename) of the dataset to run the "
-                                "strategy on. Omit to use the most-recently-loaded dataset. "
-                                "Use this to compare the same strategy across multiple "
-                                "loaded datasets (e.g. 'SPY' vs 'QQQ')."
-                            ),
-                        },
-                        **STRATEGY_PARAMS_SCHEMA,
-                        **CALENDAR_EXTRA_PARAMS,
-                    },
-                    "required": ["strategy_name"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "scan_strategies",
-                "description": (
-                    "Run multiple strategy/parameter combinations in one call and "
-                    "return a ranked leaderboard. Use this instead of calling "
-                    "run_strategy repeatedly when the user wants to compare DTE values, "
-                    "OTM% values, or multiple strategies on the same dataset. "
-                    "Does NOT support signals or calendar strategies — use run_strategy "
-                    "for those."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "strategy_names": {
-                            "type": "array",
-                            "items": {"type": "string", "enum": STRATEGY_NAMES},
-                            "minItems": 1,
-                            "description": "One or more strategy names to include in the scan.",
-                        },
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Dataset to run on. "
-                                "Omit to use the most-recently-loaded dataset."
-                            ),
-                        },
-                        "max_entry_dte_values": {
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "description": (
-                                "List of max_entry_dte values to sweep (e.g. [30, 45, 60]). "
-                                "Omit to use the default (90)."
-                            ),
-                        },
-                        "exit_dte_values": {
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "description": (
-                                "List of exit_dte values to sweep (e.g. [0, 7, 14]). "
-                                "Omit to use the default (0)."
-                            ),
-                        },
-                        "max_otm_pct_values": {
-                            "type": "array",
-                            "items": {"type": "number"},
-                            "description": (
-                                "List of max_otm_pct values to sweep (e.g. [0.1, 0.2, 0.3]). "
-                                "Omit to use the default (0.5)."
-                            ),
-                        },
-                        "slippage": {
-                            "type": "string",
-                            "enum": ["mid", "spread", "liquidity"],
-                            "description": (
-                                "Slippage model applied to all combinations. Default: 'mid'."
-                            ),
-                        },
-                        "max_combinations": {
-                            "type": "integer",
-                            "description": (
-                                "Safety cap on total combinations to run (default: 50). "
-                                "Combinations exceeding this limit are skipped."
-                            ),
-                        },
-                    },
-                    "required": ["strategy_names"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_results",
-                "description": (
-                    "List all strategy runs already executed in this session. "
-                    "Call this before running a strategy to check whether the same "
-                    "combination has already been run and avoid redundant calls. "
-                    "Returns a table sorted by mean_return descending."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "strategy_name": {
-                            "type": "string",
-                            "enum": STRATEGY_NAMES,
-                            "description": (
-                                "Optional: filter to only show runs for this strategy."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "build_signal",
-                "description": (
-                    "Build a TA signal (or compose multiple signals) and store the "
-                    "resulting valid dates under a named slot. Use this to create "
-                    "composite signals (e.g. RSI < 30 AND price above SMA 200) that "
-                    "can then be passed to run_strategy via entry_signal_slot / "
-                    "exit_signal_slot. Requires data to be loaded first."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "slot": {
-                            "type": "string",
-                            "description": (
-                                "Name for this signal (e.g. 'entry', 'exit', "
-                                "'oversold_uptrend'). Used to reference the signal "
-                                "in run_strategy or combine with other slots."
-                            ),
-                        },
-                        "signals": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "enum": SIGNAL_NAMES,
-                                        "description": "Signal type name",
-                                    },
-                                    "params": {
-                                        "type": "object",
-                                        "description": (
-                                            "Optional parameter overrides for this signal"
-                                        ),
-                                    },
-                                    "days": {
-                                        "type": "integer",
-                                        "minimum": 1,
-                                        "description": (
-                                            "Optional: require signal True for N "
-                                            "consecutive days (sustained)"
-                                        ),
-                                    },
-                                },
-                                "required": ["name"],
-                            },
-                            "minItems": 1,
-                            "description": "One or more signals to combine (default: AND)",
-                        },
-                        "combine": {
-                            "type": "string",
-                            "enum": ["and", "or"],
-                            "description": (
-                                "How to combine multiple signals: 'and' (all must be True, "
-                                "default) or 'or' (any must be True)"
-                            ),
-                        },
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Name (ticker or filename) of the dataset to build the "
-                                "signal from. Omit to use the most-recently-loaded dataset."
-                            ),
-                        },
-                    },
-                    "required": ["slot", "signals"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "preview_signal",
-                "description": (
-                    "Show the valid dates stored in a named signal slot. "
-                    "Use after build_signal to inspect how many dates matched."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "slot": {
-                            "type": "string",
-                            "description": "Signal slot name to preview",
-                        },
-                    },
-                    "required": ["slot"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_signals",
-                "description": (
-                    "List all named signal slots built in this session. "
-                    "Shows slot names, date counts, and date ranges."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "inspect_cache",
-                "description": (
-                    "List all locally cached datasets and their date ranges without "
-                    "making any network requests. Use this to discover what data is "
-                    "already available before deciding whether to fetch more. "
-                    "Optionally filter by symbol."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": (
-                                "Optional ticker symbol to filter results (e.g. 'SPY'). "
-                                "Omit to list all cached symbols."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "clear_cache",
-                "description": (
-                    "Delete cached datasets (options chains, stock prices). "
-                    "Optionally filter by symbol."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": (
-                                "Ticker to clear (e.g. 'SPY'). Omit to clear all."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "fetch_stock_data",
-                "description": (
-                    "Fetch all available daily OHLCV (open/high/low/close/volume) "
-                    "stock price data for a symbol via yfinance. Always fetches the "
-                    "full history and caches it locally. Use this to inspect price "
-                    "history, verify signal dates, or prime the cache before running "
-                    "strategies with TA signals."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": "US stock ticker symbol (e.g. SPY, AAPL, QQQ)",
-                        },
-                    },
-                    "required": ["symbol"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "simulate",
-                "description": (
-                    "Run a chronological simulation of an options strategy. "
-                    "Walks through trades sequentially with capital tracking, "
-                    "position limits, and equity curve generation. Returns "
-                    "trade log, equity curve, and summary stats (win rate, "
-                    "max drawdown, profit factor, etc.)."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "strategy_name": {
-                            "type": "string",
-                            "enum": STRATEGY_NAMES,
-                            "description": "Name of the strategy to simulate",
-                        },
-                        "capital": {
-                            "type": "number",
-                            "description": "Starting capital in dollars (default: 100000)",
-                        },
-                        "quantity": {
-                            "type": "integer",
-                            "description": "Number of contracts per trade (default: 1)",
-                            "minimum": 1,
-                        },
-                        "max_positions": {
-                            "type": "integer",
-                            "description": "Maximum concurrent open positions (default: 1)",
-                            "minimum": 1,
-                        },
-                        "multiplier": {
-                            "type": "integer",
-                            "description": "Contract multiplier (default: 100)",
-                            "minimum": 1,
-                        },
-                        "selector": {
-                            "type": "string",
-                            "enum": [
-                                "nearest",
-                                "highest_premium",
-                                "lowest_premium",
-                                "first",
-                            ],
-                            "description": (
-                                "How to pick one trade when multiple candidates "
-                                "exist for a date. 'nearest' = closest to ATM, "
-                                "'highest_premium' = most credit, "
-                                "'lowest_premium' = cheapest debit, "
-                                "'first' = first row. Default: 'nearest'."
-                            ),
-                        },
-                        **SIGNAL_PARAMS_SCHEMA,
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Name of the dataset to simulate on. "
-                                "Omit to use the most-recently-loaded dataset."
-                            ),
-                        },
-                        **{
-                            k: v
-                            for k, v in STRATEGY_PARAMS_SCHEMA.items()
-                            if k != "raw"
-                        },
-                        **CALENDAR_EXTRA_PARAMS,
-                    },
-                    "required": ["strategy_name"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_simulation_trades",
-                "description": (
-                    "Show the full trade log from a previous simulation. "
-                    "Use after 'simulate' when the user asks to see "
-                    "detailed trades."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "simulation_key": {
-                            "type": "string",
-                            "description": (
-                                "Key of the simulation result to retrieve. "
-                                "Omit to use the most recent simulation."
-                            ),
-                        },
-                    },
-                    "required": [],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "create_chart",
-                "description": (
-                    "Create an interactive Plotly chart from strategy results, "
-                    "simulation trade logs, datasets, or signals. Use this to "
-                    "visualize equity curves, return distributions, strategy "
-                    "comparisons, and heatmaps."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "chart_type": {
-                            "type": "string",
-                            "enum": [
-                                "line",
-                                "bar",
-                                "scatter",
-                                "histogram",
-                                "heatmap",
-                                "candlestick",
-                            ],
-                            "description": (
-                                "Type of chart: 'line' for time series/equity curves, "
-                                "'bar' for comparisons, 'scatter' for correlation plots, "
-                                "'histogram' for return distributions, "
-                                "'heatmap' for 2D aggregated grids, "
-                                "'candlestick' for OHLC stock price charts."
-                            ),
-                        },
-                        "data_source": {
-                            "type": "string",
-                            "enum": [
-                                "dataset",
-                                "result",
-                                "simulation",
-                                "signal",
-                                "stock",
-                            ],
-                            "description": (
-                                "Where to pull data from: 'dataset' (active or named "
-                                "dataset — use dataset_name to pick a specific one), "
-                                "'result' (strategy run summary from results registry), "
-                                "'simulation' (trade log from a simulation run), "
-                                "'signal' (signal slot dates), "
-                                "'stock' (cached OHLCV stock data from fetch_stock_data — "
-                                "use with candlestick charts)."
-                            ),
-                        },
-                        "x": {
-                            "type": "string",
-                            "description": (
-                                "Column name for the x-axis. Required for line, bar, "
-                                "scatter, and heatmap charts. For histogram, use as "
-                                "the data column. For candlestick, optionally override "
-                                "the date column (auto-detects 'date' or 'quote_date')."
-                            ),
-                        },
-                        "y": {
-                            "type": "string",
-                            "description": (
-                                "Column name for the y-axis. Required for line, bar, "
-                                "scatter, and heatmap charts."
-                            ),
-                        },
-                        "heatmap_col": {
-                            "type": "string",
-                            "description": (
-                                "Column name for heatmap cell values (aggregated with "
-                                "mean). Required only for heatmap chart_type."
-                            ),
-                        },
-                        "xlabel": {
-                            "type": "string",
-                            "description": "X-axis label. Defaults to column name.",
-                        },
-                        "ylabel": {
-                            "type": "string",
-                            "description": "Y-axis label. Defaults to column name.",
-                        },
-                        "result_key": {
-                            "type": "string",
-                            "description": (
-                                "Key of a strategy result to chart (from list_results). "
-                                "Only used when data_source='result'. Omit for most recent."
-                            ),
-                        },
-                        "simulation_key": {
-                            "type": "string",
-                            "description": (
-                                "Key of a simulation to chart. Only used when "
-                                "data_source='simulation'. Omit for most recent."
-                            ),
-                        },
-                        "signal_slot": {
-                            "type": "string",
-                            "description": (
-                                "Signal slot name. Only used when data_source='signal'."
-                            ),
-                        },
-                        "dataset_name": {
-                            "type": "string",
-                            "description": (
-                                "Name of a specific dataset (ticker or filename). "
-                                "Used with data_source='dataset'. Omit to use the "
-                                "most-recently-loaded dataset."
-                            ),
-                        },
-                        "symbol": {
-                            "type": "string",
-                            "description": (
-                                "Stock ticker symbol (e.g. 'SPY'). Required when "
-                                "data_source='stock'. Reads from the yfinance cache "
-                                "(use fetch_stock_data first)."
-                            ),
-                        },
-                        "indicators": {
-                            "type": "array",
-                            "description": (
-                                "Technical indicators to overlay or add as subplots. "
-                                'Each item: {"type": "rsi"|"sma"|"ema"|"bbands"'
-                                '|"macd"|"volume", ...params}. Overlay types (sma, '
-                                "ema, bbands) draw on the price panel; subplot types "
-                                "(rsi, macd, volume) get their own panel below."
-                            ),
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "type": {
-                                        "type": "string",
-                                        "enum": [
-                                            "rsi",
-                                            "sma",
-                                            "ema",
-                                            "bbands",
-                                            "macd",
-                                            "volume",
-                                        ],
-                                    },
-                                    "period": {"type": "integer"},
-                                    "std": {"type": "number"},
-                                    "fast": {"type": "integer"},
-                                    "slow": {"type": "integer"},
-                                    "signal": {"type": "integer"},
-                                },
-                                "required": ["type"],
-                            },
-                        },
-                        "bins": {
-                            "type": "integer",
-                            "description": (
-                                "Number of bins for histogram. Omit for auto."
-                            ),
-                        },
-                        "color": {
-                            "type": "string",
-                            "description": (
-                                "Color for the chart traces (e.g. 'blue', '#1f77b4')."
-                            ),
-                        },
-                        "figsize_width": {
-                            "type": "integer",
-                            "description": "Chart width in pixels (default: 800).",
-                        },
-                        "figsize_height": {
-                            "type": "integer",
-                            "description": "Chart height in pixels (default: 500).",
-                        },
-                    },
-                    "required": ["chart_type", "data_source"],
-                },
-            },
-        },
-    ]
+            }
+        )
 
     # Data provider tools (only added when API keys are configured)
     tools.extend(get_all_provider_tool_schemas())
