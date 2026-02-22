@@ -1,4 +1,6 @@
 import logging
+import os
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -17,6 +19,34 @@ _log = logging.getLogger(__name__)
 _yf_cache = ParquetCache()
 _YF_CACHE_CATEGORY = "yf_stocks"
 _YF_DEDUP_COLS = ["date"]
+
+# Shared simulation cache instance and helpers.
+_sim_cache = ParquetCache(
+    cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
+)
+_SIM_CATEGORY = "simulations"
+
+
+def _sim_fs_key(sim_key: str) -> str:
+    """Sanitize a simulation key for filesystem safety."""
+    return re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
+
+
+def write_sim_trade_log(sim_key: str, trade_log: pd.DataFrame) -> None:
+    """Persist a simulation trade log to the cache."""
+    _sim_cache.write(_SIM_CATEGORY, _sim_fs_key(sim_key), trade_log)
+
+
+def read_sim_trade_log(sim_key: str) -> pd.DataFrame | None:
+    """Read a simulation trade log from the cache.
+
+    Returns the DataFrame or None if not found / empty.
+    """
+    df = _sim_cache.read(_SIM_CATEGORY, _sim_fs_key(sim_key))
+    if df is None or df.empty:
+        return None
+    return df
+
 
 MAX_ROWS = 50
 
@@ -271,6 +301,7 @@ class ToolResult:
         "datasets",
         "active_dataset_name",
         "results",
+        "chart_figure",
     )
 
     def __init__(
@@ -282,6 +313,7 @@ class ToolResult:
         datasets: dict[str, pd.DataFrame] | None = None,
         active_dataset_name: str | None = None,
         results: dict[str, dict] | None = None,
+        chart_figure: Any = None,
     ):
         self.llm_summary = llm_summary
         self.user_display = user_display or llm_summary
@@ -290,6 +322,7 @@ class ToolResult:
         self.datasets = datasets
         self.active_dataset_name = active_dataset_name
         self.results = results
+        self.chart_figure = chart_figure
 
 
 def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:
