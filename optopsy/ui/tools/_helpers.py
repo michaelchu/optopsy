@@ -4,6 +4,7 @@ import re
 from datetime import date, timedelta
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 import optopsy.signals as _signals
@@ -436,13 +437,20 @@ def _make_result_summary(
         "dataset": arguments.get("dataset_name", "default"),
     }
     if "pct_change" in result_df.columns:
-        pct = result_df["pct_change"]
+        pct = result_df["pct_change"].dropna()
+        wins = pct[pct > 0].sum()
+        losses = pct[pct < 0].sum()
+        if losses == 0:
+            pf = np.nan
+        else:
+            pf = abs(float(wins) / float(losses))
         base.update(
             {
                 "count": len(pct),
                 "mean_return": round(float(pct.mean()), 4),
                 "std": round(float(pct.std()), 4),
                 "win_rate": round(float((pct > 0).mean()), 4),
+                "profit_factor": round(pf, 4),
             }
         )
     elif "mean" in result_df.columns:
@@ -452,6 +460,23 @@ def _make_result_summary(
         else:
             total = len(result_df)
             wt_mean = float(result_df["mean"].mean())
+        # Extract weighted profit_factor from aggregated output if available.
+        # Filter out inf values before averaging — groups with no losses
+        # have inf profit_factor which would dominate a weighted average.
+        agg_pf = None
+        if "profit_factor" in result_df.columns and "count" in result_df.columns:
+            valid = result_df[
+                result_df["profit_factor"].notna()
+                & np.isfinite(result_df["profit_factor"])
+            ]
+            if not valid.empty:
+                agg_pf = round(
+                    float(
+                        (valid["profit_factor"] * valid["count"]).sum()
+                        / valid["count"].sum()
+                    ),
+                    4,
+                )
         base.update(
             {
                 "count": total,
@@ -461,7 +486,17 @@ def _make_result_summary(
                     if "std" in result_df.columns
                     else None
                 ),
-                "win_rate": round(float((result_df["mean"] > 0).mean()), 4),
+                "win_rate": (
+                    round(
+                        float(
+                            (result_df["win_rate"] * result_df["count"]).sum() / total
+                        ),
+                        4,
+                    )
+                    if "win_rate" in result_df.columns and "count" in result_df.columns
+                    else round(float((result_df["mean"] > 0).mean()), 4)
+                ),
+                "profit_factor": agg_pf,
             }
         )
     else:
@@ -471,6 +506,7 @@ def _make_result_summary(
                 "mean_return": None,
                 "std": None,
                 "win_rate": None,
+                "profit_factor": None,
             }
         )
     return StrategyResultSummary(**base).model_dump()

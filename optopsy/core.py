@@ -198,11 +198,39 @@ def _cut_options_by_delta(
 def _group_by_intervals(
     data: pd.DataFrame, cols: List[str], drop_na: bool
 ) -> pd.DataFrame:
-    """Group options by intervals and calculate descriptive statistics."""
-    # this is a bottleneck, try to optimize
+    """Group options by intervals and calculate descriptive statistics.
+
+    In addition to the standard ``describe()`` output (count, mean, std, min,
+    25%, 50%, 75%, max), this also computes **win_rate** and **profit_factor**
+    per group from the raw ``pct_change`` values.
+    """
     # Use observed=True to only return groups with actual data (avoids pandas 3.0
     # issue where observed=False returns all category combinations as empty rows)
-    grouped_dataset = data.groupby(cols, observed=True)["pct_change"].describe()
+    grouped = data.groupby(cols, observed=True)["pct_change"]
+    grouped_dataset = grouped.describe()
+
+    # Compute win_rate and profit_factor per group
+    def _extra_metrics(series: pd.Series) -> pd.Series:
+        valid = series.dropna()
+        if len(valid) == 0:
+            return pd.Series({"win_rate": np.nan, "profit_factor": np.nan})
+        wr = float((valid > 0).sum()) / len(valid)
+        wins = valid[valid > 0].sum()
+        losses = valid[valid < 0].sum()
+        if losses == 0:
+            pf = np.nan
+        else:
+            pf = abs(float(wins) / float(losses))
+        return pd.Series({"win_rate": wr, "profit_factor": pf})
+
+    extra = grouped.apply(_extra_metrics)
+    # Single-level groupby: apply returns a DataFrame directly.
+    # Multi-level groupby: apply returns a Series with an extra index level;
+    # unstack() pivots that level into columns to match grouped_dataset shape.
+    if isinstance(extra, pd.DataFrame):
+        grouped_dataset = pd.concat([grouped_dataset, extra], axis=1)
+    else:
+        grouped_dataset = pd.concat([grouped_dataset, extra.unstack()], axis=1)
 
     # if any non-count columns return NaN remove the row
     if drop_na:

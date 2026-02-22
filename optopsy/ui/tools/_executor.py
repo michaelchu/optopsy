@@ -68,6 +68,15 @@ def _register(name: str):
 # ---------------------------------------------------------------------------
 
 
+def _fmt_pf(value: float) -> str:
+    """Format profit_factor for display, handling infinity and NaN."""
+    if value != value:  # NaN check
+        return "N/A"
+    if value == float("inf"):
+        return "∞ (no losses)"
+    return f"{value:.2f}"
+
+
 def _resolve_dataset(
     name: str | None,
     active: pd.DataFrame | None,
@@ -780,6 +789,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                     "mean_return": float("nan"),
                     "std": float("nan"),
                     "win_rate": float("nan"),
+                    "profit_factor": float("nan"),
                 }
             )
             continue
@@ -795,6 +805,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                 "mean_return": summary["mean_return"],
                 "std": summary["std"],
                 "win_rate": summary["win_rate"],
+                "profit_factor": summary["profit_factor"],
             }
         )
         key = _make_result_key(strat, combo_args)
@@ -987,12 +998,15 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     }
 
     # Format output
+    pf_str = _fmt_pf(s["profit_factor"])
     llm_summary = (
         f"simulate({strategy_name}): {s['total_trades']} trades, "
         f"win_rate={s['win_rate']:.1%}, "
         f"total_return={s['total_return']:.2%}, "
         f"max_drawdown={s['max_drawdown']:.2%}, "
-        f"profit_factor={s['profit_factor']:.2f}"
+        f"profit_factor={pf_str}, "
+        f"sharpe={s['sharpe_ratio']:.2f}, "
+        f"sortino={s['sortino_ratio']:.2f}"
     )
 
     from ._helpers import _df_to_markdown
@@ -1010,9 +1024,14 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         ("Avg Loss", f"${s['avg_loss']:,.2f}"),
         ("Max Win", f"${s['max_win']:,.2f}"),
         ("Max Loss", f"${s['max_loss']:,.2f}"),
-        ("Profit Factor", f"{s['profit_factor']:.2f}"),
+        ("Profit Factor", pf_str),
         ("Max Drawdown", f"{s['max_drawdown']:.2%}"),
         ("Avg Days in Trade", f"{s['avg_days_in_trade']:.1f}"),
+        ("Sharpe Ratio", f"{s['sharpe_ratio']:.2f}"),
+        ("Sortino Ratio", f"{s['sortino_ratio']:.2f}"),
+        ("VaR (95%)", f"{s['var_95']:.2%}"),
+        ("CVaR (95%)", f"{s['cvar_95']:.2%}"),
+        ("Calmar Ratio", f"{s['calmar_ratio']:.2f}"),
     ]
     stats_table = "| Metric | Value |\n|---|---|\n"
     stats_table += "\n".join(f"| {m} | {v} |" for m, v in stats_rows)

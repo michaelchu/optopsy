@@ -21,6 +21,18 @@ For detailed documentation, visit: https://github.com/michaelchu/optopsy
 __version__ = "2.2.0"
 
 from .datafeeds import csv_data
+from .metrics import (
+    calmar_ratio,
+    compute_risk_metrics,
+    conditional_value_at_risk,
+    max_drawdown,
+    max_drawdown_from_returns,
+    profit_factor,
+    sharpe_ratio,
+    sortino_ratio,
+    value_at_risk,
+    win_rate,
+)
 from .signals import (
     Signal,
     and_signals,
@@ -147,6 +159,17 @@ __all__ = [
     # Simulation
     "simulate",
     "SimulationResult",
+    # Risk metrics
+    "compute_risk_metrics",
+    "sharpe_ratio",
+    "sortino_ratio",
+    "max_drawdown",
+    "max_drawdown_from_returns",
+    "value_at_risk",
+    "conditional_value_at_risk",
+    "win_rate",
+    "profit_factor",
+    "calmar_ratio",
     # Timestamp utilities
     "normalize_dates",
 ]

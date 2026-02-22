@@ -367,7 +367,30 @@ def _resolve_expiration(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-ar
 
 
 def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
-    """Compute summary statistics from the trade log."""
+    """Compute summary statistics from the trade log.
+
+    Includes both basic trade statistics and risk-adjusted metrics
+    (Sharpe, Sortino, VaR, CVaR, Calmar) from the ``metrics`` module.
+    """
+    from .metrics import (
+        calmar_ratio,
+        conditional_value_at_risk,
+        sharpe_ratio,
+        sortino_ratio,
+        value_at_risk,
+    )
+    from .metrics import (
+        max_drawdown as _max_drawdown,
+    )
+
+    _empty_risk = {
+        "sharpe_ratio": 0.0,
+        "sortino_ratio": 0.0,
+        "var_95": 0.0,
+        "cvar_95": 0.0,
+        "calmar_ratio": 0.0,
+    }
+
     if trade_log.empty:
         return {
             "total_trades": 0,
@@ -384,6 +407,7 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
             "profit_factor": 0.0,
             "max_drawdown": 0.0,
             "avg_days_in_trade": 0.0,
+            **_empty_risk,
         }
 
     pnl = trade_log["realized_pnl"]
@@ -394,9 +418,14 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
 
     # Max drawdown from equity curve
     equity = trade_log["equity"]
-    running_max = equity.cummax()
-    drawdown = (equity - running_max) / running_max
-    max_dd = float(drawdown.min()) if len(drawdown) > 0 else 0.0
+    max_dd = _max_drawdown(equity)
+
+    # Risk-adjusted metrics from per-trade returns.
+    # NOTE: These are per-trade returns, not daily returns. The default 252-day
+    # annualisation factor in sharpe/sortino/calmar may overstate ratios when
+    # trades occur less frequently than daily. For more accurate annualised
+    # metrics, pass a trading_days value matching the actual trade cadence.
+    returns = trade_log["pct_change"]
 
     return {
         "total_trades": len(trade_log),
@@ -417,6 +446,11 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         ),
         "max_drawdown": max_dd,
         "avg_days_in_trade": float(trade_log["days_held"].mean()),
+        "sharpe_ratio": sharpe_ratio(returns),
+        "sortino_ratio": sortino_ratio(returns),
+        "var_95": value_at_risk(returns, 0.95),
+        "cvar_95": conditional_value_at_risk(returns, 0.95),
+        "calmar_ratio": calmar_ratio(returns),
     }
 
 

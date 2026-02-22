@@ -434,6 +434,11 @@ class TestSimulateSmoke:
             "profit_factor",
             "max_drawdown",
             "avg_days_in_trade",
+            "sharpe_ratio",
+            "sortino_ratio",
+            "var_95",
+            "cvar_95",
+            "calmar_ratio",
         }
         assert expected_keys == set(result.summary.keys())
 
@@ -633,6 +638,7 @@ class TestSummaryStats:
             {
                 "realized_pnl": [100.0, 0.0, -50.0],
                 "equity": [100_100.0, 100_100.0, 100_050.0],
+                "pct_change": [0.10, 0.0, -0.05],
                 "days_held": [30, 30, 30],
             }
         )
@@ -649,6 +655,7 @@ class TestSummaryStats:
             {
                 "realized_pnl": [0.0, 0.0],
                 "equity": [100_000.0, 100_000.0],
+                "pct_change": [0.0, 0.0],
                 "days_held": [30, 30],
             }
         )
