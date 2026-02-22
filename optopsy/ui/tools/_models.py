@@ -686,6 +686,7 @@ class StrategyResultSummary(BaseModel):
     mean_return: float | None = None
     std: float | None = None
     win_rate: float | None = None
+    profit_factor: float | None = None
 
 
 class SimulationResultEntry(BaseModel):

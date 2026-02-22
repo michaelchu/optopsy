@@ -59,6 +59,8 @@ describe_cols = [
     "50%",
     "75%",
     "max",
+    "win_rate",
+    "profit_factor",
 ]
 
 

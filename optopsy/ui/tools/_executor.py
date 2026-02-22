@@ -780,6 +780,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                     "mean_return": float("nan"),
                     "std": float("nan"),
                     "win_rate": float("nan"),
+                    "profit_factor": float("nan"),
                 }
             )
             continue
@@ -795,6 +796,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                 "mean_return": summary["mean_return"],
                 "std": summary["std"],
                 "win_rate": summary["win_rate"],
+                "profit_factor": summary["profit_factor"],
             }
         )
         key = _make_result_key(strat, combo_args)
@@ -992,7 +994,9 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         f"win_rate={s['win_rate']:.1%}, "
         f"total_return={s['total_return']:.2%}, "
         f"max_drawdown={s['max_drawdown']:.2%}, "
-        f"profit_factor={s['profit_factor']:.2f}"
+        f"profit_factor={s['profit_factor']:.2f}, "
+        f"sharpe={s['sharpe_ratio']:.2f}, "
+        f"sortino={s['sortino_ratio']:.2f}"
     )
 
     from ._helpers import _df_to_markdown
@@ -1013,6 +1017,11 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         ("Profit Factor", f"{s['profit_factor']:.2f}"),
         ("Max Drawdown", f"{s['max_drawdown']:.2%}"),
         ("Avg Days in Trade", f"{s['avg_days_in_trade']:.1f}"),
+        ("Sharpe Ratio", f"{s['sharpe_ratio']:.2f}"),
+        ("Sortino Ratio", f"{s['sortino_ratio']:.2f}"),
+        ("VaR (95%)", f"{s['var_95']:.2%}"),
+        ("CVaR (95%)", f"{s['cvar_95']:.2%}"),
+        ("Calmar Ratio", f"{s['calmar_ratio']:.2f}"),
     ]
     stats_table = "| Metric | Value |\n|---|---|\n"
     stats_table += "\n".join(f"| {m} | {v} |" for m, v in stats_rows)

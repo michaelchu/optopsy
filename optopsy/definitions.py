@@ -185,5 +185,16 @@ diagonal_spread_external_cols: List[str] = [
     "otm_pct_range_leg2",
 ]
 
-# Columns added by pandas describe() for aggregated statistics output
-describe_cols: List[str] = ["count", "mean", "std", "min", "25%", "50%", "75%", "max"]
+# Columns added by pandas describe() plus risk metrics for aggregated statistics output
+describe_cols: List[str] = [
+    "count",
+    "mean",
+    "std",
+    "min",
+    "25%",
+    "50%",
+    "75%",
+    "max",
+    "win_rate",
+    "profit_factor",
+]
