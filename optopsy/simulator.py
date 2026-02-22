@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from functools import reduce
 from typing import Any, Callable, Literal, Union
 
 import numpy as np
@@ -138,8 +139,8 @@ def _normalise_trades(
 
 
 def _normalise_single_leg(raw: pd.DataFrame, *, negate: bool = False) -> pd.DataFrame:
-    entry_date = pd.to_datetime(raw["quote_date_entry"])
-    expiration = pd.to_datetime(raw["expiration"])
+    entry_date = _resolve_entry_date(raw)
+    expiration = _resolve_expiration(raw)
 
     # Derive exit date: if dte_entry exists we can compute exit_dte from the
     # strategy params, but the raw output doesn't carry exit_dte directly.
@@ -175,45 +176,21 @@ def _normalise_single_leg(raw: pd.DataFrame, *, negate: bool = False) -> pd.Data
 
 
 def _normalise_multi_leg(raw: pd.DataFrame) -> pd.DataFrame:
-    # Find quote_date_entry — may be named differently after multi-leg merge
-    if "quote_date_entry" in raw.columns:
-        entry_date = pd.to_datetime(raw["quote_date_entry"])
-    elif "quote_date_entry_leg1" in raw.columns:
-        entry_date = pd.to_datetime(raw["quote_date_entry_leg1"])
-    elif "dte_entry" in raw.columns and "expiration" in raw.columns:
-        entry_date = _derive_entry_date(raw)
-    else:
-        raise ValueError(
-            "Cannot determine entry date for multi-leg trade: "
-            f"columns={list(raw.columns)}"
-        )
-
-    if "expiration" in raw.columns:
-        expiration = pd.to_datetime(raw["expiration"])
-    elif "expiration_leg1" in raw.columns:
-        expiration = pd.to_datetime(raw["expiration_leg1"])
-    else:
-        raise ValueError(
-            "Cannot determine expiration for multi-leg trade: "
-            f"columns={list(raw.columns)}"
-        )
+    entry_date = _resolve_entry_date(raw)
+    expiration = _resolve_expiration(raw)
     exit_date = expiration
 
     # Build a human-readable description from available strike/type columns
-    desc_parts = []
-    for i in range(1, 5):
-        type_col = f"option_type_leg{i}"
-        strike_col = f"strike_leg{i}"
-        if type_col in raw.columns and strike_col in raw.columns:
-            desc_parts.append(
-                raw[type_col].astype(str) + " " + raw[strike_col].astype(str)
-            )
-    if desc_parts:
-        desc = desc_parts[0]
-        for part in desc_parts[1:]:
-            desc = desc + "/" + part
-    else:
-        desc = pd.Series(["multi-leg"] * len(raw), index=raw.index)
+    desc_parts = [
+        raw[f"option_type_leg{i}"].astype(str) + " " + raw[f"strike_leg{i}"].astype(str)
+        for i in range(1, 5)
+        if f"option_type_leg{i}" in raw.columns and f"strike_leg{i}" in raw.columns
+    ]
+    desc = (
+        reduce(lambda a, b: a + "/" + b, desc_parts)
+        if desc_parts
+        else pd.Series(["multi-leg"] * len(raw), index=raw.index)
+    )
 
     return pd.DataFrame(
         {
@@ -230,20 +207,7 @@ def _normalise_multi_leg(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
-    # Calendar spreads: entry date from quote_date or derived from
-    # expiration_leg1 - dte_entry_leg1
-    if "quote_date" in raw.columns:
-        entry_date = pd.to_datetime(raw["quote_date"])
-    elif "quote_date_entry" in raw.columns:
-        entry_date = pd.to_datetime(raw["quote_date_entry"])
-    elif "dte_entry_leg1" in raw.columns and "expiration_leg1" in raw.columns:
-        exp = pd.to_datetime(raw["expiration_leg1"])
-        entry_date = exp - pd.to_timedelta(raw["dte_entry_leg1"], unit="D")
-    else:
-        raise ValueError(
-            "Cannot determine entry date for calendar trade: "
-            f"columns={list(raw.columns)}"
-        )
+    entry_date = _resolve_entry_date(raw)
 
     # Exit date = front expiration (leg1) — the spread is typically closed
     # near front expiration
@@ -277,14 +241,18 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
 # date (in the raw/pre-normalised schema) and returns a single-row Series.
 
 
+def _select_one(candidates: pd.DataFrame, idx: Any) -> pd.Series:  # type: ignore[type-arg]
+    """Return a single row from *candidates* at the given index label."""
+    result = candidates.loc[idx]
+    assert isinstance(result, pd.Series)
+    return result
+
+
 def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
     """Select the trade closest to ATM (lowest absolute OTM%)."""
     otm_col = _find_otm_col(candidates)
     if otm_col is not None:
-        idx = candidates[otm_col].abs().idxmin()
-        result = candidates.loc[idx]
-        assert isinstance(result, pd.Series)
-        return result
+        return _select_one(candidates, candidates[otm_col].abs().idxmin())
 
     # Fallback: use strike - underlying_price distance
     strike_col = "strike" if "strike" in candidates.columns else None
@@ -300,10 +268,7 @@ def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type
 
     if strike_col is not None and underlying_col is not None:
         distance = (candidates[strike_col] - candidates[underlying_col]).abs()
-        idx = distance.idxmin()
-        result = candidates.loc[idx]
-        assert isinstance(result, pd.Series)
-        return result
+        return _select_one(candidates, distance.idxmin())
 
     return candidates.iloc[0]
 
@@ -319,22 +284,15 @@ def _select_highest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ign
     cost_col = _find_cost_col(candidates)
     if cost_col == "entry":
         # Unsigned prices: highest premium = max value
-        idx = candidates[cost_col].idxmax()
-    else:
-        # Signed costs: highest credit = most negative = min value
-        idx = candidates[cost_col].idxmin()
-    result = candidates.loc[idx]
-    assert isinstance(result, pd.Series)
-    return result
+        return _select_one(candidates, candidates[cost_col].idxmax())
+    # Signed costs: highest credit = most negative = min value
+    return _select_one(candidates, candidates[cost_col].idxmin())
 
 
 def _select_lowest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
     """Select the trade with the lowest debit (cheapest absolute entry cost)."""
     cost_col = _find_cost_col(candidates)
-    idx = candidates[cost_col].abs().idxmin()
-    result = candidates.loc[idx]
-    assert isinstance(result, pd.Series)
-    return result
+    return _select_one(candidates, candidates[cost_col].abs().idxmin())
 
 
 def _select_first(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
@@ -370,29 +328,37 @@ def _find_cost_col(df: pd.DataFrame) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _find_entry_date_col(df: pd.DataFrame) -> str | None:
-    """Find the column representing the entry/quote date in raw output.
+def _resolve_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+    """Resolve the entry date from raw strategy output.
 
-    Returns the column name if found, or None if the entry date must be
-    derived from ``expiration`` and ``dte_entry``.
+    Checks for explicit date columns first, then falls back to deriving
+    from expiration - DTE.
     """
     for col in ("quote_date_entry", "quote_date_entry_leg1", "quote_date"):
-        if col in df.columns:
-            return col
-    return None
+        if col in raw.columns:
+            return pd.to_datetime(raw[col])
+    return _derive_entry_date(raw)
 
 
-def _derive_entry_date(df: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _derive_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
     """Derive entry date from expiration and dte_entry when no date column exists."""
-    if "expiration" in df.columns and "dte_entry" in df.columns:
-        exp = pd.to_datetime(df["expiration"])
-        dte = df["dte_entry"]
-    elif "expiration_leg1" in df.columns and "dte_entry_leg1" in df.columns:
-        exp = pd.to_datetime(df["expiration_leg1"])
-        dte = df["dte_entry_leg1"]
+    if "expiration" in raw.columns and "dte_entry" in raw.columns:
+        exp = pd.to_datetime(raw["expiration"])
+        dte = raw["dte_entry"]
+    elif "expiration_leg1" in raw.columns and "dte_entry_leg1" in raw.columns:
+        exp = pd.to_datetime(raw["expiration_leg1"])
+        dte = raw["dte_entry_leg1"]
     else:
         raise ValueError("Cannot derive entry date: no expiration/dte column found")
     return exp - pd.to_timedelta(dte, unit="D")
+
+
+def _resolve_expiration(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+    """Resolve the expiration date from raw strategy output."""
+    for col in ("expiration", "expiration_leg1"):
+        if col in raw.columns:
+            return pd.to_datetime(raw[col])
+    raise ValueError(f"Cannot determine expiration: columns={list(raw.columns)}")
 
 
 # ---------------------------------------------------------------------------
@@ -542,11 +508,12 @@ def _build_trade_log(
         }
     )
 
-    trade_log["dollar_cost"] = trade_log["entry_cost"].abs() * quantity * multiplier
-    trade_log["dollar_proceeds"] = trade_log["exit_proceeds"] * quantity * multiplier
+    lot_size = quantity * multiplier
+    trade_log["dollar_cost"] = trade_log["entry_cost"].abs() * lot_size
+    trade_log["dollar_proceeds"] = trade_log["exit_proceeds"] * lot_size
     trade_log["realized_pnl"] = (
-        (trade_log["exit_proceeds"] - trade_log["entry_cost"]) * quantity * multiplier
-    )
+        trade_log["exit_proceeds"] - trade_log["entry_cost"]
+    ) * lot_size
     trade_log["days_held"] = (
         pd.to_datetime(trade_log["exit_date"]) - pd.to_datetime(trade_log["entry_date"])
     ).dt.days
@@ -631,15 +598,9 @@ def simulate(
 
     # Select one trade per entry date (on raw data so OTM% columns are
     # available to selectors)
-    entry_date_col = _find_entry_date_col(raw)
     raw = raw.copy()
-    if entry_date_col is not None:
-        raw[entry_date_col] = pd.to_datetime(raw[entry_date_col])
-        group_col = entry_date_col
-    else:
-        # Derive entry date from expiration - dte_entry
-        raw["_entry_date"] = _derive_entry_date(raw)
-        group_col = "_entry_date"
+    raw["_entry_date"] = _resolve_entry_date(raw)
+    group_col = "_entry_date"
 
     # Group by symbol + entry date so multi-symbol data picks one trade per
     # symbol per date, not one trade across all symbols.

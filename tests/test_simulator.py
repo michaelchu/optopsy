@@ -11,11 +11,11 @@ from optopsy.simulator import (
     _build_trade_log,
     _filter_trades,
     _find_cost_col,
-    _find_entry_date_col,
     _find_otm_col,
     _is_calendar,
     _is_single_leg,
     _normalise_trades,
+    _resolve_entry_date,
     simulate,
 )
 
@@ -573,13 +573,15 @@ class TestColumnDetection:
         cols = pd.Index(["expiration", "total_entry_cost"])
         assert _is_calendar(cols) is False
 
-    def test_find_entry_date_col(self):
-        df = pd.DataFrame({"quote_date_entry": [1], "strike": [100]})
-        assert _find_entry_date_col(df) == "quote_date_entry"
+    def test_resolve_entry_date_from_column(self):
+        df = pd.DataFrame({"quote_date_entry": ["2020-01-01"], "strike": [100]})
+        result = _resolve_entry_date(df)
+        assert result.iloc[0] == pd.Timestamp("2020-01-01")
 
-    def test_find_entry_date_col_missing(self):
-        df = pd.DataFrame({"expiration": [1], "dte_entry": [30]})
-        assert _find_entry_date_col(df) is None
+    def test_resolve_entry_date_derived(self):
+        df = pd.DataFrame({"expiration": ["2020-02-01"], "dte_entry": [30]})
+        result = _resolve_entry_date(df)
+        assert result.iloc[0] == pd.Timestamp("2020-01-02")
 
     def test_find_otm_col(self):
         df = pd.DataFrame({"otm_pct_entry": [0.05]})
