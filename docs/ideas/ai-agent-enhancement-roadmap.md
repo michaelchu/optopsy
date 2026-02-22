@@ -1,243 +1,260 @@
 # AI Agent Enhancement Roadmap
 
-Ideas for extending the optopsy chat agent beyond its current capabilities, organized by theme. Each section describes the gap, a concrete approach, and expected impact.
+Ideas for extending the optopsy chat agent, ranked by impact vs. effort. Each section describes the gap, a concrete approach, and where it fits in the codebase.
 
-## 1. Agent evaluation and testing
+## Priority ranking
+
+| # | Feature | Impact | Effort | Rationale |
+|---|---|---|---|---|
+| 1 | Risk metrics (Sharpe, VaR, etc.) | High | Low | Extends simulate output with standard formulas |
+| 2 | IV rank signals | High | Medium | Differentiator — every options trader wants this |
+| 3 | Strategy comparison report | High | Low | Structures data the agent already produces |
+| 4 | Saved workflows | High | Medium | Eliminates repetitive multi-step prompts |
+| 5 | Portfolio construction | Very High | High | Unique capability, but significant engineering |
+| 6 | Autonomous research mode | High | Medium | Mostly prompt engineering + orchestration logic |
+| 7 | What-if scenario tool | Medium | Medium | Useful but requires good Greeks data |
+
+---
+
+## 1. Risk metrics from simulations
 
 ### Gap
 
-The agent has no end-to-end tests. `test_tools_*.py` covers individual tool execution, and `test_cli.py` covers the CLI, but there are no tests for the agent loop itself — multi-turn conversations, tool-calling sequences, error recovery, or history compaction behavior.
+The `simulate` tool (`tools/_executor.py`) tracks capital, positions, and equity curves, but the output lacks standard risk-adjusted metrics. Users get raw P&L and equity values but can't evaluate risk-adjusted performance without manual calculation. The aggregated strategy output (`core.py`) uses `DataFrame.describe()` which gives count/mean/std/percentiles of `pct_change` — useful but not what a trader needs to evaluate a strategy.
 
-### Approach
+### Metrics to add
 
-- **Deterministic replay harness**: Record LLM responses from real conversations as fixtures. Replay them against `OptopsyAgent` with a mock LLM client that returns canned responses in sequence. Assert on tool call order, final state (datasets, signals, results), and user-facing output.
-- **Scenario library**: Build a set of canonical scenarios: "load CSV and run single strategy", "fetch EODHD data with cache hit", "build composite signal and run scan", "hit 15-iteration limit gracefully". Each scenario is a JSON file with messages and expected tool calls.
-- **Compaction regression tests**: Verify that history compaction preserves tool_call/tool message pairing (breaking this causes LLM confusion). Test that results in `self.results` survive compaction even when their original tool messages are truncated.
+- **Sharpe ratio**: `mean(returns) / std(returns) * sqrt(252)` — annualized, using daily equity curve returns
+- **Sortino ratio**: Like Sharpe but only penalizes downside deviation — more appropriate for asymmetric options payoffs
+- **Max drawdown**: Largest peak-to-trough decline in the equity curve — already have the equity series, just need `(peak - trough) / peak`
+- **Value at Risk (VaR)**: 95th/99th percentile daily loss — `np.percentile(returns, 5)`
+- **Conditional VaR (CVaR)**: Mean of losses beyond VaR — `returns[returns <= var].mean()`
+- **Win rate**: `count(pnl > 0) / count(all trades)` — trivial but missing from aggregated output
+- **Profit factor**: `sum(winning trades) / abs(sum(losing trades))`
+- **Calmar ratio**: `annualized_return / max_drawdown`
+
+### Where it fits
+
+- **Simulation metrics**: Extend the simulate handler in `tools/_executor.py`. The equity curve DataFrame is already computed — these are all derived from it. Add a `_compute_risk_metrics(equity_df)` helper that returns a dict, include it in both `llm_summary` and `user_display`.
+- **Aggregated strategy metrics**: Extend `core._process_strategy()` to compute win rate and profit factor from the raw `pct_change` column before calling `.describe()`. These two metrics require only the existing data.
+- **ToolResult enrichment**: Add the metrics dict to `self.results` entries so the agent can reference them in later comparisons without re-running.
 
 ### Impact
 
-Catches regressions in the agent loop — especially around compaction, error handling, and provider fallback — without requiring live LLM calls.
+Low effort, high value. Every metric is a one-liner on data the system already produces. Transforms the output from "here are some stats" to "here's whether this strategy is worth trading."
 
-## 2. Additional data providers
+---
 
-### Gap
-
-Only EODHD is implemented. The `DataProvider` ABC is designed for extension but no other providers exist. Users without an EODHD key are limited to local CSV files.
-
-### Candidates
-
-| Provider | Data | Free tier | Notes |
-|---|---|---|---|
-| **Tradier** | Options chains, greeks, IV | 5,000 calls/day (delayed) | REST API, good docs, delayed data is free |
-| **Polygon.io** | Options, stocks, indices | 5 calls/min (free) | Websocket support for real-time |
-| **CBOE DataShop** | VIX, term structure, skew | Public downloads | No API key needed for index data |
-| **Yahoo Finance** | Options chains (limited) | Unlimited (scraping) | Already have yfinance for stocks; options chains are available but less reliable |
-
-### Approach
-
-Each provider follows the existing pattern:
-1. Subclass `DataProvider` in `providers/`
-2. Implement `get_tool_schemas()`, `execute()`, `get_arg_model()`
-3. Register in `providers/__init__.py`
-4. Provider auto-detected when env key is set
-
-For Tradier specifically:
-- `fetch_options_data` tool (same interface as EODHD, different backend)
-- `fetch_options_chain_snapshot` for current-day chains (useful for "what's trading now?")
-- Greeks columns (delta, gamma, theta, vega) preserved through the pipeline — requires `core.py` passthrough for extra columns
-
-### Impact
-
-Broadens the user base significantly. Most users don't have EODHD keys but many have Tradier or Polygon accounts.
-
-## 3. Implied volatility integration
+## 2. IV rank signals
 
 ### Gap
 
-IV is the most important variable in options pricing but is absent from the analysis pipeline. The EODHD API returns `impliedVolatility` but it's dropped during normalization. There's no way to filter by IV, rank strategies by IV regime, or visualize the vol surface.
+Implied volatility is the most important variable in options pricing but is completely absent from the analysis pipeline. The EODHD API returns `impliedVolatility` but it's dropped during column normalization in `providers/eodhd.py`. The signal system (`signals.py`) has 12 technical signals — all price/volume based — but none for IV.
 
 ### Approach
 
 **Phase 1 — Preserve IV through the pipeline:**
-- Update EODHD provider's column mapping to retain `implied_volatility` (currently normalized away)
+- Update EODHD provider's column mapping to retain `implied_volatility`
 - Update `core.py` to pass through extra columns beyond the required 8 (underlying_symbol, underlying_price, option_type, expiration, quote_date, strike, bid, ask)
 - Add `iv` to the leg output definitions in `definitions.py`
 
-**Phase 2 — IV-aware filtering:**
-- Add `iv_rank_min`/`iv_rank_max` parameters to `run_strategy` — filter entries by IV rank (percentile of current IV relative to trailing N-day range)
-- Requires computing IV rank from the dataset itself (no external dependency)
+**Phase 2 — IV rank/percentile signal:**
+- Add `iv_rank_above` and `iv_rank_below` signals to `signals.py` and `SIGNAL_REGISTRY` in `tools/_schemas.py`
+- IV rank = percentile of current ATM IV relative to trailing N-day range (default 252 days)
+- Compute from the options dataset itself: for each quote_date, find the ATM option, get its IV, rank against the trailing window
+- No external data dependency — works on any dataset that includes IV
 
-**Phase 3 — Vol surface tools:**
+**Phase 3 — IV surface tools:**
 - `plot_vol_surface` tool: 3D surface or heatmap of IV by strike/expiration for a given quote date
 - `iv_term_structure` tool: IV across expirations for ATM options on a given date
-- Both use `create_chart` infrastructure (Plotly figures attached to ToolResult)
+- Both use existing `create_chart` infrastructure (Plotly figures attached to ToolResult)
 
 ### Impact
 
-Unlocks the most-asked question in options backtesting: "does this strategy work better in high-IV environments?" Also enables vol surface visualization, which is valuable for understanding skew and term structure.
+Unlocks the most-asked question in options backtesting: "do iron condors work better in high-IV environments?" This is a genuine differentiator — most backtesting tools don't offer IV-conditional entry signals.
 
-## 4. Custom strategy builder
+---
+
+## 3. Strategy comparison report
 
 ### Gap
 
-The 28 strategies cover standard structures, but users frequently want custom combinations — ratio spreads (1x2, 1x3), jade lizards (short put + short call spread), broken-wing butterflies (unequal wing widths), or custom multi-leg positions.
+The agent already stores results in `self.results` (added to address the earlier eval doc's recommendation), but there's no tool to produce a structured side-by-side comparison. The agent must describe differences in prose, which is slow and loses precision. `scan_strategies` produces a comparison table across parameter combinations, but not across arbitrary prior runs.
 
 ### Approach
 
-- **`build_custom_strategy` tool**: Accept a list of leg definitions, each with: `option_type` (call/put), `side` (long/short), `quantity`, `otm_pct` (target moneyness), and optional `dte_offset` (for diagonals).
-- Under the hood, call `core._strategy_engine()` directly with dynamically constructed leg definitions and skip the hardcoded strategy functions.
-- Validation: Ensure legs are compatible (same underlying, overlapping dates), warn on undefined-risk positions.
-- The tool returns the same ToolResult format as `run_strategy`, so comparison with standard strategies works seamlessly.
+- **`compare_results` tool**: Accept a list of result labels (keys from `self.results`). Produce a comparison table with one row per result, columns for: strategy name, parameters, trade count, mean return, win rate, Sharpe, max drawdown, profit factor.
+- If risk metrics (item #1) are already computed and stored in `self.results`, this is purely a formatting tool — pull the metrics, build a DataFrame, render as markdown table for the user and a compact summary for the LLM.
+- Include a "verdict" row highlighting the best performer on each metric.
+- Optionally attach a grouped bar chart (Plotly) comparing key metrics across results.
+
+### Dependencies
+
+Best built after item #1 (risk metrics) so there are meaningful metrics to compare. Without risk metrics, the comparison table only has mean/std from `.describe()`.
 
 ### Impact
 
-Removes the constraint that users must use predefined structures. Power users can test arbitrary multi-leg positions without writing code.
+Low effort — the data already exists in `self.results`, this just structures and presents it. Eliminates the most common multi-turn pattern: "run strategy A... now run strategy B... now compare them."
 
-## 5. Strategy optimization via parameter sweeps
+---
+
+## 4. Saved workflows
 
 ### Gap
 
-`scan_strategies` does Cartesian product sweeps across strategies, DTE, and OTM, but there's no tool for focused single-parameter optimization. The agent must call `run_strategy` repeatedly to find the best DTE for a given strategy, consuming iterations quickly.
+Users repeat the same multi-step sequences across sessions: fetch SPY data, load it, run a specific strategy with specific parameters, compare against a baseline. Each session starts fresh (`OptopsyAgent.__init__` resets all state). The Chainlit persistence layer saves message history for resume, but there's no way to save and replay a sequence of tool calls as a reusable workflow.
 
 ### Approach
 
-- **`optimize_parameter` tool**: Accept a strategy, a parameter to sweep (e.g., `max_entry_dte`), a range (start, stop, step), and a target metric (e.g., `mean_return`, `win_rate`, `sharpe`).
-- Run the strategy for each parameter value in a single tool call.
-- Return a table of parameter_value vs. metric, plus the optimal value.
-- Optionally return a line chart showing the metric across the parameter range.
+- **`save_workflow` tool**: Capture the current session's tool call sequence (already tracked in message history) as a named workflow. Store to `~/.optopsy/workflows/{name}.json` with:
+  - Ordered list of tool calls with their arguments
+  - Optional parameter placeholders (e.g., `$SYMBOL`, `$START_DATE`) for reuse with different inputs
+  - Metadata: creation date, description, last-used date
 
-This is distinct from `scan_strategies` because:
-- It sweeps a continuous range of a single parameter (not a Cartesian product)
-- It targets a specific optimization metric
-- It includes visualization of the parameter sensitivity curve
+- **`run_workflow` tool**: Load a saved workflow by name, resolve any placeholders from provided arguments, and execute the tool sequence. Each step feeds its output state (dataset, signals) into the next, just like the normal agent loop but without LLM round-trips.
+
+- **`list_workflows` / `delete_workflow` tools**: Management utilities.
+
+- **Session start integration**: On `on_chat_start` in `app.py`, list available workflows in the welcome message so the user can say "run my SPY analysis workflow."
+
+### Considerations
+
+- Workflow replay skips the LLM entirely — it's deterministic execution of a recorded sequence. This means it's fast but can't adapt if data has changed (e.g., a strategy that returned results last week might return nothing on new data).
+- Need to handle failures gracefully: if step 3 of 5 fails, report the failure and stop (don't blindly continue).
+- Placeholder resolution should support defaults: `$SYMBOL` defaults to `SPY` if not provided.
 
 ### Impact
 
-Turns a 10-iteration agent workflow into 1 tool call. Essential for answering "what's the optimal X?" questions efficiently.
+Eliminates the "every session starts from scratch" problem. Power users who have a standard analysis routine can replay it in one command instead of 5-10 prompts.
 
-## 6. Enhanced simulation capabilities
+---
+
+## 5. Portfolio construction
 
 ### Gap
 
-The `simulate` tool runs chronological portfolio simulation with capital tracking, but it's limited to a single strategy on a single symbol. Real portfolio backtesting requires:
-- Multiple strategies running simultaneously
-- Multiple underlyings
-- Portfolio-level risk constraints (max positions, sector limits, delta budget)
+The `simulate` tool handles single-strategy, single-symbol backtesting with capital tracking. Real portfolio analysis requires running multiple strategies across multiple underlyings simultaneously, with shared capital and risk constraints. Currently, comparing a portfolio of strategies requires multiple independent simulate runs with no way to model capital allocation, correlation, or position limits across them.
 
 ### Approach
 
 **Phase 1 — Multi-strategy simulation:**
 - Extend `simulate` to accept a list of `(strategy, params, dataset_name)` tuples
-- Each strategy generates trades independently
-- Capital allocation: equal-weight, risk-parity, or fixed-notional per strategy
-- Output: combined equity curve, per-strategy contribution, correlation matrix
+- Each strategy generates trades independently from its own dataset
+- Capital allocation modes: equal-weight, risk-parity, or fixed-notional per strategy
+- Output: combined equity curve, per-strategy contribution breakdown, correlation matrix of strategy returns
 
 **Phase 2 — Portfolio constraints:**
 - `max_positions`: Limit total open positions across all strategies
-- `max_delta`: Cap net portfolio delta (requires greeks — see IV integration)
+- `max_notional`: Cap total capital deployed at any point
+- `max_delta`: Cap net portfolio delta (requires Greeks — depends on IV integration)
 - `stop_loss` / `profit_target`: Position-level exit rules independent of DTE
 
 **Phase 3 — Walk-forward analysis:**
-- Split data into in-sample/out-of-sample windows
+- Split data into in-sample/out-of-sample windows (rolling or anchored)
 - Optimize parameters on in-sample, test on out-of-sample
-- Report in-sample vs. out-of-sample degradation
+- Report in-sample vs. out-of-sample performance degradation
+- Key for detecting overfitting — "did this strategy work because the parameters are good, or because they were fit to this specific data?"
+
+### Where it fits
+
+- Phase 1 extends the existing `simulate` handler in `tools/_executor.py`
+- Phase 2 adds constraint parameters to the same handler
+- Phase 3 is a new `walk_forward` tool that wraps optimize + simulate in a loop
+- All phases build on the multi-dataset system (`self.datasets`) already in place
 
 ### Impact
 
-Moves from "does this strategy work?" to "does this portfolio work?" — a much more realistic question for actual trading.
+Very high impact but significant engineering. This is a unique capability — most options backtesting tools don't offer portfolio-level simulation. Would be a major differentiator, but Phase 2+ depends on Greeks data (IV integration) for delta-based constraints.
 
-## 7. Conversation export and reporting
+---
 
-### Gap
-
-Analysis sessions produce valuable insights but they're trapped in the Chainlit chat interface. Users can't export a session as a report, share findings with others, or reproduce an analysis later.
-
-### Approach
-
-- **`export_session` tool**: Generate a markdown or HTML report from the current conversation:
-  - Include all strategy results from `self.results`
-  - Embed chart images (Plotly figures exported as static images)
-  - Include parameter settings and data sources used
-  - Add a "methodology" section derived from the tool call sequence
-- **`export_notebook` tool**: Generate a Jupyter notebook that reproduces the analysis:
-  - Each tool call becomes a code cell using the optopsy Python API
-  - Markdown cells with the agent's commentary
-  - Users can re-run, modify, and extend the analysis
-
-### Impact
-
-Bridges the gap between interactive exploration and reproducible research. Users get both the speed of chat-driven analysis and the rigor of documented methodology.
-
-## 8. Streaming large results
+## 6. Autonomous research mode
 
 ### Gap
 
-Large DataFrames are truncated before being sent to the LLM (50-row cap in display, compaction to first line after 300 chars). This means the agent loses access to detailed results almost immediately. For raw-mode backtests with hundreds of trades, the agent can only see a sample.
+The agent currently requires the user to drive each step: "fetch data", "run this strategy", "now try that one", "compare them." For exploratory questions like "what's the best options strategy for SPY in the current environment?", the agent should be able to autonomously plan and execute a multi-step research workflow without per-step prompting.
 
 ### Approach
 
-- **Result pagination**: Instead of truncating, store full results in `self.results` (already done) and add a `get_result_detail` tool that retrieves specific slices: "show trades 50-100 from result X", "show trades where pct_change < -0.05", "show trades on date 2024-03-15".
-- **Summary statistics in compacted messages**: When compacting a tool result, replace it with computed summary stats (win rate, mean return, trade count) rather than just the first line. This preserves analytical value even after compaction.
-- **Lazy chart generation**: Instead of pre-generating charts, let the agent request specific visualizations of stored results: "histogram of returns for result X", "scatter of DTE vs return for result X".
+- **`research` tool or prompt mode**: Accept a research question (e.g., "find the best-performing strategy for SPY over the last year"). The agent then:
+  1. Plans a research sequence (fetch data, identify available DTE/strike ranges via `suggest_strategy_params`, select candidate strategies)
+  2. Runs `scan_strategies` with broad parameters to get an overview
+  3. Narrows to the top 3-5 performers
+  4. Runs focused backtests with refined parameters on the top candidates
+  5. Compares results (using the comparison report from item #3)
+  6. Presents a structured finding with confidence level
 
-### Impact
+- **Implementation**: This is primarily prompt engineering + orchestration logic:
+  - Add a "research mode" system prompt section that teaches the agent the research methodology
+  - Raise `_MAX_TOOL_ITERATIONS` for research mode (or make it configurable per-request)
+  - Use the existing tool infrastructure — no new tools needed, just better sequencing
+  - The agent's own reasoning drives the workflow; the prompt guides the methodology
 
-The agent retains analytical access to all results throughout the conversation, even after compaction. Enables deeper follow-up analysis without re-running strategies.
-
-## 9. Real-time signal monitoring
-
-### Gap
-
-Signals are currently only used for historical backtesting. Users can't ask "tell me when RSI drops below 30 on SPY" and get notified.
-
-### Approach
-
-- **`watch_signal` tool**: Accept a symbol, signal name, and parameters. Register a polling job that checks the signal condition on a configurable interval (e.g., every 5 minutes during market hours).
-- Use yfinance's real-time data (1-minute bars) as the data source.
-- When the signal fires, send a Chainlit message to the user's session with the signal details and current market state.
-- Limit to 3 active watches per session to prevent resource exhaustion.
+- **Guard rails**:
+  - Cap research mode at 25 iterations (vs. the normal 15)
+  - Require user confirmation before starting ("I'll research this by running ~10 backtests across 5 strategies. Proceed?")
+  - Summarize progress at checkpoints ("Scanned 28 strategies, narrowing to top 5...")
 
 ### Considerations
 
-- This is a significant architectural change — the agent currently has no background task system.
-- Would need a lightweight scheduler (asyncio task or threading timer) managed by the agent.
-- Market hours awareness (no point polling on weekends).
-- Chainlit's WebSocket connection must remain active for notifications.
+- Quality depends heavily on the LLM's ability to follow a multi-step research plan without drifting. The system prompt needs to be prescriptive about methodology.
+- Token costs will be higher per conversation — compaction becomes even more important.
+- Risk of "runaway" research if the agent keeps finding interesting tangents. The iteration cap and checkpoint confirmations mitigate this.
 
 ### Impact
 
-Transforms the agent from a historical analysis tool into a real-time assistant. High user value but significant implementation complexity.
+High impact, medium effort. Mostly prompt engineering with minor code changes (iteration limit, confirmation flow). Transforms the agent from a tool executor into a research assistant.
 
-## 10. Agent memory across sessions
+---
+
+## 7. What-if scenario tool
 
 ### Gap
 
-Each chat session starts fresh. The agent has no memory of previous sessions — no awareness of strategies the user has explored before, preferred parameters, or prior findings. The SQLite persistence stores message history for resume, but the agent doesn't learn from past sessions.
+Users want to ask "what would happen to my iron condor if SPY drops 5% tomorrow?" or "how does this position perform if IV spikes 20%?" Currently there's no way to model hypothetical scenarios — all analysis is on historical data as-is.
 
 ### Approach
 
-- **User profile store**: Persist key preferences and findings to `~/.optopsy/user_profile.json`:
-  - Preferred symbols and strategies
-  - Parameter presets ("my usual SPY iron condor settings")
-  - Bookmarked results ("the short put strategy from last Tuesday")
-- **Session summary**: At the end of each session, generate a 1-paragraph summary of what was explored and what was found. Store in the profile.
-- **Session start injection**: On `on_chat_start`, load the profile and inject a system message: "In previous sessions, the user explored X, Y, Z. Their preferred settings are..."
+- **`what_if` tool**: Accept a result label (from `self.results`) and a set of scenario adjustments:
+  - `price_change_pct`: Shift underlying price by X% (recomputes moneyness and P&L)
+  - `iv_change_pct`: Shift IV by X% (requires Greeks — delta, gamma, vega from the dataset)
+  - `days_forward`: Fast-forward time by N days (theta decay)
+  - `spread_widen_pct`: Widen bid-ask spreads by X% (liquidity shock)
+
+- **Greeks requirement**: Meaningful what-if analysis requires delta, gamma, theta, vega for each leg. Two paths:
+  1. **Data-driven**: If the dataset includes Greeks (Tradier, or EODHD with Greeks preserved), use them directly
+  2. **Model-driven**: Compute Greeks from Black-Scholes given strike, underlying, DTE, IV, and risk-free rate. This is self-contained but adds a pricing model dependency.
+
+- **Output**: For each scenario, show the adjusted P&L, the change from the base case, and which legs drove the change. Attach a scenario comparison chart.
+
+### Considerations
+
+- Without Greeks data, this tool has limited utility — price changes can be modeled mechanically (new intrinsic value), but IV and time effects need Greeks.
+- The Black-Scholes path is well-understood but adds a dependency (scipy for the normal CDF, or a pure-Python implementation).
+- Best implemented after IV integration (item #2) so there's actual IV data to perturb.
 
 ### Impact
 
-Reduces repetitive setup across sessions. The agent becomes a persistent research assistant rather than a stateless tool.
+Medium impact, medium effort. Very useful for position analysis ("should I hold or close?") but depends on Greeks availability. Most valuable when combined with the IV integration work.
 
-## Priority ranking
+---
 
-Roughly ordered by impact-to-effort ratio:
+## Additional ideas (unranked)
 
-1. **Agent evaluation and testing** — Low effort, prevents regressions, enables confident iteration on everything else
-2. **Implied volatility integration (Phase 1)** — Moderate effort (mostly column passthrough), unlocks the most-requested analysis dimension
-3. **Strategy optimization tool** — Low effort (builds on existing scan infrastructure), eliminates the most common multi-turn bottleneck
-4. **Streaming large results** — Moderate effort, fixes a fundamental limitation of the current compaction system
-5. **Additional data providers (Tradier)** — Moderate effort (follows existing pattern), broadens user base
-6. **Conversation export** — Moderate effort, high value for users who want to share or reproduce findings
-7. **Enhanced simulation** — High effort, high value for portfolio-level analysis
-8. **Custom strategy builder** — Moderate effort, high value for power users
-9. **Agent memory across sessions** — Low-moderate effort, quality-of-life improvement
-10. **Real-time signal monitoring** — High effort, transformative but architecturally complex
+These are worth tracking but don't rise to the priority level of the 7 items above.
+
+### Agent evaluation and testing
+
+The agent has no end-to-end tests. A deterministic replay harness (mock LLM responses, assert on tool call sequences and final state) would catch regressions in the agent loop without requiring live LLM calls. Important infrastructure but not a user-facing feature.
+
+### Additional data providers
+
+Only EODHD is implemented. Tradier (free delayed data with Greeks) and Polygon.io are strong candidates. Each follows the existing `DataProvider` pattern — subclass, implement, register. Broadens the user base but doesn't add new capabilities.
+
+### Conversation export
+
+`export_session` tool to generate markdown/HTML reports or Jupyter notebooks from a chat session. Bridges interactive exploration and reproducible research. Moderate effort, nice-to-have.
+
+### Agent memory across sessions
+
+Persist user preferences, parameter presets, and session summaries to `~/.optopsy/user_profile.json`. Inject into system prompt on session start. Reduces repetitive setup but not transformative.
