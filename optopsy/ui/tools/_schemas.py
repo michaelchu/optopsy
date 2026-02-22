@@ -8,65 +8,11 @@ from ..providers import get_all_provider_tool_schemas
 
 _log = logging.getLogger(__name__)
 
-# Legacy dicts kept for backward compatibility with code that imports them.
-STRATEGY_PARAMS_SCHEMA = {
-    "max_entry_dte": {
-        "type": "integer",
-        "description": "Maximum days to expiration for entry (default: 90)",
-    },
-    "exit_dte": {
-        "type": "integer",
-        "description": "Days to expiration for exit (default: 0)",
-    },
-    "dte_interval": {
-        "type": "integer",
-        "description": "Interval size for DTE grouping in stats (default: 7)",
-    },
-    "max_otm_pct": {
-        "type": "number",
-        "description": "Maximum out-of-the-money percentage (default: 0.5)",
-    },
-    "otm_pct_interval": {
-        "type": "number",
-        "description": "Interval size for OTM grouping in stats (default: 0.05)",
-    },
-    "min_bid_ask": {
-        "type": "number",
-        "description": "Minimum bid/ask price threshold (default: 0.05)",
-    },
-    "raw": {
-        "type": "boolean",
-        "description": "If true, return raw trades instead of aggregated stats (default: false)",
-    },
-    "drop_nan": {
-        "type": "boolean",
-        "description": "If true, remove NaN rows from output (default: true)",
-    },
-    "slippage": {
-        "type": "string",
-        "enum": ["mid", "spread", "liquidity"],
-        "description": "Slippage model: 'mid' (midpoint), 'spread' (full spread), or 'liquidity' (volume-based). Default: 'mid'",
-    },
-}
-
-CALENDAR_EXTRA_PARAMS = {
-    "front_dte_min": {
-        "type": "integer",
-        "description": "Minimum DTE for front (near-term) leg (default: 20)",
-    },
-    "front_dte_max": {
-        "type": "integer",
-        "description": "Maximum DTE for front (near-term) leg (default: 40)",
-    },
-    "back_dte_min": {
-        "type": "integer",
-        "description": "Minimum DTE for back (longer-term) leg (default: 50)",
-    },
-    "back_dte_max": {
-        "type": "integer",
-        "description": "Maximum DTE for back (longer-term) leg (default: 90)",
-    },
-}
+# Set of calendar-specific parameter names, used by _executor.py to filter
+# non-calendar strategies.
+CALENDAR_EXTRA_PARAMS = frozenset(
+    {"front_dte_min", "front_dte_max", "back_dte_min", "back_dte_max"}
+)
 
 # Maps strategy name -> (function, description, is_calendar)
 STRATEGIES = {
@@ -300,87 +246,6 @@ SIGNAL_REGISTRY: dict[str, Any] = {
 
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
-# Signal-related properties shared by run_strategy and simulate tool schemas.
-SIGNAL_PARAMS_SCHEMA = {
-    "entry_signal": {
-        "type": "string",
-        "enum": SIGNAL_NAMES,
-        "description": (
-            "Optional TA signal that gates entry. Only enters trades on "
-            "dates where the signal is True for the underlying symbol. "
-            "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
-            "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
-            "bb_below_lower, bb_above_upper. "
-            "Trend filter: sma_above (default SMA50), sma_below (default SMA50). "
-            "Volatility: atr_above (default ATR > 1.5× median), atr_below (default ATR < 0.75× median). "
-            "Calendar: day_of_week (default Friday). "
-            "Use entry_signal_params to override defaults."
-        ),
-    },
-    "entry_signal_params": {
-        "type": "object",
-        "description": (
-            "Optional parameters for entry_signal. Keys by signal type: "
-            "rsi_below/rsi_above → {period: int, threshold: float}; "
-            "sma_below/sma_above → {period: int}; "
-            "macd_cross_above/macd_cross_below → {fast: int, slow: int, signal_period: int}; "
-            "bb_above_upper/bb_below_lower → {length: int, std: float}; "
-            "ema_cross_above/ema_cross_below → {fast: int, slow: int}; "
-            "atr_above/atr_below → {period: int, multiplier: float}; "
-            "day_of_week → {days: list[int]} where 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri."
-        ),
-    },
-    "entry_signal_days": {
-        "type": "integer",
-        "minimum": 1,
-        "description": (
-            "Optional: require the entry_signal to be True for this many consecutive "
-            "trading days before entering. Works with any signal. "
-            "Omit or set to 1 for single-bar behavior (default)."
-        ),
-    },
-    "exit_signal": {
-        "type": "string",
-        "enum": SIGNAL_NAMES,
-        "description": (
-            "Optional TA signal that gates exit. Only exits trades on "
-            "dates where the signal is True. Same signal names as entry_signal."
-        ),
-    },
-    "exit_signal_params": {
-        "type": "object",
-        "description": (
-            "Optional parameters for exit_signal. Same keys as entry_signal_params."
-        ),
-    },
-    "exit_signal_days": {
-        "type": "integer",
-        "minimum": 1,
-        "description": (
-            "Optional: require the exit_signal condition to hold for this "
-            "many consecutive trading days before exiting. Works the same as "
-            "entry_signal_days but for the exit signal. "
-            "Omit or set to 1 for no sustained requirement (default behavior)."
-        ),
-    },
-    "entry_signal_slot": {
-        "type": "string",
-        "description": (
-            "Name of a pre-built signal slot (from build_signal) to "
-            "use as entry date filter. Use this for composite signals. "
-            "Cannot be combined with entry_signal."
-        ),
-    },
-    "exit_signal_slot": {
-        "type": "string",
-        "description": (
-            "Name of a pre-built signal slot (from build_signal) to "
-            "use as exit date filter. Use this for composite signals. "
-            "Cannot be combined with exit_signal."
-        ),
-    },
-}
-
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
 _DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
 
@@ -446,9 +311,6 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "run_strategy": (
         "Run an options strategy backtest on the loaded dataset. "
-        "Strategies: "
-        + ", ".join(sorted(op.__dict__.get("__all__", [])) or ["long_calls"])
-        + ". "
         "Calendar/diagonal strategies also accept front_dte_min, "
         "front_dte_max, back_dte_min, back_dte_max."
     ),
@@ -518,6 +380,9 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
 }
 
+# Tools owned by data providers — excluded from core tool schema generation.
+_PROVIDER_TOOLS = frozenset({"fetch_options_data"})
+
 
 def get_tool_schemas() -> list[dict]:
     """Return OpenAI-compatible tool schemas for all optopsy functions.
@@ -528,20 +393,18 @@ def get_tool_schemas() -> list[dict]:
     """
     from ._models import TOOL_ARG_MODELS, pydantic_to_openai_params
 
-    # Core tools (exclude provider-specific tools like fetch_options_data)
-    _PROVIDER_TOOLS = {"fetch_options_data"}
     tools = []
     for tool_name, model_cls in TOOL_ARG_MODELS.items():
         if tool_name in _PROVIDER_TOOLS:
             continue
         description = _TOOL_DESCRIPTIONS.get(tool_name, f"Execute {tool_name}")
-        # Use run_strategy description with dynamic strategy list
+        # Prepend dynamic strategy list to run_strategy description
         if tool_name == "run_strategy":
             description = (
                 "Run an options strategy backtest on the loaded dataset. "
                 "Strategies: " + ", ".join(STRATEGY_NAMES) + ". "
-                "Calendar/diagonal strategies also accept front_dte_min, "
-                "front_dte_max, back_dte_min, back_dte_max."
+            ) + description.removeprefix(
+                "Run an options strategy backtest on the loaded dataset. "
             )
         tools.append(
             {

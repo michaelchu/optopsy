@@ -68,8 +68,9 @@ _.win_rate  # unused variable (optopsy/ui/tools/_models.py)
 _._validate_signal_name  # unused method (optopsy/ui/tools/_models.py)
 _._validate_strategy_name  # unused method (optopsy/ui/tools/_models.py)
 _._validate_strategy_names  # unused method (optopsy/ui/tools/_models.py)
-# Legacy schema dicts kept for backward compatibility
-STRATEGY_PARAMS_SCHEMA  # unused variable (optopsy/ui/tools/_schemas.py)
-SIGNAL_PARAMS_SCHEMA  # unused variable (optopsy/ui/tools/_schemas.py)
+_._reject_raw  # unused method (optopsy/ui/tools/_models.py)
+# Shared validator helpers (called by Pydantic validators)
+_check_strategy_name  # unused function (optopsy/ui/tools/_models.py)
+_check_signal_name  # unused function (optopsy/ui/tools/_models.py)
 # cls parameter in Pydantic @classmethod validators
 cls  # unused variable (optopsy/ui/tools/_models.py)

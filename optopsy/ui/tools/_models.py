@@ -18,6 +18,27 @@ from pydantic import BaseModel, Field, field_validator
 from ._schemas import SIGNAL_NAMES, STRATEGY_NAMES
 
 # ---------------------------------------------------------------------------
+# Shared validator helpers
+# ---------------------------------------------------------------------------
+
+
+def _check_strategy_name(v: str | None) -> str | None:
+    """Validate a strategy name against the known registry."""
+    if v is not None and v not in STRATEGY_NAMES:
+        raise ValueError(
+            f"Unknown strategy '{v}'. Available: {', '.join(STRATEGY_NAMES)}"
+        )
+    return v
+
+
+def _check_signal_name(v: str | None) -> str | None:
+    """Validate a signal name against the known registry."""
+    if v is not None and v not in SIGNAL_NAMES:
+        raise ValueError(f"Unknown signal '{v}'. Available: {', '.join(SIGNAL_NAMES)}")
+    return v
+
+
+# ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
@@ -214,11 +235,7 @@ class SignalMixin(BaseModel):
     @field_validator("entry_signal", "exit_signal", mode="before")
     @classmethod
     def _validate_signal_name(cls, v: str | None) -> str | None:
-        if v is not None and v not in SIGNAL_NAMES:
-            raise ValueError(
-                f"Unknown signal '{v}'. Available: {', '.join(SIGNAL_NAMES)}"
-            )
-        return v
+        return _check_signal_name(v)
 
 
 # ---------------------------------------------------------------------------
@@ -277,11 +294,7 @@ class SuggestStrategyParamsArgs(BaseModel):
     @field_validator("strategy_name", mode="before")
     @classmethod
     def _validate_strategy_name(cls, v: str | None) -> str | None:
-        if v is not None and v not in STRATEGY_NAMES:
-            raise ValueError(
-                f"Unknown strategy '{v}'. Available: {', '.join(STRATEGY_NAMES)}"
-            )
-        return v
+        return _check_strategy_name(v)
 
 
 class RunStrategyArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
@@ -303,18 +316,16 @@ class RunStrategyArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
     @field_validator("strategy_name", mode="before")
     @classmethod
     def _validate_strategy_name(cls, v: str) -> str:
-        if v not in STRATEGY_NAMES:
-            raise ValueError(
-                f"Unknown strategy '{v}'. Available: {', '.join(STRATEGY_NAMES)}"
-            )
-        return v
+        return _check_strategy_name(v)  # type: ignore[return-value]
 
 
 class ScanStrategiesArgs(BaseModel):
     strategy_names: list[str] = Field(
         ...,
         min_length=1,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={
+            "items": {"type": "string", "enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        },
         description="One or more strategy names to include in the scan.",
     )
     dataset_name: str | None = Field(
@@ -362,10 +373,8 @@ class ScanStrategiesArgs(BaseModel):
         if isinstance(v, list):
             invalid = [s for s in v if s not in STRATEGY_NAMES]
             if invalid:
-                raise ValueError(
-                    f"Unknown strategies: {invalid}. "
-                    f"Available: {', '.join(STRATEGY_NAMES)}"
-                )
+                msg = f"Unknown strategies: {invalid}. Available: {', '.join(STRATEGY_NAMES)}"
+                raise ValueError(msg)
         return v
 
 
@@ -389,11 +398,7 @@ class SignalSpec(BaseModel):
     @field_validator("name", mode="before")
     @classmethod
     def _validate_signal_name(cls, v: str) -> str:
-        if v not in SIGNAL_NAMES:
-            raise ValueError(
-                f"Unknown signal '{v}'. Available: {', '.join(SIGNAL_NAMES)}"
-            )
-        return v
+        return _check_signal_name(v)  # type: ignore[return-value]
 
 
 class BuildSignalArgs(BaseModel):
@@ -444,11 +449,7 @@ class ListResultsArgs(BaseModel):
     @field_validator("strategy_name", mode="before")
     @classmethod
     def _validate_strategy_name(cls, v: str | None) -> str | None:
-        if v is not None and v not in STRATEGY_NAMES:
-            raise ValueError(
-                f"Unknown strategy '{v}'. Available: {', '.join(STRATEGY_NAMES)}"
-            )
-        return v
+        return _check_strategy_name(v)
 
 
 class InspectCacheArgs(BaseModel):
@@ -608,17 +609,23 @@ class SimulateArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
             "Omit to use the most-recently-loaded dataset."
         ),
     )
-    # Simulate does not use 'raw' — exclude from StrategyParamsMixin
+    # Simulate does not use 'raw' — override to reject it explicitly
     raw: bool | None = Field(None, exclude=True)
 
     @field_validator("strategy_name", mode="before")
     @classmethod
     def _validate_strategy_name(cls, v: str) -> str:
-        if v not in STRATEGY_NAMES:
+        return _check_strategy_name(v)  # type: ignore[return-value]
+
+    @field_validator("raw", mode="before")
+    @classmethod
+    def _reject_raw(cls, v: bool | None) -> None:
+        if v is not None:
             raise ValueError(
-                f"Unknown strategy '{v}'. Available: {', '.join(STRATEGY_NAMES)}"
+                "simulate does not support the 'raw' parameter. "
+                "Use run_strategy with raw=true to see individual trades."
             )
-        return v
+        return None
 
 
 class GetSimulationTradesArgs(BaseModel):

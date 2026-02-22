@@ -10,6 +10,7 @@ import optopsy.signals as _signals
 from optopsy.signals import apply_signal
 
 from ..providers.cache import ParquetCache, compute_date_gaps
+from ._models import StrategyResultSummary
 from ._schemas import SIGNAL_REGISTRY, STRATEGIES
 
 _log = logging.getLogger(__name__)
@@ -426,8 +427,6 @@ def _make_result_summary(
 
     Uses :class:`StrategyResultSummary` to validate and type the output.
     """
-    from ._models import StrategyResultSummary
-
     base = {
         "strategy": strategy_name,
         "max_entry_dte": arguments.get("max_entry_dte", 90),

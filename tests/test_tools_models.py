@@ -255,6 +255,10 @@ class TestValidationRejection:
         with pytest.raises(ValidationError):
             SimulateArgs.model_validate({"strategy_name": "long_calls", "quantity": 0})
 
+    def test_simulate_rejects_raw(self):
+        with pytest.raises(ValidationError, match="does not support"):
+            SimulateArgs.model_validate({"strategy_name": "long_calls", "raw": True})
+
     def test_invalid_entry_signal(self):
         with pytest.raises(ValidationError, match="Unknown signal"):
             RunStrategyArgs.model_validate(

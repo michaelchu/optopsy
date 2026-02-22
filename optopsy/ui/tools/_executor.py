@@ -1617,10 +1617,9 @@ def execute_tool(
 
     # --- Pydantic validation gate ---
     model_cls = TOOL_ARG_MODELS.get(tool_name)
-    if model_cls is None:
-        provider = get_provider_for_tool(tool_name)
-        if provider is not None:
-            model_cls = provider.get_arg_model(tool_name)
+    provider = get_provider_for_tool(tool_name)
+    if model_cls is None and provider is not None:
+        model_cls = provider.get_arg_model(tool_name)
     if model_cls is not None:
         from pydantic import ValidationError
 
@@ -1664,7 +1663,6 @@ def execute_tool(
         return handler(arguments, dataset, signals, datasets, results, _result)
 
     # Generic data-provider dispatch (external providers like EODHD)
-    provider = get_provider_for_tool(tool_name)
     if provider is not None:
         try:
             summary, df = provider.execute(tool_name, arguments)
