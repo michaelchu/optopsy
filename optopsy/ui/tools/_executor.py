@@ -1793,38 +1793,43 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     if df.empty:
         return _result(f"No options with IV data on {quote_date_str}.")
 
-    # Find ATM options: closest strike to underlying_price per expiration.
+    # Find ATM options: closest strike to underlying_price per (symbol, expiration).
     # Use per-row underlying_price (vectorized) so multi-symbol datasets
     # and intra-day price variations are handled correctly.
     df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
-    atm_idx = df.groupby("expiration")["_abs_otm"].idxmin()
+    atm_idx = df.groupby(["underlying_symbol", "expiration"])["_abs_otm"].idxmin()
     atm_df = df.loc[atm_idx].copy()
 
     # If both call and put exist at ATM strike, average their IV
-    atm_strikes = atm_df[["expiration", "strike"]].drop_duplicates()
+    atm_strikes = atm_df[
+        ["underlying_symbol", "expiration", "strike"]
+    ].drop_duplicates()
     atm_iv = (
-        df.merge(atm_strikes, on=["expiration", "strike"])
-        .groupby("expiration")["implied_volatility"]
+        df.merge(atm_strikes, on=["underlying_symbol", "expiration", "strike"])
+        .groupby(["underlying_symbol", "expiration"])["implied_volatility"]
         .mean()
         .reset_index()
     )
     atm_iv["dte"] = (atm_iv["expiration"] - pd.to_datetime(quote_date_str)).dt.days
-    atm_iv = atm_iv.sort_values("dte")
+    atm_iv = atm_iv.sort_values(["underlying_symbol", "dte"])
     atm_iv = atm_iv[atm_iv["dte"] > 0]
 
     if atm_iv.empty:
         return _result(f"No forward expirations found on {quote_date_str}.")
 
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=atm_iv["dte"],
-            y=atm_iv["implied_volatility"],
-            mode="lines+markers",
-            name="ATM IV",
-            marker=dict(size=8),
+    symbols = atm_iv["underlying_symbol"].unique()
+    for sym in symbols:
+        sym_data = atm_iv[atm_iv["underlying_symbol"] == sym]
+        fig.add_trace(
+            go.Scatter(
+                x=sym_data["dte"],
+                y=sym_data["implied_volatility"],
+                mode="lines+markers",
+                name=f"{sym} ATM IV" if len(symbols) > 1 else "ATM IV",
+                marker=dict(size=8),
+            )
         )
-    )
     fig.update_layout(
         title=f"IV Term Structure — {label} ATM ({quote_date_str})",
         xaxis_title="Days to Expiration",
@@ -1833,7 +1838,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
         height=arguments.get("figsize_height", 500),
     )
 
-    exps_shown = len(atm_iv)
+    exps_shown = atm_iv["expiration"].nunique()
     iv_range = f"{atm_iv['implied_volatility'].min():.2%} – {atm_iv['implied_volatility'].max():.2%}"
     summary = (
         f"IV term structure for {label} on {quote_date_str}: "

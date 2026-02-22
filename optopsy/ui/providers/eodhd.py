@@ -56,7 +56,7 @@ _OPTIONS_NUMERIC_COLS = [
     "gamma",
     "theta",
     "vega",
-    "impliedVolatility",
+    "implied_volatility",
     "open_interest",
     "midpoint",
 ]
