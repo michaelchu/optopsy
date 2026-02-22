@@ -1,6 +1,7 @@
 """Tests for the lightweight backtest simulation layer."""
 
 import datetime
+from collections import namedtuple
 
 import pandas as pd
 import pytest
@@ -142,6 +143,119 @@ def calendar_data():
         ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
     ]
     return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+
+
+@pytest.fixture(scope="module")
+def calendar_put_data():
+    """Calendar spread test data with puts."""
+    front_exp = datetime.datetime(2018, 1, 31)
+    back_exp = datetime.datetime(2018, 3, 2)
+    entry_date = datetime.datetime(2018, 1, 1)
+    exit_date = datetime.datetime(2018, 1, 24)
+    d = [
+        # Entry — Front month puts
+        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50],
+        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10],
+        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50],
+        # Entry — Back month puts
+        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50],
+        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00],
+        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50],
+        # Exit — Front month
+        ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30],
+        ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50],
+        ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50],
+        # Exit — Back month
+        ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50],
+        ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00],
+        ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50],
+    ]
+    return pd.DataFrame(data=d, columns=_CHAIN_COLS)
+
+
+# ---------------------------------------------------------------------------
+# Strategy specs and shared assertion helper
+# ---------------------------------------------------------------------------
+
+_Spec = namedtuple("_Spec", ["fn", "entry_sign"])
+
+_STANDARD_SPECS = [
+    _Spec(op.long_calls, "debit"),
+    _Spec(op.long_puts, "debit"),
+    _Spec(op.short_calls, "credit"),
+    _Spec(op.short_puts, "credit"),
+    _Spec(op.long_straddles, "debit"),
+    _Spec(op.short_straddles, "credit"),
+    _Spec(op.long_strangles, "debit"),
+    _Spec(op.short_strangles, "credit"),
+    _Spec(op.covered_call, "debit"),
+    _Spec(op.protective_put, "debit"),
+    _Spec(op.long_call_spread, "debit"),
+    _Spec(op.short_call_spread, "credit"),
+    _Spec(op.long_put_spread, "debit"),
+    _Spec(op.short_put_spread, "credit"),
+]
+
+_MULTI_STRIKE_SPECS = [
+    _Spec(op.long_call_butterfly, "debit"),
+    _Spec(op.short_call_butterfly, "credit"),
+    _Spec(op.long_put_butterfly, "debit"),
+    _Spec(op.short_put_butterfly, "credit"),
+    _Spec(op.iron_condor, "credit"),
+    _Spec(op.iron_butterfly, "credit"),
+    _Spec(op.reverse_iron_condor, "debit"),
+    _Spec(op.reverse_iron_butterfly, "debit"),
+]
+
+_CALL_CALENDAR_SPECS = [
+    _Spec(op.long_call_calendar, "debit"),
+    _Spec(op.short_call_calendar, "credit"),
+    _Spec(op.long_call_diagonal, "debit"),
+    _Spec(op.short_call_diagonal, "credit"),
+]
+
+_PUT_CALENDAR_SPECS = [
+    _Spec(op.long_put_calendar, "debit"),
+    _Spec(op.short_put_calendar, "credit"),
+    _Spec(op.long_put_diagonal, "debit"),
+    _Spec(op.short_put_diagonal, "credit"),
+]
+
+_CALENDAR_KWARGS = dict(
+    front_dte_min=20,
+    front_dte_max=40,
+    back_dte_min=50,
+    back_dte_max=90,
+    exit_dte=7,
+)
+
+
+def _spec_id(spec):
+    """Generate a readable test ID from a _Spec."""
+    return spec.fn.__name__
+
+
+def _assert_strategy_traits(result, entry_sign):
+    """Validate behavioral traits common to all strategies."""
+    assert isinstance(result, SimulationResult)
+    assert result.summary["total_trades"] >= 1
+    for _, t in result.trade_log.iterrows():
+        # Entry sign
+        if entry_sign == "debit":
+            assert t["entry_cost"] > 0, (
+                f"expected debit (entry_cost > 0), got {t['entry_cost']}"
+            )
+        else:
+            assert t["entry_cost"] < 0, (
+                f"expected credit (entry_cost < 0), got {t['entry_cost']}"
+            )
+        # P&L formula
+        expected = (
+            (t["exit_proceeds"] - t["entry_cost"]) * t["quantity"] * t["multiplier"]
+        )
+        assert t["realized_pnl"] == pytest.approx(expected)
+        # Description
+        assert isinstance(t["description"], str) and len(t["description"]) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -743,3 +857,123 @@ class TestFilterTrades:
         log = _build_trade_log(trades, capital=500.0, quantity=1, multiplier=100)
         assert len(log) == 2
         assert log.iloc[-1]["equity"] <= 0
+
+
+# ---------------------------------------------------------------------------
+# Parametrized smoke tests — all 28 strategies
+# ---------------------------------------------------------------------------
+
+
+class TestAllStrategiesSmoke:
+    """Behavioural-trait assertions for every strategy."""
+
+    @pytest.mark.parametrize("spec", _STANDARD_SPECS, ids=_spec_id)
+    def test_standard(self, data, spec):
+        result = simulate(data, spec.fn, selector="first")
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _MULTI_STRIKE_SPECS, ids=_spec_id)
+    def test_multi_strike(self, multi_strike_data, spec):
+        result = simulate(multi_strike_data, spec.fn, selector="first")
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _CALL_CALENDAR_SPECS, ids=_spec_id)
+    def test_call_calendar(self, calendar_data, spec):
+        result = simulate(calendar_data, spec.fn, selector="first", **_CALENDAR_KWARGS)
+        _assert_strategy_traits(result, spec.entry_sign)
+
+    @pytest.mark.parametrize("spec", _PUT_CALENDAR_SPECS, ids=_spec_id)
+    def test_put_calendar(self, calendar_put_data, spec):
+        result = simulate(
+            calendar_put_data, spec.fn, selector="first", **_CALENDAR_KWARGS
+        )
+        _assert_strategy_traits(result, spec.entry_sign)
+
+
+# ---------------------------------------------------------------------------
+# Spot-check P&L for representative shapes
+# ---------------------------------------------------------------------------
+
+
+class TestSpotCheckPnl:
+    """Hand-calculated P&L for representative strategies not already covered."""
+
+    def test_long_strangles_pnl(self, data):
+        """Long strangle from ``data`` fixture (selector=first).
+
+        Strangles combine OTM call + OTM put at different strikes.
+        With underlying at 213.93 and strikes 212.5/215.0:
+          leg1 (put 212.5):  entry mid = (5.70+5.80)/2 = 5.75
+          leg2 (call 215.0): entry mid = (6.00+6.05)/2 = 6.025
+          total_entry_cost = 5.75 + 6.025 = 11.775  (debit)
+
+        Exit (underlying 220):
+          leg1 (put 212.5):  exit mid = (0.0+0.0)/2 = 0.0
+          leg2 (call 215.0): exit mid = (4.96+5.05)/2 = 5.005
+          total_exit_proceeds = 0.0 + 5.005 = 5.005
+
+        realized_pnl = (5.005 - 11.775) * 1 * 100 = -677.0
+        """
+        result = simulate(data, op.long_strangles, selector="first")
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(11.775)
+        assert trade["exit_proceeds"] == pytest.approx(5.005)
+        assert trade["realized_pnl"] == pytest.approx(-677.0)
+
+    def test_long_put_butterfly_pnl(self, multi_strike_data):
+        """Long put butterfly from ``multi_strike_data`` (selector=first).
+
+        Long put butterfly: buy lower put, sell 2x middle put, buy upper put.
+        With first selector the engine picks the first valid 3-strike combo
+        with equal-width wings.
+
+        Strikes 207.5 / 210.0 / 212.5 (width=2.5 each):
+          leg1 (long put 207.5):  entry mid = (0.40+0.50)/2 = 0.45
+          leg2 (short 2x put 210.0): entry mid = -(1.40+1.50)/2 * 2 = -2.90
+          leg3 (long put 212.5):  entry mid = (3.00+3.10)/2 = 3.05
+          total_entry_cost = 0.45 + (-2.90) + 3.05 = 0.60
+
+        Exit (underlying 215.0):
+          leg1 (long put 207.5):  exit mid = (0.0+0.05)/2 = 0.025
+          leg2 (short 2x put 210.0): exit mid = -(0.0+0.05)/2 * 2 = -0.05
+          leg3 (long put 212.5):  exit mid = (0.0+0.05)/2 = 0.025
+          total_exit_proceeds = 0.025 + (-0.05) + 0.025 = 0.0
+
+        realized_pnl = (0.0 - 0.60) * 1 * 100 = -60.0
+        """
+        result = simulate(multi_strike_data, op.long_put_butterfly, selector="first")
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(0.60)
+        assert trade["exit_proceeds"] == pytest.approx(0.0)
+        assert trade["realized_pnl"] == pytest.approx(-60.0)
+
+    def test_iron_condor_pnl(self, multi_strike_data):
+        """Iron condor from ``multi_strike_data`` (selector=first).
+
+        Iron condor: long OTM put / short put / short call / long OTM call.
+        First selector picks the first valid 4-strike combo (ascending):
+        207.5 / 210.0 / 212.5 / 215.0.
+
+          leg1 (long put 207.5):   entry mid = (0.40+0.50)/2 = 0.45
+          leg2 (short put 210.0):  entry mid = -(1.40+1.50)/2 = -1.45
+          leg3 (short call 212.5): entry mid = -(3.00+3.10)/2 = -3.05
+          leg4 (long call 215.0):  entry mid = (1.50+1.60)/2 = 1.55
+          total_entry_cost = 0.45 - 1.45 - 3.05 + 1.55 = -2.50 (credit)
+
+        Exit (underlying 215.0):
+          leg1 (long put 207.5):   exit mid = (0.0+0.05)/2 = 0.025
+          leg2 (short put 210.0):  exit mid = -(0.0+0.05)/2 = -0.025
+          leg3 (short call 212.5): exit mid = -(2.45+2.55)/2 = -2.50
+          leg4 (long call 215.0):  exit mid = (0.0+0.10)/2 = 0.05
+          total_exit_proceeds = 0.025 - 0.025 - 2.50 + 0.05 = -2.45
+
+        realized_pnl = (-2.45 - (-2.50)) * 1 * 100 = 5.0
+        """
+        result = simulate(multi_strike_data, op.iron_condor, selector="first")
+        assert result.summary["total_trades"] >= 1
+        trade = result.trade_log.iloc[0]
+        assert trade["entry_cost"] == pytest.approx(-2.50)
+        assert trade["exit_proceeds"] == pytest.approx(-2.45)
+        assert trade["realized_pnl"] == pytest.approx(5.0)
