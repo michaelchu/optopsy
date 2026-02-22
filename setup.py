@@ -26,7 +26,7 @@ setup(
     description="A nimble backtesting and statistics library for options strategies",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    version="2.3.0b1",
+    version="2.3.0b2",
     url="https://github.com/michaelchu/optopsy",
     author="Michael Chu",
     author_email="mchchu88@gmail.com",
