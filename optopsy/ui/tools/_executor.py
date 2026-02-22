@@ -33,7 +33,6 @@ from ._helpers import (
     read_sim_trade_log,
     write_sim_trade_log,
 )
-from ._models import TOOL_ARG_MODELS
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
     CALENDAR_EXTRA_PARAMS,
@@ -1616,6 +1615,9 @@ def execute_tool(
         results = {}
 
     # --- Pydantic validation gate ---
+    # Lazy import: _models pulls in pydantic which is an optional UI dep.
+    from ._models import TOOL_ARG_MODELS
+
     model_cls = TOOL_ARG_MODELS.get(tool_name)
     provider = get_provider_for_tool(tool_name)
     if model_cls is None and provider is not None:
