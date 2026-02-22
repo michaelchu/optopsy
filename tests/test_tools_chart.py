@@ -470,30 +470,15 @@ class TestChartErrors:
 
 
 class TestChartStyling:
-    def test_custom_title(self, option_data):
-        result = execute_tool(
-            "create_chart",
-            {
-                "chart_type": "line",
-                "data_source": "dataset",
-                "x": "strike",
-                "y": "bid",
-                "title": "My Custom Title",
-            },
-            option_data,
-        )
-        assert result.chart_figure is not None
-        assert result.chart_figure.layout.title.text == "My Custom Title"
-        assert "My Custom Title" in result.user_display
-
-    def test_auto_generated_title(self, option_data):
+    def test_no_title_or_legend(self, option_data):
         result = execute_tool(
             "create_chart",
             {"chart_type": "bar", "data_source": "dataset", "x": "strike", "y": "bid"},
             option_data,
         )
         assert result.chart_figure is not None
-        assert "Bar" in result.chart_figure.layout.title.text
+        assert result.chart_figure.layout.title.text is None
+        assert result.chart_figure.layout.showlegend is False
 
     def test_custom_dimensions(self, option_data):
         result = execute_tool(
@@ -526,3 +511,224 @@ class TestChartStyling:
         )
         assert result.chart_figure is not None
         assert result.chart_figure.data[0].line.color == "red"
+
+
+# ---------------------------------------------------------------------------
+# Indicator chart tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ohlcv_long():
+    """Longer OHLCV dataset (30 rows) for indicator computation."""
+    import numpy as np
+
+    np.random.seed(42)
+    n = 60
+    dates = pd.bdate_range("2024-01-02", periods=n)
+    close = 100 + np.cumsum(np.random.randn(n) * 0.5)
+    return pd.DataFrame(
+        {
+            "date": dates,
+            "open": close - np.random.rand(n) * 0.5,
+            "high": close + np.random.rand(n) * 1.0,
+            "low": close - np.random.rand(n) * 1.0,
+            "close": close,
+            "volume": np.random.randint(1000, 5000, n),
+        }
+    )
+
+
+class TestIndicatorCharts:
+    def test_candlestick_with_rsi(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "rsi", "period": 14}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # Should have candlestick + RSI trace = 2 traces minimum
+        assert len(result.chart_figure.data) >= 2
+        # First trace is candlestick
+        assert result.chart_figure.data[0].type == "candlestick"
+
+    def test_candlestick_with_sma_overlay(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "sma", "period": 10}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # Candlestick + SMA trace
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[1].name == "SMA(10)"
+
+    def test_candlestick_with_ema_overlay(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "ema", "period": 10}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        assert result.chart_figure.data[1].name == "EMA(10)"
+
+    def test_candlestick_with_multiple_indicators(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [
+                    {"type": "sma", "period": 10},
+                    {"type": "rsi", "period": 14},
+                    {"type": "volume"},
+                ],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # Candlestick + SMA + RSI + Volume = at least 4 traces
+        assert len(result.chart_figure.data) >= 4
+
+    def test_macd_subplot(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "macd", "fast": 12, "slow": 26, "signal": 9}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # Candlestick + MACD line + Signal line + Histogram = 4 traces
+        assert len(result.chart_figure.data) >= 4
+        trace_names = [t.name for t in result.chart_figure.data]
+        assert "MACD" in trace_names
+        assert "Signal" in trace_names
+        assert "Histogram" in trace_names
+
+    def test_bbands_overlay(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "bbands", "period": 20, "std": 2.0}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # Candlestick + upper + lower + mid = 4 traces
+        assert len(result.chart_figure.data) == 4
+        trace_names = [t.name for t in result.chart_figure.data]
+        assert any("BB Upper" in n for n in trace_names)
+        assert any("BB Lower" in n for n in trace_names)
+        assert any("BB Mid" in n for n in trace_names)
+
+    def test_volume_subplot(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "volume"}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[1].name == "Volume"
+        assert result.chart_figure.data[1].type == "bar"
+
+    def test_invalid_indicator_type(self, ohlcv_long):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "stochastic"}],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is None
+        assert "unknown indicator" in result.llm_summary.lower()
+
+    def test_indicators_require_close_column(self):
+        """Indicators on data without a close column should error."""
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-02", "2024-01-03"]),
+                "open": [100.0, 101.0],
+                "high": [103.0, 104.0],
+                "low": [99.0, 100.0],
+                "value": [102.0, 103.0],
+            }
+        )
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "rsi"}],
+            },
+            df,
+        )
+        assert result.chart_figure is None
+        assert "close" in result.llm_summary.lower()
+
+    def test_volume_requires_volume_column(self, ohlcv_data):
+        """Volume indicator on data without volume column should error."""
+        df = ohlcv_data.drop(columns=["volume"])
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [{"type": "volume"}],
+            },
+            df,
+        )
+        assert result.chart_figure is None
+        assert "volume" in result.llm_summary.lower()
+
+    def test_auto_height_scaling(self, ohlcv_long):
+        """Height auto-scales based on number of subplot panels."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "candlestick",
+                "data_source": "dataset",
+                "indicators": [
+                    {"type": "rsi"},
+                    {"type": "macd"},
+                ],
+            },
+            ohlcv_long,
+        )
+        assert result.chart_figure is not None
+        # 500 base + 200*2 subplots = 900
+        assert result.chart_figure.layout.height == 900
+
+    def test_candlestick_without_indicators_unchanged(self, ohlcv_data):
+        """Candlestick without indicators still works as before."""
+        result = execute_tool(
+            "create_chart",
+            {"chart_type": "candlestick", "data_source": "dataset"},
+            ohlcv_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 1
+        assert result.chart_figure.data[0].type == "candlestick"

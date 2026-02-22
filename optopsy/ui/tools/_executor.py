@@ -1249,7 +1249,7 @@ def _resolve_chart_data(
     Returns ``(df, source_label, error_msg)``.  When ``error_msg`` is not
     None the caller should return it as a tool result immediately.
     """
-    if data_source in ("dataset", "named_dataset"):
+    if data_source == "dataset":
         ds_name = arguments.get("dataset_name")
         df = _resolve_dataset(ds_name, dataset, datasets)
         label = ds_name or "active dataset"
@@ -1344,9 +1344,33 @@ def _check_xy_columns(
     return None
 
 
+def _resolve_candlestick_columns(
+    df: pd.DataFrame, x: str | None
+) -> tuple[str | None, str | None]:
+    """Validate OHLC columns and resolve the date column for candlestick charts.
+
+    Returns ``(date_col, error_msg)``.  When ``error_msg`` is not None the
+    caller should return it as a tool error.
+    """
+    date_col = x or next((c for c in ("date", "quote_date") if c in df.columns), None)
+    if date_col is None or date_col not in df.columns:
+        return None, (
+            f"Candlestick chart needs a date column. Available: {list(df.columns)}"
+        )
+    for required in ("open", "high", "low", "close"):
+        if required not in df.columns:
+            return None, (
+                f"Candlestick chart requires 'open', 'high', 'low', 'close' "
+                f"columns. Missing: '{required}'. "
+                f"Available: {list(df.columns)}"
+            )
+    return date_col, None
+
+
 @_register("create_chart")
 def _handle_create_chart(arguments, dataset, signals, datasets, results, _result):
     import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
 
     chart_type = arguments.get("chart_type")
     if not chart_type:
@@ -1367,7 +1391,6 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
     x = arguments.get("x")
     y = arguments.get("y")
     heatmap_col = arguments.get("heatmap_col")
-    title = arguments.get("title", "")
     xlabel = arguments.get("xlabel", "")
     ylabel = arguments.get("ylabel", "")
     color = arguments.get("color")
@@ -1435,21 +1458,97 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
             )
         )
 
-    elif chart_type == "candlestick":
-        date_col = x or next(
-            (c for c in ("date", "quote_date") if c in df.columns), None
+    elif chart_type in ("candlestick", "line") and arguments.get("indicators"):
+        # Multi-panel chart with indicators
+        from ._indicators import (
+            add_overlay_indicators,
+            add_subplot_indicators,
+            classify_indicators,
+            compute_figure_height,
+            compute_row_heights,
+            validate_indicator_columns,
         )
-        if date_col is None or date_col not in df.columns:
-            return _result(
-                f"Candlestick chart needs a date column. Available: {list(df.columns)}"
+
+        indicators = arguments["indicators"]
+
+        # Validate price chart columns
+        if chart_type == "candlestick":
+            date_col, col_err = _resolve_candlestick_columns(df, x)
+            if col_err:
+                return _result(col_err)
+        else:
+            col_err = _check_xy_columns(df, x, y, chart_type)
+            if col_err:
+                return _result(col_err)
+            date_col = x
+
+        # Validate and classify indicators
+        overlay_specs, subplot_specs, ind_err = classify_indicators(indicators)
+        if ind_err:
+            return _result(ind_err)
+
+        sorted_df = df.sort_values(date_col)
+        col_err = validate_indicator_columns(indicators, list(sorted_df.columns))
+        if col_err:
+            return _result(col_err)
+
+        # Build multi-row subplot figure
+        n_subplot_panels = len(subplot_specs)
+        fig = make_subplots(
+            rows=1 + n_subplot_panels,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.03,
+            row_heights=compute_row_heights(n_subplot_panels),
+        )
+
+        # Price chart on row 1
+        if chart_type == "candlestick":
+            fig.add_trace(
+                go.Candlestick(
+                    x=sorted_df[date_col],
+                    open=sorted_df["open"],
+                    high=sorted_df["high"],
+                    low=sorted_df["low"],
+                    close=sorted_df["close"],
+                    name="Price",
+                ),
+                row=1,
+                col=1,
             )
-        for required in ("open", "high", "low", "close"):
-            if required not in df.columns:
-                return _result(
-                    f"Candlestick chart requires 'open', 'high', 'low', 'close' "
-                    f"columns. Missing: '{required}'. "
-                    f"Available: {list(df.columns)}"
-                )
+        else:
+            fig.add_trace(
+                go.Scatter(
+                    x=sorted_df[date_col],
+                    y=sorted_df[y],
+                    mode="lines",
+                    name=y,
+                    line={"color": color} if color else {},
+                ),
+                row=1,
+                col=1,
+            )
+
+        close = sorted_df["close"] if "close" in sorted_df.columns else None
+        add_overlay_indicators(fig, go, sorted_df[date_col], close, overlay_specs)
+        add_subplot_indicators(
+            fig,
+            go,
+            sorted_df,
+            date_col,
+            close,
+            subplot_specs,
+        )
+
+        figsize_height = arguments.get(
+            "figsize_height", compute_figure_height(n_subplot_panels)
+        )
+        fig.update_layout(xaxis_rangeslider_visible=False)
+
+    elif chart_type == "candlestick":
+        date_col, col_err = _resolve_candlestick_columns(df, x)
+        if col_err:
+            return _result(col_err)
         sorted_df = df.sort_values(date_col)
         fig.add_trace(
             go.Candlestick(
@@ -1468,22 +1567,20 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
             "Use: line, bar, scatter, histogram, heatmap, or candlestick."
         )
 
-    if not title:
-        title = f"{chart_type.title()} chart — {source_label}"
     fig.update_layout(
-        title=title,
         xaxis_title=xlabel or x or "",
         yaxis_title=ylabel or y or "",
         width=figsize_width,
         height=figsize_height,
         template="plotly_white",
+        showlegend=False,
+        margin=dict(l=40, r=20, t=10, b=30),
     )
 
-    caption = f"Chart: {title}"
     llm_summary = (
         f"Created {chart_type} chart from {source_label}. {len(df)} data points."
     )
-    return _result(llm_summary, user_display=caption, chart_figure=fig)
+    return _result(llm_summary, user_display=llm_summary, chart_figure=fig)
 
 
 # ---------------------------------------------------------------------------

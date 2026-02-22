@@ -287,17 +287,22 @@ async def on_message(message: cl.Message):
     # Show tool calls as expandable steps with a loading indicator.
     # tool_call_id is stored in step metadata so on_chat_resume can reconstruct
     # the tool message history with the correct ID.
+    # Chart figures are collected and attached to the final response message
+    # so they appear in the main chat area, not inside the tool accordion.
+    chart_elements: list[cl.ElementBased] = []
+
     async def on_tool_call(tool_name, arguments, result, tool_call_id=""):
         async with cl.Step(name=tool_name, type="tool") as step:
             step.input = str(arguments)
             step.output = result.user_display
             if result.chart_figure is not None:
-                chart_el = cl.Plotly(
-                    name="chart",
-                    figure=result.chart_figure,
-                    display="inline",
+                chart_elements.append(
+                    cl.Plotly(
+                        name="chart",
+                        figure=result.chart_figure,
+                        display="inline",
+                    )
                 )
-                step.elements = [chart_el]
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
 
@@ -312,7 +317,9 @@ async def on_message(message: cl.Message):
     async def on_token(token: str):
         nonlocal response_msg
         if response_msg is None:
-            response_msg = cl.Message(content="")
+            # Attach chart elements up front — tool calls finish before
+            # streaming begins, so chart_elements is already populated.
+            response_msg = cl.Message(content="", elements=chart_elements)
             await response_msg.send()
         await response_msg.stream_token(token)
 
@@ -333,10 +340,12 @@ async def on_message(message: cl.Message):
         )
         # If on_token never fired (e.g. result came back all at once), send now.
         if response_msg is None:
-            response_msg = cl.Message(content=result_text)
+            response_msg = cl.Message(content=result_text, elements=chart_elements)
             await response_msg.send()
         else:
             response_msg.content = result_text
+            if chart_elements:
+                response_msg.elements = chart_elements
             await response_msg.update()
         cl.user_session.set("messages", updated_messages)
     except Exception as e:

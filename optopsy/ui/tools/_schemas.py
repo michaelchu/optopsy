@@ -1008,10 +1008,6 @@ def get_tool_schemas() -> list[dict]:
                                 "mean). Required only for heatmap chart_type."
                             ),
                         },
-                        "title": {
-                            "type": "string",
-                            "description": "Chart title. Auto-generated if omitted.",
-                        },
                         "xlabel": {
                             "type": "string",
                             "description": "X-axis label. Defaults to column name.",
@@ -1055,6 +1051,38 @@ def get_tool_schemas() -> list[dict]:
                                 "data_source='stock'. Reads from the yfinance cache "
                                 "(use fetch_stock_data first)."
                             ),
+                        },
+                        "indicators": {
+                            "type": "array",
+                            "description": (
+                                "Technical indicators to overlay or add as subplots. "
+                                'Each item: {"type": "rsi"|"sma"|"ema"|"bbands"'
+                                '|"macd"|"volume", ...params}. Overlay types (sma, '
+                                "ema, bbands) draw on the price panel; subplot types "
+                                "(rsi, macd, volume) get their own panel below."
+                            ),
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "rsi",
+                                            "sma",
+                                            "ema",
+                                            "bbands",
+                                            "macd",
+                                            "volume",
+                                        ],
+                                    },
+                                    "period": {"type": "integer"},
+                                    "std": {"type": "number"},
+                                    "fast": {"type": "integer"},
+                                    "slow": {"type": "integer"},
+                                    "signal": {"type": "integer"},
+                                },
+                                "required": ["type"],
+                            },
                         },
                         "bins": {
                             "type": "integer",
