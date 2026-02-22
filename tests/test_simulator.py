@@ -486,23 +486,23 @@ class TestSummaryStats:
 
 class TestArgumentValidation:
     def test_zero_capital_raises(self, data):
-        with pytest.raises(ValueError, match="capital must be positive"):
+        with pytest.raises(ValueError, match="capital"):
             simulate(data, op.long_calls, capital=0)
 
     def test_negative_capital_raises(self, data):
-        with pytest.raises(ValueError, match="capital must be positive"):
+        with pytest.raises(ValueError, match="capital"):
             simulate(data, op.long_calls, capital=-1000)
 
     def test_zero_quantity_raises(self, data):
-        with pytest.raises(ValueError, match="quantity must be >= 1"):
+        with pytest.raises(ValueError, match="quantity"):
             simulate(data, op.long_calls, quantity=0)
 
     def test_zero_max_positions_raises(self, data):
-        with pytest.raises(ValueError, match="max_positions must be >= 1"):
+        with pytest.raises(ValueError, match="max_positions"):
             simulate(data, op.long_calls, max_positions=0)
 
     def test_zero_multiplier_raises(self, data):
-        with pytest.raises(ValueError, match="multiplier must be >= 1"):
+        with pytest.raises(ValueError, match="multiplier"):
             simulate(data, op.long_calls, multiplier=0)
 
 

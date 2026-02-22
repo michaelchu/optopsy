@@ -592,15 +592,16 @@ def simulate(
     Returns:
         A :class:`SimulationResult` with trade log, equity curve, and summary.
     """
-    # Validate arguments
-    if capital <= 0:
-        raise ValueError(f"capital must be positive, got {capital}")
-    if quantity < 1:
-        raise ValueError(f"quantity must be >= 1, got {quantity}")
-    if max_positions < 1:
-        raise ValueError(f"max_positions must be >= 1, got {max_positions}")
-    if multiplier < 1:
-        raise ValueError(f"multiplier must be >= 1, got {multiplier}")
+    # Validate arguments via shared param_checks registry
+    from .checks import param_checks as _param_checks
+
+    for _name, _val in [
+        ("capital", capital),
+        ("quantity", quantity),
+        ("max_positions", max_positions),
+        ("multiplier", multiplier),
+    ]:
+        _param_checks[_name](_name, _val)
 
     # Resolve selector
     if isinstance(selector, str):
