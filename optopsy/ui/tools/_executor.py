@@ -1625,7 +1625,7 @@ def execute_tool(
 
         try:
             validated = model_cls.model_validate(arguments)
-            arguments = validated.model_dump(exclude_none=True)
+            arguments = validated.model_dump(mode="json", exclude_none=True)
         except ValidationError as e:
             items = []
             for err in e.errors():

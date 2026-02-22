@@ -609,8 +609,14 @@ class SimulateArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
             "Omit to use the most-recently-loaded dataset."
         ),
     )
-    # Simulate does not use 'raw' — override to reject it explicitly
-    raw: bool | None = Field(None, exclude=True)
+    # Simulate does not use 'raw' — override to reject it explicitly.
+    # exclude=True removes it from model_dump(); json_schema_extra hides it
+    # from model_json_schema() so the LLM tool schema won't expose it.
+    raw: bool | None = Field(
+        None,
+        exclude=True,
+        json_schema_extra={"hidden": True},
+    )
 
     @field_validator("strategy_name", mode="before")
     @classmethod
@@ -770,6 +776,17 @@ def pydantic_to_openai_params(model_cls: type[BaseModel]) -> dict[str, Any]:
     defs = raw.get("$defs", raw.get("definitions", {}))
     resolved = _resolve_refs(raw, defs)
     cleaned = _strip_titles(resolved)
+
+    # Remove properties marked with json_schema_extra={"hidden": True}
+    # (e.g. SimulateArgs.raw which is excluded from model_dump but would
+    # otherwise appear in the schema, confusing LLMs).
+    props = cleaned.get("properties", {})
+    hidden = [k for k, v in props.items() if isinstance(v, dict) and v.get("hidden")]
+    for k in hidden:
+        del props[k]
+    req = cleaned.get("required", [])
+    if hidden and req:
+        cleaned["required"] = [r for r in req if r not in hidden]
 
     # Ensure 'required' key exists
     if "required" not in cleaned:
