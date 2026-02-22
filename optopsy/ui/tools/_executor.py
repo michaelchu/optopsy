@@ -69,7 +69,9 @@ def _register(name: str):
 
 
 def _fmt_pf(value: float) -> str:
-    """Format profit_factor for display, handling infinity."""
+    """Format profit_factor for display, handling infinity and NaN."""
+    if value != value:  # NaN check
+        return "N/A"
     if value == float("inf"):
         return "∞ (no losses)"
     return f"{value:.2f}"

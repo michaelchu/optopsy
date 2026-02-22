@@ -441,7 +441,7 @@ def _make_result_summary(
         wins = pct[pct > 0].sum()
         losses = pct[pct < 0].sum()
         if losses == 0:
-            pf = float("inf") if wins > 0 else 0.0
+            pf = np.nan
         else:
             pf = abs(float(wins) / float(losses))
         base.update(
@@ -486,7 +486,16 @@ def _make_result_summary(
                     if "std" in result_df.columns
                     else None
                 ),
-                "win_rate": round(float((result_df["mean"] > 0).mean()), 4),
+                "win_rate": (
+                    round(
+                        float(
+                            (result_df["win_rate"] * result_df["count"]).sum() / total
+                        ),
+                        4,
+                    )
+                    if "win_rate" in result_df.columns and "count" in result_df.columns
+                    else round(float((result_df["mean"] > 0).mean()), 4)
+                ),
                 "profit_factor": agg_pf,
             }
         )
