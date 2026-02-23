@@ -21,3 +21,11 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+      - id: branch-name
+        name: branch name check
+        entry: bash scripts/check-branch-name.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
