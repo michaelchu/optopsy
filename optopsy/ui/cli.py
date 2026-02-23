@@ -48,6 +48,123 @@ def _cmd_cache_clear(args: argparse.Namespace) -> None:
         print(f"Cleared {count} cached file(s).")
 
 
+def _load_env() -> None:
+    """Load .env file the same way app.py does."""
+    from pathlib import Path
+
+    from dotenv import find_dotenv, load_dotenv
+
+    env_path = find_dotenv() or str(
+        Path(__file__).resolve().parent.parent.parent / ".env"
+    )
+    load_dotenv(env_path, override=True)
+
+
+def _cmd_download(args: argparse.Namespace) -> None:
+    import logging
+
+    from optopsy.ui._compat import import_optional_dependency
+
+    import_optional_dependency("pyarrow")
+    _load_env()
+
+    if args.verbose:
+        level = logging.DEBUG
+    else:
+        level = logging.ERROR  # suppress all logs in normal mode; status via Rich
+
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%H:%M:%S",
+        level=level,
+    )
+
+    from optopsy.ui.providers import get_provider_for_tool
+    from optopsy.ui.providers.eodhd import EODHDProvider
+
+    provider = get_provider_for_tool("download_options_data")
+    if provider is None:
+        print(
+            "No data provider is configured for downloading options data.\n"
+            "Set EODHD_API_KEY in your environment or .env file."
+        )
+        return
+
+    for symbol in args.symbols:
+        if isinstance(provider, EODHDProvider):
+            _download_with_rich(provider, symbol.upper())
+        else:
+            print(f"\n{'=' * 60}")
+            print(f"Downloading options data for {symbol.upper()}…")
+            print(f"{'=' * 60}")
+            summary, _ = provider.execute("download_options_data", {"symbol": symbol})
+            print(f"\n{summary}")
+
+
+def _download_with_rich(provider: object, symbol: str) -> None:
+    """Run download with Rich live progress display."""
+    from rich.console import Console
+    from rich.live import Live
+    from rich.table import Table
+
+    console = Console()
+    console.rule(f"Downloading options data for {symbol}")
+
+    # State shared with callbacks
+    state: dict[str, object] = {
+        "option_type": "",
+        "rows": 0,
+        "pct": 0.0,
+        "status": "",
+    }
+    live_ctx: list[Live] = []  # mutable container for closure access
+
+    def _make_display() -> Table:
+        table = Table.grid(padding=(0, 1))
+        otype = str(state["option_type"])
+        rows = int(state.get("rows", 0))  # type: ignore[arg-type]
+        pct = float(state.get("pct", 0))  # type: ignore[arg-type]
+        status = str(state.get("status", ""))
+
+        # Progress bar
+        bar_width = 30
+        filled = int(bar_width * pct / 100)
+        bar = "━" * filled + "╺" + "─" * (bar_width - filled - 1)
+
+        if otype:
+            table.add_row(
+                f"  [bold]{symbol}[/bold] {otype}",
+                f"[green]{bar}[/green]",
+                f"[cyan]{pct:5.1f}%[/cyan]",
+                f"[yellow]{rows:,} rows[/yellow]",
+            )
+        if status:
+            table.add_row(f"  [dim]{status}[/dim]")
+        return table
+
+    def _on_progress(sym: str, option_type: str, rows: int, pct: float) -> None:
+        state["option_type"] = option_type
+        state["rows"] = rows
+        state["pct"] = pct
+        if live_ctx:
+            live_ctx[0].update(_make_display())
+
+    def _on_status(msg: str) -> None:
+        state["status"] = msg
+        if live_ctx:
+            live_ctx[0].update(_make_display())
+
+    with Live(_make_display(), console=console, refresh_per_second=10) as live:
+        live_ctx.append(live)
+        summary, _ = provider.download_with_progress(  # type: ignore[attr-defined]
+            symbol,
+            on_progress=_on_progress,
+            on_status=_on_status,
+        )
+
+    console.print(f"\n{summary}")
+
+
 def _cmd_run(args: argparse.Namespace) -> None:
     if args.host:
         os.environ["CHAINLIT_HOST"] = args.host
@@ -118,6 +235,21 @@ def main(argv: list[str] | None = None) -> None:
         "-w", "--watch", action="store_true", help="Reload on file changes"
     )
     run_parser.set_defaults(func=_cmd_run)
+
+    # --- download ---
+    dl_parser = subparsers.add_parser(
+        "download",
+        help="Download historical options data for one or more symbols",
+    )
+    dl_parser.add_argument(
+        "symbols",
+        nargs="+",
+        help="One or more US stock ticker symbols (e.g. SPY AAPL TSLA)",
+    )
+    dl_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable debug logging"
+    )
+    dl_parser.set_defaults(func=_cmd_download)
 
     # --- cache ---
     cache_parser = subparsers.add_parser("cache", help="Manage the data cache")

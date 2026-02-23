@@ -110,6 +110,11 @@ optopsy-chat
 # With options
 optopsy-chat run --port 9000 --headless --debug
 
+# Download historical options data (requires EODHD_API_KEY)
+optopsy-chat download SPY       # download single symbol
+optopsy-chat download SPY AAPL  # download multiple symbols
+optopsy-chat download SPY -v    # verbose/debug logging
+
 # Cache management
 optopsy-chat cache size          # show disk usage
 optopsy-chat cache clear         # clear all cached data
@@ -129,7 +134,7 @@ Environment variables (set in `.env` or shell):
 
 ### Module Structure
 
-- **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run` and `cache` subcommands. Lazy imports so cache commands skip Chainlit startup.
+- **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run`, `download`, and `cache` subcommands. Lazy imports so non-`run` commands skip Chainlit startup.
 - **`app.py`** — Chainlit web app. Handlers for `on_chat_start`, `on_chat_resume`, `on_message`. Delegates to `OptopsyAgent`.
 - **`agent.py`** — `OptopsyAgent` class. Tool-calling loop over LiteLLM with streaming, message compaction (`_COMPACT_THRESHOLD = 300`), and max `_MAX_TOOL_ITERATIONS = 15`.
 - **`tools.py`** — Tool registry. Core tools: `load_csv_data`, `list_data_files`, `preview_data`, `run_strategy` (all 28 strategies). Provider tools registered dynamically.

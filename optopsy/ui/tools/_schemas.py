@@ -411,7 +411,7 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
 }
 
 # Tools owned by data providers — excluded from core tool schema generation.
-_PROVIDER_TOOLS = frozenset({"fetch_options_data"})
+_PROVIDER_TOOLS = frozenset({"download_options_data", "fetch_options_data"})
 
 
 def get_tool_schemas() -> list[dict]:
