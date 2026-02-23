@@ -1,7 +1,8 @@
 """Iron condor and iron butterfly option strategies (4-leg)."""
 
+from typing import Unpack
+
 import pandas as pd
-from typing_extensions import Unpack
 
 from ..evaluation import _calls, _puts
 from ..types import StrategyParams

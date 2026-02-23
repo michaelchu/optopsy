@@ -6,10 +6,9 @@ These are not part of the public API.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Unpack
 
 import pandas as pd
-from typing_extensions import Unpack
 
 from ..core import _process_calendar_strategy, _process_strategy
 from ..definitions import (

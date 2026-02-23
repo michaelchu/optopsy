@@ -8,6 +8,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Set up Python
+      run: uv python install 3.13
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Check code formatting with ruff
+      run: uv run ruff format --check optopsy/ tests/
+
+    - name: Lint with ruff
+      run: uv run ruff check optopsy/ tests/
+
+    - name: Type check with ty
+      run: uv run ty check optopsy/
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -32,15 +55,6 @@ jobs:
         else
           uv sync
         fi
-
-    - name: Check code formatting with ruff
-      run: uv run ruff format --check optopsy/ tests/
-
-    - name: Lint with ruff
-      run: uv run ruff check optopsy/ tests/
-
-    - name: Type check with ty
-      run: uv run ty check optopsy/
 
     - name: Run tests with pytest
       run: uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing --cov-report=xml

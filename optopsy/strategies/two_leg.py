@@ -1,7 +1,8 @@
 """Two-leg option strategies: straddles, strangles, spreads, covered, protective."""
 
+from typing import Unpack
+
 import pandas as pd
-from typing_extensions import Unpack
 
 from ..core import _process_strategy
 from ..definitions import (

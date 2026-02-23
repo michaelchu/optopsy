@@ -1,7 +1,8 @@
 """Butterfly option strategies (3-leg)."""
 
+from typing import Unpack
+
 import pandas as pd
-from typing_extensions import Unpack
 
 from ..evaluation import _calls, _puts
 from ..types import StrategyParams
