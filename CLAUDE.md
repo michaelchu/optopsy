@@ -151,6 +151,28 @@ Pluggable provider system for fetching market data.
 3. Register in `providers/__init__.py`
 4. Provider is auto-detected if its `env_key` is set
 
+## Git Branching Convention
+
+Branch names are enforced by a `pre-push` hook (via pre-commit). All branches must use one of these prefixes:
+
+| Prefix | Use case |
+|---|---|
+| `feature/` | New features |
+| `fix/` | Bug fixes |
+| `bugfix/` | Bug fixes (alias) |
+| `hotfix/` | Urgent production fixes |
+| `release/` | Release preparation |
+| `claude/` | Claude-generated branches |
+| `master` | Main branch (no prefix) |
+
+Example: `feature/add-iron-condor-strategy`, `fix/dte-filter-bug`, `claude/refactor-core`
+
+After cloning, install the pre-push hook:
+
+```bash
+uv run pre-commit install --hook-type pre-push
+```
+
 ## Releasing
 
 Publishing to PyPI is automated via GitHub Actions (`.github/workflows/python-publish.yml`) using trusted publishing. To release:
