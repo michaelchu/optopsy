@@ -328,10 +328,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "missing/mistyped required columns, optional column availability "
         "(Greeks, volume, IV), null analysis on critical columns, bid/ask "
         "quality (zero bids, crossed markets, spread stats), date coverage "
-        "and gaps, and monthly row distribution. Returns actionable "
-        "recommendations (e.g. slippage model choice, reliable date range, "
-        "delta filtering availability). Use this after loading data and "
-        "before running strategies to make informed parameter choices."
+        "and gaps, monthly row distribution, duplicate rows, and negative "
+        "bid/ask/strike values. Optionally pass strategy_name for "
+        "strategy-specific checks: option type balance (e.g. iron condors "
+        "need both calls and puts), strike density (butterflies need ≥3 "
+        "strikes per date), and expiration coverage (calendar strategies "
+        "need ≥2 expirations per date). Returns actionable "
+        "recommendations. Use this after loading data and before running "
+        "strategies to make informed parameter choices."
     ),
     "suggest_strategy_params": (
         "Analyze a loaded dataset and suggest good starting parameters "

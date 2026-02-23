@@ -677,6 +677,20 @@ class CheckDataQualityArgs(BaseModel):
         None,
         description=("Dataset to check. Omit to use the most-recently-loaded dataset."),
     )
+    strategy_name: str | None = Field(
+        None,
+        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        description=(
+            "Optional: tailor checks for a specific strategy. "
+            "Adds option-type balance, strike density, and "
+            "expiration coverage checks relevant to the strategy."
+        ),
+    )
+
+    @field_validator("strategy_name", mode="before")
+    @classmethod
+    def _validate_strategy_name(cls, v: str | None) -> str | None:
+        return _check_strategy_name(v)
 
 
 class DownloadOptionsDataArgs(BaseModel):

@@ -65,6 +65,7 @@ from ._schemas import (
     SIGNAL_REGISTRY,
     STRATEGIES,
     STRATEGY_NAMES,
+    STRATEGY_OPTION_TYPE,
 )
 
 _log = logging.getLogger(__name__)
@@ -99,6 +100,55 @@ def _fmt_pf(value: float) -> str:
     if value == float("inf"):
         return "∞ (no losses)"
     return f"{value:.2f}"
+
+
+# Minimum distinct strikes per quote_date needed for multi-leg strategies.
+_STRIKE_THRESHOLDS: dict[str, int] = {
+    name: (3 if "butterfly" in name else 4 if "condor" in name else 2)
+    for name in STRATEGY_NAMES
+    if "butterfly" in name
+    or "condor" in name
+    or "spread" in name
+    or "straddle" in name
+    or "strangle" in name
+}
+
+
+def _check_per_date_uniqueness(
+    df: pd.DataFrame,
+    column: str,
+    threshold: int,
+    section_title: str,
+    unit_label: str,
+    strategy_name: str,
+    findings: list[str],
+    display_parts: list[str],
+) -> None:
+    """Check that each quote_date has at least *threshold* unique values in *column*."""
+    per_date = df.groupby("quote_date")[column].nunique()
+    below = per_date[per_date < threshold]
+    if not below.empty:
+        n_below = len(below)
+        total = len(per_date)
+        sample = [
+            str(d.date()) if hasattr(d, "date") else str(d) for d in below.index[:5]
+        ]
+        findings.append(
+            f"WARN: {n_below}/{total} dates have < {threshold} "
+            f"{unit_label} (needed for {strategy_name})"
+        )
+        display_parts.append(
+            f"**{section_title}** — {n_below}/{total} dates "
+            f"have fewer than {threshold} {unit_label}\n"
+            f"Sample dates: {', '.join(sample)}\n"
+        )
+    else:
+        findings.append(
+            f"PASS: all dates have ≥ {threshold} {unit_label} for {strategy_name}"
+        )
+        display_parts.append(
+            f"**{section_title}** — all dates have ≥ {threshold} {unit_label}\n"
+        )
 
 
 def _resolve_dataset(
@@ -535,7 +585,135 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
             )
 
     # ---------------------------------------------------------------
-    # 7. Actionable recommendations
+    # 7. Duplicate rows
+    # ---------------------------------------------------------------
+    _DEDUP_COLS = ["quote_date", "expiration", "strike", "option_type"]
+    dedup_present = [c for c in _DEDUP_COLS if c in df.columns]
+    if len(dedup_present) == len(_DEDUP_COLS):
+        n_dupes = int(df.duplicated(subset=_DEDUP_COLS).sum())
+        if n_dupes > 0:
+            dupe_pct = n_dupes / n_rows * 100 if n_rows > 0 else 0
+            findings.append(
+                f"WARN: {n_dupes:,} duplicate rows ({dupe_pct:.1f}%) "
+                f"on ({', '.join(_DEDUP_COLS)})"
+            )
+            display_parts.append(
+                f"**Duplicate Rows** — {n_dupes:,} duplicates "
+                f"({dupe_pct:.1f}%) on ({', '.join(_DEDUP_COLS)})\n"
+            )
+        else:
+            findings.append("PASS: no duplicate rows")
+            display_parts.append("**Duplicate Rows** — none found\n")
+
+    # ---------------------------------------------------------------
+    # 8. Negative values
+    # ---------------------------------------------------------------
+    _NEG_CHECK_COLS = ["bid", "ask", "strike"]
+    neg_parts: list[str] = []
+    neg_display: list[str] = []
+    for col in _NEG_CHECK_COLS:
+        if col not in df.columns:
+            continue
+        n_neg = int((df[col] < 0).sum())
+        if n_neg > 0:
+            neg_parts.append(f"{col} has {n_neg:,} negative values")
+            neg_display.append(f"| {col} | {n_neg:,} |")
+    if neg_parts:
+        findings.append(f"WARN: {'; '.join(neg_parts)}")
+        display_parts.append(
+            "**Negative Values**\n\n"
+            "| Column | Count |\n|---|---|\n" + "\n".join(neg_display) + "\n"
+        )
+    else:
+        present_neg = [c for c in _NEG_CHECK_COLS if c in df.columns]
+        if present_neg:
+            findings.append("PASS: no negative bid/ask/strike values")
+            display_parts.append("**Negative Values** — none found\n")
+
+    # ---------------------------------------------------------------
+    # 9–11. Strategy-specific checks
+    # ---------------------------------------------------------------
+    strategy_name = arguments.get("strategy_name")
+
+    # 9. Option type balance
+    if strategy_name and "option_type" in df.columns:
+        required_type = STRATEGY_OPTION_TYPE.get(strategy_name)
+        types_present = set(df["option_type"].dropna().unique())
+
+        if required_type is None:
+            # Strategy needs both calls and puts
+            missing_types = {"call", "put"} - types_present
+            if missing_types:
+                findings.append(
+                    f"FAIL: {strategy_name} requires both calls and puts, "
+                    f"but missing: {', '.join(sorted(missing_types))}"
+                )
+                display_parts.append(
+                    f"**Option Type Balance** — MISSING "
+                    f"{', '.join(sorted(missing_types))} "
+                    f"(required for {strategy_name})\n"
+                )
+            else:
+                call_count = int((df["option_type"] == "call").sum())
+                put_count = int((df["option_type"] == "put").sum())
+                findings.append(
+                    f"PASS: both calls ({call_count:,}) and puts "
+                    f"({put_count:,}) present for {strategy_name}"
+                )
+                display_parts.append(
+                    f"**Option Type Balance** — calls: {call_count:,}, "
+                    f"puts: {put_count:,}\n"
+                )
+        else:
+            # Strategy needs a specific type
+            if required_type not in types_present:
+                findings.append(
+                    f"FAIL: {strategy_name} requires '{required_type}' options, "
+                    f"but only found: {', '.join(sorted(types_present))}"
+                )
+                display_parts.append(
+                    f"**Option Type Balance** — MISSING '{required_type}' "
+                    f"(required for {strategy_name})\n"
+                )
+
+    # 10. Strike density
+    if (
+        strategy_name
+        and strategy_name in _STRIKE_THRESHOLDS
+        and "quote_date" in df.columns
+        and "strike" in df.columns
+    ):
+        _check_per_date_uniqueness(
+            df,
+            "strike",
+            _STRIKE_THRESHOLDS[strategy_name],
+            "Strike Density",
+            "distinct strikes",
+            strategy_name,
+            findings,
+            display_parts,
+        )
+
+    # 11. Expiration coverage (calendar/diagonal strategies)
+    if (
+        strategy_name
+        and strategy_name in CALENDAR_STRATEGIES
+        and "quote_date" in df.columns
+        and "expiration" in df.columns
+    ):
+        _check_per_date_uniqueness(
+            df,
+            "expiration",
+            2,
+            "Expiration Coverage",
+            "distinct expirations",
+            strategy_name,
+            findings,
+            display_parts,
+        )
+
+    # ---------------------------------------------------------------
+    # 12. Actionable recommendations
     # ---------------------------------------------------------------
     recommendations: list[str] = []
     # Slippage recommendation
