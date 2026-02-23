@@ -48,6 +48,42 @@ def option_data():
     return pd.DataFrame(data=d, columns=cols)
 
 
+@pytest.fixture
+def wide_dte_otm_data():
+    """Option dataset with high DTE (90) and high OTM% (>0.3).
+
+    Used to exercise capping logic in iron condor and spread overrides.
+    DTE distribution: 4 rows with DTE=90, 4 rows with DTE=0.
+    OTM% values: strikes far from underlying → OTM% > 0.3.
+    """
+    # Expiration 90 days from quote_date
+    quote_date = datetime.datetime(2018, 1, 1)
+    exp_date = datetime.datetime(2018, 4, 1)  # ~90 days
+    exp_date_near = datetime.datetime(2018, 1, 1)  # DTE=0
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+    # Underlying price 100; strikes at 140 (40% OTM for calls) and 60 (40% OTM for puts)
+    d = [
+        ["SPX", 100.0, "call", exp_date, quote_date, 140.0, 1.0, 1.1],
+        ["SPX", 100.0, "call", exp_date, quote_date, 150.0, 0.5, 0.6],
+        ["SPX", 100.0, "put", exp_date, quote_date, 60.0, 1.0, 1.1],
+        ["SPX", 100.0, "put", exp_date, quote_date, 50.0, 0.5, 0.6],
+        ["SPX", 100.0, "call", exp_date_near, quote_date, 140.0, 0.1, 0.2],
+        ["SPX", 100.0, "call", exp_date_near, quote_date, 150.0, 0.05, 0.1],
+        ["SPX", 100.0, "put", exp_date_near, quote_date, 60.0, 0.1, 0.2],
+        ["SPX", 100.0, "put", exp_date_near, quote_date, 50.0, 0.05, 0.1],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
 def _extract_recommended_json(text):
     """Extract the JSON block from user_display or llm_summary."""
     match = re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
@@ -112,30 +148,40 @@ class TestSuggestStrategyParams:
         # front_dte_min = max(10, p10) = 10 (since p10=0, floor is 10)
         assert reco["front_dte_min"] == 10
 
-    def test_iron_condor_caps_dte_and_otm(self, option_data):
-        """Iron condor caps max_entry_dte at 45 and max_otm_pct at 0.3."""
+    def test_iron_condor_caps_dte_and_otm(self, wide_dte_otm_data):
+        """Iron condor caps max_entry_dte at 45 and max_otm_pct at 0.3.
+
+        Uses wide_dte_otm_data where p75 DTE=90 and p75 OTM%≈0.4,
+        both above the caps, so min() actually clamps the values.
+        """
         result = execute_tool(
             "suggest_strategy_params",
             {"strategy_name": "iron_condor"},
-            option_data,
+            wide_dte_otm_data,
         )
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
-        assert reco["max_entry_dte"] <= 45
-        assert reco["max_otm_pct"] <= 0.3
+        # p75 DTE is 90 but cap is 45 → must be exactly 45
+        assert reco["max_entry_dte"] == 45
+        # p75 OTM% is ~0.4 but cap is 0.3 → must be exactly 0.3
+        assert reco["max_otm_pct"] == 0.3
         # Multi-leg note should be present
         assert "multi-leg" in result.llm_summary.lower()
 
-    def test_spread_caps_otm(self, option_data):
-        """Spread strategy caps max_otm_pct at 0.2."""
+    def test_spread_caps_otm(self, wide_dte_otm_data):
+        """Spread strategy caps max_otm_pct at 0.2.
+
+        Uses wide_dte_otm_data where p75 OTM%≈0.4, above the 0.2 cap.
+        """
         result = execute_tool(
             "suggest_strategy_params",
             {"strategy_name": "long_call_spread"},
-            option_data,
+            wide_dte_otm_data,
         )
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
-        assert reco["max_otm_pct"] <= 0.2
+        # p75 OTM% is ~0.4 but cap is 0.2 → must be exactly 0.2
+        assert reco["max_otm_pct"] == 0.2
 
     def test_unknown_strategy_rejected(self, option_data):
         """Unknown strategy name is rejected by Pydantic validation."""

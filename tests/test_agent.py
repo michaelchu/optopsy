@@ -724,3 +724,66 @@ class TestAgentChat:
             assert isinstance(system_msg["content"], str)
 
         asyncio.run(_run())
+
+    def test_streaming_tool_call_chunk_accumulation(self):
+        """Tool call arrives as multiple partial chunks — id, name, and args are accumulated."""
+
+        async def _run():
+            # First chunk: id and start of function name
+            tc_part1 = MagicMock()
+            tc_part1.index = 0
+            tc_part1.id = "call_acc"
+            tc_part1.function = MagicMock()
+            tc_part1.function.name = "preview"
+            tc_part1.function.arguments = '{"ro'
+
+            # Second chunk: rest of function name and args (no id on continuation)
+            tc_part2 = MagicMock()
+            tc_part2.index = 0
+            tc_part2.id = None
+            tc_part2.function = MagicMock()
+            tc_part2.function.name = "_data"
+            tc_part2.function.arguments = 'ws": 5}'
+
+            chunk1 = _make_chunk(_make_delta(tool_calls=[tc_part1]))
+            chunk2 = _make_chunk(_make_delta(tool_calls=[tc_part2]))
+            text_chunks = [_make_chunk(_make_delta(content="Done"))]
+            call_count = 0
+
+            async def mock_acompletion(**kwargs):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return _async_iter([chunk1, chunk2])
+                return _async_iter(text_chunks)
+
+            agent = OptopsyAgent(model="test/model")
+            agent.tools = [{"type": "function", "function": {"name": "preview_data"}}]
+
+            with (
+                patch("litellm.acompletion", side_effect=mock_acompletion),
+                patch("optopsy.ui.agent.execute_tool") as mock_exec,
+                patch("asyncio.sleep", new_callable=AsyncMock),
+            ):
+                mock_result = MagicMock()
+                mock_result.dataset = None
+                mock_result.signals = None
+                mock_result.datasets = None
+                mock_result.results = None
+                mock_result.llm_summary = "ok"
+                mock_exec.return_value = mock_result
+
+                content, msgs = await agent.chat(
+                    [{"role": "user", "content": "show"}],
+                )
+
+            assert content == "Done"
+            mock_exec.assert_called_once()
+            # Verify accumulated name: "preview" + "_data" = "preview_data"
+            actual_name = mock_exec.call_args[0][0]
+            assert actual_name == "preview_data"
+            # Verify accumulated args: '{"ro' + 'ws": 5}' = '{"rows": 5}'
+            actual_args = mock_exec.call_args[0][1]
+            assert actual_args == {"rows": 5}
+
+        asyncio.run(_run())

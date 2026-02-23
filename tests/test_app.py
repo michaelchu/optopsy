@@ -123,6 +123,8 @@ class TestOnMessageCSVUpload:
             upload_msg = next(c for c in sent_contents if "SPX_2018.csv" in c)
             assert "4" in upload_msg  # 4 rows
             assert "Loaded" in upload_msg
+            # Verify the message was actually sent to the user
+            assert mock_cl_msg.send.called
 
         asyncio.run(_run())
 
