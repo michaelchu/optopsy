@@ -322,6 +322,21 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "distributions for a dataset. Use for data quality checks "
         "and debugging."
     ),
+    "check_data_quality": (
+        "Run an integrity check on a loaded dataset against the columns "
+        "and data quality the backtesting engine requires. Reports "
+        "missing/mistyped required columns, optional column availability "
+        "(Greeks, volume, IV), null analysis on critical columns, bid/ask "
+        "quality (zero bids, crossed markets, spread stats), date coverage "
+        "and gaps, monthly row distribution, duplicate rows, and negative "
+        "bid/ask/strike values. Optionally pass strategy_name for "
+        "strategy-specific checks: option type balance (e.g. iron condors "
+        "need both calls and puts), strike density (butterflies need ≥3 "
+        "strikes per date), and expiration coverage (calendar strategies "
+        "need ≥2 expirations per date). Returns actionable "
+        "recommendations. Use this after loading data and before running "
+        "strategies to make informed parameter choices."
+    ),
     "suggest_strategy_params": (
         "Analyze a loaded dataset and suggest good starting parameters "
         "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "

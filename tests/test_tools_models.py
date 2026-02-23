@@ -336,6 +336,7 @@ class TestSchemaGeneration:
             "get_simulation_trades",
             "fetch_options_data",
             "download_options_data",
+            "check_data_quality",
             "plot_vol_surface",
             "iv_term_structure",
         }
