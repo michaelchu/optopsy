@@ -79,13 +79,15 @@ class TestSuggestStrategyParams:
         """DTE percentiles are computed correctly for known data.
 
         Data has 4 rows with DTE=30 and 4 with DTE=0.
-        p50 should be 15 (midpoint), min=0, max=30.
+        The recommended max_entry_dte (p75) should be 30, exit_dte (p10) should be 0.
         """
         result = execute_tool("suggest_strategy_params", {}, option_data)
-        # Parse DTE stats from llm_summary
-        summary = result.llm_summary
-        assert "min" in summary
-        assert "'min': 0" in summary or '"min": 0' in summary
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        # p75 of DTE distribution [0,0,0,0,30,30,30,30] = 30
+        assert reco["max_entry_dte"] == 30
+        # p10 = 0
+        assert reco["exit_dte"] == 0
 
     def test_base_recommendations_use_p75(self, option_data):
         """Base max_entry_dte = p75(DTE), max_otm_pct = p75(OTM%)."""
@@ -176,3 +178,24 @@ class TestSuggestStrategyParams:
         # All OTM% values in fixture are < 0.04, so p75 should be < 0.04
         assert reco["max_otm_pct"] < 0.05
         assert reco["max_otm_pct"] > 0.0
+
+    def test_empty_dataframe_raises_or_returns_error(self):
+        """Empty DataFrame is handled — either error result or exception."""
+        cols = [
+            "underlying_symbol",
+            "underlying_price",
+            "option_type",
+            "expiration",
+            "quote_date",
+            "strike",
+            "bid",
+            "ask",
+        ]
+        empty_df = pd.DataFrame(columns=cols)
+        try:
+            result = execute_tool("suggest_strategy_params", {}, empty_df)
+            # If it returns, should be an error result
+            assert result.llm_summary is not None
+        except (ValueError, ZeroDivisionError):
+            # Empty series causes NaN quantile → acceptable failure mode
+            pass

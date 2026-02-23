@@ -506,3 +506,91 @@ class TestOnChatStart:
             assert "No data providers configured" in welcome
 
         asyncio.run(_run())
+
+    def test_on_chat_start_sets_session_state(self):
+        """on_chat_start stores agent and messages in user_session."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_start
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", return_value=mock_cl_msg),
+                patch("optopsy.ui.app.get_provider_names", return_value=[]),
+            ):
+                await on_chat_start()
+
+            assert "agent" in store
+            assert "messages" in store
+            assert isinstance(store["messages"], list)
+            assert len(store["messages"]) == 0
+            # Agent should be an OptopsyAgent instance
+            from optopsy.ui.agent import OptopsyAgent
+
+            assert isinstance(store["agent"], OptopsyAgent)
+
+        asyncio.run(_run())
+
+    def test_on_token_lazy_message_creation(self):
+        """on_token creates response_msg lazily on first token."""
+
+        async def _run():
+            from optopsy.ui.app import on_message
+
+            agent = MagicMock()
+            agent.datasets = {}
+
+            # Simulate chat that calls on_token with tokens
+            async def fake_chat(messages, **kwargs):
+                on_token = kwargs.get("on_token")
+                if on_token:
+                    await on_token("Hello ")
+                    await on_token("world")
+                return "Hello world", [
+                    {"role": "user", "content": "hi"},
+                    {"role": "assistant", "content": "Hello world"},
+                ]
+
+            agent.chat = fake_chat
+            session, store, _ = _make_session_and_agent(agent=agent)
+
+            mock_msg = MagicMock()
+            mock_msg.content = "hi"
+            mock_msg.elements = []
+
+            sent_messages = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            import chainlit as cl
+
+            def capture_message(**kwargs):
+                sent_messages.append(kwargs)
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_message(mock_msg)
+
+            # First Message is created by on_token with empty content
+            assert sent_messages[0]["content"] == ""
+            # stream_token should have been called twice
+            assert mock_cl_msg.stream_token.call_count == 2
+            stream_calls = [c[0][0] for c in mock_cl_msg.stream_token.call_args_list]
+            assert stream_calls == ["Hello ", "world"]
+
+        asyncio.run(_run())

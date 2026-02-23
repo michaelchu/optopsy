@@ -136,6 +136,13 @@ class TestCmdRun:
             self._mock_chainlit_modules()
         )
 
+        # Use a controlled env dict to prevent leaking into os.environ
+        controlled_env = dict(os.environ)
+        controlled_env["CHAINLIT_AUTH_SECRET"] = "test"
+        # Remove any pre-existing values
+        controlled_env.pop("CHAINLIT_HOST", None)
+        controlled_env.pop("CHAINLIT_PORT", None)
+
         with (
             patch.dict(
                 sys.modules,
@@ -148,7 +155,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
-            patch.dict(os.environ, {"CHAINLIT_AUTH_SECRET": "test"}, clear=False),
+            patch.dict(os.environ, controlled_env, clear=True),
         ):
             _cmd_run(args)
             assert os.environ.get("CHAINLIT_HOST") == "0.0.0.0"
@@ -399,3 +406,32 @@ class TestCmdCache:
         assert "2" in output
         assert "SPY" in output
         mock_cache.clear.assert_called_once_with(symbol="SPY")
+
+
+# ---------------------------------------------------------------------------
+# _cmd_download tests
+# ---------------------------------------------------------------------------
+
+
+class TestCmdDownload:
+    def test_no_provider_prints_error(self, capsys):
+        """_cmd_download prints error when no provider is configured."""
+        from optopsy.ui.cli import _cmd_download
+
+        args = argparse.Namespace(symbols=["SPY"], verbose=False)
+
+        with (
+            patch(
+                "optopsy.ui._compat.import_optional_dependency",
+            ),
+            patch("optopsy.ui.cli._load_env"),
+            patch(
+                "optopsy.ui.providers.get_provider_for_tool",
+                return_value=None,
+            ),
+        ):
+            _cmd_download(args)
+
+        output = capsys.readouterr().out
+        assert "No data provider" in output
+        assert "EODHD_API_KEY" in output
