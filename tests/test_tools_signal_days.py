@@ -116,7 +116,7 @@ class TestEntrySignalDaysExecutor:
             }
         )
         with patch(
-            "optopsy.ui.tools._executor._fetch_stock_data_for_signals",
+            "optopsy.ui.tools._helpers._fetch_stock_data_for_signals",
             return_value=fake_stock,
         ):
             result = execute_tool(
