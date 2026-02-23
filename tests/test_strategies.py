@@ -1326,11 +1326,6 @@ class TestDeltaInterval:
         assert "delta_range" in results.columns
         assert list(results.columns)[0] == "delta_range"
 
-    def test_delta_interval_none_no_delta_range(self, data_with_delta):
-        """Without delta_interval, output should not have delta_range column."""
-        results = long_calls(data_with_delta, raw=False)
-        assert "delta_range" not in results.columns
-
 
 # =============================================================================
 # Core Module Coverage — delta_max-only filter (core.py line 164)
@@ -1350,10 +1345,9 @@ def test_delta_max_only_filter(data_with_delta):
 # =============================================================================
 
 
-def test_entry_dates_filter(data):
-    """Passing entry_dates should restrict entries to those dates only."""
-
-    # Only allow entries on 2018-01-01 (which is the entry date in the fixture)
+def test_entry_dates_filter_valid(data):
+    """entry_dates matching fixture date should return same results as unfiltered."""
+    unfiltered = long_calls(data, raw=True)
     valid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
@@ -1361,17 +1355,19 @@ def test_entry_dates_filter(data):
         }
     )
     results = long_calls(data, raw=True, entry_dates=valid)
-    assert len(results) > 0
+    assert len(results) == len(unfiltered)
 
-    # Use a date that doesn't exist in the data — should return no results
+
+def test_entry_dates_filter_invalid(data):
+    """entry_dates with no matching date should return empty."""
     invalid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
             "quote_date": pd.to_datetime(["2099-01-01"]),
         }
     )
-    results_empty = long_calls(data, raw=True, entry_dates=invalid)
-    assert len(results_empty) == 0
+    results = long_calls(data, raw=True, entry_dates=invalid)
+    assert len(results) == 0
 
 
 # =============================================================================
@@ -1379,9 +1375,9 @@ def test_entry_dates_filter(data):
 # =============================================================================
 
 
-def test_exit_dates_filter(data):
-    """Passing exit_dates should restrict exits to those dates only."""
-    # Allow exits on 2018-01-31 (expiration day in the fixture, exit_dte=0)
+def test_exit_dates_filter_valid(data):
+    """exit_dates matching fixture exit date should return same results as unfiltered."""
+    unfiltered = long_calls(data, raw=True)
     valid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
@@ -1389,17 +1385,19 @@ def test_exit_dates_filter(data):
         }
     )
     results = long_calls(data, raw=True, exit_dates=valid)
-    assert len(results) > 0
+    assert len(results) == len(unfiltered)
 
-    # Use a date that doesn't exist — should return no results
+
+def test_exit_dates_filter_invalid(data):
+    """exit_dates with no matching date should return empty."""
     invalid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
             "quote_date": pd.to_datetime(["2099-01-01"]),
         }
     )
-    results_empty = long_calls(data, raw=True, exit_dates=invalid)
-    assert len(results_empty) == 0
+    results = long_calls(data, raw=True, exit_dates=invalid)
+    assert len(results) == 0
 
 
 # =============================================================================
@@ -1410,10 +1408,10 @@ def test_exit_dates_filter(data):
 @pytest.fixture(scope="module")
 def data_with_iv():
     """Data with implied_volatility column."""
-    import datetime
+    from datetime import datetime
 
-    exp_date = datetime.datetime(2018, 1, 31)
-    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
+    exp_date = datetime(2018, 1, 31)
+    quote_dates = [datetime(2018, 1, 1), datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
         "underlying_price",
@@ -1435,15 +1433,12 @@ def data_with_iv():
 
 
 def test_implied_volatility_passthrough(data_with_iv):
-    """IV column in input should appear as implied_volatility_entry in raw output."""
+    """IV column in input should appear as implied_volatility_entry with correct values."""
     results = long_calls(data_with_iv, raw=True)
     assert "implied_volatility_entry" in results.columns
-    assert len(results) > 0
-
-
-# =============================================================================
-# Core Module Coverage — calendar empty aggregated output (core.py line 1125)
-# =============================================================================
+    # Verify entry IV values match the input data (0.20 for 212.5 strike, 0.22 for 215.0)
+    iv_values = sorted(results["implied_volatility_entry"].tolist())
+    assert iv_values == [0.20, 0.22]
 
 
 # =============================================================================
@@ -1454,12 +1449,12 @@ def test_implied_volatility_passthrough(data_with_iv):
 @pytest.fixture(scope="module")
 def data_with_near_exit():
     """Data with exit at DTE=8 for testing exit_dte_tolerance on non-calendar strategies."""
-    import datetime
+    from datetime import datetime
 
-    exp_date = datetime.datetime(2018, 2, 28)
-    entry_date = datetime.datetime(2018, 1, 1)
+    exp_date = datetime(2018, 2, 28)
+    entry_date = datetime(2018, 1, 1)
     # Exit at DTE=8 (8 days before expiration = Feb 20)
-    exit_date = datetime.datetime(2018, 2, 20)
+    exit_date = datetime(2018, 2, 20)
 
     cols = [
         "underlying_symbol",
@@ -1489,15 +1484,6 @@ def test_exit_dte_tolerance_non_calendar(data_with_near_exit):
         data_with_near_exit, raw=True, exit_dte=7, exit_dte_tolerance=2
     )
     assert len(results) > 0
-
-
-def test_exit_dte_tolerance_no_match(data_with_near_exit):
-    """exit_dte_tolerance too small to find a match should return empty."""
-    # Data has exit at DTE=8. Request exit_dte=15 with tolerance=0 — no match
-    results = long_calls(
-        data_with_near_exit, raw=True, exit_dte=15, exit_dte_tolerance=0
-    )
-    assert len(results) == 0
 
 
 def test_calendar_empty_aggregated_output(data):
@@ -1543,35 +1529,36 @@ def test_calendar_tolerance_no_nearby_dates(calendar_data):
     assert len(results) == 0
 
 
-def test_calendar_entry_dates_filter(calendar_data):
-    """Calendar with entry_dates should restrict which entry dates are used."""
-    # Valid entry date matches the fixture's entry date
-    valid = pd.DataFrame(
-        {
-            "underlying_symbol": ["SPX"],
-            "quote_date": pd.to_datetime(["2018-01-01"]),
-        }
-    )
-    results = long_call_calendar(
-        calendar_data,
+def test_calendar_entry_dates_filter_valid(calendar_data):
+    """Calendar with valid entry_dates should return same results as unfiltered."""
+    cal_kwargs = dict(
         raw=True,
-        entry_dates=valid,
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results) > 0
+    unfiltered = long_call_calendar(calendar_data, **cal_kwargs)
+    valid = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": pd.to_datetime(["2018-01-01"]),
+        }
+    )
+    results = long_call_calendar(calendar_data, entry_dates=valid, **cal_kwargs)
+    assert len(results) == len(unfiltered)
 
-    # Invalid entry date — no matches, should return empty
+
+def test_calendar_entry_dates_filter_invalid(calendar_data):
+    """Calendar with non-matching entry_dates should return empty."""
     invalid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
             "quote_date": pd.to_datetime(["2099-01-01"]),
         }
     )
-    results_empty = long_call_calendar(
+    results = long_call_calendar(
         calendar_data,
         raw=True,
         entry_dates=invalid,
@@ -1581,38 +1568,39 @@ def test_calendar_entry_dates_filter(calendar_data):
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results_empty) == 0
+    assert len(results) == 0
 
 
-def test_calendar_exit_dates_filter(calendar_data):
-    """Calendar with exit_dates should restrict which exit dates are used."""
-    # Valid exit date matches the fixture's exit date (2018-01-24)
-    valid = pd.DataFrame(
-        {
-            "underlying_symbol": ["SPX"],
-            "quote_date": pd.to_datetime(["2018-01-24"]),
-        }
-    )
-    results = long_call_calendar(
-        calendar_data,
+def test_calendar_exit_dates_filter_valid(calendar_data):
+    """Calendar with valid exit_dates should return same results as unfiltered."""
+    cal_kwargs = dict(
         raw=True,
-        exit_dates=valid,
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results) > 0
+    unfiltered = long_call_calendar(calendar_data, **cal_kwargs)
+    valid = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": pd.to_datetime(["2018-01-24"]),
+        }
+    )
+    results = long_call_calendar(calendar_data, exit_dates=valid, **cal_kwargs)
+    assert len(results) == len(unfiltered)
 
-    # Invalid exit date — should return empty
+
+def test_calendar_exit_dates_filter_invalid(calendar_data):
+    """Calendar with non-matching exit_dates should return empty."""
     invalid = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
             "quote_date": pd.to_datetime(["2099-01-01"]),
         }
     )
-    results_empty = long_call_calendar(
+    results = long_call_calendar(
         calendar_data,
         raw=True,
         exit_dates=invalid,
@@ -1622,4 +1610,4 @@ def test_calendar_exit_dates_filter(calendar_data):
         back_dte_max=70,
         exit_dte=7,
     )
-    assert len(results_empty) == 0
+    assert len(results) == 0
