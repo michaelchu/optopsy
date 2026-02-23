@@ -55,6 +55,7 @@ htmlcov/
 # Chainlit
 .chainlit/
 chainlit.md
+.files/
 
 # Optopsy data uploads
 optopsy_data/
