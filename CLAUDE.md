@@ -4,50 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment Setup
 
-Always use the virtual environment for running commands:
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-# Activate the virtual environment before running any commands
-source venv/bin/activate
+# Install dependencies and create .venv (core + dev)
+uv sync
+
+# Install with UI/chat extras
+uv sync --extra ui
 ```
 
 ## Build & Test Commands
 
-All commands below assume the virtual environment is activated.
+All commands use `uv run` to execute within the managed environment.
 
 ```bash
-# Install in development mode (core only)
-pip install -e .
-
-# Install with UI/chat extras
-pip install -e ".[ui]"
-
 # Run all tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run a specific test file
-pytest tests/test_strategies.py -v
+uv run pytest tests/test_strategies.py -v
 
 # Run tests matching a pattern
-pytest tests/ -k "butterfly"
+uv run pytest tests/ -k "butterfly"
 
 # Check code formatting
-ruff format --check optopsy/ tests/
+uv run ruff format --check optopsy/ tests/
 
 # Auto-format code
-ruff format optopsy/ tests/
+uv run ruff format optopsy/ tests/
 
 # Lint code
-ruff check optopsy/ tests/
+uv run ruff check optopsy/ tests/
 
 # Lint and auto-fix
-ruff check --fix optopsy/ tests/
+uv run ruff check --fix optopsy/ tests/
 
 # Type check
-mypy optopsy/
+uv run mypy optopsy/
 
 # Run tests with coverage
-pytest tests/ -v --cov=optopsy --cov-report=term-missing
+uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing
 ```
 
 ## Architecture Overview
@@ -102,10 +99,10 @@ An AI-powered chat interface for interactive options backtesting, built on Chain
 
 ```bash
 # Install with UI extras
-pip install -e ".[ui]"
+uv sync --extra ui
 
 # Launch (opens browser)
-optopsy-chat
+uv run optopsy-chat
 
 # With options
 optopsy-chat run --port 9000 --headless --debug

@@ -14,34 +14,33 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        extras: ["", "[ui]"]
+        extras: ["", "ui"]
 
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e ".${{ matrix.extras }}"
-        pip install pytest==9.0.2 pytest-cov==7.0.0 ruff==0.15.2 mypy==1.19.1 pandas-stubs==3.0.0.260204 types-requests==2.32.4.20260107
+        if [ -n "${{ matrix.extras }}" ]; then
+          uv sync --extra ${{ matrix.extras }}
+        else
+          uv sync
+        fi
 
     - name: Check code formatting with ruff
-      run: |
-        ruff format --check optopsy/ tests/ setup.py
+      run: uv run ruff format --check optopsy/ tests/
 
     - name: Lint with ruff
-      run: |
-        ruff check optopsy/ tests/ setup.py
+      run: uv run ruff check optopsy/ tests/
 
     - name: Type check with mypy
-      run: |
-        mypy optopsy/
+      run: uv run mypy optopsy/
 
     - name: Run tests with pytest
-      run: |
-        pytest tests/ -v --cov=optopsy --cov-report=term-missing
+      run: uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing
