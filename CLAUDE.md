@@ -32,16 +32,16 @@ pytest tests/test_strategies.py -v
 pytest tests/ -k "butterfly"
 
 # Check code formatting
-ruff format --check optopsy/ tests/ setup.py
+ruff format --check optopsy/ tests/
 
 # Auto-format code
-ruff format optopsy/ tests/ setup.py
+ruff format optopsy/ tests/
 
 # Lint code
-ruff check optopsy/ tests/ setup.py
+ruff check optopsy/ tests/
 
 # Lint and auto-fix
-ruff check --fix optopsy/ tests/ setup.py
+ruff check --fix optopsy/ tests/
 
 # Type check
 mypy optopsy/
@@ -153,7 +153,7 @@ Pluggable provider system for fetching market data.
 
 Publishing to PyPI is automated via GitHub Actions (`.github/workflows/python-publish.yml`) using trusted publishing. To release:
 
-1. Update `version` in `setup.py` (e.g., `"2.3.0"`, or `"2.3.0b1"` for pre-releases)
+1. Update `version` in `pyproject.toml` (e.g., `"2.3.0"`, or `"2.3.0b1"` for pre-releases)
 2. Commit and push the version bump
 3. Create a GitHub release via `gh release create`:
    ```bash
