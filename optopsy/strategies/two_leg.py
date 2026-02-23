@@ -3,11 +3,12 @@
 import pandas as pd
 from typing_extensions import Unpack
 
-from ..core import _calls, _process_strategy, _puts
+from ..core import _process_strategy
 from ..definitions import (
     double_strike_external_cols,
     double_strike_internal_cols,
 )
+from ..evaluation import _calls, _puts
 from ..rules import _rule_non_overlapping_strike
 from ..types import StrategyParams
 from ._helpers import (

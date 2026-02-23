@@ -3,7 +3,7 @@
 import pandas as pd
 from typing_extensions import Unpack
 
-from ..core import _calls, _puts
+from ..evaluation import _calls, _puts
 from ..types import StrategyParams
 from ._helpers import Side, _butterfly
 
