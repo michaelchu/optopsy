@@ -147,9 +147,9 @@ The simulator works with all 28 strategies. It selects one trade per entry date,
 - [Examples](https://michaelchu.github.io/optopsy/examples/) - Common use cases and recipes
 - [API Reference](https://michaelchu.github.io/optopsy/api-reference/) - Complete function documentation
 
-## Contributing
+## Star History
 
-Contributions are welcome! See the [Contributing Guide](https://michaelchu.github.io/optopsy/contributing/) for details.
+[![Star History Chart](https://app.repohistory.com/api/svg?repo=michaelchu/optopsy&type=Date&background=FFFFFF&color=62C3F8)](https://app.repohistory.com/star-history)
 
 ## Disclaimer
 
