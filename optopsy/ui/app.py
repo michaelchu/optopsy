@@ -355,21 +355,11 @@ async def on_message(message: cl.Message):
         await response_msg.stream_token(token)
 
     async def on_assistant_tool_calls(tool_calls: list[dict]):
-        # Persist tool_calls so on_chat_resume can rebuild the full
-        # assistant→tool message sequence.  During intermediate iterations
-        # response_msg is None, so create an invisible assistant message
-        # just to carry the metadata.
+        # Store tool_calls metadata for session resume; no message to clear.
         nonlocal response_msg
         if response_msg is not None:
             response_msg.metadata = {"tool_calls": tool_calls}
             await response_msg.update()
-        else:
-            # Intermediate turn — create a hidden assistant message to
-            # persist tool_calls metadata for session resume.
-            intermediate_msg = cl.Message(
-                content="", metadata={"tool_calls": tool_calls}
-            )
-            await intermediate_msg.send()
 
     try:
         result_text, updated_messages = await agent.chat(
