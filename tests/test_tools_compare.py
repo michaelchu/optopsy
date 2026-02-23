@@ -26,6 +26,7 @@ def strategy_results():
             "mean_return": 0.0523,
             "std": 0.1200,
             "win_rate": 0.55,
+            "profit_factor": 1.25,
         },
         "short_puts:dte=30,exit=0,otm=0.05,slip=mid": {
             "strategy": "short_puts",
@@ -38,6 +39,7 @@ def strategy_results():
             "mean_return": 0.0312,
             "std": 0.0800,
             "win_rate": 0.72,
+            "profit_factor": 2.57,
         },
     }
 
@@ -57,6 +59,7 @@ def three_results(strategy_results):
         "mean_return": 0.0185,
         "std": 0.0500,
         "win_rate": 0.80,
+        "profit_factor": 4.00,
     }
     return results
 

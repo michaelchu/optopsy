@@ -22,6 +22,7 @@ from ._helpers import (
     _empty_signal_suggestion,
     _fetch_stock_data_for_signals,
     _intersect_with_options_dates,
+    _iv_signal_data,
     _make_result_key,
     _make_result_summary,
     _normalise_yf_df,
@@ -35,6 +36,7 @@ from ._helpers import (
 )
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
+    _IV_SIGNALS,
     CALENDAR_EXTRA_PARAMS,
     CALENDAR_STRATEGIES,
     SIGNAL_NAMES,
@@ -408,11 +410,53 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     if not signal_specs or not isinstance(signal_specs, list):
         return _result("'signals' must be a non-empty array of signal specs.")
 
-    # Determine if any signal needs OHLCV data
-    needs_stock = any(s.get("name") not in _DATE_ONLY_SIGNALS for s in signal_specs)
+    # Determine what data the signals need
+    has_iv_signal = any(s.get("name") in _IV_SIGNALS for s in signal_specs)
+    needs_stock = any(
+        s.get("name") not in _DATE_ONLY_SIGNALS and s.get("name") not in _IV_SIGNALS
+        for s in signal_specs
+    )
+
+    # IV signals use options data; OHLCV signals (RSI, SMA, etc.) use stock
+    # data. Combining them in a single build_signal call is not supported
+    # because each type requires a different dataset shape.
+    if has_iv_signal and needs_stock:
+        iv_names = [
+            s.get("name")
+            for s in signal_specs
+            if s.get("name") and s.get("name") in _IV_SIGNALS
+        ]
+        stock_names = [
+            s.get("name")
+            for s in signal_specs
+            if s.get("name")
+            and s.get("name") not in _DATE_ONLY_SIGNALS
+            and s.get("name") not in _IV_SIGNALS
+        ]
+        return _result(
+            f"Cannot combine IV signals ({', '.join(iv_names)}) with "
+            f"OHLCV signals ({', '.join(stock_names)}) in one build_signal "
+            f"call. IV signals use options data while OHLCV signals use "
+            f"stock price data. Build them as separate slots and pass them "
+            f"to run_strategy via entry_signal_slot / exit_signal_slot.",
+        )
 
     signal_data = None
-    if needs_stock:
+    if has_iv_signal:
+        # IV signals need options data with implied_volatility.
+        # Use the options dataset directly — apply_signal() deduplicates
+        # by (symbol, date), so price-based signals (RSI, SMA) still work
+        # via the underlying_price column.
+        iv_data = _iv_signal_data(dataset)
+        if iv_data is None:
+            return _result(
+                "IV rank signals require options data with an "
+                "'implied_volatility' column. Fetch data from a provider "
+                "that includes IV (e.g. EODHD), or load a CSV with an "
+                "implied_volatility column.",
+            )
+        signal_data = iv_data
+    elif needs_stock:
         signal_data = _fetch_stock_data_for_signals(dataset)
         if signal_data is None:
             return _result(
@@ -670,10 +714,19 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
             f"Available: {', '.join(SIGNAL_NAMES)}",
         )
 
-    # Determine if we need OHLCV stock data for signal computation
+    # Determine what data each signal needs
     needs_stock = (
-        entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
-    ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+        entry_signal_name
+        and entry_signal_name not in _DATE_ONLY_SIGNALS
+        and entry_signal_name not in _IV_SIGNALS
+    ) or (
+        exit_signal_name
+        and exit_signal_name not in _DATE_ONLY_SIGNALS
+        and exit_signal_name not in _IV_SIGNALS
+    )
+    needs_iv = (entry_signal_name and entry_signal_name in _IV_SIGNALS) or (
+        exit_signal_name and exit_signal_name in _IV_SIGNALS
+    )
 
     signal_data = None
     if needs_stock:
@@ -685,8 +738,24 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
                 "(`pip install yfinance`) and try again.",
             )
 
-    # For date-only signals, extract unique dates from the option dataset
-    if signal_data is None and (entry_signal_name or exit_signal_name):
+    iv_signal_data = None
+    if needs_iv:
+        iv_signal_data = _iv_signal_data(dataset)
+        if iv_signal_data is None:
+            return _result(
+                "IV rank signals require options data with an "
+                "'implied_volatility' column. Fetch data from a provider "
+                "that includes IV (e.g. EODHD), or load a CSV with an "
+                "implied_volatility column.",
+            )
+
+    # For date-only signals, extract unique dates from the option dataset.
+    # This must run even when needs_iv is true, because the other signal
+    # in the entry/exit pair may be date-only and would receive signal_data=None.
+    has_non_iv_signal = (
+        entry_signal_name and entry_signal_name not in _IV_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
+    if signal_data is None and has_non_iv_signal:
         signal_data = _date_only_fallback(dataset)
 
     # Resolve inline entry/exit signals via shared helper
@@ -695,8 +764,10 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
         (exit_signal_name, "exit", "exit_dates"),
     ]:
         if sig_name:
+            # IV signals use options data; others use stock/date data
+            sd = iv_signal_data if sig_name in _IV_SIGNALS else signal_data
             dates, err_msg = _resolve_inline_signal(
-                sig_name, arguments, signal_data, dataset, prefix
+                sig_name, arguments, sd, dataset, prefix
             )
             if err_msg:
                 return _result(err_msg)
@@ -943,8 +1014,17 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         )
 
     needs_stock = (
-        entry_signal_name and entry_signal_name not in _DATE_ONLY_SIGNALS
-    ) or (exit_signal_name and exit_signal_name not in _DATE_ONLY_SIGNALS)
+        entry_signal_name
+        and entry_signal_name not in _DATE_ONLY_SIGNALS
+        and entry_signal_name not in _IV_SIGNALS
+    ) or (
+        exit_signal_name
+        and exit_signal_name not in _DATE_ONLY_SIGNALS
+        and exit_signal_name not in _IV_SIGNALS
+    )
+    needs_iv = (entry_signal_name and entry_signal_name in _IV_SIGNALS) or (
+        exit_signal_name and exit_signal_name in _IV_SIGNALS
+    )
 
     signal_data = None
     if needs_stock:
@@ -956,7 +1036,24 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
                 "(`pip install yfinance`) and try again.",
             )
 
-    if signal_data is None and (entry_signal_name or exit_signal_name):
+    iv_signal_data_sim = None
+    if needs_iv:
+        iv_signal_data_sim = _iv_signal_data(active_ds)
+        if iv_signal_data_sim is None:
+            return _result(
+                "IV rank signals require options data with an "
+                "'implied_volatility' column. Fetch data from a provider "
+                "that includes IV (e.g. EODHD), or load a CSV with an "
+                "implied_volatility column.",
+            )
+
+    # Build date-only fallback for non-IV, non-stock signals even when
+    # needs_iv is true, so a date-only signal paired with an IV signal
+    # does not receive signal_data=None.
+    has_non_iv_signal_sim = (
+        entry_signal_name and entry_signal_name not in _IV_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
+    if signal_data is None and has_non_iv_signal_sim:
         signal_data = _date_only_fallback(active_ds)
 
     for sig_name, prefix, dates_key in [
@@ -964,8 +1061,9 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         (exit_signal_name, "exit", "exit_dates"),
     ]:
         if sig_name:
+            sd = iv_signal_data_sim if sig_name in _IV_SIGNALS else signal_data
             dates, err_msg = _resolve_inline_signal(
-                sig_name, arguments, signal_data, active_ds, prefix
+                sig_name, arguments, sd, active_ds, prefix
             )
             if err_msg:
                 return _result(err_msg)
@@ -1243,10 +1341,6 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
             if pct_mean is not None and pct_std and pct_std > 0:
                 sharpe = round(float(pct_mean / pct_std), 4)
 
-            # Profit factor: approximate from mean & win_rate when raw data
-            # is unavailable.  With win_rate=w and mean_return=m,
-            # avg_win ~ m/w and avg_loss ~ m/(1-w) doesn't hold exactly,
-            # so we only report it for simulation results.
             row = {
                 "label": key,
                 "strategy": entry.get("strategy", "?"),
@@ -1257,7 +1351,7 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                 "win_rate": win_rate,
                 "sharpe": sharpe,
                 "max_drawdown": None,
-                "profit_factor": None,
+                "profit_factor": entry.get("profit_factor"),
             }
         rows.append(row)
 
@@ -1852,6 +1946,201 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
         f"Created {chart_type} chart from {source_label}. {len(df)} data points."
     )
     return _result(llm_summary, user_display=llm_summary, chart_figure=fig)
+
+
+# ---------------------------------------------------------------------------
+# IV surface tools
+# ---------------------------------------------------------------------------
+
+
+@_register("plot_vol_surface")
+def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _result):
+    import plotly.graph_objects as go
+
+    active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+    ds = active_ds
+
+    if "implied_volatility" not in ds.columns:
+        return _result(
+            "Dataset does not contain 'implied_volatility'. "
+            "Fetch data from a provider that includes IV (e.g. EODHD) "
+            "or load a CSV with an implied_volatility column."
+        )
+
+    # Convert to datetime without mutating the active dataset
+    try:
+        quote_dates = pd.to_datetime(ds["quote_date"])
+    except (ValueError, TypeError) as e:
+        return _result(f"Cannot parse quote_date column as datetime: {e}")
+
+    quote_date_str = arguments.get("quote_date")
+    if quote_date_str:
+        target_date = pd.to_datetime(quote_date_str)
+        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
+        if df.empty:
+            available = sorted(quote_dates.dt.date.unique())
+            closest = min(
+                available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
+            )
+            return _result(
+                f"No data for {quote_date_str}. "
+                f"Closest available date: {closest}. "
+                f"Try quote_date='{closest}'."
+            )
+    else:
+        latest_day = quote_dates.dt.normalize().max()
+        df = ds[quote_dates.dt.normalize() == latest_day].copy()
+        quote_date_str = str(latest_day.date())
+
+    option_type = arguments.get("option_type", "call")
+    ot = option_type.lower()[:1]
+    df = df[df["option_type"].str.lower().str[0] == ot]
+    df = df.dropna(subset=["implied_volatility"])
+
+    if df.empty:
+        return _result(f"No {option_type} options with IV data on {quote_date_str}.")
+
+    # Pivot: rows=strike, columns=expiration, values=IV
+    pivot = df.pivot_table(
+        index="strike",
+        columns="expiration",
+        values="implied_volatility",
+        aggfunc="mean",
+    )
+    pivot = pivot.sort_index(ascending=True)
+
+    strikes = pivot.index.tolist()
+    expirations = [
+        str(e.date()) if hasattr(e, "date") else str(e) for e in pivot.columns
+    ]
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=pivot.values,
+            x=expirations,
+            y=strikes,
+            colorscale="Viridis",
+            colorbar=dict(title="IV"),
+        )
+    )
+    fig.update_layout(
+        title=f"Volatility Surface — {label} {option_type}s ({quote_date_str})",
+        xaxis_title="Expiration",
+        yaxis_title="Strike",
+        width=arguments.get("figsize_width", 900),
+        height=arguments.get("figsize_height", 600),
+    )
+
+    n_strikes = len(strikes)
+    n_exps = len(expirations)
+    summary = (
+        f"Volatility surface for {label} {option_type}s on {quote_date_str}: "
+        f"{n_strikes} strikes × {n_exps} expirations."
+    )
+    return _result(summary, user_display=summary, chart_figure=fig)
+
+
+@_register("iv_term_structure")
+def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _result):
+    import plotly.graph_objects as go
+
+    active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+    ds = active_ds
+
+    if "implied_volatility" not in ds.columns:
+        return _result(
+            "Dataset does not contain 'implied_volatility'. "
+            "Fetch data from a provider that includes IV (e.g. EODHD) "
+            "or load a CSV with an implied_volatility column."
+        )
+
+    # Convert to datetime without mutating the active dataset
+    try:
+        quote_dates = pd.to_datetime(ds["quote_date"])
+    except (ValueError, TypeError) as e:
+        return _result(f"Cannot parse quote_date column as datetime: {e}")
+
+    quote_date_str = arguments.get("quote_date")
+    if quote_date_str:
+        target_date = pd.to_datetime(quote_date_str)
+        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
+        if df.empty:
+            available = sorted(quote_dates.dt.date.unique())
+            closest = min(
+                available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
+            )
+            return _result(
+                f"No data for {quote_date_str}. "
+                f"Closest available date: {closest}. "
+                f"Try quote_date='{closest}'."
+            )
+    else:
+        normalized_dates = quote_dates.dt.normalize()
+        latest_day = normalized_dates.max()
+        df = ds[normalized_dates == latest_day].copy()
+        quote_date_str = str(latest_day.date())
+
+    df = df.dropna(subset=["implied_volatility", "underlying_price"])
+
+    if df.empty:
+        return _result(f"No options with IV data on {quote_date_str}.")
+
+    # Find ATM options: closest strike to underlying_price per (symbol, expiration).
+    # Use per-row underlying_price (vectorized) so multi-symbol datasets
+    # and intra-day price variations are handled correctly.
+    df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
+    atm_idx = df.groupby(["underlying_symbol", "expiration"])["_abs_otm"].idxmin()
+    atm_df = df.loc[atm_idx].copy()
+
+    # If both call and put exist at ATM strike, average their IV
+    atm_strikes = atm_df[
+        ["underlying_symbol", "expiration", "strike"]
+    ].drop_duplicates()
+    atm_iv = (
+        df.merge(atm_strikes, on=["underlying_symbol", "expiration", "strike"])
+        .groupby(["underlying_symbol", "expiration"])["implied_volatility"]
+        .mean()
+        .reset_index()
+    )
+    atm_iv["dte"] = (atm_iv["expiration"] - pd.to_datetime(quote_date_str)).dt.days
+    atm_iv = atm_iv.sort_values(["underlying_symbol", "dte"])
+    atm_iv = atm_iv[atm_iv["dte"] > 0]
+
+    if atm_iv.empty:
+        return _result(f"No forward expirations found on {quote_date_str}.")
+
+    fig = go.Figure()
+    symbols = atm_iv["underlying_symbol"].unique()
+    for sym in symbols:
+        sym_data = atm_iv[atm_iv["underlying_symbol"] == sym]
+        fig.add_trace(
+            go.Scatter(
+                x=sym_data["dte"],
+                y=sym_data["implied_volatility"],
+                mode="lines+markers",
+                name=f"{sym} ATM IV" if len(symbols) > 1 else "ATM IV",
+                marker=dict(size=8),
+            )
+        )
+    fig.update_layout(
+        title=f"IV Term Structure — {label} ATM ({quote_date_str})",
+        xaxis_title="Days to Expiration",
+        yaxis_title="Implied Volatility",
+        width=arguments.get("figsize_width", 800),
+        height=arguments.get("figsize_height", 500),
+    )
+
+    exps_shown = atm_iv["expiration"].nunique()
+    iv_range = f"{atm_iv['implied_volatility'].min():.2%} – {atm_iv['implied_volatility'].max():.2%}"
+    summary = (
+        f"IV term structure for {label} on {quote_date_str}: "
+        f"{exps_shown} expirations, ATM IV range {iv_range}."
+    )
+    return _result(summary, user_display=summary, chart_figure=fig)
 
 
 # ---------------------------------------------------------------------------

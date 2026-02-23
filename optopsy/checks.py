@@ -19,6 +19,7 @@ optional_greek_types: Dict[str, Tuple[str, ...]] = {
     "gamma": ("int64", "float64"),
     "theta": ("int64", "float64"),
     "vega": ("int64", "float64"),
+    "implied_volatility": ("int64", "float64"),
 }
 
 # Optional liquidity columns - only validated when liquidity slippage is enabled
