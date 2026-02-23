@@ -84,7 +84,10 @@ def _yf_fetch_and_cache(
     worth considering — yfinance returns all available data on first fetch,
     so interior gaps are just non-trading days).
 
-    Returns the updated cached DataFrame, or None on failure.
+    Returns the updated cached DataFrame, or None when yfinance returns no
+    data on a cold cache.  Exceptions from yfinance (``OSError``,
+    ``ValueError``) are **not** caught here — callers are responsible for
+    handling them.
     """
     import yfinance as yf
 
