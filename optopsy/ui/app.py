@@ -233,6 +233,24 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
                 }
             )
 
+    # Validate tool_use / tool_result pairing.  Intermediate assistant messages
+    # with tool_calls may not have been persisted (the on_assistant_tool_calls
+    # callback only fires when response_msg exists, which is None during
+    # intermediate tool-calling turns).  Orphaned tool messages cause
+    # Anthropic API errors: "unexpected tool_use_id found in tool_result blocks".
+    valid_tc_ids: set[str] = set()
+    for m in messages:
+        if m.get("role") == "assistant":
+            for tc in m.get("tool_calls", []):
+                tc_id = tc.get("id", "")
+                if tc_id:
+                    valid_tc_ids.add(tc_id)
+    messages = [
+        m
+        for m in messages
+        if m.get("role") != "tool" or m.get("tool_call_id") in valid_tc_ids
+    ]
+
     # Datasets and signals are lost on reconnect (they live only in memory).
     # Append a concise reminder so the LLM doesn't try to use stale state.
     if any(m.get("role") == "tool" for m in messages):
@@ -337,11 +355,21 @@ async def on_message(message: cl.Message):
         await response_msg.stream_token(token)
 
     async def on_assistant_tool_calls(tool_calls: list[dict]):
-        # Store tool_calls metadata for session resume; no message to clear.
+        # Persist tool_calls so on_chat_resume can rebuild the full
+        # assistant→tool message sequence.  During intermediate iterations
+        # response_msg is None, so create an invisible assistant message
+        # just to carry the metadata.
         nonlocal response_msg
         if response_msg is not None:
             response_msg.metadata = {"tool_calls": tool_calls}
             await response_msg.update()
+        else:
+            # Intermediate turn — create a hidden assistant message to
+            # persist tool_calls metadata for session resume.
+            intermediate_msg = cl.Message(
+                content="", metadata={"tool_calls": tool_calls}
+            )
+            await intermediate_msg.send()
 
     try:
         result_text, updated_messages = await agent.chat(
