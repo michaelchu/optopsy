@@ -15,6 +15,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: pytest
+        name: pytest
+        entry: uv run pytest tests/ -q
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
       - id: branch-name
         name: branch name check
         entry: bash scripts/check-branch-name.sh
