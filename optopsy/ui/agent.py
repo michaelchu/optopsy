@@ -1,3 +1,23 @@
+"""LLM agent with tool-calling loop for interactive options backtesting.
+
+The ``OptopsyAgent`` class manages the conversation loop:
+
+1. Send messages + tool schemas to the LLM via LiteLLM (streaming).
+2. If the LLM emits tool calls, execute them via ``execute_tool()`` and
+   append the results to the conversation.
+3. Repeat until the LLM produces a final text response (no tool calls).
+
+Key design decisions:
+
+- **Message compaction** — After each iteration, old tool results and
+  intermediate assistant messages are truncated to ``_COMPACT_THRESHOLD``
+  characters to keep token usage manageable across many iterations.
+- **Iteration cap** — ``_MAX_TOOL_ITERATIONS`` prevents runaway loops.
+- **State** — The agent holds mutable state: ``dataset`` (active DataFrame),
+  ``datasets`` (named registry), ``signals`` (named signal slots), and
+  ``results`` (session-scoped strategy run summaries).
+"""
+
 import asyncio
 import functools
 import json
@@ -327,6 +347,12 @@ def _compact_history(messages: list[dict[str, Any]]) -> None:
 
 
 class OptopsyAgent:
+    """Tool-calling LLM agent for options strategy backtesting.
+
+    Wraps LiteLLM to stream responses, execute tools, and manage session
+    state (datasets, signals, strategy results) across conversation turns.
+    """
+
     def __init__(self, model: str = "anthropic/claude-haiku-4-5-20251001"):
         self.model = model
         self.tools = get_tool_schemas()

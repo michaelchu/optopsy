@@ -1,3 +1,19 @@
+"""Strike and expiration validation rules for multi-leg option strategies.
+
+Each rule function receives a DataFrame of candidate leg combinations and a
+leg definition list, then filters out rows that violate the strategy's
+structural constraints.  Rules are passed to ``core._strategy_engine()`` via
+the ``rules`` parameter and are applied after legs are joined but before
+P&L calculation.
+
+Rule functions:
+- ``_rule_non_overlapping_strike`` — ascending strike ordering for spreads/strangles
+- ``_rule_butterfly_strikes`` — ascending strikes with equal-width wings
+- ``_rule_iron_condor_strikes`` — four strictly ascending strikes
+- ``_rule_iron_butterfly_strikes`` — four strikes where middle two are equal
+- ``_rule_expiration_ordering`` — front leg expires before back leg (calendar/diagonal)
+"""
+
 from typing import List, Tuple
 
 import pandas as pd

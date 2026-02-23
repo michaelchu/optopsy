@@ -813,16 +813,24 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
 
 
 def _resolve_refs(schema: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
-    """Recursively resolve ``$ref`` pointers in a JSON schema."""
+    """Recursively resolve ``$ref`` pointers in a JSON schema.
+
+    Pydantic v2's ``model_json_schema()`` emits shared sub-models (enums,
+    nested BaseModels) as ``$defs`` entries referenced via ``$ref`` pointers.
+    OpenAI's function-calling schema format does not support ``$ref``, so this
+    function inlines every reference by walking the schema tree depth-first.
+    """
     if "$ref" in schema:
         ref_path = schema["$ref"]
-        # Handle "#/$defs/Foo" format
+        # Extract the definition name from "#/$defs/Foo" or "#/definitions/Foo"
         ref_name = ref_path.rsplit("/", 1)[-1]
         resolved = defs.get(ref_name, {})
+        # Recurse in case the resolved definition itself contains $ref pointers
         return _resolve_refs(dict(resolved), defs)
 
     result: dict[str, Any] = {}
     for key, value in schema.items():
+        # Drop the $defs / definitions block itself — its contents are inlined
         if key in ("$defs", "definitions"):
             continue
         if isinstance(value, dict):

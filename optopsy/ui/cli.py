@@ -8,6 +8,7 @@ import os
 
 
 def _format_bytes(n: int | float) -> str:
+    """Format a byte count as a human-readable string (e.g. ``"1.2 MB"``)."""
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024:
             return f"{n:.1f} {unit}"
@@ -16,6 +17,7 @@ def _format_bytes(n: int | float) -> str:
 
 
 def _cmd_cache_size(args: argparse.Namespace) -> None:
+    """Print per-symbol cache sizes and a total to stdout."""
     from optopsy.ui._compat import import_optional_dependency
 
     import_optional_dependency("pyarrow")
@@ -33,6 +35,7 @@ def _cmd_cache_size(args: argparse.Namespace) -> None:
 
 
 def _cmd_cache_clear(args: argparse.Namespace) -> None:
+    """Delete cached parquet files, optionally filtered by symbol."""
     from optopsy.ui._compat import import_optional_dependency
 
     import_optional_dependency("pyarrow")
@@ -166,6 +169,7 @@ def _download_with_rich(provider: object, symbol: str) -> None:
 
 
 def _cmd_run(args: argparse.Namespace) -> None:
+    """Configure environment and launch the Chainlit server."""
     if args.host:
         os.environ["CHAINLIT_HOST"] = args.host
     if args.port:
@@ -213,6 +217,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Parse CLI arguments and dispatch to the appropriate subcommand."""
     parser = argparse.ArgumentParser(
         prog="optopsy-chat",
         description="Optopsy Chat — options strategy backtesting assistant",

@@ -1,3 +1,12 @@
+"""Tool subsystem for the Optopsy Chat UI.
+
+Re-exports the main entry points used by ``OptopsyAgent``:
+
+- ``execute_tool()`` — dispatch a tool call by name and return a ``ToolResult``
+- ``get_tool_schemas()`` — generate OpenAI-compatible function schemas for all tools
+- Strategy, signal, and model registries used across the tool layer
+"""
+
 from ._executor import execute_tool
 from ._helpers import (
     _YF_CACHE_CATEGORY,

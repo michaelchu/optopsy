@@ -1,3 +1,23 @@
+"""Public API for options strategy backtesting.
+
+Each strategy function (e.g. ``long_calls``, ``iron_condor``) accepts a DataFrame
+of option chain data and optional ``StrategyParams`` keyword arguments, then
+returns a DataFrame of either raw trades or aggregated descriptive statistics.
+
+**Pattern:** Every public function delegates to a private helper (``_singles``,
+``_spread``, ``_butterfly``, etc.) that assembles leg definitions and calls
+``core._process_strategy()`` (or ``_process_calendar_strategy()`` for calendar
+and diagonal spreads).
+
+**Leg definitions** are lists of tuples: ``(Side.long/short, filter_fn, quantity)``.
+The ``Side`` enum encodes direction as a multiplier (``long=1``, ``short=-1``).
+``filter_fn`` is ``_calls`` or ``_puts`` from ``core.py``.
+
+**Default parameters** are defined in ``default_kwargs`` (standard strategies) and
+``calendar_default_kwargs`` (calendar/diagonal spreads).  Users override any
+parameter via keyword arguments.
+"""
+
 from enum import Enum
 from typing import Any, Dict, List, Tuple
 
