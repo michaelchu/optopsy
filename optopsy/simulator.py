@@ -382,6 +382,12 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     from .metrics import (
         max_drawdown as _max_drawdown,
     )
+    from .metrics import (
+        profit_factor as _profit_factor,
+    )
+    from .metrics import (
+        win_rate as _win_rate,
+    )
 
     _empty_risk = {
         "sharpe_ratio": 0.0,
@@ -413,8 +419,6 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     pnl = trade_log["realized_pnl"]
     wins = pnl[pnl > 0]
     losses = pnl[pnl < 0]
-    total_wins = float(wins.sum()) if len(wins) > 0 else 0.0
-    total_losses = float(losses.sum()) if len(losses) > 0 else 0.0
 
     # Max drawdown from equity curve
     equity = trade_log["equity"]
@@ -452,7 +456,7 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         "total_trades": len(trade_log),
         "winning_trades": len(wins),
         "losing_trades": len(losses),
-        "win_rate": len(wins) / len(trade_log) if len(trade_log) > 0 else 0.0,
+        "win_rate": _win_rate(pnl),
         "total_pnl": float(pnl.sum()),
         "total_return": float(pnl.sum()) / capital if capital > 0 else 0.0,
         "avg_pnl": float(pnl.mean()),
@@ -460,11 +464,7 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         "avg_loss": float(losses.mean()) if len(losses) > 0 else 0.0,
         "max_win": float(pnl.max()),
         "max_loss": float(pnl.min()),
-        "profit_factor": (
-            abs(total_wins / total_losses)
-            if total_losses != 0
-            else (float("inf") if total_wins > 0 else 0.0)
-        ),
+        "profit_factor": _profit_factor(pnl),
         "max_drawdown": max_dd,
         "avg_days_in_trade": float(trade_log["days_held"].mean()),
         "sharpe_ratio": sharpe_ratio(daily_returns),

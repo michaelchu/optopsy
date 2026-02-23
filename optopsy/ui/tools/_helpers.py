@@ -7,11 +7,19 @@ from typing import Any
 import pandas as pd
 
 import optopsy.signals as _signals
+from optopsy.metrics import profit_factor as _profit_factor
+from optopsy.metrics import win_rate as _win_rate
 from optopsy.signals import apply_signal
 
 from ..providers.cache import ParquetCache, compute_date_gaps
 from ._models import StrategyResultSummary
-from ._schemas import SIGNAL_REGISTRY, STRATEGIES
+from ._schemas import (
+    _DATE_ONLY_SIGNALS,
+    _IV_SIGNALS,
+    SIGNAL_NAMES,
+    SIGNAL_REGISTRY,
+    STRATEGIES,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -437,20 +445,13 @@ def _make_result_summary(
     }
     if "pct_change" in result_df.columns:
         pct = result_df["pct_change"].dropna()
-        wins = float(pct[pct > 0].sum())
-        losses = float(pct[pct < 0].sum())
-        if losses == 0:
-            pf = float("inf") if wins > 0 else 0.0
-        else:
-            # Match metrics.profit_factor pattern: abs(wins) / abs(losses)
-            pf = abs(wins) / abs(losses)
         base.update(
             {
                 "count": len(pct),
                 "mean_return": round(float(pct.mean()), 4),
                 "std": round(float(pct.std()), 4),
-                "win_rate": round(float((pct > 0).mean()), 4),
-                "profit_factor": round(pf, 4),
+                "win_rate": round(_win_rate(pct), 4),
+                "profit_factor": round(_profit_factor(pct), 4),
             }
         )
     elif "mean" in result_df.columns:
@@ -564,6 +565,209 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     if len(cols) < len(keep):
         return None
     return dataset[cols].copy()
+
+
+# ---------------------------------------------------------------------------
+# Shared parameter key sets (8.4.1)
+# ---------------------------------------------------------------------------
+
+_SIGNAL_PARAM_KEYS = frozenset(
+    {
+        "strategy_name",
+        "entry_signal",
+        "entry_signal_params",
+        "entry_signal_days",
+        "exit_signal",
+        "exit_signal_params",
+        "exit_signal_days",
+        "entry_signal_slot",
+        "exit_signal_slot",
+    }
+)
+
+_SIM_PARAM_KEYS = frozenset(
+    {"capital", "quantity", "max_positions", "multiplier", "selector"}
+)
+
+# ---------------------------------------------------------------------------
+# Shared IV error message (8.2.3)
+# ---------------------------------------------------------------------------
+
+_IV_MISSING_MSG = (
+    "IV rank signals require options data with an "
+    "'implied_volatility' column. Fetch data from a provider "
+    "that includes IV (e.g. EODHD), or load a CSV with an "
+    "implied_volatility column."
+)
+
+_IV_COLUMN_MISSING_MSG = (
+    "Dataset does not contain 'implied_volatility'. "
+    "Fetch data from a provider that includes IV (e.g. EODHD) "
+    "or load a CSV with an implied_volatility column."
+)
+
+
+# ---------------------------------------------------------------------------
+# Quote date filtering for vol surface tools (8.2.4)
+# ---------------------------------------------------------------------------
+
+
+def _filter_by_quote_date(
+    ds: pd.DataFrame,
+    quote_date_str: str | None,
+) -> tuple[pd.DataFrame | None, str | None, str | None]:
+    """Filter a dataset to a single quote date.
+
+    Returns ``(filtered_df, resolved_date_str, error_msg)``.  When
+    ``error_msg`` is not None the caller should return it immediately.
+    """
+    try:
+        quote_dates = pd.to_datetime(ds["quote_date"])
+    except (ValueError, TypeError) as e:
+        return None, None, f"Cannot parse quote_date column as datetime: {e}"
+
+    if quote_date_str:
+        target_date = pd.to_datetime(quote_date_str)
+        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
+        if df.empty:
+            available = sorted(quote_dates.dt.date.unique())
+            closest = min(
+                available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
+            )
+            return (
+                None,
+                None,
+                (
+                    f"No data for {quote_date_str}. "
+                    f"Closest available date: {closest}. "
+                    f"Try quote_date='{closest}'."
+                ),
+            )
+        return df, quote_date_str, None
+    else:
+        latest_day = quote_dates.dt.normalize().max()
+        df = ds[quote_dates.dt.normalize() == latest_day].copy()
+        return df, str(latest_day.date()), None
+
+
+# ---------------------------------------------------------------------------
+# Signal resolution for strategy handlers (8.2.2)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_signals_for_strategy(
+    arguments: dict[str, Any],
+    signals: dict[str, pd.DataFrame],
+    dataset: pd.DataFrame,
+) -> tuple[dict[str, Any], str | None]:
+    """Resolve entry/exit signal slots and inline signals into dates.
+
+    Shared by both ``run_strategy`` and ``simulate`` to avoid duplicating
+    ~80 lines of signal resolution logic.
+
+    Returns ``(strat_kwargs_update, error_msg)``.  On success ``error_msg``
+    is None and ``strat_kwargs_update`` is a dict with ``entry_dates``
+    and/or ``exit_dates`` to merge into the strategy kwargs.
+    """
+    update: dict[str, Any] = {}
+
+    # --- Resolve entry dates ---
+    entry_slot = arguments.get("entry_signal_slot")
+    entry_signal_name = arguments.get("entry_signal")
+
+    if entry_slot and entry_signal_name:
+        return {}, "Cannot use both entry_signal and entry_signal_slot. Pick one."
+
+    if entry_slot:
+        if entry_slot not in signals:
+            return {}, (
+                f"No signal slot '{entry_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        update["entry_dates"] = signals[entry_slot]
+
+    # --- Resolve exit dates ---
+    exit_slot = arguments.get("exit_signal_slot")
+    exit_signal_name = arguments.get("exit_signal")
+
+    if exit_slot and exit_signal_name:
+        return {}, "Cannot use both exit_signal and exit_signal_slot. Pick one."
+
+    if exit_slot:
+        if exit_slot not in signals:
+            return {}, (
+                f"No signal slot '{exit_slot}'. "
+                f"Build it first with build_signal. "
+                f"Available: {list(signals.keys()) or 'none'}"
+            )
+        update["exit_dates"] = signals[exit_slot]
+
+    # --- Inline signal resolution ---
+    if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
+        return {}, (
+            f"Unknown entry_signal '{entry_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}"
+        )
+    if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
+        return {}, (
+            f"Unknown exit_signal '{exit_signal_name}'. "
+            f"Available: {', '.join(SIGNAL_NAMES)}"
+        )
+
+    # Determine what data each signal needs
+    needs_stock = (
+        entry_signal_name
+        and entry_signal_name not in _DATE_ONLY_SIGNALS
+        and entry_signal_name not in _IV_SIGNALS
+    ) or (
+        exit_signal_name
+        and exit_signal_name not in _DATE_ONLY_SIGNALS
+        and exit_signal_name not in _IV_SIGNALS
+    )
+    needs_iv = (entry_signal_name and entry_signal_name in _IV_SIGNALS) or (
+        exit_signal_name and exit_signal_name in _IV_SIGNALS
+    )
+
+    signal_data = None
+    if needs_stock:
+        signal_data = _fetch_stock_data_for_signals(dataset)
+        if signal_data is None:
+            return {}, (
+                "TA signals require stock price data but yfinance is not "
+                "installed or the fetch failed. Install yfinance "
+                "(`pip install yfinance`) and try again."
+            )
+
+    iv_signal_data = None
+    if needs_iv:
+        iv_signal_data = _iv_signal_data(dataset)
+        if iv_signal_data is None:
+            return {}, _IV_MISSING_MSG
+
+    # Build date-only fallback for non-IV, non-stock signals even when
+    # needs_iv is true, so a date-only signal paired with an IV signal
+    # does not receive signal_data=None.
+    has_non_iv_signal = (
+        entry_signal_name and entry_signal_name not in _IV_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
+    if signal_data is None and has_non_iv_signal:
+        signal_data = _date_only_fallback(dataset)
+
+    for sig_name, prefix, dates_key in [
+        (entry_signal_name, "entry", "entry_dates"),
+        (exit_signal_name, "exit", "exit_dates"),
+    ]:
+        if sig_name:
+            sd = iv_signal_data if sig_name in _IV_SIGNALS else signal_data
+            dates, err_msg = _resolve_inline_signal(
+                sig_name, arguments, sd, dataset, prefix
+            )
+            if err_msg:
+                return {}, err_msg
+            update[dates_key] = dates
+
+    return update, None
 
 
 def _resolve_inline_signal(

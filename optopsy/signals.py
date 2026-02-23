@@ -610,23 +610,8 @@ def _compute_iv_rank_series(atm_iv: pd.DataFrame, window: int = 252) -> pd.Serie
     return result
 
 
-def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
-    """True when IV rank exceeds a threshold.
-
-    IV rank is the percentile of current ATM implied volatility relative
-    to its trailing ``window``-day range.  An IV rank of 0.8 means
-    current IV is in the top 20% of the past year.
-
-    Requires a DataFrame with ``implied_volatility`` column (options
-    chain data with IV preserved).
-
-    Args:
-        threshold: IV rank value above which signal fires (default 0.5).
-        window: Trailing lookback in trading days (default 252).
-
-    Returns:
-        Signal function
-    """
+def _iv_rank_signal(threshold: float, window: int, compare_op) -> SignalFunc:
+    """Factory for IV rank signals — shared by iv_rank_above/iv_rank_below."""
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         if "implied_volatility" not in data.columns:
@@ -646,10 +631,30 @@ def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
             [data["underlying_symbol"], data["quote_date"]]
         )
         iv_rank_for_rows = pd.Series(rank_lookup.reindex(keys).values, index=data.index)
-        return (iv_rank_for_rows > threshold).fillna(False)
+        return compare_op(iv_rank_for_rows, threshold).fillna(False)
 
     _signal.requires_per_strike = True  # type: ignore[attr-defined]
     return _signal
+
+
+def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
+    """True when IV rank exceeds a threshold.
+
+    IV rank is the percentile of current ATM implied volatility relative
+    to its trailing ``window``-day range.  An IV rank of 0.8 means
+    current IV is in the top 20% of the past year.
+
+    Requires a DataFrame with ``implied_volatility`` column (options
+    chain data with IV preserved).
+
+    Args:
+        threshold: IV rank value above which signal fires (default 0.5).
+        window: Trailing lookback in trading days (default 252).
+
+    Returns:
+        Signal function
+    """
+    return _iv_rank_signal(threshold, window, operator.gt)
 
 
 def iv_rank_below(threshold: float = 0.5, window: int = 252) -> SignalFunc:
@@ -669,28 +674,7 @@ def iv_rank_below(threshold: float = 0.5, window: int = 252) -> SignalFunc:
     Returns:
         Signal function
     """
-
-    def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if "implied_volatility" not in data.columns:
-            return pd.Series(False, index=data.index)
-        atm_iv = _compute_atm_iv(data)
-        if atm_iv.empty:
-            return pd.Series(False, index=data.index)
-        rank = _compute_iv_rank_series(atm_iv, window)
-        rank_lookup = pd.Series(
-            rank.values,
-            index=pd.MultiIndex.from_arrays(
-                [atm_iv["underlying_symbol"], atm_iv["quote_date"]]
-            ),
-        )
-        keys = pd.MultiIndex.from_arrays(
-            [data["underlying_symbol"], data["quote_date"]]
-        )
-        iv_rank_for_rows = pd.Series(rank_lookup.reindex(keys).values, index=data.index)
-        return (iv_rank_for_rows < threshold).fillna(False)
-
-    _signal.requires_per_strike = True  # type: ignore[attr-defined]
-    return _signal
+    return _iv_rank_signal(threshold, window, operator.lt)
 
 
 # ---------------------------------------------------------------------------
