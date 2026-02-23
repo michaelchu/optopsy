@@ -7,7 +7,7 @@ name = "optopsy"
 version = "2.3.0b2"
 description = "A nimble backtesting and statistics library for options strategies"
 readme = "README.md"
-license = "GPL-3.0-or-later"
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12,<3.14"
 authors = [{ name = "Michael Chu", email = "mchchu88@gmail.com" }]
 classifiers = [
