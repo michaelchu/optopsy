@@ -18,6 +18,7 @@ from optopsy.signals import (
     day_of_week,
     ema_cross_above,
     ema_cross_below,
+    iv_rank_above,
     macd_cross_above,
     macd_cross_below,
     or_signals,
@@ -1837,3 +1838,65 @@ class TestTASignalE2E:
         assert close_dates < ohlcv_dates, (
             "Expected close-only to be a strict subset of OHLCV dates"
         )
+
+
+# ============================================================================
+# Edge case tests for uncovered lines
+# ============================================================================
+
+
+class TestSignalEdgeCases:
+    def test_ta_signal_insufficient_data_returns_all_false(self):
+        """TA indicator returning None (insufficient data) should produce all-False.
+
+        sma_below with period=20 on only 2 bars: ta.sma() returns None,
+        hitting the `if indicator is None: continue` path (line 96).
+        """
+        dates = pd.date_range("2018-01-01", periods=2, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0],
+            }
+        )
+        result = sma_below(period=20)(data)
+        assert not result.any()
+
+    def test_sustained_days_zero_raises(self):
+        """sustained() with days < 1 should raise ValueError."""
+        with pytest.raises(ValueError, match="days must be >= 1"):
+            sustained(rsi_below(14, 30), days=0)
+
+    def test_signal_repr(self):
+        """Signal.__repr__ returns expected string representation."""
+        inner = day_of_week(3)
+        sig = Signal(inner)
+        r = repr(sig)
+        assert r.startswith("Signal(")
+        assert r.endswith(")")
+
+
+class TestIVRankEdgeCases:
+    def test_iv_rank_empty_after_dte_filter(self):
+        """When all options have DTE <= 0, iv_rank signal returns all-False.
+
+        This hits _compute_atm_iv line 552 (empty after DTE > 0 filter)
+        and _iv_rank_signal line 621 (empty ATM IV → return all-False).
+        """
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        # All expirations are on or before the quote_date (DTE <= 0)
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPX"] * 3,
+                "quote_date": dates,
+                "underlying_price": [100.0, 100.0, 100.0],
+                "strike": [100.0, 100.0, 100.0],
+                "option_type": ["call", "call", "call"],
+                "expiration": dates,  # same as quote_date → DTE = 0
+                "implied_volatility": [0.20, 0.25, 0.22],
+            }
+        )
+        sig = iv_rank_above(threshold=0.5)
+        result = sig(data)
+        assert not result.any()
