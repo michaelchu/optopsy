@@ -334,14 +334,14 @@ def _compact_history(messages: list[dict[str, Any]]) -> None:
     )
 
     for i in old_tool_indices:
-        content = messages[i].get("content", "")
+        content = messages[i].get("content") or ""
         if len(content) > _COMPACT_THRESHOLD:
             # Keep just the first line (e.g. "long_calls — 37 aggregated stats")
             first_line = content.split("\n", 1)[0]
             messages[i]["content"] = first_line + " [truncated]"
 
     for i in old_assistant_indices:
-        content = messages[i].get("content", "")
+        content = messages[i].get("content") or ""
         if len(content) > _COMPACT_THRESHOLD:
             messages[i]["content"] = content[:_COMPACT_THRESHOLD] + "… [truncated]"
 
