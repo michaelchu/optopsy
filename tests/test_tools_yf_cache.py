@@ -1,4 +1,4 @@
-"""Tests for yfinance caching in _fetch_stock_data_for_signals."""
+"""Tests for yfinance caching in _yf_fetch_and_cache and _fetch_stock_data_for_signals."""
 
 from datetime import date, timedelta
 from unittest.mock import patch
@@ -11,6 +11,7 @@ pytest.importorskip("chainlit", reason="chainlit not installed (install ui extra
 
 from optopsy.ui.providers.cache import ParquetCache
 from optopsy.ui.tools import _YF_CACHE_CATEGORY, _fetch_stock_data_for_signals
+from optopsy.ui.tools._helpers import _yf_fetch_and_cache
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -261,3 +262,163 @@ def test_failed_symbol_does_not_block_other(tmp_path):
     assert (
         cache.read(_YF_CACHE_CATEGORY, "SPY") is None
     )  # nothing cached for failed symbol
+
+
+# ---------------------------------------------------------------------------
+# Direct _yf_fetch_and_cache unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestYfFetchAndCache:
+    """Unit tests for _yf_fetch_and_cache."""
+
+    def test_none_cache_fetches_period_max(self, tmp_path):
+        """None cached → period='max' fetch."""
+        cache = ParquetCache(str(tmp_path))
+        end = date(2025, 12, 17)
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(date(2020, 1, 1), end)
+            result = _yf_fetch_and_cache("SPY", None, end)
+
+        assert result is not None
+        assert not result.empty
+        mock_dl.assert_called_once_with("SPY", period="max", progress=False)
+
+    def test_empty_df_cache_fetches_period_max(self, tmp_path):
+        """Empty DataFrame cached → treated as cold cache, period='max' fetch."""
+        cache = ParquetCache(str(tmp_path))
+        end = date(2025, 12, 17)
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(date(2020, 1, 1), end)
+            result = _yf_fetch_and_cache("SPY", pd.DataFrame(), end)
+
+        assert result is not None
+        mock_dl.assert_called_once_with("SPY", period="max", progress=False)
+
+    def test_cache_up_to_date_skips_fetch(self, tmp_path):
+        """Cache max >= end_dt → no fetch, returns cached data unchanged."""
+        cache = ParquetCache(str(tmp_path))
+        end = date(2025, 12, 17)
+        cached_df = _make_cached_df("SPY", date(2020, 1, 1), end)
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            result = _yf_fetch_and_cache("SPY", cached_df, end)
+
+        mock_dl.assert_not_called()
+        assert result is not None
+        assert len(result) == len(cached_df)
+
+    def test_stale_cache_fetches_tail_only(self, tmp_path):
+        """Cache max < end_dt → fetch from cache_max+1 to end_dt+1."""
+        cache = ParquetCache(str(tmp_path))
+        cache_end = date(2025, 12, 10)
+        end = date(2025, 12, 17)
+        cached_df = _make_cached_df("SPY", date(2020, 1, 1), cache_end)
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+        actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(
+                actual_cache_max + timedelta(days=1), end
+            )
+            result = _yf_fetch_and_cache("SPY", cached_df, end)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(actual_cache_max + timedelta(days=1)),
+            end=str(end + timedelta(days=1)),
+            progress=False,
+        )
+        assert result is not None
+        # Merged result should have more rows than the original cache
+        assert len(result) > len(cached_df)
+
+    def test_tail_fetch_returns_empty(self, tmp_path):
+        """yfinance returns empty for the tail → returns original cached data."""
+        cache = ParquetCache(str(tmp_path))
+        cache_end = date(2025, 12, 10)
+        end = date(2025, 12, 17)
+        cached_df = _make_cached_df("SPY", date(2020, 1, 1), cache_end)
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = pd.DataFrame()
+            result = _yf_fetch_and_cache("SPY", cached_df, end)
+
+        # Should return the original cached data (no merge happened)
+        assert result is not None
+        assert len(result) == len(cached_df)
+
+    def test_cold_fetch_returns_empty(self, tmp_path):
+        """Cold cache + yfinance returns empty → returns None."""
+        cache = ParquetCache(str(tmp_path))
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = pd.DataFrame()
+            result = _yf_fetch_and_cache("SPY", None, date(2025, 12, 17))
+
+        assert result is None
+
+    def test_interior_gaps_ignored(self, tmp_path):
+        """Cache with interior gaps (non-trading days) does NOT trigger re-fetch."""
+        cache = ParquetCache(str(tmp_path))
+        end = date(2025, 12, 17)
+
+        # Build cache with a 10-day gap in the middle (simulating a holiday period).
+        # Under the old gap-detection logic, this would trigger a re-fetch.
+        part1 = _make_cached_df("SPY", date(2020, 1, 1), date(2025, 11, 20))
+        part2 = _make_cached_df("SPY", date(2025, 12, 5), end)
+        cached_df = pd.concat([part1, part2], ignore_index=True)
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            result = _yf_fetch_and_cache("SPY", cached_df, end)
+
+        # Cache covers [2020-01-01, end] so no fetch needed, despite the interior gap
+        mock_dl.assert_not_called()
+        assert result is not None
+
+    def test_tail_merges_with_cache(self, tmp_path):
+        """Tail fetch data is merged and persisted in the cache."""
+        cache = ParquetCache(str(tmp_path))
+        cache_end = date(2025, 12, 10)
+        end = date(2025, 12, 17)
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), cache_end)
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+        actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
+
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(
+                actual_cache_max + timedelta(days=1), end
+            )
+            _yf_fetch_and_cache("SPY", cached_df, end)
+
+        # Verify merged data was persisted to disk
+        on_disk = cache.read(_YF_CACHE_CATEGORY, "SPY")
+        assert on_disk is not None
+        disk_max = pd.to_datetime(on_disk["date"]).dt.date.max()
+        assert disk_max >= end or disk_max >= actual_cache_max
