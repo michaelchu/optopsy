@@ -14,6 +14,10 @@ pydantic = pytest.importorskip("pydantic")  # noqa: F841
 
 from optopsy.ui.tools._executor import execute_tool  # noqa: E402
 from optopsy.ui.tools._helpers import ToolResult  # noqa: E402
+from optopsy.ui.tools._models import (  # noqa: E402
+    SimulationResultEntry,
+    StrategyResultSummary,
+)
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -325,3 +329,377 @@ class TestValidationPreservesState:
             "invalid" in r_bad.llm_summary.lower()
             or "unknown" in r_bad.llm_summary.lower()
         )
+
+
+# ---------------------------------------------------------------------------
+# TestCompareResultsEndToEnd
+# ---------------------------------------------------------------------------
+
+
+class TestCompareResultsEndToEnd:
+    """End-to-end: run_strategy output feeds directly into compare_results.
+
+    Unlike test_tools_compare.py which uses hand-crafted fixture dicts, these
+    tests verify the full chain: run_strategy produces ToolResult.results dicts
+    that compare_results consumes without format mismatches.
+    """
+
+    def test_two_strategies_then_compare(self, basic_dataset):
+        """run_strategy x2 → compare_results produces a valid comparison."""
+        r1 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        assert r1.results and len(r1.results) == 1
+
+        r2 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "short_puts"},
+            basic_dataset,
+            results=r1.results,
+        )
+        assert r2.results and len(r2.results) == 2
+
+        # Now compare — using the actual results dict produced by run_strategy
+        r3 = execute_tool(
+            "compare_results",
+            {},
+            r2.dataset,
+            signals=r2.signals,
+            datasets=r2.datasets,
+            results=r2.results,
+        )
+        assert "2 results" in r3.llm_summary
+        assert "long_calls" in r3.user_display
+        assert "short_puts" in r3.user_display
+        # Results should carry forward unchanged
+        assert r3.results is r2.results
+
+    def test_compare_with_sort_on_real_results(self, basic_dataset):
+        """compare_results sort_by works on actual run_strategy output."""
+        r1 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        r2 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "short_puts"},
+            basic_dataset,
+            results=r1.results,
+        )
+        r3 = execute_tool(
+            "compare_results",
+            {"sort_by": "win_rate"},
+            r2.dataset,
+            results=r2.results,
+        )
+        assert "sorted by win_rate" in r3.llm_summary
+
+    def test_compare_specific_keys_from_real_results(self, basic_dataset):
+        """compare_results with result_keys selecting actual run_strategy keys."""
+        r1 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        r2 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "short_puts"},
+            basic_dataset,
+            results=r1.results,
+        )
+        r3 = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_puts"},
+            basic_dataset,
+            results=r2.results,
+        )
+        assert len(r3.results) == 3
+
+        # Compare only the first two using their actual keys
+        keys = list(r3.results.keys())[:2]
+        r4 = execute_tool(
+            "compare_results",
+            {"result_keys": keys},
+            r3.dataset,
+            results=r3.results,
+        )
+        assert "2 results" in r4.llm_summary
+
+    def test_result_summaries_validate_as_strategy_result_summary(self, basic_dataset):
+        """Every result dict produced by run_strategy validates as StrategyResultSummary."""
+        r = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        assert r.results
+        for key, summary in r.results.items():
+            # Must round-trip through the Pydantic model without error
+            validated = StrategyResultSummary(**summary)
+            assert validated.strategy == "long_calls"
+            assert validated.count >= 0
+
+    def test_scan_then_compare(self, basic_dataset):
+        """scan_strategies → compare_results end-to-end."""
+        r1 = execute_tool(
+            "scan_strategies",
+            {"strategy_names": ["long_calls", "short_puts"]},
+            basic_dataset,
+        )
+        assert r1.results and len(r1.results) >= 2
+
+        r2 = execute_tool(
+            "compare_results",
+            {},
+            r1.dataset,
+            results=r1.results,
+        )
+        assert "results" in r2.llm_summary
+        # Both strategies should appear
+        assert "long_calls" in r2.user_display
+        assert "short_puts" in r2.user_display
+
+
+# ---------------------------------------------------------------------------
+# TestIVSurfaceEndToEnd
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def iv_option_chain():
+    """Option chain with implied_volatility for IV surface integration tests.
+
+    Two quote dates, two expirations, calls and puts at three strikes.
+    Suitable for threading through preview_data → plot_vol_surface / iv_term_structure.
+    """
+    qd1 = datetime.datetime(2024, 1, 2)
+    qd2 = datetime.datetime(2024, 1, 3)
+    exp1 = datetime.datetime(2024, 2, 16)
+    exp2 = datetime.datetime(2024, 3, 15)
+    rows = []
+    for qd, price in [(qd1, 100.0), (qd2, 101.0)]:
+        for exp in [exp1, exp2]:
+            for strike in [95.0, 100.0, 105.0]:
+                for ot in ["call", "put"]:
+                    iv = 0.20 + abs(strike - price) * 0.005
+                    bid = (
+                        max(price - strike, 0) + 1.0
+                        if ot == "call"
+                        else max(strike - price, 0) + 1.0
+                    )
+                    rows.append(
+                        [
+                            "SPX",
+                            price,
+                            ot,
+                            exp,
+                            qd,
+                            strike,
+                            bid,
+                            bid + 0.10,
+                            iv,
+                        ]
+                    )
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "implied_volatility",
+    ]
+    return pd.DataFrame(data=rows, columns=cols)
+
+
+class TestIVSurfaceEndToEnd:
+    """End-to-end: data-loading tool output feeds into IV surface tools.
+
+    Unlike test_tools_iv_surface.py which uses hand-built DataFrames passed
+    directly, these tests thread a dataset through preview_data first (as a
+    user session would), then pass the ToolResult's dataset into the IV tools.
+    """
+
+    def test_preview_then_vol_surface(self, iv_option_chain):
+        """preview_data → plot_vol_surface using threaded dataset."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
+
+        # Simulate loading data: preview_data receives the dataset
+        r1 = execute_tool(
+            "preview_data",
+            {"rows": 5},
+            iv_option_chain,
+            datasets={"SPX": iv_option_chain},
+        )
+        assert r1.dataset is iv_option_chain
+
+        # Feed r1's state into plot_vol_surface
+        r2 = execute_tool(
+            "plot_vol_surface",
+            {"quote_date": "2024-01-02"},
+            r1.dataset,
+            signals=r1.signals,
+            datasets=r1.datasets,
+            results=r1.results,
+        )
+        assert r2.chart_figure is not None
+        assert "Volatility surface" in r2.llm_summary
+        assert "strikes" in r2.llm_summary
+        assert "expirations" in r2.llm_summary
+
+    def test_preview_then_iv_term_structure(self, iv_option_chain):
+        """preview_data → iv_term_structure using threaded dataset."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
+
+        r1 = execute_tool(
+            "preview_data",
+            {"rows": 5},
+            iv_option_chain,
+            datasets={"SPX": iv_option_chain},
+        )
+
+        r2 = execute_tool(
+            "iv_term_structure",
+            {"quote_date": "2024-01-02"},
+            r1.dataset,
+            signals=r1.signals,
+            datasets=r1.datasets,
+            results=r1.results,
+        )
+        assert r2.chart_figure is not None
+        assert "IV term structure" in r2.llm_summary
+        assert "ATM IV range" in r2.llm_summary
+
+    def test_describe_then_vol_surface(self, iv_option_chain):
+        """describe_data → plot_vol_surface using threaded dataset."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
+
+        r1 = execute_tool(
+            "describe_data",
+            {},
+            iv_option_chain,
+            datasets={"SPX": iv_option_chain},
+        )
+        # Verify dataset threads through describe_data
+        assert r1.dataset is iv_option_chain
+
+        r2 = execute_tool(
+            "plot_vol_surface",
+            {},
+            r1.dataset,
+            signals=r1.signals,
+            datasets=r1.datasets,
+            results=r1.results,
+        )
+        # With no quote_date arg, should default to latest (2024-01-03)
+        assert r2.chart_figure is not None
+        assert "2024-01-03" in r2.llm_summary
+
+    def test_named_dataset_flows_to_iv_tools(self, iv_option_chain):
+        """Named dataset from datasets dict flows into IV surface tools."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
+
+        named = {"SPX_IV": iv_option_chain}
+        r1 = execute_tool(
+            "preview_data",
+            {"dataset_name": "SPX_IV", "rows": 3},
+            iv_option_chain,
+            datasets=named,
+        )
+        assert r1.datasets is named
+
+        # plot_vol_surface uses the active dataset threaded from preview
+        r2 = execute_tool(
+            "plot_vol_surface",
+            {"quote_date": "2024-01-02", "option_type": "put"},
+            r1.dataset,
+            signals=r1.signals,
+            datasets=r1.datasets,
+            results=r1.results,
+        )
+        assert r2.chart_figure is not None
+        assert "put" in r2.llm_summary.lower()
+
+    def test_iv_tool_without_iv_column_after_preview(self, basic_dataset):
+        """IV tools reject dataset without IV column even when threaded."""
+        r1 = execute_tool(
+            "preview_data",
+            {"rows": 3},
+            basic_dataset,
+        )
+        r2 = execute_tool(
+            "plot_vol_surface",
+            {},
+            r1.dataset,
+            signals=r1.signals,
+            datasets=r1.datasets,
+            results=r1.results,
+        )
+        assert r2.chart_figure is None
+        assert "implied_volatility" in r2.llm_summary
+
+
+# ---------------------------------------------------------------------------
+# TestOutputModelEnforcement
+# ---------------------------------------------------------------------------
+
+
+class TestOutputModelEnforcement:
+    """Verify that output models are enforced at the boundary where results
+    are created — not just tested in isolation."""
+
+    def test_run_strategy_result_validates_as_pydantic_model(self, basic_dataset):
+        """Each result dict from run_strategy round-trips through StrategyResultSummary."""
+        r = execute_tool(
+            "run_strategy",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        assert r.results
+        for summary in r.results.values():
+            model = StrategyResultSummary(**summary)
+            dumped = model.model_dump()
+            # Round-tripped dict should match the original
+            for key in ("strategy", "count", "mean_return", "std", "win_rate"):
+                assert dumped[key] == summary[key], f"Mismatch on {key}"
+
+    def test_scan_strategies_results_validate(self, basic_dataset):
+        """Each result dict from scan_strategies validates as StrategyResultSummary."""
+        r = execute_tool(
+            "scan_strategies",
+            {"strategy_names": ["long_calls", "short_puts"]},
+            basic_dataset,
+        )
+        assert r.results
+        for key, summary in r.results.items():
+            # scan_strategies adds a "source" field — StrategyResultSummary
+            # should still accept the core fields (extra fields are OK with
+            # model_validate which strips extras, or via dict unpacking if
+            # the model uses model_config allowing extras).
+            core = {k: v for k, v in summary.items() if k != "source"}
+            model = StrategyResultSummary(**core)
+            assert model.strategy in ("long_calls", "short_puts")
+
+    def test_simulate_result_validates_as_simulation_entry(self, basic_dataset):
+        """Simulation results validate as SimulationResultEntry."""
+        r = execute_tool(
+            "simulate",
+            {"strategy_name": "long_calls"},
+            basic_dataset,
+        )
+        if not r.results:
+            pytest.skip("Simulation produced no results with this dataset")
+
+        sim_entries = {
+            k: v for k, v in r.results.items() if v.get("type") == "simulation"
+        }
+        for key, entry in sim_entries.items():
+            model = SimulationResultEntry(**entry)
+            assert model.type == "simulation"
+            assert model.strategy == "long_calls"
+            assert isinstance(model.summary, dict)
