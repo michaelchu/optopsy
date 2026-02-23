@@ -230,6 +230,11 @@ dates. If you see "0 valid dates" or an "overlap" warning, it means the signal f
 historical price dates that fall outside the options data window. Fix by fetching options \
 data for the period when the signal fires (e.g. if RSI was oversold in 2024, fetch options \
 from 2024), or adjust signal parameters so the signal triggers within the options date range.
+- **Stock data is the authority for signal backtests**: When running strategies with TA signals, \
+the stock price data determines where valid signals can exist. If the stock data covers \
+2020-2024 but options data covers 2018-2025, signals can only fire within the stock data range. \
+Be aware of this when interpreting results — the effective backtest window is the overlap of \
+both datasets, not the full options data range.
 
 ### Composing signals (library API)
 
