@@ -33,7 +33,7 @@ import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
 import optopsy as op
-from optopsy.ui.agent import OptopsyAgent
+from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
 from optopsy.ui.providers import get_provider_names
 
 DB_PATH = Path("~/.optopsy/chat.db").expanduser()
@@ -232,6 +232,11 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
                     "content": step.get("output", ""),
                 }
             )
+
+    # Drop orphaned tool messages whose tool_call_id has no matching
+    # tool_calls entry — prevents Anthropic API "unexpected tool_use_id"
+    # errors on resume.  Uses the same function applied in agent.chat().
+    messages = _sanitize_tool_messages(messages)
 
     # Datasets and signals are lost on reconnect (they live only in memory).
     # Append a concise reminder so the LLM doesn't try to use stale state.

@@ -12,7 +12,77 @@ from optopsy.ui.agent import (
     _COMPACT_THRESHOLD,
     OptopsyAgent,
     _compact_history,
+    _sanitize_tool_messages,
 )
+
+# ---------------------------------------------------------------------------
+# _sanitize_tool_messages tests
+# ---------------------------------------------------------------------------
+
+
+class TestSanitizeToolMessages:
+    def test_removes_orphaned_tool_messages(self):
+        """Tool messages without matching tool_calls are removed."""
+        messages = [
+            {"role": "user", "content": "load data"},
+            {"role": "assistant", "content": "Loading..."},  # no tool_calls
+            {"role": "tool", "tool_call_id": "orphan1", "content": "result1"},
+            {"role": "tool", "tool_call_id": "orphan2", "content": "result2"},
+            {"role": "assistant", "content": "Done."},
+        ]
+        result = _sanitize_tool_messages(messages)
+        assert len(result) == 3
+        assert not any(m.get("role") == "tool" for m in result)
+
+    def test_keeps_valid_tool_messages(self):
+        """Tool messages with matching tool_calls are preserved."""
+        messages = [
+            {"role": "user", "content": "run strategy"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {"id": "tc1", "function": {"name": "run_strategy"}},
+                    {"id": "tc2", "function": {"name": "preview_data"}},
+                ],
+            },
+            {"role": "tool", "tool_call_id": "tc1", "content": "result1"},
+            {"role": "tool", "tool_call_id": "tc2", "content": "result2"},
+            {"role": "assistant", "content": "Here are results."},
+        ]
+        result = _sanitize_tool_messages(messages)
+        assert len(result) == 5  # nothing removed
+
+    def test_mixed_orphaned_and_valid(self):
+        """Only orphaned tool messages are removed; valid ones stay."""
+        messages = [
+            {"role": "user", "content": "load data"},
+            {"role": "assistant", "content": "Fetching..."},  # no tool_calls
+            {"role": "tool", "tool_call_id": "orphan", "content": "cached"},
+            {"role": "assistant", "content": "Now running..."},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [{"id": "tc_valid", "function": {"name": "run"}}],
+            },
+            {"role": "tool", "tool_call_id": "tc_valid", "content": "stats"},
+            {"role": "assistant", "content": "Results."},
+        ]
+        result = _sanitize_tool_messages(messages)
+        tool_msgs = [m for m in result if m.get("role") == "tool"]
+        assert len(tool_msgs) == 1
+        assert tool_msgs[0]["tool_call_id"] == "tc_valid"
+
+    def test_empty_messages(self):
+        assert _sanitize_tool_messages([]) == []
+
+    def test_no_tool_messages(self):
+        messages = [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+        ]
+        assert _sanitize_tool_messages(messages) == messages
+
 
 # ---------------------------------------------------------------------------
 # _compact_history tests

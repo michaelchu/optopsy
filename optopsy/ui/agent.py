@@ -321,6 +321,32 @@ _MAX_TOOL_ITERATIONS = 15
 _COMPACT_THRESHOLD = 300
 
 
+def _sanitize_tool_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove tool messages whose tool_call_id has no matching tool_calls entry.
+
+    The Anthropic API requires every ``tool_result`` block to reference a
+    ``tool_use`` block in the preceding assistant message.  When a session is
+    resumed from persisted steps, intermediate assistant messages (which carry
+    ``tool_calls``) may not have been saved, leaving orphaned tool messages
+    that trigger ``invalid_request_error``.
+
+    This function drops those orphaned tool messages so the conversation
+    history is always valid before sending to the LLM.
+    """
+    valid_tc_ids: set[str] = set()
+    for m in messages:
+        if m.get("role") == "assistant":
+            for tc in m.get("tool_calls", []):
+                tc_id = tc.get("id", "")
+                if tc_id:
+                    valid_tc_ids.add(tc_id)
+    return [
+        m
+        for m in messages
+        if m.get("role") != "tool" or m.get("tool_call_id") in valid_tc_ids
+    ]
+
+
 def _compact_history(messages: list[dict[str, Any]]) -> None:
     """Truncate old tool results and assistant reasoning in-place.
 
@@ -468,7 +494,7 @@ class OptopsyAgent:
         else:
             system_msg = {"role": "system", "content": SYSTEM_PROMPT}
 
-        full_messages = [system_msg] + messages
+        full_messages = [system_msg] + _sanitize_tool_messages(messages)
 
         for _iteration in range(_MAX_TOOL_ITERATIONS):
             # Throttle LLM calls: skip delay on the first iteration,
