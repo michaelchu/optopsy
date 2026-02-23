@@ -56,4 +56,4 @@ pip install optopsy
 
 ## 许可证
 
-Optopsy 根据 GPL-3.0 许可证发布。有关更多信息，请参阅 [GitHub 仓库](https://github.com/michaelchu/optopsy)。
+Optopsy 根据 AGPL-3.0 许可证发布。有关更多信息，请参阅 [GitHub 仓库](https://github.com/michaelchu/optopsy)。
