@@ -869,12 +869,13 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     # Persist trade log to disk; keep only summary stats in session memory
     write_sim_trade_log(sim_key, result.trade_log)
 
+    from ._models import SimulationResultEntry
+
     updated_results = dict(results)
-    updated_results[sim_key] = {
-        "type": "simulation",
-        "strategy": strategy_name,
-        "summary": s,
-    }
+    updated_results[sim_key] = SimulationResultEntry(
+        strategy=strategy_name,
+        summary=s,
+    ).model_dump()
 
     # Format output
     pf_str = _fmt_pf(s["profit_factor"])
