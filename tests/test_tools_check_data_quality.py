@@ -266,3 +266,212 @@ class TestUserDisplay:
         result = execute_tool("check_data_quality", {}, data_with_optionals)
         # Bid/ask quality section should have a table
         assert "Spread mean" in result.user_display
+
+
+# ---------------------------------------------------------------------------
+# Tests — duplicate rows
+# ---------------------------------------------------------------------------
+
+
+class TestDuplicateRows:
+    def test_duplicates_detected(self, clean_data):
+        """Duplicate (quote_date, expiration, strike, option_type) rows flagged."""
+        df = pd.concat([clean_data, clean_data.iloc[:2]], ignore_index=True)
+        result = execute_tool("check_data_quality", {}, df)
+        assert "duplicate" in result.llm_summary.lower()
+        assert "WARN" in result.llm_summary
+
+    def test_no_duplicates(self, clean_data):
+        result = execute_tool("check_data_quality", {}, clean_data)
+        assert "no duplicate rows" in result.llm_summary.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests — negative values
+# ---------------------------------------------------------------------------
+
+
+class TestNegativeValues:
+    def test_negative_bid(self, clean_data):
+        df = clean_data.copy()
+        df.loc[0, "bid"] = -1.0
+        result = execute_tool("check_data_quality", {}, df)
+        assert "negative" in result.llm_summary.lower()
+        assert "bid" in result.llm_summary
+
+    def test_negative_strike(self, clean_data):
+        df = clean_data.copy()
+        df.loc[0, "strike"] = -100.0
+        result = execute_tool("check_data_quality", {}, df)
+        assert "negative" in result.llm_summary.lower()
+        assert "strike" in result.llm_summary
+
+    def test_no_negatives(self, clean_data):
+        result = execute_tool("check_data_quality", {}, clean_data)
+        assert "no negative" in result.llm_summary.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests — option type balance
+# ---------------------------------------------------------------------------
+
+
+class TestOptionTypeBalance:
+    def test_iron_condor_calls_only(self, clean_data):
+        """iron_condor needs both calls and puts; calls-only should fail."""
+        df = clean_data[clean_data["option_type"] == "call"].copy()
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "iron_condor"},
+            df,
+        )
+        assert "FAIL" in result.llm_summary
+        assert "put" in result.llm_summary.lower()
+
+    def test_iron_condor_both_types(self, clean_data):
+        """iron_condor with both types should pass."""
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "iron_condor"},
+            clean_data,
+        )
+        assert (
+            "both calls" in result.llm_summary.lower() or "PASS" in result.llm_summary
+        )
+
+    def test_call_strategy_missing_calls(self, clean_data):
+        """long_calls requires calls; puts-only should fail."""
+        df = clean_data[clean_data["option_type"] == "put"].copy()
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_calls"},
+            df,
+        )
+        assert "FAIL" in result.llm_summary
+        assert "call" in result.llm_summary.lower()
+
+    def test_no_strategy_skips_check(self, clean_data):
+        """Without strategy_name, option type balance check is skipped."""
+        df = clean_data[clean_data["option_type"] == "call"].copy()
+        result = execute_tool("check_data_quality", {}, df)
+        assert "Option Type Balance" not in (result.user_display or "")
+
+
+# ---------------------------------------------------------------------------
+# Tests — strike density
+# ---------------------------------------------------------------------------
+
+
+class TestStrikeDensity:
+    def test_butterfly_sparse_strikes(self):
+        """Butterfly needs ≥3 strikes per date; 1 strike should warn."""
+        exp = datetime.datetime(2024, 3, 15)
+        qd = pd.Timestamp("2024-01-02")
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"] * 2,
+                "option_type": ["call"] * 2,
+                "expiration": [exp] * 2,
+                "quote_date": [qd] * 2,
+                "strike": [480.0, 480.0],
+                "bid": [5.0, 5.0],
+                "ask": [5.10, 5.10],
+            }
+        )
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_call_butterfly"},
+            df,
+        )
+        assert "strike" in result.llm_summary.lower()
+        assert "WARN" in result.llm_summary
+
+    def test_butterfly_sufficient_strikes(self):
+        """Butterfly with ≥3 distinct strikes should pass."""
+        exp = datetime.datetime(2024, 3, 15)
+        qd = pd.Timestamp("2024-01-02")
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"] * 3,
+                "option_type": ["call"] * 3,
+                "expiration": [exp] * 3,
+                "quote_date": [qd] * 3,
+                "strike": [475.0, 480.0, 485.0],
+                "bid": [8.0, 5.0, 3.0],
+                "ask": [8.10, 5.10, 3.10],
+            }
+        )
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_call_butterfly"},
+            df,
+        )
+        assert "PASS" in result.llm_summary
+        assert (
+            "≥ 3" in result.llm_summary
+            or ">= 3" in result.llm_summary
+            or "3 distinct" in result.llm_summary
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests — expiration coverage
+# ---------------------------------------------------------------------------
+
+
+class TestExpirationCoverage:
+    def test_calendar_single_expiration(self):
+        """Calendar strategy with 1 expiration per date should warn."""
+        exp = datetime.datetime(2024, 3, 15)
+        qd = pd.Timestamp("2024-01-02")
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "option_type": ["call"],
+                "expiration": [exp],
+                "quote_date": [qd],
+                "strike": [480.0],
+                "bid": [5.0],
+                "ask": [5.10],
+            }
+        )
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_call_calendar"},
+            df,
+        )
+        assert "expiration" in result.llm_summary.lower()
+        assert "WARN" in result.llm_summary
+
+    def test_calendar_multiple_expirations(self):
+        """Calendar strategy with ≥2 expirations per date should pass."""
+        exp1 = datetime.datetime(2024, 3, 15)
+        exp2 = datetime.datetime(2024, 4, 19)
+        qd = pd.Timestamp("2024-01-02")
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY"],
+                "option_type": ["call", "call"],
+                "expiration": [exp1, exp2],
+                "quote_date": [qd, qd],
+                "strike": [480.0, 480.0],
+                "bid": [5.0, 7.0],
+                "ask": [5.10, 7.10],
+            }
+        )
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_call_calendar"},
+            df,
+        )
+        assert "PASS" in result.llm_summary
+        assert "expiration" in result.llm_summary.lower()
+
+    def test_non_calendar_skips_check(self, clean_data):
+        """Non-calendar strategy should not run expiration coverage check."""
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_calls"},
+            clean_data,
+        )
+        assert "Expiration Coverage" not in (result.user_display or "")
