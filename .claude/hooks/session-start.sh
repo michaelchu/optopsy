@@ -8,26 +8,14 @@ fi
 
 cd "$CLAUDE_PROJECT_DIR"
 
-VENV_DIR="$CLAUDE_PROJECT_DIR/venv"
-PYTHON="python3.12"
-
-# Create virtual environment if it doesn't exist
-if [ ! -d "$VENV_DIR" ]; then
-  "$PYTHON" -m venv "$VENV_DIR"
+# Install uv if not available
+if ! command -v uv &>/dev/null; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# Activate the virtual environment
-source "$VENV_DIR/bin/activate"
-
-# Install package in editable mode + dev tools
-# Prefer uv for speed, fall back to pip
-if command -v uv &>/dev/null; then
-  uv pip install -e .
-  uv pip install ruff mypy pytest pytest-cov pre-commit pandas-stubs types-requests
-else
-  pip install -e .
-  pip install ruff mypy pytest pytest-cov pre-commit pandas-stubs types-requests
-fi
+# Sync dependencies (creates .venv automatically)
+uv sync
 
 # Install pre-commit hooks into the git repo
-pre-commit install
+uv run pre-commit install

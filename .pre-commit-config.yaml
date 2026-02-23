@@ -10,14 +10,14 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: venv/bin/mypy optopsy/
+        entry: uv run mypy optopsy/
         language: system
         pass_filenames: false
         always_run: true
 
       - id: pytest
         name: pytest
-        entry: venv/bin/pytest tests/ -q
+        entry: uv run pytest tests/ -q
         language: system
         pass_filenames: false
         always_run: true

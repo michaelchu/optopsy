@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optopsy"
+version = "2.3.0b2"
+description = "A nimble backtesting and statistics library for options strategies"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.12,<3.14"
+authors = [{ name = "Michael Chu", email = "mchchu88@gmail.com" }]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "typing_extensions>=4.0.0",
+    "tabulate>=0.9.0,<1.0.0",
+    "pandas-ta>=0.4.67b0",
+]
+
+[project.urls]
+Homepage = "https://github.com/michaelchu/optopsy"
+
+[project.optional-dependencies]
+ui = [
+    "pyarrow>=14.0.0",
+    "chainlit>=1.0.0,<3.0.0",
+    "litellm>=1.0.0,<3.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    "requests>=2.28.0,<3.0.0",
+    "yfinance>=0.2.0,<1.0.0",
+    "sqlalchemy>=2.0.0,<3.0.0",
+    "aiosqlite>=0.17.0,<1.0.0",
+    "greenlet>=3.0.0",
+    "plotly>=5.0.0,<7.0.0",
+    "pydantic>=2.0,<3.0",
+]
+
+[project.scripts]
+optopsy-chat = "optopsy.ui.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["optopsy", "optopsy.*"]
+exclude = ["tests", "tests.*", "samples"]
+
+[tool.setuptools.package-data]
+"optopsy.ui" = ["public/*"]
+
+# --- ruff (was ruff.toml) ---
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"optopsy/ui/agent.py" = ["E402"]
+"optopsy/ui/app.py" = ["E402"]
+"**/__init__.py" = ["F401"]
+"tests/*" = ["F403", "F405", "E712"]
+
+# --- mypy (was mypy.ini) ---
+
+[tool.mypy]
+warn_unused_configs = true
+ignore_missing_imports = true
+disable_error_code = ["arg-type", "list-item", "call-overload"]
+
+# --- pytest (was pytest.ini) ---
+
+[tool.pytest.ini_options]
+addopts = "--cov=optopsy --cov-report=term-missing"
+filterwarnings = ["ignore::DeprecationWarning:pandas_ta"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pandas-stubs>=3.0.0.260204",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.2",
+    "types-requests>=2.32.4.20260107",
+]
