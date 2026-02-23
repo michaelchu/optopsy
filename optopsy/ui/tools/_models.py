@@ -672,6 +672,13 @@ class GetSimulationTradesArgs(BaseModel):
     )
 
 
+class DownloadOptionsDataArgs(BaseModel):
+    symbol: str = Field(
+        ...,
+        description="US stock ticker symbol (e.g. SPY, AAPL, TSLA)",
+    )
+
+
 class FetchOptionsDataArgs(BaseModel):
     symbol: str = Field(
         ...,
@@ -683,7 +690,7 @@ class FetchOptionsDataArgs(BaseModel):
     )
     end_date: str | None = Field(
         None,
-        description="End date (YYYY-MM-DD). Defaults to today.",
+        description="End date (YYYY-MM-DD). Defaults to all available.",
     )
     option_type: Literal["call", "put"] | None = Field(
         None,
@@ -795,6 +802,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "iv_term_structure": IVTermStructureArgs,
     "simulate": SimulateArgs,
     "get_simulation_trades": GetSimulationTradesArgs,
+    "download_options_data": DownloadOptionsDataArgs,
     "fetch_options_data": FetchOptionsDataArgs,
 }
 
