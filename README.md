@@ -26,7 +26,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
 
-![AI Chat UI](docs/images/chat-ui.png)
+![AI Chat UI](docs/images/example.gif)
 
 ### Setup & Configuration
 
