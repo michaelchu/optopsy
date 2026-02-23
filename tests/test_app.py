@@ -404,6 +404,84 @@ class TestOnChatResume:
 
         asyncio.run(_run())
 
+    def test_orphaned_tool_messages_dropped(self):
+        """Tool messages without a matching tool_calls entry are removed.
+
+        This prevents Anthropic API errors like 'unexpected tool_use_id found
+        in tool_result blocks' when intermediate assistant messages with
+        tool_calls were not persisted.
+        """
+
+        async def _run():
+            from optopsy.ui.app import on_chat_resume
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            thread = {
+                "steps": [
+                    {"type": "user_message", "output": "fetch SPY data"},
+                    # Assistant message WITHOUT tool_calls metadata (not persisted)
+                    {"type": "assistant_message", "output": "Fetching..."},
+                    # Orphaned tool message — its tool_call_id has no match
+                    {
+                        "type": "tool",
+                        "output": "Loaded 500 rows",
+                        "id": "step_orphan",
+                        "metadata": json.dumps({"tool_call_id": "toolu_ORPHANED_ID"}),
+                    },
+                    {"type": "user_message", "output": "run long_calls"},
+                    # This assistant message HAS tool_calls
+                    {
+                        "type": "assistant_message",
+                        "output": "Running...",
+                        "metadata": json.dumps(
+                            {
+                                "tool_calls": [
+                                    {
+                                        "id": "tc_valid",
+                                        "function": {"name": "run_strategy"},
+                                    }
+                                ]
+                            }
+                        ),
+                    },
+                    # Valid tool message — matches tc_valid
+                    {
+                        "type": "tool",
+                        "output": "37 aggregated stats",
+                        "id": "step_valid",
+                        "metadata": json.dumps({"tool_call_id": "tc_valid"}),
+                    },
+                    {"type": "assistant_message", "output": "Here are the results."},
+                ],
+            }
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch("optopsy.ui.app.OptopsyAgent") as mock_agent_cls,
+            ):
+                mock_agent_cls.return_value = MagicMock()
+                await on_chat_resume(thread)
+
+            messages = store["messages"]
+            # Orphaned tool message should be dropped
+            tool_msgs = [m for m in messages if m.get("role") == "tool"]
+            assert len(tool_msgs) == 1
+            assert tool_msgs[0]["tool_call_id"] == "tc_valid"
+
+            # The orphaned tool_call_id should not appear anywhere
+            all_tc_ids = [
+                m.get("tool_call_id") for m in messages if m.get("role") == "tool"
+            ]
+            assert "toolu_ORPHANED_ID" not in all_tc_ids
+
+        asyncio.run(_run())
+
     def test_malformed_metadata_handled_gracefully(self):
         """Steps with non-JSON metadata strings are handled without crashing."""
 
