@@ -1,3 +1,13 @@
+"""Strategy, signal, and tool schema registries.
+
+This module is the single source of truth for:
+
+- ``STRATEGIES`` — maps strategy name to ``(function, description, is_calendar)``
+- ``SIGNAL_REGISTRY`` — maps signal name to a factory lambda returning a ``SignalFunc``
+- ``STRATEGY_OPTION_TYPE`` — maps strategy name to required option type for data fetching
+- ``get_tool_schemas()`` — generates OpenAI-compatible function schemas from Pydantic models
+"""
+
 import logging
 from typing import Any
 

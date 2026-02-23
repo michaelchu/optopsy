@@ -1,7 +1,26 @@
+"""Parameter and data validation for option strategy inputs.
+
+This module validates two things before a strategy runs:
+
+1. **Parameter checks** — Each user-supplied parameter (DTE intervals, OTM %,
+   slippage mode, etc.) is validated by a type-specific checker function.  The
+   ``param_checks`` dict at module level maps parameter names to their checkers.
+
+2. **DataFrame schema checks** — The input DataFrame must contain the required
+   columns (``expected_types``) with compatible dtypes.  Optional columns for
+   Greeks (``optional_greek_types``) and liquidity (``optional_liquidity_types``)
+   are validated only when the corresponding features are enabled.
+
+Entry points:
+- ``_run_checks()`` — standard strategies (validates params, dtypes, delta)
+- ``_run_calendar_checks()`` — calendar/diagonal spreads (adds DTE range ordering)
+"""
+
 from typing import Any, Callable, Dict, Tuple
 
 import pandas as pd
 
+# Required columns and their accepted dtypes for option chain DataFrames.
 expected_types: Dict[str, Tuple[str, ...]] = {
     "underlying_symbol": ("object", "str"),
     "underlying_price": ("int64", "float64"),
@@ -13,7 +32,7 @@ expected_types: Dict[str, Tuple[str, ...]] = {
     "ask": ("int64", "float64"),
 }
 
-# Optional Greek columns - only validated when Greeks filtering/grouping is enabled
+# Optional Greek columns — validated only when delta filtering/grouping is enabled.
 optional_greek_types: Dict[str, Tuple[str, ...]] = {
     "delta": ("int64", "float64"),
     "gamma": ("int64", "float64"),
@@ -22,7 +41,7 @@ optional_greek_types: Dict[str, Tuple[str, ...]] = {
     "implied_volatility": ("int64", "float64"),
 }
 
-# Optional liquidity columns - only validated when liquidity slippage is enabled
+# Optional liquidity columns — validated only when slippage="liquidity" is enabled.
 optional_liquidity_types: Dict[str, Tuple[str, ...]] = {
     "volume": ("int64", "float64"),
     "open_interest": ("int64", "float64"),
@@ -267,6 +286,9 @@ def _check_volume_column(data: pd.DataFrame) -> None:
         )
 
 
+# Maps parameter name → validation function.  Each checker raises ValueError
+# if the value is invalid.  Used by ``_run_common_checks()`` to validate all
+# user-supplied strategy parameters before execution.
 param_checks: Dict[str, Callable[[str, Any], None]] = {
     "dte_interval": _check_positive_integer,
     "max_entry_dte": _check_positive_integer,

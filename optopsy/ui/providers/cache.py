@@ -1,3 +1,15 @@
+"""Parquet-based file cache for immutable historical market data.
+
+Each ``(category, symbol)`` pair maps to a single parquet file at
+``~/.optopsy/cache/{category}/{SYMBOL}.parquet``.  There is no TTL or
+eviction — historical data is immutable, so cached files are only ever
+appended to (via ``merge_and_save``) or explicitly cleared.
+
+The module also exports ``compute_date_gaps()``, which inspects a cached
+DataFrame and returns the date ranges that need to be fetched to fill
+coverage gaps (before, after, or interior holes).
+"""
+
 import logging
 import os
 from datetime import date, timedelta

@@ -1,3 +1,21 @@
+"""Strategy execution engine for options backtesting.
+
+This module implements the core pipeline that transforms raw option chain data
+into strategy performance results. The pipeline flows through several stages:
+
+1. **Validation** — ``_run_checks()`` verifies parameter types and DataFrame schemas.
+2. **Evaluation** — ``_evaluate_all_options()`` filters by DTE, OTM%, bid/ask thresholds,
+   and optionally delta; then merges entry and exit rows for each contract.
+3. **Strategy construction** — ``_strategy_engine()`` joins legs (single or multi-leg),
+   applies strike-ordering rules, and calculates P&L with optional slippage.
+4. **Output formatting** — ``_format_output()`` returns raw trades or grouped
+   descriptive statistics (with win_rate and profit_factor).
+
+Calendar and diagonal spreads follow a parallel path via
+``_process_calendar_strategy()``, which handles different expirations per leg
+and a dedicated exit-price matching step.
+"""
+
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -445,15 +463,20 @@ def _apply_ratios(
         volume_col = f"volume_entry_leg{idx}"
 
         leg = leg_def[idx - 1]
-        side_value = leg[0].value
+        side_value = leg[0].value  # +1 (long/buy) or -1 (short/sell)
         quantity = _get_leg_quantity(leg)
+        # Combined multiplier: direction × quantity, e.g. short 2 calls → -2
         multiplier = side_value * quantity
 
         # Check if bid/ask columns exist for slippage calculation
         has_bid_ask = bid_entry_col in data.columns and ask_entry_col in data.columns
 
         if has_bid_ask and slippage != "mid":
-            # Calculate fill price based on slippage model
+            # Slippage recalculates fill prices from raw bid/ask rather than
+            # using the midpoint.  Long entries fill closer to the ask (worse
+            # price for buyer); short entries fill closer to the bid (worse
+            # price for seller).  The degree depends on the slippage model:
+            # "spread" uses the full spread; "liquidity" scales by volume.
             volume_entry = data.get(volume_col) if volume_col in data.columns else None
 
             # Entry: use side_value to determine buy/sell direction
@@ -605,15 +628,21 @@ def _strategy_engine(
     ) -> pd.DataFrame:
         return d if r is None else r(d, ld)
 
-    # Pre-rename columns for each leg to avoid suffix issues with 3+ legs.
-    # .rename() already returns a new DataFrame, so .copy() is unnecessary.
+    # Multi-leg construction:
+    # 1. Filter data for each leg's option type (calls/puts) and pre-rename
+    #    columns with _legN suffixes to avoid ambiguity during merges.
+    # 2. Sequentially inner-join all legs on shared columns (symbol,
+    #    expiration, DTE, etc.) to produce every valid leg combination.
+    # 3. Apply strategy-specific rules (e.g. ascending strikes, equal wings).
+    # 4. Calculate P&L across all legs with slippage adjustments.
     partials = [
         _rename_leg_columns(leg[1](data), idx, join_on or [])
         for idx, leg in enumerate(leg_def, start=1)
     ]
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    # Merge all legs sequentially
+    # Merge all legs sequentially on shared columns (inner join ensures
+    # only rows present in ALL legs are kept)
     result = partials[0]
     for partial in partials[1:]:
         result = pd.merge(result, partial, on=join_on, how="inner")

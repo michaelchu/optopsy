@@ -1,3 +1,16 @@
+"""Chainlit web application for the Optopsy Chat UI.
+
+This module is the Chainlit entry point.  It sets up:
+
+- **Database** — SQLite-backed persistence for chat threads, steps, and feedback
+  (``_init_db_sync()``).
+- **Authentication** — Header-based auto-auth for single-user local use.
+- **Session lifecycle** — ``on_chat_start`` creates a fresh ``OptopsyAgent``;
+  ``on_chat_resume`` rebuilds message history from persisted steps.
+- **Message handling** — ``on_message`` processes user input, handles CSV
+  drag-and-drop uploads, and streams LLM responses with tool-call step UI.
+"""
+
 import json
 import logging
 import os

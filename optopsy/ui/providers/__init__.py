@@ -1,3 +1,16 @@
+"""Pluggable data provider registry.
+
+Providers are lazily imported so that ``import optopsy`` never requires UI
+extras (requests, pyarrow, etc.).  A provider is "available" when its
+``env_key`` (e.g. ``EODHD_API_KEY``) is set in the environment.
+
+Public helpers:
+
+- ``get_available_providers()`` — list providers with configured API keys
+- ``get_provider_for_tool(tool_name)`` — find the provider that handles a tool
+- ``get_all_provider_tool_schemas()`` — aggregate tool schemas for the LLM
+"""
+
 from typing import Any
 
 from .base import DataProvider

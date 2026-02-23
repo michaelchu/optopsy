@@ -76,6 +76,7 @@ def validate_indicator_columns(
 def add_sma_trace(
     fig: Any, go: Any, dates: pd.Series, close: pd.Series, ind: dict
 ) -> None:
+    """Add a Simple Moving Average line to the price panel."""
     period = ind.get("period", 20)
     fig.add_trace(
         go.Scatter(
@@ -92,6 +93,7 @@ def add_sma_trace(
 def add_ema_trace(
     fig: Any, go: Any, dates: pd.Series, close: pd.Series, ind: dict
 ) -> None:
+    """Add an Exponential Moving Average line to the price panel."""
     period = ind.get("period", 20)
     fig.add_trace(
         go.Scatter(
@@ -112,6 +114,7 @@ def add_bbands_traces(
     close: pd.Series,
     ind: dict,
 ) -> None:
+    """Add upper, lower, and middle Bollinger Band traces to the price panel."""
     period = ind.get("period", 20)
     std = ind.get("std", 2.0)
     bb = ta.bbands(close, length=period, std=std)
@@ -192,6 +195,7 @@ def add_rsi_traces(
     ind: dict,
     row: int,
 ) -> None:
+    """Add RSI line with overbought/oversold reference lines to a subplot row."""
     period = ind.get("period", 14)
     fig.add_trace(
         go.Scatter(
@@ -216,6 +220,7 @@ def add_macd_traces(
     ind: dict,
     row: int,
 ) -> None:
+    """Add MACD line, signal line, and histogram bar chart to a subplot row."""
     fast = ind.get("fast", 12)
     slow = ind.get("slow", 26)
     signal_period = ind.get("signal", 9)
@@ -252,6 +257,7 @@ def add_volume_traces(
     date_col: str,
     row: int,
 ) -> None:
+    """Add a volume bar chart colour-coded by price direction to a subplot row."""
     closes = sorted_df["close"]
     # Vectorised: green when close >= previous close (or first bar)
     vol_colors = (closes >= closes.shift(1).bfill()).map({True: "green", False: "red"})

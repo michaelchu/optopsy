@@ -1,3 +1,20 @@
+"""Tool handler implementations and main dispatcher.
+
+Each tool handler is registered via the ``@_register`` decorator and invoked
+by ``execute_tool()``.  Handlers receive the current session state (active
+dataset, named datasets, signals, results) and return a ``ToolResult`` that
+carries updated state back to the agent loop.
+
+Key handlers:
+
+- ``preview_data`` / ``describe_data`` — dataset inspection
+- ``run_strategy`` / ``scan_strategies`` — backtest execution
+- ``build_signal`` / ``preview_signal`` — TA signal construction
+- ``simulate`` / ``get_simulation_trades`` — chronological simulation
+- ``create_chart`` / ``plot_vol_surface`` — visualisation
+- ``compare_results`` / ``list_results`` — cross-run comparison
+"""
+
 import itertools as _itertools
 import json as _json
 import logging
