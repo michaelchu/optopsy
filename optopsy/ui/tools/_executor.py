@@ -749,8 +749,13 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
                 "implied_volatility column.",
             )
 
-    # For date-only signals, extract unique dates from the option dataset
-    if signal_data is None and not needs_iv and (entry_signal_name or exit_signal_name):
+    # For date-only signals, extract unique dates from the option dataset.
+    # This must run even when needs_iv is true, because the other signal
+    # in the entry/exit pair may be date-only and would receive signal_data=None.
+    has_non_iv_signal = (
+        entry_signal_name and entry_signal_name not in _IV_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
+    if signal_data is None and has_non_iv_signal:
         signal_data = _date_only_fallback(dataset)
 
     # Resolve inline entry/exit signals via shared helper
@@ -1042,7 +1047,13 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
                 "implied_volatility column.",
             )
 
-    if signal_data is None and not needs_iv and (entry_signal_name or exit_signal_name):
+    # Build date-only fallback for non-IV, non-stock signals even when
+    # needs_iv is true, so a date-only signal paired with an IV signal
+    # does not receive signal_data=None.
+    has_non_iv_signal_sim = (
+        entry_signal_name and entry_signal_name not in _IV_SIGNALS
+    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
+    if signal_data is None and has_non_iv_signal_sim:
         signal_data = _date_only_fallback(active_ds)
 
     for sig_name, prefix, dates_key in [
@@ -1958,18 +1969,18 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
             "or load a CSV with an implied_volatility column."
         )
 
-    # Ensure quote_date is datetime-like for .dt accessor
+    # Convert to datetime without mutating the active dataset
     try:
-        ds["quote_date"] = pd.to_datetime(ds["quote_date"])
+        quote_dates = pd.to_datetime(ds["quote_date"])
     except (ValueError, TypeError) as e:
         return _result(f"Cannot parse quote_date column as datetime: {e}")
 
     quote_date_str = arguments.get("quote_date")
     if quote_date_str:
         target_date = pd.to_datetime(quote_date_str)
-        df = ds[ds["quote_date"].dt.normalize() == target_date.normalize()].copy()
+        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
         if df.empty:
-            available = sorted(ds["quote_date"].dt.date.unique())
+            available = sorted(quote_dates.dt.date.unique())
             closest = min(
                 available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
             )
@@ -1979,8 +1990,8 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
                 f"Try quote_date='{closest}'."
             )
     else:
-        latest_day = ds["quote_date"].dt.normalize().max()
-        df = ds[ds["quote_date"].dt.normalize() == latest_day].copy()
+        latest_day = quote_dates.dt.normalize().max()
+        df = ds[quote_dates.dt.normalize() == latest_day].copy()
         quote_date_str = str(latest_day.date())
 
     option_type = arguments.get("option_type", "call")
@@ -2047,18 +2058,18 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
             "or load a CSV with an implied_volatility column."
         )
 
-    # Ensure quote_date is datetime-like for .dt accessor
+    # Convert to datetime without mutating the active dataset
     try:
-        ds["quote_date"] = pd.to_datetime(ds["quote_date"])
+        quote_dates = pd.to_datetime(ds["quote_date"])
     except (ValueError, TypeError) as e:
         return _result(f"Cannot parse quote_date column as datetime: {e}")
 
     quote_date_str = arguments.get("quote_date")
     if quote_date_str:
         target_date = pd.to_datetime(quote_date_str)
-        df = ds[ds["quote_date"].dt.normalize() == target_date.normalize()].copy()
+        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
         if df.empty:
-            available = sorted(ds["quote_date"].dt.date.unique())
+            available = sorted(quote_dates.dt.date.unique())
             closest = min(
                 available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
             )
@@ -2068,7 +2079,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
                 f"Try quote_date='{closest}'."
             )
     else:
-        normalized_dates = ds["quote_date"].dt.normalize()
+        normalized_dates = quote_dates.dt.normalize()
         latest_day = normalized_dates.max()
         df = ds[normalized_dates == latest_day].copy()
         quote_date_str = str(latest_day.date())
