@@ -6,7 +6,52 @@ This document catalogues untested and under-tested code paths across the core li
 
 ---
 
-## Core Library
+## Coverage Summary
+
+**Overall: 74%** (3856 statements, 1010 uncovered) — 854 tests, 12 skipped
+
+### Core Library
+
+| File | Stmts | Miss | Cover | Uncovered lines |
+|---|---|---|---|---|
+| `__init__.py` | 9 | 0 | 100% | — |
+| `checks.py` | 96 | 0 | 100% | — |
+| `core.py` | 349 | 4 | 99% | 63, 182, 206, 925 |
+| `datafeeds.py` | 51 | 9 | 82% | 83-84, 186, 201-206 |
+| `definitions.py` | 16 | 0 | 100% | — |
+| `metrics.py` | 92 | 3 | 97% | 79, 100, 163 |
+| `rules.py` | 24 | 0 | 100% | — |
+| `signals.py` | 231 | 0 | 100% | — |
+| `simulator.py` | 231 | 2 | 99% | 665, 696 |
+| `strategies.py` | 104 | 0 | 100% | — |
+| `timestamps.py` | 6 | 0 | 100% | — |
+| `types.py` | 25 | 0 | 100% | — |
+
+### UI Module
+
+| File | Stmts | Miss | Cover | Uncovered lines |
+|---|---|---|---|---|
+| `ui/__init__.py` | 0 | 0 | 100% | — |
+| `ui/_compat.py` | 8 | 8 | 0% | 3-18 |
+| `ui/agent.py` | 141 | 141 | 0% | 21-624 |
+| `ui/app.py` | 144 | 144 | 0% | 14-376 |
+| `ui/cli.py` | 159 | 115 | 28% | 16, 21-34, 39-51, 56-63, 67-104, 109-168, 173-216, 287-290 |
+| `ui/providers/__init__.py` | 25 | 4 | 84% | 30-31, 42, 57 |
+| `ui/providers/base.py` | 24 | 2 | 92% | 143, 151 |
+| `ui/providers/cache.py` | 108 | 5 | 95% | 132-133, 159, 178, 199 |
+| `ui/providers/eodhd.py` | 391 | 318 | 19% | *(extensive — see details below)* |
+| `ui/tools/__init__.py` | 5 | 0 | 100% | — |
+| `ui/tools/_executor.py` | 908 | 203 | 78% | *(see details below)* |
+| `ui/tools/_helpers.py` | 296 | 39 | 87% | 66-69, 96-97, 102, 129-131, 293, 296, 362, 416, 420-421, 474-475, 489-492, 516, 566, 578, 638-639, 691, 695, 707, 710-716, 720, 725, 756-758, 804-805 |
+| `ui/tools/_indicators.py` | 94 | 3 | 97% | 37, 64, 122 |
+| `ui/tools/_models.py` | 273 | 1 | 99% | 637 |
+| `ui/tools/_schemas.py` | 46 | 9 | 80% | 193, 195, 198, 202-207, 312 |
+
+---
+
+## Gap Analysis
+
+### Core Library
 
 ### Completely Untested Features
 
@@ -61,7 +106,7 @@ These gaps were addressed and now have tests:
 | Signal.__repr__ | `test_signals.py::TestSignalEdgeCases::test_signal_repr` | signals.py line 853 |
 | IV rank empty after DTE filter | `test_signals.py::TestIVRankEdgeCases::test_iv_rank_empty_after_dte_filter` | signals.py lines 552, 621 |
 
-**Current core.py coverage: 99%** (349 statements, 5 uncovered — 3 dead code, 2 edge cases)
+**Current core.py coverage: 99%** (349 statements, 4 uncovered — 3 dead code, 1 edge case)
 **Current simulator.py coverage: 99%** (231 statements, 2 uncovered — defensive edge cases)
 **Current signals.py coverage: 100%** (231 statements, 0 uncovered)
 
@@ -69,35 +114,44 @@ These gaps were addressed and now have tests:
 
 ## UI Module
 
-### 0% Coverage — Critical Components
+### 0% Coverage
 
-| File | Lines | What's untested |
+| File | Stmts | What's untested |
 |---|---|---|
-| `agent.py` | ~600 | Entire `OptopsyAgent.chat()` loop: streaming, tool dispatch, retry/backoff for `RateLimitError`/`AuthenticationError`, message compaction (`_compact_history`), iteration throttle, max iterations guard |
-| `app.py` | ~364 | All Chainlit handlers: `on_chat_start`, `on_chat_resume`, `on_message`, CSV upload handling, session state recovery, chart element collection, token streaming |
-| `_executor.py` | ~1000+ | Tool dispatch (`execute_tool`), and every handler: `_handle_preview_data`, `_handle_describe_data`, `_handle_suggest_strategy_params`, `_handle_run_strategy`, `_handle_scan_strategies`, `_handle_build_signal`, `_handle_simulate`, `_handle_create_chart`, `_handle_plot_vol_surface`, `_handle_iv_term_structure`, plus helpers `_fmt_pf`, `_resolve_dataset`, `_require_dataset` |
-| `_schemas.py` | ~454 | `get_tool_schemas()`, signal registry lambdas, `_normalize_days_param()`, `get_required_option_type()` |
-| `providers/__init__.py` | ~46 | `_load_providers()`, `get_available_providers()`, `get_provider_for_tool()` — the entire provider discovery system |
+| `_compat.py` | 8 | Compatibility shim — conditional imports |
+| `agent.py` | 141 | Entire `OptopsyAgent.chat()` loop: streaming, tool dispatch, retry/backoff for `RateLimitError`/`AuthenticationError`, message compaction (`_compact_history`), iteration throttle, max iterations guard |
+| `app.py` | 144 | All Chainlit handlers: `on_chat_start`, `on_chat_resume`, `on_message`, CSV upload handling, session state recovery, chart element collection, token streaming |
 
-### ~10% Coverage
+### 19% Coverage
 
-| File | What's tested | What's NOT |
-|---|---|---|
-| `eodhd.py` | `_compute_date_gaps`, `_fetch_with_cache` error path | `_request_with_retry`, `_paginate_window` (complex pagination), `_fetch_options_from_api` (adaptive windowing), `_apply_options_transforms`, `_filter_options`, `_resolve_underlying_prices` (yfinance integration), `_select_options_columns`, `_parse_date`, `_coerce_numeric`, `_safe_raise_for_status` (API token sanitization) |
-| `_helpers.py` | Minimal | `_fetch_stock_data_for_signals` (yfinance caching), `_intersect_with_options_dates`, `write_sim_trade_log`/`read_sim_trade_log`, `_empty_signal_suggestion`, `_df_to_markdown`, `ToolResult` class |
+| File | Stmts | Miss | What's tested | What's NOT |
+|---|---|---|---|---|
+| `eodhd.py` | 391 | 318 | `_compute_date_gaps`, `_fetch_with_cache` error path | `_request_with_retry`, `_paginate_window` (complex pagination), `_fetch_options_from_api` (adaptive windowing), `_apply_options_transforms`, `_filter_options`, `_resolve_underlying_prices` (yfinance integration), `_select_options_columns`, `_parse_date`, `_coerce_numeric`, `_safe_raise_for_status` (API token sanitization) |
 
-### ~30% Coverage
+### 28% Coverage
 
-| File | What's tested | What's NOT |
-|---|---|---|
-| `cli.py` | `_format_bytes`, arg parsing | `_cmd_cache_size`, `_cmd_cache_clear`, `_cmd_run` (auth secret generation, env setup, Chainlit config) |
-| `_models.py` | Pydantic happy paths | Schema conversion (`pydantic_to_openai_params`, `_resolve_refs`, `_strip_titles`), output models, most enum classes, mixin validators |
+| File | Stmts | Miss | What's tested | What's NOT |
+|---|---|---|---|---|
+| `cli.py` | 159 | 115 | `_format_bytes`, arg parsing | `_cmd_cache_size`, `_cmd_cache_clear`, `_cmd_run` (auth secret generation, env setup, Chainlit config), `_cmd_download` |
 
-### ~85% Coverage
+### 78–87% Coverage
 
-| File | Minor gaps |
-|---|---|
-| `cache.py` | Path traversal safety, `merge_and_save` with partial dedup_cols |
+| File | Stmts | Miss | Cover | Remaining gaps |
+|---|---|---|---|---|
+| `_executor.py` | 908 | 203 | 78% | `_handle_scan_strategies` (lines 313-418), `_handle_simulate` error paths, `_handle_create_chart` edge cases, `_fmt_pf` formatting helper |
+| `_schemas.py` | 46 | 9 | 80% | Signal registry lambdas (lines 193-207), `get_required_option_type()` (line 312) |
+| `providers/__init__.py` | 25 | 4 | 84% | `_load_providers()` import error handling (lines 30-31), `get_provider_for_tool()` miss path (line 57) |
+| `_helpers.py` | 296 | 39 | 87% | `_fetch_stock_data_for_signals` error paths, `write_sim_trade_log`/`read_sim_trade_log`, `_df_to_markdown` edge cases |
+
+### 92–100% Coverage
+
+| File | Stmts | Miss | Cover | Remaining gaps |
+|---|---|---|---|---|
+| `base.py` | 24 | 2 | 92% | Abstract method stubs (lines 143, 151) |
+| `cache.py` | 108 | 5 | 95% | Path traversal safety (line 132-133), `merge_and_save` partial dedup (line 159), edge cases (lines 178, 199) |
+| `_indicators.py` | 94 | 3 | 97% | Fallback branches (lines 37, 64, 122) |
+| `_models.py` | 273 | 1 | 99% | Single uncovered line (637) |
+| `tools/__init__.py` | 5 | 0 | 100% | Fully covered |
 
 ---
 
@@ -110,13 +164,11 @@ These gaps were addressed and now have tests:
 
 ### UI — highest impact first
 
-1. **`_executor.py` tool handlers** — unit-testable without Chainlit; mock the dataset registry and verify each handler returns correct results/errors
-2. **`agent.py` `_compact_history`** — pure function, easy to unit test
-3. **`agent.py` `chat()`** — mock LiteLLM calls, verify tool loop, retry logic, iteration cap
-4. **`_schemas.py` `get_tool_schemas()`** — verify schema shape, signal registry correctness
-5. **`providers/__init__.py`** — provider loading/discovery with mocked env vars
-6. **`eodhd.py` pagination and retry** — mock `requests` and verify windowing logic
-7. **`app.py` `on_message` CSV upload path** — mock Chainlit context, verify dataset registration
-8. **`_helpers.py` stock data fetching** — mock yfinance, verify caching and gap detection
-9. **`cli.py` `_cmd_run`** — mock Chainlit import, verify env/config setup
-10. **`_models.py` schema conversion** — `pydantic_to_openai_params` output shape
+1. **`agent.py` `_compact_history`** — pure function, easy to unit test
+2. **`agent.py` `chat()`** — mock LiteLLM calls, verify tool loop, retry logic, iteration cap
+3. **`app.py` `on_message` CSV upload path** — mock Chainlit context, verify dataset registration
+4. **`eodhd.py` pagination and retry** — mock `requests` and verify windowing logic
+5. **`_executor.py` `_handle_scan_strategies`** — largest remaining uncovered handler (~100 lines)
+6. **`cli.py` `_cmd_run`** — mock Chainlit import, verify env/config setup
+7. **`_helpers.py` stock data fetching** — mock yfinance, verify caching and gap detection
+8. **`_schemas.py` signal registry lambdas** — verify schema shape correctness
