@@ -24,25 +24,65 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 
 ## AI Chat UI (Beta)
 
-> **Note:** The AI Chat UI is currently only available in beta pre-releases. Install the latest beta with:
-> ```bash
-> pip install --pre optopsy[ui]
-> ```
-
 An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
 
 ![AI Chat UI](docs/images/chat-ui.png)
 
+### Setup & Configuration
+
+Install the beta pre-release with the `ui` extra:
+
 ```bash
 pip install --pre optopsy[ui]
-optopsy-chat
 ```
 
-### What the agent can do
+Configure your environment variables in a `.env` file at the project root (the app auto-loads it):
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...       # or OPENAI_API_KEY for OpenAI models
+EODHD_API_KEY=your-key-here        # enables live data downloads (optional)
+OPTOPSY_MODEL=anthropic/claude-haiku-4-5-20251001  # override the default model (optional)
+```
+
+At minimum you need an LLM API key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`). Set `EODHD_API_KEY` to enable downloading historical options data directly from [EODHD](https://eodhd.com/). The `OPTOPSY_MODEL` variable accepts any [LiteLLM model string](https://docs.litellm.ai/docs/providers) if you want to use a different model.
+
+### Downloading Data
+
+The recommended workflow is to download data first via the CLI, then use the chat agent to analyze it:
+
+```bash
+# Download historical options data (requires EODHD_API_KEY)
+optopsy-chat download SPY
+optopsy-chat download SPY AAPL TSLA    # multiple symbols
+optopsy-chat download SPY -v           # verbose/debug output
+```
+
+Data is stored locally as Parquet files at `~/.optopsy/cache/`. Re-running the download command only fetches new data since your last download — it won't re-download what you already have. A Rich progress display shows download progress in the terminal.
+
+Once downloaded, the chat agent can query this data instantly without needing to re-fetch. Stock price history (via yfinance) is also cached locally and fetched automatically when the agent needs it for charting or signal analysis — no manual download required.
+
+### Cache Management
+
+```bash
+optopsy-chat cache size              # show per-symbol disk usage
+optopsy-chat cache clear             # clear all cached data
+optopsy-chat cache clear SPY         # clear specific symbol
+```
+
+### Launching the Chat
+
+```bash
+optopsy-chat                         # launch (opens browser)
+optopsy-chat run --port 9000         # custom port
+optopsy-chat run --headless          # don't open browser
+optopsy-chat run --debug             # enable debug logging
+```
+
+### What the Agent Can Do
 
 - **Run any of the 28 strategies** — ask in plain English (e.g. *"Run iron condors on SPY with 30-45 DTE"*) and the agent picks the right function and parameters
-- **Fetch live options data** — pull options chains from EODHD (requires `EODHD_API_KEY`) with smart caching that only re-fetches missing date ranges
-- **Fetch stock price history** — download OHLCV data via yfinance for charting and signal analysis
+- **Fetch live options data** — pull options chains from EODHD and cache them locally for fast repeat access
+- **Fetch stock price history** — automatically download OHLCV data via yfinance for charting and signal analysis
 - **Load & preview CSV data** — drag-and-drop a CSV into the chat or point to a file on disk; inspect shape, columns, date ranges, and sample rows
 - **Scan & compare strategies** — run up to 50 strategy/parameter combinations in one call and get a ranked leaderboard
 - **Suggest parameters** — analyze your dataset's DTE and OTM% distributions and recommend sensible starting ranges
@@ -52,7 +92,11 @@ optopsy-chat
 - **Multi-dataset sessions** — load multiple symbols, run the same strategy across each, and compare side-by-side
 - **Session memory** — the agent tracks all strategy runs and results so it can reference prior analysis without re-running
 
-See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for setup and configuration details.
+### Data Providers
+
+EODHD is the built-in data provider for downloading historical options and stock data. The provider system is pluggable — you can build custom providers by subclassing `DataProvider` in `optopsy/ui/providers/` to integrate your own data sources.
+
+See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for more details.
 
 ## Installation
 
