@@ -77,6 +77,16 @@ class TestFormatBytes:
 
         assert _format_bytes(1_500_000) == "1.4 MB"
 
+    def test_gigabytes(self):
+        from optopsy.ui.cli import _format_bytes
+
+        assert _format_bytes(2_147_483_648) == "2.0 GB"
+
+    def test_terabytes(self):
+        from optopsy.ui.cli import _format_bytes
+
+        assert _format_bytes(1_099_511_627_776) == "1.0 TB"
+
     def test_zero(self):
         from optopsy.ui.cli import _format_bytes
 
@@ -144,8 +154,8 @@ class TestCmdRun:
             assert os.environ.get("CHAINLIT_HOST") == "0.0.0.0"
             assert os.environ.get("CHAINLIT_PORT") == "9000"
 
-    def test_auth_secret_generation(self, tmp_path):
-        """Auth secret is generated and persisted when not present."""
+    def test_auth_secret_generation_writes_to_file(self):
+        """Auth secret is generated and written to file when not present."""
         from optopsy.ui.cli import _cmd_run
 
         args = self._make_args()
@@ -171,7 +181,6 @@ class TestCmdRun:
             ),
             patch.dict(os.environ, env_copy, clear=True),
         ):
-            # Mock Path so it uses our tmp_path
             mock_path = MagicMock()
             mock_path.parent.mkdir = MagicMock()
             mock_path.exists.return_value = False
@@ -180,8 +189,12 @@ class TestCmdRun:
             with patch("pathlib.Path.expanduser", return_value=mock_path):
                 _cmd_run(args)
                 assert "CHAINLIT_AUTH_SECRET" in os.environ
+                # Verify the secret was actually written to file
+                mock_path.write_text.assert_called_once()
+                written = mock_path.write_text.call_args[0][0]
+                assert len(written) == 64  # token_hex(32) produces 64 hex chars
 
-    def test_auth_secret_read_from_file(self, tmp_path):
+    def test_auth_secret_read_from_file(self):
         """Existing auth secret file is read instead of generating new one."""
         from optopsy.ui.cli import _cmd_run
 
@@ -213,6 +226,8 @@ class TestCmdRun:
             with patch("pathlib.Path.expanduser", return_value=mock_path):
                 _cmd_run(args)
                 assert os.environ.get("CHAINLIT_AUTH_SECRET") == "existing_secret_value"
+                # write_text should NOT have been called
+                mock_path.write_text.assert_not_called()
 
     def test_chainlit_config_set(self):
         """Chainlit config values are set correctly."""
@@ -274,3 +289,113 @@ class TestCmdRun:
         target_path = mock_cli_mod.run_chainlit.call_args[0][0]
         assert target_path.endswith("app.py")
         assert os.path.isabs(target_path)
+
+
+# ---------------------------------------------------------------------------
+# _cmd_cache_size / _cmd_cache_clear tests
+# ---------------------------------------------------------------------------
+
+
+class TestCmdCache:
+    def test_cache_size_shows_entries(self, capsys):
+        """_cmd_cache_size prints per-symbol sizes and total."""
+        from optopsy.ui.cli import _cmd_cache_size
+
+        mock_cache = MagicMock()
+        mock_cache.size.return_value = {
+            "options/SPY": 1024 * 1024,
+            "options/AAPL": 2048,
+        }
+        mock_cache.total_size_bytes.return_value = 1024 * 1024 + 2048
+
+        args = argparse.Namespace()
+
+        with (
+            patch(
+                "optopsy.ui._compat.import_optional_dependency",
+            ),
+            patch(
+                "optopsy.ui.providers.cache.ParquetCache",
+                return_value=mock_cache,
+            ),
+        ):
+            _cmd_cache_size(args)
+
+        output = capsys.readouterr().out
+        assert "options/SPY" in output
+        assert "1.0 MB" in output
+        assert "options/AAPL" in output
+        assert "2.0 KB" in output
+        assert "Total" in output
+
+    def test_cache_size_empty(self, capsys):
+        """_cmd_cache_size prints 'empty' when no cache entries."""
+        from optopsy.ui.cli import _cmd_cache_size
+
+        mock_cache = MagicMock()
+        mock_cache.size.return_value = {}
+
+        args = argparse.Namespace()
+
+        with (
+            patch(
+                "optopsy.ui._compat.import_optional_dependency",
+            ),
+            patch(
+                "optopsy.ui.providers.cache.ParquetCache",
+                return_value=mock_cache,
+            ),
+        ):
+            _cmd_cache_size(args)
+
+        output = capsys.readouterr().out
+        assert "empty" in output.lower()
+
+    def test_cache_clear_all(self, capsys):
+        """_cmd_cache_clear clears all entries."""
+        from optopsy.ui.cli import _cmd_cache_clear
+
+        mock_cache = MagicMock()
+        mock_cache.clear.return_value = 5
+
+        args = argparse.Namespace(symbol=None)
+
+        with (
+            patch(
+                "optopsy.ui._compat.import_optional_dependency",
+            ),
+            patch(
+                "optopsy.ui.providers.cache.ParquetCache",
+                return_value=mock_cache,
+            ),
+        ):
+            _cmd_cache_clear(args)
+
+        output = capsys.readouterr().out
+        assert "5" in output
+        mock_cache.clear.assert_called_once_with(symbol=None)
+
+    def test_cache_clear_symbol(self, capsys):
+        """_cmd_cache_clear with symbol clears only that symbol."""
+        from optopsy.ui.cli import _cmd_cache_clear
+
+        mock_cache = MagicMock()
+        mock_cache.clear.return_value = 2
+
+        args = argparse.Namespace(symbol="SPY")
+
+        with (
+            patch(
+                "optopsy.ui._compat.import_optional_dependency",
+            ),
+            patch(
+                "optopsy.ui.providers.cache.ParquetCache",
+                return_value=mock_cache,
+            ),
+        ):
+            _cmd_cache_clear(args)
+
+        output = capsys.readouterr().out
+        assert "2" in output
+        assert "SPY" in output
+        mock_cache.clear.assert_called_once_with(symbol="SPY")

@@ -156,7 +156,11 @@ class TestAgentChat:
 
             assert content == "Hello world"
             assert tokens_received == ["Hello ", "world"]
-            assert any(m["role"] == "assistant" for m in msgs)
+            # Returned messages should not include the system message
+            assert msgs[0]["role"] == "user"
+            assert any(
+                m["role"] == "assistant" and m["content"] == "Hello world" for m in msgs
+            )
 
         asyncio.run(_run())
 
@@ -191,9 +195,11 @@ class TestAgentChat:
             agent.tools = [{"type": "function", "function": {"name": "preview_data"}}]
 
             tool_calls_seen = []
+            tool_args_seen = []
 
             async def on_tool_call(name, args, result, tc_id):
                 tool_calls_seen.append(name)
+                tool_args_seen.append(args)
 
             with (
                 patch("litellm.acompletion", side_effect=mock_acompletion),
@@ -215,6 +221,58 @@ class TestAgentChat:
 
             assert content == "Here are the results."
             assert tool_calls_seen == ["preview_data"]
+            # Verify execute_tool was called with parsed JSON args
+            mock_exec.assert_called_once()
+            actual_args = mock_exec.call_args[0][1]
+            assert actual_args == {"rows": 5}
+            # Verify tool result message was added to history
+            assert any(m.get("role") == "tool" for m in msgs)
+
+        asyncio.run(_run())
+
+    def test_malformed_tool_arguments_fallback_to_empty(self):
+        """When LLM sends invalid JSON arguments, they fall back to {}."""
+
+        async def _run():
+            tc_chunk = MagicMock()
+            tc_chunk.index = 0
+            tc_chunk.id = "call_bad"
+            tc_chunk.function = MagicMock()
+            tc_chunk.function.name = "preview_data"
+            tc_chunk.function.arguments = "not valid json {"
+
+            tool_call_delta = _make_delta(tool_calls=[tc_chunk])
+            text_delta = _make_delta(content="Done")
+            call_count = 0
+
+            async def mock_acompletion(**kwargs):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return _async_iter([_make_chunk(tool_call_delta)])
+                return _async_iter([_make_chunk(text_delta)])
+
+            agent = OptopsyAgent(model="test/model")
+            agent.tools = [{"type": "function", "function": {"name": "preview_data"}}]
+
+            with (
+                patch("litellm.acompletion", side_effect=mock_acompletion),
+                patch("optopsy.ui.agent.execute_tool") as mock_exec,
+                patch("asyncio.sleep", new_callable=AsyncMock),
+            ):
+                mock_result = MagicMock()
+                mock_result.dataset = None
+                mock_result.signals = None
+                mock_result.datasets = None
+                mock_result.results = None
+                mock_result.llm_summary = "ok"
+                mock_exec.return_value = mock_result
+
+                await agent.chat([{"role": "user", "content": "go"}])
+
+            # Should have been called with empty dict due to JSON parse failure
+            actual_args = mock_exec.call_args[0][1]
+            assert actual_args == {}
 
         asyncio.run(_run())
 
@@ -259,6 +317,32 @@ class TestAgentChat:
                 with pytest.raises(RuntimeError, match="rate limit exceeded"):
                     await agent.chat([{"role": "user", "content": "hi"}])
                 assert mock_llm.call_count == 3
+
+        asyncio.run(_run())
+
+    def test_service_unavailable_retries_then_fails(self):
+        """ServiceUnavailableError retries up to 3 times then raises RuntimeError."""
+
+        async def _run():
+            import litellm
+
+            agent = OptopsyAgent(model="test/model")
+            agent.tools = []
+
+            with (
+                patch("litellm.acompletion", new_callable=AsyncMock) as mock_llm,
+                patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            ):
+                mock_llm.side_effect = litellm.ServiceUnavailableError(
+                    message="service down",
+                    llm_provider="test",
+                    model="test/model",
+                )
+                with pytest.raises(RuntimeError, match="temporarily unavailable"):
+                    await agent.chat([{"role": "user", "content": "hi"}])
+                assert mock_llm.call_count == 3
+                # Verify exponential backoff: sleep(1), sleep(2)
+                assert mock_sleep.call_count == 2
 
         asyncio.run(_run())
 
@@ -387,5 +471,99 @@ class TestAgentChat:
 
             assert content == "ok"
             assert call_count == 2
+
+        asyncio.run(_run())
+
+    def test_on_assistant_tool_calls_callback_fired(self):
+        """on_assistant_tool_calls callback is called with tool_calls list."""
+
+        async def _run():
+            tc_chunk = MagicMock()
+            tc_chunk.index = 0
+            tc_chunk.id = "call_1"
+            tc_chunk.function = MagicMock()
+            tc_chunk.function.name = "preview_data"
+            tc_chunk.function.arguments = "{}"
+
+            tool_call_delta = _make_delta(tool_calls=[tc_chunk])
+            text_delta = _make_delta(content="Done")
+            call_count = 0
+
+            async def mock_acompletion(**kwargs):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return _async_iter([_make_chunk(tool_call_delta)])
+                return _async_iter([_make_chunk(text_delta)])
+
+            agent = OptopsyAgent(model="test/model")
+            agent.tools = [{"type": "function", "function": {"name": "preview_data"}}]
+
+            assistant_tc_calls = []
+
+            async def on_assistant_tool_calls(tool_calls):
+                assistant_tc_calls.append(tool_calls)
+
+            with (
+                patch("litellm.acompletion", side_effect=mock_acompletion),
+                patch("optopsy.ui.agent.execute_tool") as mock_exec,
+                patch("asyncio.sleep", new_callable=AsyncMock),
+            ):
+                mock_result = MagicMock()
+                mock_result.dataset = None
+                mock_result.signals = None
+                mock_result.datasets = None
+                mock_result.results = None
+                mock_result.llm_summary = "ok"
+                mock_exec.return_value = mock_result
+
+                await agent.chat(
+                    [{"role": "user", "content": "go"}],
+                    on_assistant_tool_calls=on_assistant_tool_calls,
+                )
+
+            assert len(assistant_tc_calls) == 1
+            # The callback should receive a list of tool call dicts
+            tc_list = assistant_tc_calls[0]
+            assert len(tc_list) == 1
+            assert tc_list[0]["id"] == "call_1"
+            assert tc_list[0]["function"]["name"] == "preview_data"
+
+        asyncio.run(_run())
+
+    def test_system_prompt_includes_results_memo_for_anthropic(self):
+        """Anthropic model gets results memo appended to system prompt."""
+
+        async def _run():
+            agent = OptopsyAgent(model="anthropic/claude-test")
+            agent.tools = []
+            agent.results = {
+                "run1": {
+                    "strategy": "long_calls",
+                    "max_entry_dte": 30,
+                    "exit_dte": 0,
+                    "max_otm_pct": 0.05,
+                    "mean_return": 0.10,
+                    "win_rate": 0.65,
+                },
+            }
+
+            chunks = [_make_chunk(_make_delta(content="ok"))]
+
+            with patch("litellm.acompletion", new_callable=AsyncMock) as mock_llm:
+                mock_llm.return_value = _async_iter(chunks)
+                await agent.chat([{"role": "user", "content": "compare"}])
+
+            # Inspect the system message passed to litellm
+            call_kwargs = mock_llm.call_args[1]
+            system_msg = call_kwargs["messages"][0]
+            assert system_msg["role"] == "system"
+            # Anthropic model uses content-block form with cache_control
+            assert isinstance(system_msg["content"], list)
+            # Should have 2 content blocks: prompt + results memo
+            assert len(system_msg["content"]) == 2
+            memo_text = system_msg["content"][1]["text"]
+            assert "long_calls" in memo_text
+            assert "mean=" in memo_text
 
         asyncio.run(_run())

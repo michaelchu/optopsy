@@ -1,11 +1,12 @@
-"""Tests for optopsy.ui.app — on_message CSV upload handling.
+"""Tests for optopsy.ui.app — on_message, on_chat_start, on_chat_resume.
 
-These tests exercise on_message by importing app.py (which registers Chainlit
-handlers) and calling the function directly with mocked Chainlit objects.
+These tests exercise Chainlit handlers by importing app.py (which registers
+Chainlit decorators) and calling the functions directly with mocked objects.
 """
 
 import asyncio
 import datetime
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
@@ -70,7 +71,7 @@ def _make_session_and_agent(agent=None, messages=None):
 
 
 # ---------------------------------------------------------------------------
-# Tests
+# on_message tests
 # ---------------------------------------------------------------------------
 
 
@@ -101,9 +102,16 @@ class TestOnMessageCSVUpload:
 
             import optopsy as op
 
+            sent_contents = []
+
+            def capture_message(**kwargs):
+                content = kwargs.get("content", "")
+                sent_contents.append(content)
+                return mock_cl_msg
+
             with (
                 patch.object(cl, "user_session", session),
-                patch.object(cl, "Message", return_value=mock_cl_msg),
+                patch.object(cl, "Message", side_effect=capture_message),
                 patch.object(cl, "Step", return_value=mock_step),
                 patch.object(op, "csv_data", return_value=option_csv_data),
             ):
@@ -111,11 +119,15 @@ class TestOnMessageCSVUpload:
 
             assert "SPX_2018.csv" in agent.datasets
             assert agent.dataset is option_csv_data
+            # Verify the upload confirmation message includes row count
+            upload_msg = next(c for c in sent_contents if "SPX_2018.csv" in c)
+            assert "4" in upload_msg  # 4 rows
+            assert "Loaded" in upload_msg
 
         asyncio.run(_run())
 
     def test_csv_upload_error_displayed(self):
-        """CSV upload failure sends error message to user."""
+        """CSV upload failure sends error message with filename and error text."""
 
         async def _run():
             from optopsy.ui.app import on_message
@@ -148,13 +160,14 @@ class TestOnMessageCSVUpload:
             ):
                 await on_message(mock_msg)
 
-            assert any("Failed to load" in c for c in sent_contents)
-            assert any("bad.csv" in c for c in sent_contents)
+            error_msg = next(c for c in sent_contents if "Failed" in c)
+            assert "bad.csv" in error_msg
+            assert "bad CSV" in error_msg
 
         asyncio.run(_run())
 
-    def test_no_csv_calls_chat(self):
-        """No CSV elements — goes straight to agent.chat."""
+    def test_no_csv_passes_correct_args_to_chat(self):
+        """No CSV elements — agent.chat is called with the user message in history."""
 
         async def _run():
             from optopsy.ui.app import on_message
@@ -179,6 +192,16 @@ class TestOnMessageCSVUpload:
                 await on_message(mock_msg)
 
             agent.chat.assert_called_once()
+            # Verify the messages list passed to chat contains the user message
+            call_args = agent.chat.call_args
+            messages_arg = call_args[0][0]
+            assert any(
+                m["role"] == "user" and m["content"] == "run long_calls"
+                for m in messages_arg
+            )
+            # Verify callbacks were passed
+            assert "on_tool_call" in call_args[1]
+            assert "on_token" in call_args[1]
 
         asyncio.run(_run())
 
@@ -228,7 +251,7 @@ class TestOnMessageCSVUpload:
         asyncio.run(_run())
 
     def test_chat_exception_displayed(self):
-        """Exception from agent.chat is shown to user."""
+        """Exception from agent.chat is shown to user as Error: message."""
 
         async def _run():
             from optopsy.ui.app import on_message
@@ -262,6 +285,224 @@ class TestOnMessageCSVUpload:
             ):
                 await on_message(mock_msg)
 
-            assert any("LLM exploded" in c for c in sent_contents)
+            error_msg = next(c for c in sent_contents if "LLM exploded" in c)
+            assert error_msg.startswith("Error:")
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# on_chat_resume tests
+# ---------------------------------------------------------------------------
+
+
+class TestOnChatResume:
+    def test_rebuilds_message_history_from_steps(self):
+        """on_chat_resume reconstructs messages from persisted thread steps."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_resume
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            thread = {
+                "steps": [
+                    {"type": "user_message", "output": "load data"},
+                    {
+                        "type": "assistant_message",
+                        "output": "Loading...",
+                        "metadata": json.dumps(
+                            {
+                                "tool_calls": [
+                                    {
+                                        "id": "tc1",
+                                        "function": {"name": "load_csv_data"},
+                                    }
+                                ]
+                            }
+                        ),
+                    },
+                    {
+                        "type": "tool",
+                        "output": "Loaded 100 rows",
+                        "id": "step_1",
+                        "metadata": json.dumps({"tool_call_id": "tc1"}),
+                    },
+                    {"type": "user_message", "output": "run strategy"},
+                    {"type": "assistant_message", "output": "Running..."},
+                ],
+            }
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch("optopsy.ui.app.OptopsyAgent") as mock_agent_cls,
+            ):
+                mock_agent_cls.return_value = MagicMock()
+                await on_chat_resume(thread)
+
+            messages = store["messages"]
+            # Should have 5 step messages + 1 session-resumed notice
+            assert len(messages) == 6
+
+            # Check user messages
+            assert messages[0] == {"role": "user", "content": "load data"}
+            assert messages[3] == {"role": "user", "content": "run strategy"}
+
+            # Check assistant with tool_calls restored
+            assert messages[1]["role"] == "assistant"
+            assert "tool_calls" in messages[1]
+            assert messages[1]["tool_calls"][0]["id"] == "tc1"
+
+            # Check tool message with tool_call_id from metadata
+            assert messages[2]["role"] == "tool"
+            assert messages[2]["tool_call_id"] == "tc1"
+            assert messages[2]["content"] == "Loaded 100 rows"
+
+            # Check session-resumed notice is appended (because tool messages exist)
+            assert messages[5]["role"] == "user"
+            assert "Session resumed" in messages[5]["content"]
+
+        asyncio.run(_run())
+
+    def test_no_session_resumed_notice_without_tools(self):
+        """on_chat_resume does NOT append session-resumed notice when no tool messages."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_resume
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            thread = {
+                "steps": [
+                    {"type": "user_message", "output": "hello"},
+                    {"type": "assistant_message", "output": "hi there"},
+                ],
+            }
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch("optopsy.ui.app.OptopsyAgent") as mock_agent_cls,
+            ):
+                mock_agent_cls.return_value = MagicMock()
+                await on_chat_resume(thread)
+
+            messages = store["messages"]
+            assert len(messages) == 2
+            assert not any("Session resumed" in m.get("content", "") for m in messages)
+
+        asyncio.run(_run())
+
+    def test_malformed_metadata_handled_gracefully(self):
+        """Steps with non-JSON metadata strings are handled without crashing."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_resume
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            thread = {
+                "steps": [
+                    {"type": "user_message", "output": "test"},
+                    {
+                        "type": "assistant_message",
+                        "output": "response",
+                        "metadata": "not valid json {{{",
+                    },
+                ],
+            }
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch("optopsy.ui.app.OptopsyAgent") as mock_agent_cls,
+            ):
+                mock_agent_cls.return_value = MagicMock()
+                await on_chat_resume(thread)
+
+            messages = store["messages"]
+            assert len(messages) == 2
+            # Should not have tool_calls since metadata was unparseable
+            assert "tool_calls" not in messages[1]
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# on_chat_start tests
+# ---------------------------------------------------------------------------
+
+
+class TestOnChatStart:
+    def test_welcome_message_with_providers(self):
+        """on_chat_start sends welcome message that lists configured providers."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_start
+
+            session = MagicMock()
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+
+            import chainlit as cl
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+                patch("optopsy.ui.app.get_provider_names", return_value=["EODHD"]),
+            ):
+                await on_chat_start()
+
+            assert len(sent_contents) == 1
+            welcome = sent_contents[0]
+            assert "Welcome to **Optopsy Chat**" in welcome
+            assert "EODHD" in welcome
+
+        asyncio.run(_run())
+
+    def test_welcome_message_without_providers(self):
+        """on_chat_start warns when no providers are configured."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_start
+
+            session = MagicMock()
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+
+            import chainlit as cl
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+                patch("optopsy.ui.app.get_provider_names", return_value=[]),
+            ):
+                await on_chat_start()
+
+            welcome = sent_contents[0]
+            assert "No data providers configured" in welcome
 
         asyncio.run(_run())
