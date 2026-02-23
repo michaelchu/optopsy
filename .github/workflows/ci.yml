@@ -39,8 +39,8 @@ jobs:
     - name: Lint with ruff
       run: uv run ruff check optopsy/ tests/
 
-    - name: Type check with mypy
-      run: uv run mypy optopsy/
+    - name: Type check with ty
+      run: uv run ty check optopsy/
 
     - name: Run tests with pytest
       run: uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing --cov-report=xml
