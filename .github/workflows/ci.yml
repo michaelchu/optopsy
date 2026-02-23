@@ -51,3 +51,4 @@ jobs:
       with:
         files: coverage.xml
         flags: py${{ matrix.python-version }}${{ matrix.extras && '-' }}${{ matrix.extras }}
+        token: ${{ secrets.CODECOV_TOKEN }}
