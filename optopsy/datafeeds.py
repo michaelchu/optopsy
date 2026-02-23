@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from .core import _ltrim, _rtrim, _trim
+from .filters import _ltrim, _rtrim, _trim
 
 default_kwargs: Dict[str, Any] = {
     "start_date": None,

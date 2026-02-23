@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from optopsy.core import _calls, _puts
+from optopsy.evaluation import _calls, _puts
 from optopsy.rules import (
     _rule_butterfly_strikes,
     _rule_expiration_ordering,

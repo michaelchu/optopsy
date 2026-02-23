@@ -37,32 +37,11 @@ from .calendar import (
     _prepare_calendar_leg,
 )
 from .checks import _run_calendar_checks, _run_checks
-from .evaluation import _calls, _evaluate_all_options, _puts
-from .filters import _apply_signal_filter, _assign_dte, _ltrim, _rtrim, _trim
+from .evaluation import _evaluate_all_options
+from .filters import _apply_signal_filter, _assign_dte
 from .output import _format_calendar_output, _format_output
 from .pricing import _assign_profit, _calculate_fill_price
 from .timestamps import normalize_dates
-
-# ---------------------------------------------------------------------------
-# Re-exports for backward compatibility
-# ---------------------------------------------------------------------------
-# These names are imported by other modules (strategies.py, datafeeds.py,
-# tests/test_rules.py) via ``from .core import ...``.  Keep them accessible
-# here so that existing import paths continue to work.
-__all__ = [
-    # Used by strategies.py
-    "_calls",
-    "_puts",
-    "_process_strategy",
-    "_process_calendar_strategy",
-    # Used by datafeeds.py
-    "_trim",
-    "_ltrim",
-    "_rtrim",
-    # Kept for internal use within this module
-    "_strategy_engine",
-    "_rename_leg_columns",
-]
 
 
 def _rename_leg_columns(
