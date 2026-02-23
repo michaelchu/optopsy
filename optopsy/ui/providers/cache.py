@@ -30,6 +30,7 @@ def compute_date_gaps(
     start_dt: date | None,
     end_dt: date | None,
     date_column: str = "quote_date",
+    check_interior: bool = True,
 ) -> list[tuple[str | None, str | None]]:
     """Compute date ranges missing from *cached_df* that need to be fetched.
 
@@ -39,7 +40,10 @@ def compute_date_gaps(
     2. **After** — requested end is later than the cached max (or open-ended).
     3. **Interior** — consecutive cached dates within the requested range are
        more than ``_INTERIOR_GAP_THRESHOLD`` calendar days apart, suggesting
-       missing data (e.g. a partial fetch failure).
+       missing data (e.g. a partial fetch failure).  Skipped when
+       *check_interior* is False (useful for sources like yfinance that
+       return all available data on first fetch, where gaps are simply
+       non-trading days).
 
     Returns ``[(None, None)]`` to mean "fetch everything" (no cache), or a
     list of ``(start_str, end_str)`` tuples for each missing range.
@@ -62,7 +66,7 @@ def compute_date_gaps(
     # it *intersects* [overlap_start, overlap_end].
     overlap_start = max(start_dt, cached_min) if start_dt else cached_min
     overlap_end = min(end_dt, cached_max) if end_dt else cached_max
-    if overlap_start <= overlap_end:
+    if check_interior and overlap_start <= overlap_end:
         unique_dates = sorted(cached_dates.unique())
         for prev, curr in zip(unique_dates, unique_dates[1:]):
             day_gap = (curr - prev).days

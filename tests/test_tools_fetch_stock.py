@@ -53,7 +53,10 @@ def _make_cached_df(symbol: str, start: date, end: date) -> pd.DataFrame:
 
 def _call_handler(arguments, cache):
     """Invoke the fetch_stock_data handler via execute_tool."""
-    with patch("optopsy.ui.tools._signals_builder._yf_cache", cache):
+    with (
+        patch("optopsy.ui.tools._helpers._yf_cache", cache),
+        patch("optopsy.ui.tools._signals_builder._yf_cache", cache),
+    ):
         return execute_tool("fetch_stock_data", arguments, dataset=None)
 
 

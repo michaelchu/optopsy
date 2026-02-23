@@ -1,7 +1,7 @@
 """Signal tool handlers: build_signal, preview_signal, list_signals, fetch_stock_data."""
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 
 import pandas as pd
 
@@ -11,16 +11,15 @@ from optopsy.signals import apply_signal
 from ._executor import _register, _require_dataset
 from ._helpers import (
     _YF_CACHE_CATEGORY,
-    _YF_DEDUP_COLS,
     _date_only_fallback,
     _df_to_markdown,
     _empty_signal_suggestion,
     _fetch_stock_data_for_signals,
     _intersect_with_options_dates,
     _iv_signal_data,
-    _normalise_yf_df,
     _signal_slot_summary,
     _yf_cache,
+    _yf_fetch_and_cache,
 )
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
@@ -217,36 +216,18 @@ def _handle_list_signals(arguments, dataset, signals, datasets, results, _result
 @_register("fetch_stock_data")
 def _handle_fetch_stock_data(arguments, dataset, signals, datasets, results, _result):
     try:
-        import yfinance as yf
+        import yfinance as yf  # noqa: F401
     except ImportError:
         return _result("yfinance is not installed. Run: pip install yfinance")
 
     symbol = arguments["symbol"].upper()
 
-    cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-
     try:
-        if cached is None or cached.empty:
-            raw = yf.download(symbol, period="max", progress=False)
-        else:
-            cache_max = pd.to_datetime(cached["date"]).dt.date.max()
-            fetch_start = cache_max + timedelta(days=1)
-            if fetch_start > date.today():
-                raw = pd.DataFrame()
-            else:
-                raw = yf.download(
-                    symbol,
-                    start=str(fetch_start),
-                    end=str(date.today() + timedelta(days=1)),
-                    progress=False,
-                )
-        if not raw.empty:
-            new_data = _normalise_yf_df(raw, symbol)
-            cached = _yf_cache.merge_and_save(
-                _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
-            )
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+        cached = _yf_fetch_and_cache(symbol, cached, date.today())
     except (OSError, ValueError) as exc:
         _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
 
     if cached is None or cached.empty:
         return _result(f"No stock data found for {symbol}.")

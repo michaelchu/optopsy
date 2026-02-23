@@ -283,3 +283,21 @@ class TestComputeDateGaps:
         gaps = compute_date_gaps(cached, date(2024, 2, 1), date(2024, 4, 1))
         # Should fetch Feb 1 to Apr 1, not Jan 2 to May 31
         assert ("2024-02-01", "2024-04-01") in gaps
+
+    def test_check_interior_false_skips_interior_gaps(self):
+        """check_interior=False ignores interior gaps but still detects before/after."""
+        # 30-day interior gap between Jan 2 and Feb 1
+        cached = _make_cached_df(
+            ["2024-01-01", "2024-01-02", "2024-02-01", "2024-02-02"]
+        )
+        gaps = compute_date_gaps(
+            cached,
+            date(2023, 12, 1),
+            date(2024, 3, 1),
+            check_interior=False,
+        )
+        # Interior gap (Jan 3 → Jan 31) must NOT appear
+        assert ("2024-01-03", "2024-01-31") not in gaps
+        # Before and after gaps must still be detected
+        assert ("2023-12-01", "2023-12-31") in gaps
+        assert ("2024-02-03", "2024-03-01") in gaps
