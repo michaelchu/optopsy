@@ -37,6 +37,7 @@ MANIFEST
 
 /tests/.pytest_cache/
 .coverage
+htmlcov/
 
 *.swp
 *.swo
