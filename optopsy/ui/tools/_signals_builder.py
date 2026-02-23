@@ -1,0 +1,262 @@
+"""Signal tool handlers: build_signal, preview_signal, list_signals, fetch_stock_data."""
+
+import logging
+from datetime import date, timedelta
+
+import pandas as pd
+
+import optopsy.signals as _signals
+from optopsy.signals import apply_signal
+
+from ._executor import _register, _require_dataset
+from ._helpers import (
+    _YF_CACHE_CATEGORY,
+    _YF_DEDUP_COLS,
+    _date_only_fallback,
+    _df_to_markdown,
+    _empty_signal_suggestion,
+    _fetch_stock_data_for_signals,
+    _intersect_with_options_dates,
+    _iv_signal_data,
+    _normalise_yf_df,
+    _signal_slot_summary,
+    _yf_cache,
+)
+from ._schemas import (
+    _DATE_ONLY_SIGNALS,
+    _IV_SIGNALS,
+    SIGNAL_NAMES,
+    SIGNAL_REGISTRY,
+)
+
+_log = logging.getLogger(__name__)
+
+
+@_register("build_signal")
+def _handle_build_signal(arguments, dataset, signals, datasets, results, _result):
+    slot = arguments.get("slot", "").strip()
+    if not slot:
+        return _result("Missing required 'slot' name for the signal.")
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+    dataset = active_ds  # shadow for the rest of the block
+
+    signal_specs = arguments.get("signals")
+    if not signal_specs or not isinstance(signal_specs, list):
+        return _result("'signals' must be a non-empty array of signal specs.")
+
+    # Determine what data the signals need
+    has_iv_signal = any(s.get("name") in _IV_SIGNALS for s in signal_specs)
+    needs_stock = any(
+        s.get("name") not in _DATE_ONLY_SIGNALS and s.get("name") not in _IV_SIGNALS
+        for s in signal_specs
+    )
+
+    # IV signals use options data; OHLCV signals (RSI, SMA, etc.) use stock
+    # data. Combining them in a single build_signal call is not supported
+    # because each type requires a different dataset shape.
+    if has_iv_signal and needs_stock:
+        iv_names = [
+            s.get("name")
+            for s in signal_specs
+            if s.get("name") and s.get("name") in _IV_SIGNALS
+        ]
+        stock_names = [
+            s.get("name")
+            for s in signal_specs
+            if s.get("name")
+            and s.get("name") not in _DATE_ONLY_SIGNALS
+            and s.get("name") not in _IV_SIGNALS
+        ]
+        return _result(
+            f"Cannot combine IV signals ({', '.join(iv_names)}) with "
+            f"OHLCV signals ({', '.join(stock_names)}) in one build_signal "
+            f"call. IV signals use options data while OHLCV signals use "
+            f"stock price data. Build them as separate slots and pass them "
+            f"to run_strategy via entry_signal_slot / exit_signal_slot.",
+        )
+
+    from ._helpers import _IV_MISSING_MSG
+
+    signal_data = None
+    if has_iv_signal:
+        iv_data = _iv_signal_data(dataset)
+        if iv_data is None:
+            return _result(_IV_MISSING_MSG)
+        signal_data = iv_data
+    elif needs_stock:
+        signal_data = _fetch_stock_data_for_signals(dataset)
+        if signal_data is None:
+            return _result(
+                "TA signals require stock price data but yfinance is not "
+                "installed or the fetch failed. Install yfinance "
+                "(`pip install yfinance`) and try again.",
+            )
+
+    # Fallback for date-only signals
+    if signal_data is None:
+        signal_data = _date_only_fallback(dataset)
+
+    # Build individual signal functions
+    built_signals = []
+    descriptions = []
+    for spec in signal_specs:
+        name = spec.get("name")
+        if not name or name not in SIGNAL_REGISTRY:
+            return _result(
+                f"Unknown signal '{name}'. Available: {', '.join(SIGNAL_NAMES)}"
+            )
+        params = spec.get("params") or {}
+        sig = SIGNAL_REGISTRY[name](**params)
+        try:
+            sig_days = int(spec.get("days", 0))
+        except (TypeError, ValueError):
+            sig_days = 0
+        if sig_days > 1:
+            sig = _signals.sustained(sig, sig_days)
+            descriptions.append(f"{name}(sustained {sig_days}d)")
+        else:
+            param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+            descriptions.append(f"{name}({param_str})" if param_str else name)
+        built_signals.append(sig)
+
+    # Combine signals
+    combine = arguments.get("combine", "and")
+    if len(built_signals) == 1:
+        combined = built_signals[0]
+    elif combine == "or":
+        combined = _signals.or_signals(*built_signals)
+    else:
+        combined = _signals.and_signals(*built_signals)
+
+    # Compute valid dates, intersected with actual options dates.
+    raw_signal_dates = apply_signal(signal_data, combined)
+    valid_dates = _intersect_with_options_dates(raw_signal_dates, dataset)
+
+    # Store in signals dict
+    updated_signals = dict(signals)
+    updated_signals[slot] = valid_dates
+
+    combiner = f" {combine.upper()} " if len(descriptions) > 1 else ""
+    desc = combiner.join(descriptions)
+    n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
+    summary = f"Signal '{slot}' built: {desc} → {n_dates} valid dates for {symbols}"
+    display_lines = [summary]
+    if n_dates > 0:
+        display_lines.append(f"Date range: {date_min} to {date_max}")
+    else:
+        opt_min = dataset["quote_date"].min().date()
+        opt_max = dataset["quote_date"].max().date()
+        suggestion = _empty_signal_suggestion(raw_signal_dates, opt_min, opt_max)
+        display_lines.append(
+            f"WARNING: No signal dates overlap the options data "
+            f"({opt_min} to {opt_max}). {suggestion}"
+        )
+    display = "\n".join(display_lines)
+    return _result(summary, user_display=display, sigs=updated_signals)
+
+
+@_register("preview_signal")
+def _handle_preview_signal(arguments, dataset, signals, datasets, results, _result):
+    slot = arguments.get("slot", "").strip()
+    if not slot:
+        return _result("Missing required 'slot' name.")
+    if slot not in signals:
+        available_slots = list(signals.keys()) if signals else []
+        return _result(
+            f"No signal named '{slot}'. "
+            f"Available slots: {available_slots or 'none — use build_signal first'}"
+        )
+    valid_dates = signals[slot]
+    n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
+    if n_dates == 0:
+        return _result(f"Signal '{slot}' has 0 valid dates.")
+    summary = (
+        f"Signal '{slot}': {n_dates} valid dates, "
+        f"symbols={symbols}, range={date_min} to {date_max}"
+    )
+    # Show a sample of dates in the user display
+    display = f"{summary}\n\n{_df_to_markdown(valid_dates, max_rows=30)}"
+    return _result(summary, user_display=display)
+
+
+@_register("list_signals")
+def _handle_list_signals(arguments, dataset, signals, datasets, results, _result):
+    if not signals:
+        return _result("No signals built yet.")
+
+    rows = []
+    for slot, valid_dates in signals.items():
+        n_dates, symbols, date_min, date_max = _signal_slot_summary(valid_dates)
+        rows.append(
+            {
+                "slot": slot,
+                "dates": n_dates,
+                "symbols": ", ".join(str(s) for s in symbols),
+                "date_from": str(date_min or ""),
+                "date_to": str(date_max or ""),
+            }
+        )
+
+    result_df = pd.DataFrame(rows)
+    llm_lines = [f"list_signals: {len(rows)} signal slot(s)"]
+    for r in rows:
+        if r["dates"] > 0:
+            llm_lines.append(
+                f"'{r['slot']}': {r['dates']} dates, symbols={r['symbols']}, "
+                f"range={r['date_from']} to {r['date_to']}"
+            )
+        else:
+            llm_lines.append(f"'{r['slot']}': 0 dates")
+    llm_summary = "\n".join(llm_lines)
+    user_display = f"### Signal Slots ({len(rows)})\n\n{_df_to_markdown(result_df)}"
+    return _result(llm_summary, user_display=user_display)
+
+
+@_register("fetch_stock_data")
+def _handle_fetch_stock_data(arguments, dataset, signals, datasets, results, _result):
+    try:
+        import yfinance as yf
+    except ImportError:
+        return _result("yfinance is not installed. Run: pip install yfinance")
+
+    symbol = arguments["symbol"].upper()
+
+    cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+
+    try:
+        if cached is None or cached.empty:
+            raw = yf.download(symbol, period="max", progress=False)
+        else:
+            cache_max = pd.to_datetime(cached["date"]).dt.date.max()
+            fetch_start = cache_max + timedelta(days=1)
+            if fetch_start > date.today():
+                raw = pd.DataFrame()
+            else:
+                raw = yf.download(
+                    symbol,
+                    start=str(fetch_start),
+                    end=str(date.today() + timedelta(days=1)),
+                    progress=False,
+                )
+        if not raw.empty:
+            new_data = _normalise_yf_df(raw, symbol)
+            cached = _yf_cache.merge_and_save(
+                _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
+            )
+    except (OSError, ValueError) as exc:
+        _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+
+    if cached is None or cached.empty:
+        return _result(f"No stock data found for {symbol}.")
+
+    df = cached.rename(columns={"date": "quote_date"})
+    d_min = pd.to_datetime(df["quote_date"]).dt.date.min()
+    d_max = pd.to_datetime(df["quote_date"]).dt.date.max()
+    summary = (
+        f"Fetched {len(df):,} daily price records for {symbol}. "
+        f"Date range: {d_min} to {d_max}."
+    )
+    display = f"{summary}\n\nFirst 10 rows:\n{_df_to_markdown(df.head(10))}"
+    return _result(summary, user_display=display)
