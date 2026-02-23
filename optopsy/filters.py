@@ -1,0 +1,153 @@
+"""Filtering primitives for option chain data.
+
+Functions in this module apply row-level filters to DataFrames — by DTE,
+OTM percentage, delta, bid/ask thresholds, and signal dates.  They are
+pure functions with no side effects and no dependencies on other optopsy
+modules.
+"""
+
+from typing import Any, Optional
+
+import numpy as np
+import pandas as pd
+
+
+def _assign_dte(data: pd.DataFrame) -> pd.DataFrame:
+    """Assign days to expiration (DTE) to the dataset."""
+    return data.assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
+
+
+def _trim(data: pd.DataFrame, col: str, lower: float, upper: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is between lower and upper bounds."""
+    return data.loc[(data[col] >= lower) & (data[col] <= upper)]
+
+
+def _ltrim(data: pd.DataFrame, col: str, lower: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is greater than or equal to lower bound."""
+    return data.loc[data[col] >= lower]
+
+
+def _rtrim(data: pd.DataFrame, col: str, upper: float) -> pd.DataFrame:
+    """Filter dataframe rows where column value is less than or equal to upper bound."""
+    return data.loc[data[col] <= upper]
+
+
+def _get(data: pd.DataFrame, col: str, val: Any) -> pd.DataFrame:
+    """Filter dataframe rows where column equals specified value."""
+    return data.loc[data[col] == val]
+
+
+def _remove_min_bid_ask(data: pd.DataFrame, min_bid_ask: float) -> pd.DataFrame:
+    """Remove options with bid or ask prices below minimum threshold."""
+    return data.loc[(data["bid"] > min_bid_ask) & (data["ask"] > min_bid_ask)]
+
+
+def _remove_invalid_evaluated_options(data: pd.DataFrame) -> pd.DataFrame:
+    """Keep evaluated options where entry DTE is greater than exit DTE."""
+    return data.loc[
+        (data["dte_exit"] <= data["dte_entry"])
+        & (data["dte_entry"] != data["dte_exit"])
+    ]
+
+
+def _apply_signal_filter(
+    data: pd.DataFrame,
+    valid_dates: pd.DataFrame,
+    date_col: str = "quote_date",
+) -> pd.DataFrame:
+    """
+    Filter data to only include rows matching valid (symbol, date) pairs.
+
+    Both the option chain data (normalized at the root of _process_strategy /
+    _process_calendar_strategy) and signal dates (normalized in apply_signal)
+    are already date-only, so this is a straightforward inner join.
+
+    Args:
+        data: DataFrame to filter (already date-normalized)
+        valid_dates: DataFrame with (underlying_symbol, quote_date) of valid dates
+            (already date-normalized via apply_signal)
+        date_col: Name of the date column in data to match against (default: quote_date)
+
+    Returns:
+        Filtered DataFrame
+    """
+    if date_col != "quote_date":
+        valid_dates = valid_dates.rename(columns={"quote_date": date_col})
+    return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
+
+
+def _filter_by_delta(
+    data: pd.DataFrame, delta_min: Optional[float], delta_max: Optional[float]
+) -> pd.DataFrame:
+    """
+    Filter options by delta range.
+
+    Args:
+        data: DataFrame with delta column
+        delta_min: Minimum delta value (inclusive), or None for no lower bound
+        delta_max: Maximum delta value (inclusive), or None for no upper bound
+
+    Returns:
+        Filtered DataFrame
+    """
+    if delta_min is None and delta_max is None:
+        return data
+
+    if delta_min is not None and delta_max is not None:
+        return _trim(data, "delta", delta_min, delta_max)
+    elif delta_min is not None:
+        return _ltrim(data, "delta", delta_min)
+    else:
+        return _rtrim(data, "delta", delta_max)
+
+
+def _cut_options_by_dte(
+    data: pd.DataFrame, dte_interval: int, max_entry_dte: int
+) -> pd.DataFrame:
+    """Categorize options into DTE intervals for grouping."""
+    dte_intervals = list(range(0, max_entry_dte, dte_interval))
+    data["dte_range"] = pd.cut(data["dte_entry"], dte_intervals)
+    return data
+
+
+def _cut_options_by_otm(
+    data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float
+) -> pd.DataFrame:
+    """Categorize options into out-of-the-money percentage intervals."""
+    # consider using np.linspace in future
+    otm_pct_intervals = [
+        round(i, 2)
+        for i in list(
+            np.arange(
+                max_otm_pct_interval * -1,
+                max_otm_pct_interval,
+                otm_pct_interval,
+            )
+        )
+    ]
+    data["otm_pct_range"] = pd.cut(data["otm_pct_entry"], otm_pct_intervals)
+    return data
+
+
+def _cut_options_by_delta(
+    data: pd.DataFrame, delta_interval: Optional[float]
+) -> pd.DataFrame:
+    """
+    Categorize options into delta intervals for grouping.
+
+    Args:
+        data: DataFrame with delta_entry column
+        delta_interval: Interval size for delta grouping, or None to skip
+
+    Returns:
+        DataFrame with delta_range column added (if delta_interval provided)
+    """
+    if delta_interval is None:
+        return data
+
+    # Delta ranges from -1 to 1 for puts and calls
+    delta_intervals = [
+        round(i, 2) for i in list(np.arange(-1.0, 1.0 + delta_interval, delta_interval))
+    ]
+    data["delta_range"] = pd.cut(data["delta_entry"], delta_intervals)
+    return data
