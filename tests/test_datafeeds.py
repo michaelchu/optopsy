@@ -1,9 +1,11 @@
 import os
 from datetime import datetime
 
+import pandas as pd
 import pytest
 
 import optopsy as op
+from optopsy.datafeeds import _standardize_cols, _trim_cols
 
 _TEST_DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "test_data")
 
@@ -236,3 +238,69 @@ def test_empty_csv_raises():
             bid=6,
             ask=7,
         )
+
+
+# =============================================================================
+# Internal Helper Tests
+# =============================================================================
+
+
+class TestTrimCols:
+    def test_selects_specified_columns(self):
+        """_trim_cols should select only columns at the specified indices."""
+        df = pd.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+                "d": [4],
+                "e": [5],
+            }
+        )
+        mapping = [(0, "sym"), (2, "type"), (4, "bid")]
+        result = _trim_cols(df, mapping)
+        assert list(result.columns) == ["a", "c", "e"]
+        assert len(result.columns) == 3
+
+    def test_skips_none_indices(self):
+        """_trim_cols should skip entries with None index."""
+        df = pd.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+            }
+        )
+        mapping = [(0, "sym"), (None, "delta"), (2, "type")]
+        result = _trim_cols(df, mapping)
+        assert list(result.columns) == ["a", "c"]
+        assert len(result.columns) == 2
+
+
+class TestStandardizeCols:
+    def test_renames_columns_to_labels(self):
+        """_standardize_cols should rename columns to standardized labels."""
+        df = pd.DataFrame(
+            {
+                "col_a": [1],
+                "col_b": [2],
+                "col_c": [3],
+            }
+        )
+        mapping = [(0, "symbol"), (1, "price"), (2, "type")]
+        result = _standardize_cols(df, mapping)
+        assert list(result.columns) == ["symbol", "price", "type"]
+
+    def test_skips_none_indices(self):
+        """_standardize_cols should handle None entries without error."""
+        df = pd.DataFrame(
+            {
+                "col_a": [1],
+                "col_b": [2],
+            }
+        )
+        mapping = [(0, "symbol"), (None, "delta"), (1, "price")]
+        result = _standardize_cols(df, mapping)
+        assert "symbol" in result.columns
+        assert "price" in result.columns
+        assert "delta" not in result.columns

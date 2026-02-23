@@ -662,6 +662,23 @@ class TestSummaryStats:
         s = _compute_summary(trade_log, 100_000.0)
         assert s["profit_factor"] == 0.0
 
+    def test_profit_factor_zero_when_all_losers(self):
+        """All losing trades → profit_factor should be 0.0."""
+        from optopsy.simulator import _compute_summary
+
+        trade_log = pd.DataFrame(
+            {
+                "realized_pnl": [-100.0, -200.0, -50.0],
+                "equity": [99_900.0, 99_700.0, 99_650.0],
+                "pct_change": [-0.001, -0.002, -0.0005],
+                "days_held": [30, 30, 30],
+            }
+        )
+        s = _compute_summary(trade_log, 100_000.0)
+        assert s["profit_factor"] == 0.0
+        assert s["winning_trades"] == 0
+        assert s["losing_trades"] == 3
+
     def test_duplicate_exit_dates_handled(self):
         """Multiple trades exiting on the same date should not cause resample errors."""
         from optopsy.simulator import _compute_summary
