@@ -1,6 +1,6 @@
 # Test Gap Analysis
 
-Last reviewed: 2026-02-23
+Last updated: 2026-02-23
 
 This document catalogues untested and under-tested code paths across the core library and the UI module. Use it to prioritise future test work.
 
@@ -12,10 +12,6 @@ This document catalogues untested and under-tested code paths across the core li
 
 | Feature | Location | Notes |
 |---|---|---|
-| IV Rank signals | `signals.py:516-677` | `_compute_atm_iv`, `_compute_iv_rank_series`, `iv_rank_above`, `iv_rank_below` — ~160 lines, zero tests |
-| Signal-strategy integration | `entry_dates`/`exit_dates` params | Implemented in `_evaluate_options()` and `_process_calendar_strategy()` but never exercised |
-| `delta_interval` grouping | `core.py` + all strategies | Parameter accepted everywhere, never tested |
-| Calendar `exit_dte_tolerance` | `core.py:842-886` | Tolerance-based date snapping logic, untested branch |
 | Multi-position filtering | `simulator.py:511-531` | `max_positions > 1` concurrent positions path untested |
 | Custom selector callables | `simulator.py:636-637` | Only built-in selectors tested |
 
@@ -23,11 +19,7 @@ This document catalogues untested and under-tested code paths across the core li
 
 | Feature | What's missing |
 |---|---|
-| Slippage modes on strategies | Only `"mid"` tested via strategies; `"spread"` and `"liquidity"` modes never used in strategy-level tests |
-| Quantity-aware legs | Butterflies define middle leg `quantity=2` but no test verifies the 2x P&L math |
 | `_apply_ratios()` no bid/ask branch | `core.py:488-494` — fallback when bid/ask columns are absent |
-| Profit factor edge cases | All-winners (`inf`), all-losers (`0.0`), zero-P&L trades |
-| Calendar DTE range validation | `checks.py:85-110` — `front_min > front_max`, `back_min > back_max`, and overlap detection all untested |
 | `apply_signal()` per-strike dedup | `signals.py:929-937` — `requires_per_strike` attribute handling |
 | ATR with close-only | `signals.py:434-435` — high/low fallback path |
 | Simulator ruin detection | `simulator.py:578-582` — equity hitting zero |
@@ -37,10 +29,41 @@ This document catalogues untested and under-tested code paths across the core li
 
 These are lower priority but easy wins for coverage:
 
-- `_check_positive_number()` in `checks.py:131` — in param registry but no test
-- `_requires_delta()` / `_requires_volume()` in `checks.py:234-244`
-- `_trim_cols()` / `_standardize_cols()` in `datafeeds.py`
 - `_macd_lines()`, `_bb_signal()`, `_ema_lines()`, `_atr_signal()` in `signals.py`
+
+### Dead Code (unreachable)
+
+These lines are guarded at call sites and cannot be reached through normal execution:
+
+| Line | Location | Why unreachable |
+|---|---|---|
+| 45 | `core.py` `_calculate_fill_price` | `ratio = fill_ratio` — validation in `_check_fill_ratio` prevents reaching this |
+| 164 | `core.py` `_filter_by_delta` | `return data` — guarded by `_requires_delta()` check at call site (line 325) |
+| 188 | `core.py` `_cut_options_by_delta` | `return data` — guarded by `delta_interval is not None` check at call site (line 397) |
+
+### Recently Covered
+
+These gaps were addressed and now have tests:
+
+| Feature | Tests added | Coverage |
+|---|---|---|
+| `delta_interval` grouping | `test_strategies.py::TestDeltaInterval` | core.py line 397 |
+| `entry_dates`/`exit_dates` signal integration | `test_strategies.py::test_entry_dates_filter_*`, `test_exit_dates_filter_*`, calendar variants | core.py lines 330, 337, 1065, 1085, 1088 |
+| `exit_dte_tolerance` (non-calendar) | `test_strategies.py::test_exit_dte_tolerance_non_calendar` | core.py lines 273-289 |
+| Calendar `exit_dte_tolerance` | `test_strategies.py::test_calendar_tolerance_no_nearby_dates` | core.py lines 842-886 |
+| Calendar empty aggregated output | `test_strategies.py::test_calendar_empty_aggregated_output` | core.py line 1125 |
+| `delta_max`-only filtering | `test_strategies.py::test_delta_max_only_filter` | core.py `_filter_by_delta` rtrim branch |
+| IV passthrough | `test_strategies.py::test_implied_volatility_passthrough` | core.py line 361 |
+| `_check_positive_number` | `test_checks.py::TestCheckPositiveNumber` | checks.py line 131 |
+| `_requires_delta` / `_requires_volume` | `test_checks.py::TestRequiresDelta`, `TestRequiresVolume` | checks.py lines 234-244 |
+| `_trim_cols` / `_standardize_cols` | `test_datafeeds.py::TestTrimCols`, `TestStandardizeCols` | datafeeds.py internal helpers |
+| Profit factor all-losers | `test_simulator.py::test_profit_factor_zero_when_all_losers` | simulator.py edge case |
+| IV rank signals | `test_iv_signals.py` (pre-existing) | signals.py:516-677 |
+| Calendar DTE range validation | `test_strategies.py` (pre-existing strategy-level tests) | checks.py:85-110 |
+| Slippage modes | `test_strategies.py` (pre-existing) | Covered at strategy level |
+| Butterfly quantity 2x | `test_strategies.py::test_long_call_butterfly_raw` (pre-existing) | Verified via raw output |
+
+**Current core.py coverage: 99%** (349 statements, 5 uncovered — 3 dead code, 2 edge cases)
 
 ---
 
@@ -82,16 +105,12 @@ These are lower priority but easy wins for coverage:
 
 ### Core — highest impact first
 
-1. **IV rank signals** — large untested feature surface (`signals.py:516-677`)
-2. **Signal-strategy integration** — `entry_dates`/`exit_dates` flowing through strategies
-3. **Calendar `exit_dte_tolerance`** — real code path, zero coverage
-4. **Non-mid slippage on multi-leg strategies** — `"spread"` and `"liquidity"` modes
-5. **`delta_interval` grouping** — on any strategy
-6. **Calendar DTE range validation** — error paths in `checks.py:85-110`
-7. **Profit factor / win rate edge cases** — all-winners, all-losers, single trade
-8. **Quantity-aware butterfly P&L** — verify 2x middle leg math
-9. **Simulator `max_positions > 1`** — concurrent position filtering
-10. **`apply_signal()` per-strike dedup** — `requires_per_strike` branch
+1. **Simulator `max_positions > 1`** — concurrent position filtering (`simulator.py:511-531`)
+2. **Custom selector callables** — only built-in selectors tested (`simulator.py:636-637`)
+3. **`_apply_ratios()` no bid/ask branch** — fallback path (`core.py:488-494`)
+4. **`apply_signal()` per-strike dedup** — `requires_per_strike` branch (`signals.py:929-937`)
+5. **Simulator ruin detection** — equity hitting zero (`simulator.py:578-582`)
+6. **Signal helpers** — `_macd_lines`, `_bb_signal`, `_ema_lines`, `_atr_signal` in `signals.py`
 
 ### UI — highest impact first
 
