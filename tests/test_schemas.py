@@ -214,20 +214,33 @@ class TestRegistryCompleteness:
         assert "long_calls" in desc
         assert "iron_condor" in desc
 
-    def test_provider_tools_excluded_from_schemas(self):
-        """Provider tools (download_options_data, fetch_options_data) excluded from core schemas."""
-        schemas = get_tool_schemas()
-        names = {s["function"]["name"] for s in schemas}
-        for provider_tool in _PROVIDER_TOOLS:
-            # These may appear via provider registration, but should NOT appear
-            # in the core tool schema generation (the TOOL_ARG_MODELS loop).
-            # We verify that provider tools are not generated from Pydantic models.
-            from optopsy.ui.tools._models import TOOL_ARG_MODELS
+    def test_provider_tools_excluded_from_core_schema_loop(self):
+        """Provider tools in TOOL_ARG_MODELS are skipped by the Pydantic schema loop.
 
-            if provider_tool in TOOL_ARG_MODELS:
-                # If the model exists, it should still be excluded
-                assert provider_tool not in names or provider_tool in names
-                # The key check: _PROVIDER_TOOLS skips them in the Pydantic loop
+        get_tool_schemas() skips _PROVIDER_TOOLS in the TOOL_ARG_MODELS iteration,
+        then adds provider tools separately via get_all_provider_tool_schemas().
+        We verify the skip logic by mocking out the provider extension.
+        """
+        from optopsy.ui.tools._models import TOOL_ARG_MODELS
+
+        # Verify provider tools exist in the Pydantic models (precondition)
+        provider_tools_in_models = _PROVIDER_TOOLS & set(TOOL_ARG_MODELS.keys())
+        assert len(provider_tools_in_models) > 0, (
+            "Test precondition: at least one provider tool should be in TOOL_ARG_MODELS"
+        )
+
+        # Mock out provider extension to isolate core schema generation
+        with patch(
+            "optopsy.ui.tools._schemas.get_all_provider_tool_schemas",
+            return_value=[],
+        ):
+            schemas = get_tool_schemas()
+
+        core_names = {s["function"]["name"] for s in schemas}
+        for provider_tool in provider_tools_in_models:
+            assert provider_tool not in core_names, (
+                f"{provider_tool} should be excluded from core schemas by _PROVIDER_TOOLS"
+            )
 
     def test_calendar_strategies_set_correct(self):
         """CALENDAR_STRATEGIES contains exactly the strategies with is_calendar=True."""

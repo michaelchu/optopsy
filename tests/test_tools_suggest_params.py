@@ -75,28 +75,19 @@ class TestSuggestStrategyParams:
         assert "exit_dte" in reco
         assert "max_otm_pct" in reco
 
-    def test_dte_percentiles_match_data(self, option_data):
-        """DTE percentiles are computed correctly for known data.
+    def test_base_recommendations_use_correct_percentiles(self, option_data):
+        """Base max_entry_dte = p75(DTE), exit_dte = p10(DTE), max_otm_pct = p75(OTM%).
 
         Data has 4 rows with DTE=30 and 4 with DTE=0.
-        The recommended max_entry_dte (p75) should be 30, exit_dte (p10) should be 0.
+        p75 of DTE [0,0,0,0,30,30,30,30] = 30, p10 = 0.
+        OTM% values are all < 0.04, so p75 should be < 0.05.
         """
         result = execute_tool("suggest_strategy_params", {}, option_data)
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
-        # p75 of DTE distribution [0,0,0,0,30,30,30,30] = 30
         assert reco["max_entry_dte"] == 30
-        # p10 = 0
         assert reco["exit_dte"] == 0
-
-    def test_base_recommendations_use_p75(self, option_data):
-        """Base max_entry_dte = p75(DTE), max_otm_pct = p75(OTM%)."""
-        result = execute_tool("suggest_strategy_params", {}, option_data)
-        reco = _extract_recommended_json(result.user_display)
-        # p75 of DTE [0,0,0,0,30,30,30,30] = 30
-        assert reco["max_entry_dte"] == 30
-        # exit_dte = max(0, p10) — p10 of [0,0,0,0,30,30,30,30] = 0
-        assert reco["exit_dte"] == 0
+        assert 0.0 < reco["max_otm_pct"] < 0.05
 
     def test_no_dataset(self):
         """Returns error when no dataset is loaded."""
@@ -179,8 +170,8 @@ class TestSuggestStrategyParams:
         assert reco["max_otm_pct"] < 0.05
         assert reco["max_otm_pct"] > 0.0
 
-    def test_empty_dataframe_raises_or_returns_error(self):
-        """Empty DataFrame is handled — either error result or exception."""
+    def test_empty_dataframe_raises_value_error(self):
+        """Empty DataFrame raises ValueError from NaN quantile conversion."""
         cols = [
             "underlying_symbol",
             "underlying_price",
@@ -192,10 +183,5 @@ class TestSuggestStrategyParams:
             "ask",
         ]
         empty_df = pd.DataFrame(columns=cols)
-        try:
-            result = execute_tool("suggest_strategy_params", {}, empty_df)
-            # If it returns, should be an error result
-            assert result.llm_summary is not None
-        except (ValueError, ZeroDivisionError):
-            # Empty series causes NaN quantile → acceptable failure mode
-            pass
+        with pytest.raises(ValueError, match="cannot convert float NaN"):
+            execute_tool("suggest_strategy_params", {}, empty_df)

@@ -635,8 +635,7 @@ class TestAgentChat:
         """_compact_history handles content=None without crashing.
 
         LLMs sometimes send content=None on assistant messages that only have
-        tool_calls. The compaction logic uses len(content) which would fail
-        on None. Verify it either handles it gracefully or leaves it alone.
+        tool_calls. The compaction treats None as empty string.
         """
         msgs = [
             {"role": "user", "content": "go"},
@@ -645,22 +644,13 @@ class TestAgentChat:
             {"role": "assistant", "content": "done", "tool_calls": [{"id": "t2"}]},
             {"role": "tool", "tool_call_id": "t2", "content": "result"},
         ]
-        # content=None on old assistant msg — len(None) would raise TypeError.
-        # The code uses `content = messages[i].get("content", "")` which returns
-        # None (not ""), so len(None) fails. This is a known edge case.
-        # For now, verify the function's actual behavior:
-        # If None content is shorter than threshold when treated as empty string,
-        # it won't be truncated (the `get` returns None, but len("") would be 0).
-        # Actually, .get("content", "") returns None because the key exists with
-        # value None. So this will raise TypeError. Verify the function crashes
-        # on None content (documenting the behavior for potential future fix).
-        try:
-            _compact_history(msgs)
-            # If it doesn't raise, verify tool result is still intact
-            assert msgs[4]["content"] == "result"
-        except TypeError:
-            # Expected: len(None) raises TypeError — this is a known limitation
-            pass
+        _compact_history(msgs)
+        # None content on old assistant is left as-is (treated as empty, below threshold)
+        assert msgs[1]["content"] is None
+        # Old tool result is truncated
+        assert msgs[2]["content"].endswith("[truncated]")
+        # Last batch is intact
+        assert msgs[4]["content"] == "result"
 
     def test_anthropic_cache_control_on_last_tool(self):
         """Anthropic model adds cache_control to the last tool schema."""
