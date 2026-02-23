@@ -23,7 +23,7 @@ from optopsy.metrics import profit_factor as _profit_factor
 from optopsy.metrics import win_rate as _win_rate
 from optopsy.signals import apply_signal
 
-from ..providers.cache import ParquetCache, compute_date_gaps
+from ..providers.cache import ParquetCache
 from ._models import StrategyResultSummary
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
@@ -72,17 +72,53 @@ def read_sim_trade_log(sim_key: str) -> pd.DataFrame | None:
 MAX_ROWS = 50
 
 
-def _yf_compute_gaps(
-    cached_df: pd.DataFrame | None,
-    start_dt: date,
+def _yf_fetch_and_cache(
+    symbol: str,
+    cached: pd.DataFrame | None,
     end_dt: date,
-) -> list[tuple[str | None, str | None]]:
-    """Compute date gaps for the yfinance stock cache.
+) -> pd.DataFrame | None:
+    """Fetch missing yfinance data and update the cache.
 
-    Wraps :func:`compute_date_gaps` using ``date`` as the date column
-    (matching how yfinance rows are stored in the cache).
+    On cold cache, fetches everything with ``period="max"``.  On warm cache,
+    fetches only the tail from ``cache_max + 1`` to *end_dt* (the only gap
+    worth considering — yfinance returns all available data on first fetch,
+    so interior gaps are just non-trading days).
+
+    Returns the updated cached DataFrame, or None when yfinance returns no
+    data on a cold cache.  Exceptions from yfinance (``OSError``,
+    ``ValueError``) are **not** caught here — callers are responsible for
+    handling them.
     """
-    return compute_date_gaps(cached_df, start_dt, end_dt, date_column="date")
+    import yfinance as yf
+
+    if cached is None or cached.empty:
+        _log.info("Cold cache for %s, fetching full history from yfinance", symbol)
+        raw = yf.download(symbol, period="max", progress=False)
+    else:
+        cache_max = pd.to_datetime(cached["date"]).dt.date.max()
+        fetch_start = cache_max + timedelta(days=1)
+        if fetch_start > end_dt:
+            _log.info("Cache for %s is up to date, skipping yfinance", symbol)
+            return cached
+        _log.info(
+            "Fetching %s stock data from %s to %s",
+            symbol,
+            fetch_start,
+            end_dt,
+        )
+        raw = yf.download(
+            symbol,
+            start=str(fetch_start),
+            end=str(end_dt + timedelta(days=1)),
+            progress=False,
+        )
+
+    if not raw.empty:
+        new_data = _normalise_yf_df(raw, symbol)
+        cached = _yf_cache.merge_and_save(
+            _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
+        )
+    return cached
 
 
 def _normalise_yf_df(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
@@ -112,10 +148,11 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     Pads the date range by ~250 trading days (~1 year) so that indicators
     with long warmup periods (EMA-200, MACD) have enough history.
 
-    Results are cached in ``~/.optopsy/cache/stocks/{SYMBOL}.parquet``.
-    Only missing date ranges (gaps) are fetched from yfinance; subsequent
-    calls for the same symbol and date range are served from cache with no
-    network activity.
+    Results are cached in ``~/.optopsy/cache/yf_stocks/{SYMBOL}.parquet``.
+    On cold cache, fetches all history via ``period="max"``.  On warm cache,
+    only the tail (cache_max → date_max) is fetched.  Interior gaps are
+    ignored — yfinance returns all available data on first fetch, so gaps
+    are just non-trading days (weekends/holidays).
 
     Returns a DataFrame with columns:
         underlying_symbol, quote_date, open, high, low, close, volume
@@ -125,7 +162,7 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
     try:
-        import yfinance as yf
+        import yfinance as yf  # noqa: F401 — validates availability
     except ImportError:
         _log.warning("yfinance not installed — cannot fetch stock data for TA signals")
         return None
@@ -139,40 +176,8 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     frames = []
     for symbol in symbols:
         try:
-            # Phase 1: read cache, detect missing date ranges
             cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-            gaps = _yf_compute_gaps(cached, padded_start, date_max)
-
-            # Phase 2: fetch only the missing gaps from yfinance
-            if gaps:
-                _log.info(
-                    "Fetching %d gap(s) from yfinance for %s: %s",
-                    len(gaps),
-                    symbol,
-                    gaps,
-                )
-                new_frames = []
-                for gap_start, gap_end in gaps:
-                    yf_start = gap_start or str(padded_start)
-                    yf_end = str(
-                        (pd.Timestamp(gap_end).date() + timedelta(days=1))
-                        if gap_end
-                        else (date_max + timedelta(days=1))
-                    )
-                    raw = yf.download(
-                        symbol, start=yf_start, end=yf_end, progress=False
-                    )
-                    if raw.empty:
-                        continue
-                    new_frames.append(_normalise_yf_df(raw, symbol))
-
-                if new_frames:
-                    new_data = pd.concat(new_frames, ignore_index=True)
-                    cached = _yf_cache.merge_and_save(
-                        _YF_CACHE_CATEGORY, symbol, new_data, dedup_cols=_YF_DEDUP_COLS
-                    )
-            else:
-                _log.info("Full cache hit for %s stock data, skipping yfinance", symbol)
+            cached = _yf_fetch_and_cache(symbol, cached, date_max)
 
             if cached is None or cached.empty:
                 continue
