@@ -1,5 +1,4 @@
 [![CI](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/github/michaelchu/optopsy/branch/master/graph/badge.svg?token=UjWMLQhyVM)](https://codecov.io/github/michaelchu/optopsy)
 [![PyPI version](https://badge.fury.io/py/optopsy.svg)](https://badge.fury.io/py/optopsy)
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
 [![Python](https://img.shields.io/pypi/pyversions/optopsy)](https://pypi.org/project/optopsy/)
