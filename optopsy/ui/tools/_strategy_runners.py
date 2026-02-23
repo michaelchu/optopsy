@@ -33,6 +33,7 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
     dataset = active_ds  # shadow for the rest of the block
     func, _, _ = STRATEGIES[strategy_name]
     # Build a clean kwargs dict without mutating the original arguments.
@@ -87,6 +88,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
 
     max_combos = int(arguments.get("max_combinations", 50))
     slippage = arguments.get("slippage", "mid")

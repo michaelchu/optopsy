@@ -16,6 +16,7 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
 
     df = active_ds
     findings: list[str] = []
@@ -218,7 +219,7 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
 
         # Flag thin months (< 25% of median)
         thin_threshold = median_count * 0.25
-        thin_months = monthly[monthly < thin_threshold]
+        thin_months = monthly[monthly < thin_threshold]  # type: ignore[operator]
         if not thin_months.empty:
             thin_list = [f"{str(p)} ({c:,})" for p, c in thin_months.items()]
             findings.append(

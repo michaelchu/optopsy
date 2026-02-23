@@ -50,7 +50,7 @@ def _calculate_fill_price(
         else:
             # Higher fill ratio for illiquid options
             liquidity_score = (volume.fillna(0) / reference_volume).clip(upper=1.0)
-            ratio = fill_ratio + (1 - fill_ratio) * (1 - liquidity_score)  # type: ignore[assignment]
+            ratio = fill_ratio + (1 - fill_ratio) * (1 - liquidity_score)
 
     if side_value == 1:  # long - buying at higher price
         return mid + (half_spread * ratio)

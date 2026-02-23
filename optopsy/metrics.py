@@ -253,7 +253,7 @@ def compute_risk_metrics(
 
     mdd = (
         max_drawdown(equity)
-        if equity is not None and len(equity) > 0  # type: ignore[arg-type]
+        if equity is not None and len(equity) > 0
         else max_drawdown_from_returns(returns)
     )
 

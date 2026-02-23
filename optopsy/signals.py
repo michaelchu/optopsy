@@ -306,7 +306,7 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
         result = pd.Series(False, index=data.index)
         for _symbol, group in data.groupby("underlying_symbol", sort=False):
             prices = group["underlying_price"]
-            bb = ta.bbands(prices, length=length, std=std)
+            bb = ta.bbands(prices, length=length, std=std)  # type: ignore[arg-type]
             if bb is None:
                 continue
             band = bb[band_col].fillna(fill_val)
