@@ -204,3 +204,70 @@ class TestCheckVolumeColumn:
 
     def test_accepts_valid_volume(self):
         assert op._check_volume_column(pd.DataFrame({"volume": [100]})) is None
+
+
+class TestCheckPositiveNumber:
+    def test_rejects_negative(self):
+        with pytest.raises(ValueError):
+            op._check_positive_number("some key", -1)
+
+    def test_rejects_zero(self):
+        with pytest.raises(ValueError):
+            op._check_positive_number("some key", 0)
+
+    def test_rejects_string(self):
+        with pytest.raises(ValueError):
+            op._check_positive_number("some key", "invalid")
+
+    def test_accepts_positive_int(self):
+        assert op._check_positive_number("some key", 1) is None
+
+    def test_accepts_positive_float(self):
+        assert op._check_positive_number("some key", 1.5) is None
+
+
+class TestRequiresDelta:
+    def test_true_when_delta_min_set(self):
+        assert (
+            op._requires_delta(
+                {"delta_min": 0.3, "delta_max": None, "delta_interval": None}
+            )
+            is True
+        )
+
+    def test_true_when_delta_interval_set(self):
+        assert (
+            op._requires_delta(
+                {"delta_min": None, "delta_max": None, "delta_interval": 0.1}
+            )
+            is True
+        )
+
+    def test_false_when_all_none(self):
+        assert (
+            op._requires_delta(
+                {"delta_min": None, "delta_max": None, "delta_interval": None}
+            )
+            is False
+        )
+
+
+class TestRequiresVolume:
+    def test_true_when_liquidity(self):
+        assert op._requires_volume({"slippage": "liquidity"}) is True
+
+    def test_false_when_mid(self):
+        assert op._requires_volume({"slippage": "mid"}) is False
+
+    def test_false_when_spread(self):
+        assert op._requires_volume({"slippage": "spread"}) is False
+
+
+class TestRequiresDeltaMax:
+    def test_true_when_delta_max_set(self):
+        assert (
+            op._requires_delta(
+                {"delta_min": None, "delta_max": -0.3, "delta_interval": None}
+            )
+            is True
+        )
