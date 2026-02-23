@@ -616,10 +616,12 @@ class OptopsyAgent:
 
             # Execute each tool call
             for tc in tool_calls_list:
-                func_name = tc["function"]["name"]
+                tc_func = tc["function"]
+                assert isinstance(tc_func, dict)
+                func_name = tc_func["name"]
                 tc_id = tc["id"]
                 try:
-                    args = json.loads(tc["function"]["arguments"])
+                    args = json.loads(tc_func["arguments"])
                 except json.JSONDecodeError:
                     args = {}
 

@@ -39,6 +39,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
     dataset = active_ds  # shadow for the rest of the block
 
     signal_specs = arguments.get("signals")

@@ -74,14 +74,14 @@ def validate_indicator_columns(
 
 
 def add_sma_trace(
-    fig: Any, go: Any, dates: pd.Series, close: pd.Series, ind: dict
+    fig: Any, go: Any, dates: pd.Series, close: pd.Series | None, ind: dict
 ) -> None:
     """Add a Simple Moving Average line to the price panel."""
     period = ind.get("period", 20)
     fig.add_trace(
         go.Scatter(
             x=dates,
-            y=ta.sma(close, length=period),
+            y=ta.sma(close, length=period),  # type: ignore[arg-type]
             mode="lines",
             name=f"SMA({period})",
         ),
@@ -91,14 +91,14 @@ def add_sma_trace(
 
 
 def add_ema_trace(
-    fig: Any, go: Any, dates: pd.Series, close: pd.Series, ind: dict
+    fig: Any, go: Any, dates: pd.Series, close: pd.Series | None, ind: dict
 ) -> None:
     """Add an Exponential Moving Average line to the price panel."""
     period = ind.get("period", 20)
     fig.add_trace(
         go.Scatter(
             x=dates,
-            y=ta.ema(close, length=period),
+            y=ta.ema(close, length=period),  # type: ignore[arg-type]
             mode="lines",
             name=f"EMA({period})",
         ),
@@ -111,13 +111,13 @@ def add_bbands_traces(
     fig: Any,
     go: Any,
     dates: pd.Series,
-    close: pd.Series,
+    close: pd.Series | None,
     ind: dict,
 ) -> None:
     """Add upper, lower, and middle Bollinger Band traces to the price panel."""
     period = ind.get("period", 20)
     std = ind.get("std", 2.0)
-    bb = ta.bbands(close, length=period, std=std)
+    bb = ta.bbands(close, length=period, std=std)  # type: ignore[arg-type]
     if bb is None or bb.empty:
         return
     # pandas_ta column names vary (e.g. BBL_20_2.0 vs BBL_20_2.0_2.0)
@@ -174,7 +174,7 @@ def add_overlay_indicators(
     fig: Any,
     go: Any,
     dates: pd.Series,
-    close: pd.Series,
+    close: pd.Series | None,
     specs: list[dict],
 ) -> None:
     """Add all overlay indicator traces to the price panel (row 1)."""
@@ -191,7 +191,7 @@ def add_rsi_traces(
     fig: Any,
     go: Any,
     dates: pd.Series,
-    close: pd.Series,
+    close: pd.Series | None,
     ind: dict,
     row: int,
 ) -> None:
@@ -200,7 +200,7 @@ def add_rsi_traces(
     fig.add_trace(
         go.Scatter(
             x=dates,
-            y=ta.rsi(close, length=period),
+            y=ta.rsi(close, length=period),  # type: ignore[arg-type]
             mode="lines",
             name=f"RSI({period})",
         ),
@@ -216,7 +216,7 @@ def add_macd_traces(
     fig: Any,
     go: Any,
     dates: pd.Series,
-    close: pd.Series,
+    close: pd.Series | None,
     ind: dict,
     row: int,
 ) -> None:
@@ -224,7 +224,7 @@ def add_macd_traces(
     fast = ind.get("fast", 12)
     slow = ind.get("slow", 26)
     signal_period = ind.get("signal", 9)
-    macd_df = ta.macd(close, fast=fast, slow=slow, signal=signal_period)
+    macd_df = ta.macd(close, fast=fast, slow=slow, signal=signal_period)  # type: ignore[arg-type]
     if macd_df is not None and not macd_df.empty:
         macd_col = f"MACD_{fast}_{slow}_{signal_period}"
         signal_col = f"MACDs_{fast}_{slow}_{signal_period}"

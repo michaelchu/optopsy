@@ -15,6 +15,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from dotenv import find_dotenv, load_dotenv
 
@@ -200,7 +201,7 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
     #   "user_message"      -> role: user
     #   "assistant_message" -> role: assistant  (may embed tool_calls metadata)
     #   "tool"              -> role: tool        (tool result)
-    def _parse_meta(step: dict) -> dict:
+    def _parse_meta(step: Any) -> dict[str, Any]:
         """SQLite stores metadata as a JSON string; parse it to a dict."""
         raw = step.get("metadata") or {}
         if isinstance(raw, str):
@@ -278,6 +279,7 @@ async def on_message(message: cl.Message):
     ]
     for el in csv_elements:
         try:
+            assert el.path is not None
             df = op.csv_data(el.path)
             label = el.name
             agent.datasets[label] = df

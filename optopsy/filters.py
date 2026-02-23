@@ -17,17 +17,17 @@ def _assign_dte(data: pd.DataFrame) -> pd.DataFrame:
     return data.assign(dte=lambda r: (r["expiration"] - r["quote_date"]).dt.days)
 
 
-def _trim(data: pd.DataFrame, col: str, lower: float, upper: float) -> pd.DataFrame:
+def _trim(data: pd.DataFrame, col: str, lower: Any, upper: Any) -> pd.DataFrame:
     """Filter dataframe rows where column value is between lower and upper bounds."""
     return data.loc[(data[col] >= lower) & (data[col] <= upper)]
 
 
-def _ltrim(data: pd.DataFrame, col: str, lower: float) -> pd.DataFrame:
+def _ltrim(data: pd.DataFrame, col: str, lower: Any) -> pd.DataFrame:
     """Filter dataframe rows where column value is greater than or equal to lower bound."""
     return data.loc[data[col] >= lower]
 
 
-def _rtrim(data: pd.DataFrame, col: str, upper: float) -> pd.DataFrame:
+def _rtrim(data: pd.DataFrame, col: str, upper: Any) -> pd.DataFrame:
     """Filter dataframe rows where column value is less than or equal to upper bound."""
     return data.loc[data[col] <= upper]
 
@@ -98,6 +98,7 @@ def _filter_by_delta(
     elif delta_min is not None:
         return _ltrim(data, "delta", delta_min)
     else:
+        assert delta_max is not None
         return _rtrim(data, "delta", delta_max)
 
 

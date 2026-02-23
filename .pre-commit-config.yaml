@@ -8,9 +8,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: mypy
-        name: mypy
-        entry: uv run mypy optopsy/
+      - id: ty
+        name: ty
+        entry: uv run ty check optopsy/
         language: system
         pass_filenames: false
         always_run: true

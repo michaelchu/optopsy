@@ -254,10 +254,12 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
             date_col, col_err = _resolve_candlestick_columns(df, x)
             if col_err:
                 return _result(col_err)
+            assert date_col is not None
         else:
             col_err = _check_xy_columns(df, x, y, chart_type)
             if col_err:
                 return _result(col_err)
+            assert x is not None
             date_col = x
 
         # Validate and classify indicators
@@ -327,6 +329,7 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
         date_col, col_err = _resolve_candlestick_columns(df, x)
         if col_err:
             return _result(col_err)
+        assert date_col is not None
         sorted_df = df.sort_values(date_col)
         fig.add_trace(
             go.Candlestick(
@@ -373,6 +376,7 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
     active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
     ds = active_ds
 
     if "implied_volatility" not in ds.columns:
@@ -381,6 +385,7 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
     df, quote_date_str, qd_err = _filter_by_quote_date(ds, arguments.get("quote_date"))
     if qd_err:
         return _result(qd_err)
+    assert df is not None
 
     option_type = arguments.get("option_type", "call")
     ot = option_type.lower()[:1]
@@ -401,7 +406,8 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
 
     strikes = pivot.index.tolist()
     expirations = [
-        str(e.date()) if hasattr(e, "date") else str(e) for e in pivot.columns
+        str(e.date()) if hasattr(e, "date") and callable(e.date) else str(e)  # type: ignore[union-attr]
+        for e in pivot.columns
     ]
 
     fig = go.Figure(
@@ -437,6 +443,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
     ds = active_ds
 
     if "implied_volatility" not in ds.columns:
@@ -445,6 +452,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     df, quote_date_str, qd_err = _filter_by_quote_date(ds, arguments.get("quote_date"))
     if qd_err:
         return _result(qd_err)
+    assert df is not None
 
     df = df.dropna(subset=["implied_volatility", "underlying_price"])
 
@@ -466,6 +474,7 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
         .mean()
         .reset_index()
     )
+    assert quote_date_str is not None
     atm_iv["dte"] = (atm_iv["expiration"] - pd.to_datetime(quote_date_str)).dt.days
     atm_iv = atm_iv.sort_values(["underlying_symbol", "dte"])
     atm_iv = atm_iv[atm_iv["dte"] > 0]

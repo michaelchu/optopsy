@@ -66,12 +66,10 @@ ignore = ["E501"]
 "**/__init__.py" = ["F401"]
 "tests/*" = ["F403", "F405", "E712"]
 
-# --- mypy (was mypy.ini) ---
+# --- ty ---
 
-[tool.mypy]
-warn_unused_configs = true
-ignore_missing_imports = true
-disable_error_code = ["arg-type", "list-item", "call-overload"]
+[tool.ty.src]
+exclude = ["optopsy/ui/"]
 
 # --- pytest (was pytest.ini) ---
 
@@ -81,11 +79,11 @@ filterwarnings = ["ignore::DeprecationWarning:pandas_ta"]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.19.1",
     "pandas-stubs>=3.0.0.260204",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.2",
+    "ty>=0.0.18",
     "types-requests>=2.32.4.20260107",
 ]

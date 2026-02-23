@@ -31,6 +31,7 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
 
     func, _, _ = STRATEGIES[strategy_name]
 

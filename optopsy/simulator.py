@@ -43,7 +43,7 @@ class SimulationResult:
     """
 
     trade_log: pd.DataFrame
-    equity_curve: pd.Series  # type: ignore[type-arg]
+    equity_curve: pd.Series
     summary: dict[str, Any]
 
 
@@ -151,7 +151,7 @@ def _normalise_single_leg(raw: pd.DataFrame, *, negate: bool = False) -> pd.Data
 
     option_type = raw.get("option_type", pd.Series([""] * len(raw), index=raw.index))
     strike = raw.get("strike", pd.Series([np.nan] * len(raw), index=raw.index))
-    desc = option_type.astype(str) + " " + strike.astype(str)
+    desc = option_type.astype(str) + " " + strike.astype(str)  # type: ignore[operator]
 
     # For short single-leg strategies, negate prices to signed cash flows:
     # selling at entry = credit (negative cost), buying back at exit = debit
@@ -182,7 +182,7 @@ def _normalise_multi_leg(raw: pd.DataFrame) -> pd.DataFrame:
 
     # Build a human-readable description from available strike/type columns
     desc_parts = [
-        raw[f"option_type_leg{i}"].astype(str) + " " + raw[f"strike_leg{i}"].astype(str)
+        raw[f"option_type_leg{i}"].astype(str) + " " + raw[f"strike_leg{i}"].astype(str)  # type: ignore[operator]
         for i in range(1, 5)
         if f"option_type_leg{i}" in raw.columns and f"strike_leg{i}" in raw.columns
     ]
@@ -217,7 +217,7 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
     strike_col = "strike" if "strike" in raw.columns else "strike_leg1"
     strike = raw.get(strike_col, pd.Series([np.nan] * len(raw), index=raw.index))
     option_type = raw.get("option_type", pd.Series([""] * len(raw), index=raw.index))
-    desc = "cal " + option_type.astype(str) + " " + strike.astype(str)
+    desc = "cal " + option_type.astype(str) + " " + strike.astype(str)  # type: ignore[operator]
 
     return pd.DataFrame(
         {
@@ -241,14 +241,14 @@ def _normalise_calendar(raw: pd.DataFrame) -> pd.DataFrame:
 # date (in the raw/pre-normalised schema) and returns a single-row Series.
 
 
-def _select_one(candidates: pd.DataFrame, idx: Any) -> pd.Series:  # type: ignore[type-arg]
+def _select_one(candidates: pd.DataFrame, idx: Any) -> pd.Series:
     """Return a single row from *candidates* at the given index label."""
     result = candidates.loc[idx]
     assert isinstance(result, pd.Series)
     return result
 
 
-def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _select_nearest(candidates: pd.DataFrame) -> pd.Series:
     """Select the trade closest to ATM (lowest absolute OTM%)."""
     otm_col = _find_otm_col(candidates)
     if otm_col is not None:
@@ -259,12 +259,12 @@ def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type
     if strike_col is None and "strike_leg1" in candidates.columns:
         strike_col = "strike_leg1"
 
-    underlying_col = "underlying_price_entry"
+    underlying_col: str | None = "underlying_price_entry"
     if underlying_col not in candidates.columns:
         if "underlying_price_entry_leg1" in candidates.columns:
             underlying_col = "underlying_price_entry_leg1"
         else:
-            underlying_col = None  # type: ignore[assignment]
+            underlying_col = None
 
     if strike_col is not None and underlying_col is not None:
         distance = (candidates[strike_col] - candidates[underlying_col]).abs()
@@ -273,7 +273,7 @@ def _select_nearest(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type
     return candidates.iloc[0]
 
 
-def _select_highest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _select_highest_premium(candidates: pd.DataFrame) -> pd.Series:
     """Select the trade with the highest credit (most negative entry cost).
 
     For multi-leg strategies, ``total_entry_cost`` is already signed (negative
@@ -289,18 +289,18 @@ def _select_highest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ign
     return _select_one(candidates, candidates[cost_col].idxmin())
 
 
-def _select_lowest_premium(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _select_lowest_premium(candidates: pd.DataFrame) -> pd.Series:
     """Select the trade with the lowest debit (cheapest absolute entry cost)."""
     cost_col = _find_cost_col(candidates)
     return _select_one(candidates, candidates[cost_col].abs().idxmin())
 
 
-def _select_first(candidates: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _select_first(candidates: pd.DataFrame) -> pd.Series:
     """Select the first candidate (deterministic, for testing)."""
     return candidates.iloc[0]
 
 
-_BUILTIN_SELECTORS: dict[str, Callable[..., pd.Series]] = {  # type: ignore[type-arg]
+_BUILTIN_SELECTORS: dict[str, Callable[..., pd.Series]] = {
     "nearest": _select_nearest,
     "highest_premium": _select_highest_premium,
     "lowest_premium": _select_lowest_premium,
@@ -328,7 +328,7 @@ def _find_cost_col(df: pd.DataFrame) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _resolve_entry_date(raw: pd.DataFrame) -> pd.Series:
     """Resolve the entry date from raw strategy output.
 
     Checks for explicit date columns first, then falls back to deriving
@@ -340,7 +340,7 @@ def _resolve_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-ar
     return _derive_entry_date(raw)
 
 
-def _derive_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _derive_entry_date(raw: pd.DataFrame) -> pd.Series:
     """Derive entry date from expiration and dte_entry when no date column exists."""
     if "expiration" in raw.columns and "dte_entry" in raw.columns:
         exp = pd.to_datetime(raw["expiration"])
@@ -353,7 +353,7 @@ def _derive_entry_date(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg
     return exp - pd.to_timedelta(dte, unit="D")
 
 
-def _resolve_expiration(raw: pd.DataFrame) -> pd.Series:  # type: ignore[type-arg]
+def _resolve_expiration(raw: pd.DataFrame) -> pd.Series:
     """Resolve the expiration date from raw strategy output."""
     for col in ("expiration", "expiration_leg1"):
         if col in raw.columns:
@@ -579,7 +579,7 @@ def _build_trade_log(
     ruin_mask = trade_log["equity"] <= 0
     if ruin_mask.any():
         ruin_idx = ruin_mask.idxmax()  # first True
-        trade_log = trade_log.loc[:ruin_idx]  # type: ignore[misc]
+        trade_log = trade_log.loc[:ruin_idx]
 
     return trade_log
 
@@ -593,7 +593,7 @@ def simulate(
     multiplier: int = 100,
     selector: Union[
         Literal["nearest", "highest_premium", "lowest_premium", "first"],
-        Callable[[pd.DataFrame], pd.Series],  # type: ignore[type-arg]
+        Callable[[pd.DataFrame], pd.Series],
     ] = "nearest",
     **strategy_kwargs: Any,
 ) -> SimulationResult:

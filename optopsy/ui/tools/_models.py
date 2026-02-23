@@ -156,7 +156,7 @@ class CalendarParamsMixin(BaseModel):
 class SignalMixin(BaseModel):
     entry_signal: str | None = Field(
         None,
-        json_schema_extra={"enum": SIGNAL_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": SIGNAL_NAMES},
         description=(
             "Optional TA signal that gates entry. Only enters trades on "
             "dates where the signal is True for the underlying symbol. "
@@ -196,7 +196,7 @@ class SignalMixin(BaseModel):
     )
     exit_signal: str | None = Field(
         None,
-        json_schema_extra={"enum": SIGNAL_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": SIGNAL_NAMES},
         description=(
             "Optional TA signal that gates exit. Only exits trades on "
             "dates where the signal is True. Same signal names as entry_signal."
@@ -285,7 +285,7 @@ class SuggestStrategyParamsArgs(BaseModel):
     )
     strategy_name: str | None = Field(
         None,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": STRATEGY_NAMES},
         description=(
             "Optional: tailor suggestions for a specific strategy. "
             "Iron condors and multi-leg strategies get tighter DTE/OTM% "
@@ -303,7 +303,7 @@ class SuggestStrategyParamsArgs(BaseModel):
 class RunStrategyArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
     strategy_name: str = Field(
         ...,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": STRATEGY_NAMES},
         description="Name of the strategy to run",
     )
     dataset_name: str | None = Field(
@@ -327,7 +327,7 @@ class ScanStrategiesArgs(BaseModel):
         ...,
         min_length=1,
         json_schema_extra={
-            "items": {"type": "string", "enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+            "items": {"type": "string", "enum": STRATEGY_NAMES},
         },
         description="One or more strategy names to include in the scan.",
     )
@@ -384,7 +384,7 @@ class ScanStrategiesArgs(BaseModel):
 class SignalSpec(BaseModel):
     name: str = Field(
         ...,
-        json_schema_extra={"enum": SIGNAL_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": SIGNAL_NAMES},
         description="Signal type name",
     )
     params: dict[str, Any] | None = Field(
@@ -445,7 +445,7 @@ class ListSignalsArgs(BaseModel):
 class ListResultsArgs(BaseModel):
     strategy_name: str | None = Field(
         None,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": STRATEGY_NAMES},
         description=("Optional: filter to only show runs for this strategy."),
     )
 
@@ -575,7 +575,7 @@ class CreateChartArgs(BaseModel):
 class SimulateArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):
     strategy_name: str = Field(
         ...,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": STRATEGY_NAMES},
         description="Name of the strategy to simulate",
     )
     capital: float | None = Field(
@@ -679,7 +679,7 @@ class CheckDataQualityArgs(BaseModel):
     )
     strategy_name: str | None = Field(
         None,
-        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        json_schema_extra={"enum": STRATEGY_NAMES},
         description=(
             "Optional: tailor checks for a specific strategy. "
             "Adds option-type balance, strike density, and "

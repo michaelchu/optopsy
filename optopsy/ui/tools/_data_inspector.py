@@ -14,6 +14,7 @@ def _handle_preview_data(arguments, dataset, signals, datasets, results, _result
     active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
     summary = _df_summary(active_ds, label)
 
     try:
@@ -49,6 +50,7 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
 
     columns = arguments.get("columns")
     if isinstance(columns, str):
@@ -176,6 +178,7 @@ def _handle_suggest_strategy_params(
     active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
     if err:
         return err
+    assert active_ds is not None
 
     strategy_name = arguments.get("strategy_name")
 

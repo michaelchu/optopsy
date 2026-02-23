@@ -452,7 +452,7 @@ def _make_result_summary(
 
     Uses :class:`StrategyResultSummary` to validate and type the output.
     """
-    base = {
+    base: dict[str, Any] = {
         "strategy": strategy_name,
         "max_entry_dte": arguments.get("max_entry_dte", 90),
         "exit_dte": arguments.get("exit_dte", 0),
@@ -777,6 +777,7 @@ def _resolve_signals_for_strategy(
     ]:
         if sig_name:
             sd = iv_signal_data if sig_name in _IV_SIGNALS else signal_data
+            assert sd is not None
             dates, err_msg = _resolve_inline_signal(
                 sig_name, arguments, sd, dataset, prefix
             )
