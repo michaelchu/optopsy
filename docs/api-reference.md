@@ -304,4 +304,4 @@ results = op.iron_condor(
 )
 ```
 
-See [TYPE_HINTS.md](https://github.com/michaelchu/optopsy/blob/master/TYPE_HINTS.md) for detailed documentation on using type hints with Optopsy.
+See [TYPE_HINTS.md](https://github.com/michaelchu/optopsy/blob/main/TYPE_HINTS.md) for detailed documentation on using type hints with Optopsy.
