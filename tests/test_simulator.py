@@ -10,6 +10,7 @@ import optopsy as op
 from optopsy.simulator import (
     SimulationResult,
     _build_trade_log,
+    _derive_entry_date,
     _filter_trades,
     _find_cost_col,
     _find_otm_col,
@@ -17,6 +18,9 @@ from optopsy.simulator import (
     _is_single_leg,
     _normalise_trades,
     _resolve_entry_date,
+    _resolve_expiration,
+    _select_highest_premium,
+    _select_nearest,
     simulate,
 )
 
@@ -1304,3 +1308,100 @@ class TestMultiTradeSpread:
         log = multi_trade_spread_result.trade_log
         for _, row in log.iterrows():
             assert row["equity"] == pytest.approx(100_000.0 + row["cumulative_pnl"])
+
+
+# ---------------------------------------------------------------------------
+# Selector edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestSelectorEdgeCases:
+    def test_select_nearest_with_otm_column(self):
+        """When otm_pct_entry is present, select row with smallest abs OTM%."""
+        candidates = pd.DataFrame(
+            {
+                "otm_pct_entry": [0.10, -0.02, 0.05],
+                "strike": [100, 105, 110],
+                "entry": [3.0, 4.0, 2.0],
+            }
+        )
+        result = _select_nearest(candidates)
+        # Row 1 has abs(otm) = 0.02 (smallest)
+        assert result["strike"] == 105
+
+    def test_select_nearest_ultimate_fallback(self):
+        """When no OTM, strike, or underlying_price columns exist, return first row."""
+        candidates = pd.DataFrame(
+            {
+                "entry": [3.0, 4.0, 2.0],
+                "some_other_col": ["a", "b", "c"],
+            }
+        )
+        result = _select_nearest(candidates)
+        assert result["entry"] == 3.0
+
+    def test_select_highest_premium_multi_leg(self):
+        """With total_entry_cost (signed), pick most negative (largest credit)."""
+        candidates = pd.DataFrame(
+            {
+                "total_entry_cost": [-1.50, -3.00, -0.50],
+                "strike_leg1": [100, 105, 110],
+            }
+        )
+        result = _select_highest_premium(candidates)
+        # Row 1 has total_entry_cost = -3.00 (most negative = largest credit)
+        assert result["strike_leg1"] == 105
+
+
+# ---------------------------------------------------------------------------
+# Resolve helper errors
+# ---------------------------------------------------------------------------
+
+
+class TestResolveHelperErrors:
+    def test_derive_entry_date_no_columns_raises(self):
+        """_derive_entry_date raises ValueError when no expiration/dte columns exist."""
+        df = pd.DataFrame({"strike": [100], "entry": [3.0]})
+        with pytest.raises(ValueError, match="Cannot derive entry date"):
+            _derive_entry_date(df)
+
+    def test_resolve_expiration_no_columns_raises(self):
+        """_resolve_expiration raises ValueError when no expiration column exists."""
+        df = pd.DataFrame({"strike": [100], "entry": [3.0]})
+        with pytest.raises(ValueError, match="Cannot determine expiration"):
+            _resolve_expiration(df)
+
+
+# ---------------------------------------------------------------------------
+# Empty data paths
+# ---------------------------------------------------------------------------
+
+
+class TestEmptyDataPaths:
+    def test_filter_trades_empty(self):
+        """_filter_trades with empty DataFrame returns empty."""
+        trades = pd.DataFrame(
+            columns=["entry_date", "exit_date", "expiration", "underlying_symbol"]
+        )
+        result = _filter_trades(trades, max_positions=1)
+        assert result.empty
+
+    def test_build_trade_log_empty(self):
+        """_build_trade_log with empty DataFrame returns empty with correct columns."""
+        from optopsy.simulator import _TRADE_LOG_COLUMNS
+
+        trades = pd.DataFrame(
+            columns=[
+                "entry_date",
+                "exit_date",
+                "expiration",
+                "underlying_symbol",
+                "entry_cost",
+                "exit_proceeds",
+                "pct_change",
+                "description",
+            ]
+        )
+        result = _build_trade_log(trades, capital=100_000.0, quantity=1, multiplier=100)
+        assert result.empty
+        assert list(result.columns) == _TRADE_LOG_COLUMNS

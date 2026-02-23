@@ -10,26 +10,13 @@ This document catalogues untested and under-tested code paths across the core li
 
 ### Completely Untested Features
 
-| Feature | Location | Notes |
-|---|---|---|
-| Multi-position filtering | `simulator.py:511-531` | `max_positions > 1` concurrent positions path untested |
-| Custom selector callables | `simulator.py:636-637` | Only built-in selectors tested |
+None — all significant features are now covered.
 
 ### Partially Tested (missing key branches)
 
 | Feature | What's missing |
 |---|---|
 | `_apply_ratios()` no bid/ask branch | `core.py:488-494` — fallback when bid/ask columns are absent |
-| `apply_signal()` per-strike dedup | `signals.py:929-937` — `requires_per_strike` attribute handling |
-| ATR with close-only | `signals.py:434-435` — high/low fallback path |
-| Simulator ruin detection | `simulator.py:578-582` — equity hitting zero |
-| `_compute_summary()` multi-date equity | `simulator.py:432-450` — conditional logic for multi-date curves |
-
-### Untested Helpers
-
-These are lower priority but easy wins for coverage:
-
-- `_macd_lines()`, `_bb_signal()`, `_ema_lines()`, `_atr_signal()` in `signals.py`
 
 ### Dead Code (unreachable)
 
@@ -62,8 +49,21 @@ These gaps were addressed and now have tests:
 | Calendar DTE range validation | `test_strategies.py` (pre-existing strategy-level tests) | checks.py:85-110 |
 | Slippage modes | `test_strategies.py` (pre-existing) | Covered at strategy level |
 | Butterfly quantity 2x | `test_strategies.py::test_long_call_butterfly_raw` (pre-existing) | Verified via raw output |
+| Selector OTM% path | `test_simulator.py::TestSelectorEdgeCases::test_select_nearest_with_otm_column` | simulator.py line 255 |
+| Selector ultimate fallback | `test_simulator.py::TestSelectorEdgeCases::test_select_nearest_ultimate_fallback` | simulator.py line 273 |
+| Highest premium multi-leg | `test_simulator.py::TestSelectorEdgeCases::test_select_highest_premium_multi_leg` | simulator.py line 289 |
+| _derive_entry_date error | `test_simulator.py::TestResolveHelperErrors::test_derive_entry_date_no_columns_raises` | simulator.py line 352 |
+| _resolve_expiration error | `test_simulator.py::TestResolveHelperErrors::test_resolve_expiration_no_columns_raises` | simulator.py line 361 |
+| _filter_trades empty | `test_simulator.py::TestEmptyDataPaths::test_filter_trades_empty` | simulator.py line 495 |
+| _build_trade_log empty | `test_simulator.py::TestEmptyDataPaths::test_build_trade_log_empty` | simulator.py line 548 |
+| TA indicator returns None | `test_signals.py::TestSignalEdgeCases::test_ta_signal_insufficient_data_returns_all_false` | signals.py line 96 |
+| sustained days < 1 | `test_signals.py::TestSignalEdgeCases::test_sustained_days_zero_raises` | signals.py line 787 |
+| Signal.__repr__ | `test_signals.py::TestSignalEdgeCases::test_signal_repr` | signals.py line 853 |
+| IV rank empty after DTE filter | `test_signals.py::TestIVRankEdgeCases::test_iv_rank_empty_after_dte_filter` | signals.py lines 552, 621 |
 
 **Current core.py coverage: 99%** (349 statements, 5 uncovered — 3 dead code, 2 edge cases)
+**Current simulator.py coverage: 99%** (231 statements, 2 uncovered — defensive edge cases)
+**Current signals.py coverage: 100%** (231 statements, 0 uncovered)
 
 ---
 
@@ -105,12 +105,8 @@ These gaps were addressed and now have tests:
 
 ### Core — highest impact first
 
-1. **Simulator `max_positions > 1`** — concurrent position filtering (`simulator.py:511-531`)
-2. **Custom selector callables** — only built-in selectors tested (`simulator.py:636-637`)
-3. **`_apply_ratios()` no bid/ask branch** — fallback path (`core.py:488-494`)
-4. **`apply_signal()` per-strike dedup** — `requires_per_strike` branch (`signals.py:929-937`)
-5. **Simulator ruin detection** — equity hitting zero (`simulator.py:578-582`)
-6. **Signal helpers** — `_macd_lines`, `_bb_signal`, `_ema_lines`, `_atr_signal` in `signals.py`
+1. **`_apply_ratios()` no bid/ask branch** — fallback path (`core.py:488-494`)
+2. **Simulator `no underlying_symbol`** — contrived edge case (`simulator.py:665, 696`)
 
 ### UI — highest impact first
 
