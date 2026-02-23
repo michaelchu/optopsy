@@ -13,6 +13,10 @@ from optopsy.signals import apply_signal
 from ..providers import get_provider_for_tool
 from ..providers.cache import ParquetCache
 from ._helpers import (
+    _IV_COLUMN_MISSING_MSG,
+    _IV_MISSING_MSG,
+    _SIGNAL_PARAM_KEYS,
+    _SIM_PARAM_KEYS,
     _YF_CACHE_CATEGORY,
     _YF_DEDUP_COLS,
     ToolResult,
@@ -21,12 +25,13 @@ from ._helpers import (
     _df_to_markdown,
     _empty_signal_suggestion,
     _fetch_stock_data_for_signals,
+    _filter_by_quote_date,
     _intersect_with_options_dates,
     _iv_signal_data,
     _make_result_key,
     _make_result_summary,
     _normalise_yf_df,
-    _resolve_inline_signal,
+    _resolve_signals_for_strategy,
     _run_one_strategy,
     _signal_slot_summary,
     _strategy_llm_summary,
@@ -449,12 +454,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
         # via the underlying_price column.
         iv_data = _iv_signal_data(dataset)
         if iv_data is None:
-            return _result(
-                "IV rank signals require options data with an "
-                "'implied_volatility' column. Fetch data from a provider "
-                "that includes IV (e.g. EODHD), or load a CSV with an "
-                "implied_volatility column.",
-            )
+            return _result(_IV_MISSING_MSG)
         signal_data = iv_data
     elif needs_stock:
         signal_data = _fetch_stock_data_for_signals(dataset)
@@ -650,128 +650,19 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
     func, _, _ = STRATEGIES[strategy_name]
     # Build a clean kwargs dict without mutating the original arguments.
     # Strip signal params — handled separately below.
-    _signal_keys = {
-        "strategy_name",
-        "entry_signal",
-        "entry_signal_params",
-        "entry_signal_days",
-        "exit_signal",
-        "exit_signal_params",
-        "exit_signal_days",
-        "entry_signal_slot",
-        "exit_signal_slot",
-    }
     strat_kwargs = {
         k: v
         for k, v in arguments.items()
-        if k not in _signal_keys
+        if k not in _SIGNAL_PARAM_KEYS
         and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
     }
 
-    # --- Resolve entry dates ---
-    entry_slot = arguments.get("entry_signal_slot")
-    entry_signal_name = arguments.get("entry_signal")
+    # Resolve entry/exit signals (slots and inline) via shared helper
+    sig_update, sig_err = _resolve_signals_for_strategy(arguments, signals, dataset)
+    if sig_err:
+        return _result(sig_err)
+    strat_kwargs.update(sig_update)
 
-    if entry_slot and entry_signal_name:
-        return _result("Cannot use both entry_signal and entry_signal_slot. Pick one.")
-
-    # Use pre-built slot if provided
-    if entry_slot:
-        if entry_slot not in signals:
-            return _result(
-                f"No signal slot '{entry_slot}'. "
-                f"Build it first with build_signal. "
-                f"Available: {list(signals.keys()) or 'none'}"
-            )
-        strat_kwargs["entry_dates"] = signals[entry_slot]
-
-    # --- Resolve exit dates ---
-    exit_slot = arguments.get("exit_signal_slot")
-    exit_signal_name = arguments.get("exit_signal")
-
-    if exit_slot and exit_signal_name:
-        return _result("Cannot use both exit_signal and exit_signal_slot. Pick one.")
-
-    if exit_slot:
-        if exit_slot not in signals:
-            return _result(
-                f"No signal slot '{exit_slot}'. "
-                f"Build it first with build_signal. "
-                f"Available: {list(signals.keys()) or 'none'}"
-            )
-        strat_kwargs["exit_dates"] = signals[exit_slot]
-
-    # --- Inline signal resolution (single signal, no slot) ---
-    # Validate signal names early, before fetching stock data
-    if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
-        return _result(
-            f"Unknown entry_signal '{entry_signal_name}'. "
-            f"Available: {', '.join(SIGNAL_NAMES)}",
-        )
-    if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
-        return _result(
-            f"Unknown exit_signal '{exit_signal_name}'. "
-            f"Available: {', '.join(SIGNAL_NAMES)}",
-        )
-
-    # Determine what data each signal needs
-    needs_stock = (
-        entry_signal_name
-        and entry_signal_name not in _DATE_ONLY_SIGNALS
-        and entry_signal_name not in _IV_SIGNALS
-    ) or (
-        exit_signal_name
-        and exit_signal_name not in _DATE_ONLY_SIGNALS
-        and exit_signal_name not in _IV_SIGNALS
-    )
-    needs_iv = (entry_signal_name and entry_signal_name in _IV_SIGNALS) or (
-        exit_signal_name and exit_signal_name in _IV_SIGNALS
-    )
-
-    signal_data = None
-    if needs_stock:
-        signal_data = _fetch_stock_data_for_signals(dataset)
-        if signal_data is None:
-            return _result(
-                "TA signals require stock price data but yfinance is not "
-                "installed or the fetch failed. Install yfinance "
-                "(`pip install yfinance`) and try again.",
-            )
-
-    iv_signal_data = None
-    if needs_iv:
-        iv_signal_data = _iv_signal_data(dataset)
-        if iv_signal_data is None:
-            return _result(
-                "IV rank signals require options data with an "
-                "'implied_volatility' column. Fetch data from a provider "
-                "that includes IV (e.g. EODHD), or load a CSV with an "
-                "implied_volatility column.",
-            )
-
-    # For date-only signals, extract unique dates from the option dataset.
-    # This must run even when needs_iv is true, because the other signal
-    # in the entry/exit pair may be date-only and would receive signal_data=None.
-    has_non_iv_signal = (
-        entry_signal_name and entry_signal_name not in _IV_SIGNALS
-    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
-    if signal_data is None and has_non_iv_signal:
-        signal_data = _date_only_fallback(dataset)
-
-    # Resolve inline entry/exit signals via shared helper
-    for sig_name, prefix, dates_key in [
-        (entry_signal_name, "entry", "entry_dates"),
-        (exit_signal_name, "exit", "exit_dates"),
-    ]:
-        if sig_name:
-            # IV signals use options data; others use stock/date data
-            sd = iv_signal_data if sig_name in _IV_SIGNALS else signal_data
-            dates, err_msg = _resolve_inline_signal(
-                sig_name, arguments, sd, dataset, prefix
-            )
-            if err_msg:
-                return _result(err_msg)
-            strat_kwargs[dates_key] = dates
     result_df, err = _run_one_strategy(strategy_name, dataset, strat_kwargs)
     if err:
         return _result(f"Error running {strategy_name}: {err}")
@@ -940,28 +831,12 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
 
     # Extract simulation-specific params
     sim_params: dict = {}
-    for key in ("capital", "quantity", "max_positions", "multiplier", "selector"):
+    for key in _SIM_PARAM_KEYS:
         if key in arguments:
             sim_params[key] = arguments[key]
 
     # Build strategy kwargs — strip sim-specific and signal keys
-    _non_strat_keys = {
-        "strategy_name",
-        "dataset_name",
-        "capital",
-        "quantity",
-        "max_positions",
-        "multiplier",
-        "selector",
-        "entry_signal",
-        "entry_signal_params",
-        "entry_signal_days",
-        "exit_signal",
-        "exit_signal_params",
-        "exit_signal_days",
-        "entry_signal_slot",
-        "exit_signal_slot",
-    }
+    _non_strat_keys = _SIGNAL_PARAM_KEYS | _SIM_PARAM_KEYS | {"dataset_name"}
     strat_kwargs = {
         k: v
         for k, v in arguments.items()
@@ -969,105 +844,11 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
     }
 
-    # --- Resolve entry dates ---
-    entry_slot = arguments.get("entry_signal_slot")
-    entry_signal_name = arguments.get("entry_signal")
-
-    if entry_slot and entry_signal_name:
-        return _result("Cannot use both entry_signal and entry_signal_slot. Pick one.")
-
-    if entry_slot:
-        if entry_slot not in signals:
-            return _result(
-                f"No signal slot '{entry_slot}'. "
-                f"Build it first with build_signal. "
-                f"Available: {list(signals.keys()) or 'none'}"
-            )
-        strat_kwargs["entry_dates"] = signals[entry_slot]
-
-    # --- Resolve exit dates ---
-    exit_slot = arguments.get("exit_signal_slot")
-    exit_signal_name = arguments.get("exit_signal")
-
-    if exit_slot and exit_signal_name:
-        return _result("Cannot use both exit_signal and exit_signal_slot. Pick one.")
-
-    if exit_slot:
-        if exit_slot not in signals:
-            return _result(
-                f"No signal slot '{exit_slot}'. "
-                f"Build it first with build_signal. "
-                f"Available: {list(signals.keys()) or 'none'}"
-            )
-        strat_kwargs["exit_dates"] = signals[exit_slot]
-
-    # --- Inline signal resolution ---
-    if entry_signal_name and entry_signal_name not in SIGNAL_REGISTRY:
-        return _result(
-            f"Unknown entry_signal '{entry_signal_name}'. "
-            f"Available: {', '.join(SIGNAL_NAMES)}",
-        )
-    if exit_signal_name and exit_signal_name not in SIGNAL_REGISTRY:
-        return _result(
-            f"Unknown exit_signal '{exit_signal_name}'. "
-            f"Available: {', '.join(SIGNAL_NAMES)}",
-        )
-
-    needs_stock = (
-        entry_signal_name
-        and entry_signal_name not in _DATE_ONLY_SIGNALS
-        and entry_signal_name not in _IV_SIGNALS
-    ) or (
-        exit_signal_name
-        and exit_signal_name not in _DATE_ONLY_SIGNALS
-        and exit_signal_name not in _IV_SIGNALS
-    )
-    needs_iv = (entry_signal_name and entry_signal_name in _IV_SIGNALS) or (
-        exit_signal_name and exit_signal_name in _IV_SIGNALS
-    )
-
-    signal_data = None
-    if needs_stock:
-        signal_data = _fetch_stock_data_for_signals(active_ds)
-        if signal_data is None:
-            return _result(
-                "TA signals require stock price data but yfinance is not "
-                "installed or the fetch failed. Install yfinance "
-                "(`pip install yfinance`) and try again.",
-            )
-
-    iv_signal_data_sim = None
-    if needs_iv:
-        iv_signal_data_sim = _iv_signal_data(active_ds)
-        if iv_signal_data_sim is None:
-            return _result(
-                "IV rank signals require options data with an "
-                "'implied_volatility' column. Fetch data from a provider "
-                "that includes IV (e.g. EODHD), or load a CSV with an "
-                "implied_volatility column.",
-            )
-
-    # Build date-only fallback for non-IV, non-stock signals even when
-    # needs_iv is true, so a date-only signal paired with an IV signal
-    # does not receive signal_data=None.
-    has_non_iv_signal_sim = (
-        entry_signal_name and entry_signal_name not in _IV_SIGNALS
-    ) or (exit_signal_name and exit_signal_name not in _IV_SIGNALS)
-    if signal_data is None and has_non_iv_signal_sim:
-        signal_data = _date_only_fallback(active_ds)
-
-    for sig_name, prefix, dates_key in [
-        (entry_signal_name, "entry", "entry_dates"),
-        (exit_signal_name, "exit", "exit_dates"),
-    ]:
-        if sig_name:
-            sd = iv_signal_data_sim if sig_name in _IV_SIGNALS else signal_data
-            dates, err_msg = _resolve_inline_signal(
-                sig_name, arguments, sd, active_ds, prefix
-            )
-            if err_msg:
-                return _result(err_msg)
-            strat_kwargs[dates_key] = dates
+    # Resolve entry/exit signals (slots and inline) via shared helper
+    sig_update, sig_err = _resolve_signals_for_strategy(arguments, signals, active_ds)
+    if sig_err:
+        return _result(sig_err)
+    strat_kwargs.update(sig_update)
 
     try:
         result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
@@ -1106,8 +887,6 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         f"sharpe={s['sharpe_ratio']:.2f}, "
         f"sortino={s['sortino_ratio']:.2f}"
     )
-
-    from ._helpers import _df_to_markdown
 
     # Summary stats table
     stats_rows = [
@@ -1414,26 +1193,21 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
             display_cols.append(c)
     display_df = df[[c for c in display_cols if c in df.columns]].copy()
 
-    # Format percentage columns for user display
+    # Format percentage columns for user display using config dict
+    _COMPARISON_FORMATS = {
+        "mean_return": ".4f",
+        "std": ".4f",
+        "win_rate": ".2%",
+        "max_drawdown": ".2%",
+        "sharpe": ".4f",
+        "profit_factor": ".2f",
+    }
     format_df = display_df.copy()
-    for col in ["mean_return", "std"]:
+    for col, fmt in _COMPARISON_FORMATS.items():
         if col in format_df.columns:
             format_df[col] = format_df[col].apply(
-                lambda x: f"{x:.4f}" if pd.notna(x) else "—"
+                lambda x, f=fmt: f"{x:{f}}" if pd.notna(x) else "—"
             )
-    for col in ["win_rate", "max_drawdown"]:
-        if col in format_df.columns:
-            format_df[col] = format_df[col].apply(
-                lambda x: f"{x:.2%}" if pd.notna(x) else "—"
-            )
-    if "sharpe" in format_df.columns:
-        format_df["sharpe"] = format_df["sharpe"].apply(
-            lambda x: f"{x:.4f}" if pd.notna(x) else "—"
-        )
-    if "profit_factor" in format_df.columns:
-        format_df["profit_factor"] = format_df["profit_factor"].apply(
-            lambda x: f"{x:.2f}" if pd.notna(x) else "—"
-        )
 
     table = _df_to_markdown(format_df, max_rows=100)
 
@@ -1446,20 +1220,20 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
     else:
         verdict_line = ""
 
-    # LLM summary — compact
+    # LLM summary — compact, using metric config list
+    _LLM_METRICS = [
+        ("mean_return", "mean", ".4f"),
+        ("win_rate", "wr", ".2%"),
+        ("sharpe", "sharpe", ".4f"),
+        ("max_drawdown", "mdd", ".2%"),
+        ("profit_factor", "pf", ".2f"),
+    ]
     llm_lines = [f"compare_results: {len(df)} results compared, sorted by {sort_by}"]
     for _, row in df.head(5).iterrows():
         parts = [str(row["label"])]
-        if pd.notna(row.get("mean_return")):
-            parts.append(f"mean={row['mean_return']:.4f}")
-        if pd.notna(row.get("win_rate")):
-            parts.append(f"wr={row['win_rate']:.2%}")
-        if pd.notna(row.get("sharpe")):
-            parts.append(f"sharpe={row['sharpe']:.4f}")
-        if pd.notna(row.get("max_drawdown")):
-            parts.append(f"mdd={row['max_drawdown']:.2%}")
-        if pd.notna(row.get("profit_factor")):
-            parts.append(f"pf={row['profit_factor']:.2f}")
+        for col, abbrev, fmt in _LLM_METRICS:
+            if pd.notna(row.get(col)):
+                parts.append(f"{abbrev}={row[col]:{fmt}}")
         llm_lines.append(" | ".join(parts))
     if verdict:
         llm_lines.append(
@@ -1963,36 +1737,11 @@ def _handle_plot_vol_surface(arguments, dataset, signals, datasets, results, _re
     ds = active_ds
 
     if "implied_volatility" not in ds.columns:
-        return _result(
-            "Dataset does not contain 'implied_volatility'. "
-            "Fetch data from a provider that includes IV (e.g. EODHD) "
-            "or load a CSV with an implied_volatility column."
-        )
+        return _result(_IV_COLUMN_MISSING_MSG)
 
-    # Convert to datetime without mutating the active dataset
-    try:
-        quote_dates = pd.to_datetime(ds["quote_date"])
-    except (ValueError, TypeError) as e:
-        return _result(f"Cannot parse quote_date column as datetime: {e}")
-
-    quote_date_str = arguments.get("quote_date")
-    if quote_date_str:
-        target_date = pd.to_datetime(quote_date_str)
-        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
-        if df.empty:
-            available = sorted(quote_dates.dt.date.unique())
-            closest = min(
-                available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
-            )
-            return _result(
-                f"No data for {quote_date_str}. "
-                f"Closest available date: {closest}. "
-                f"Try quote_date='{closest}'."
-            )
-    else:
-        latest_day = quote_dates.dt.normalize().max()
-        df = ds[quote_dates.dt.normalize() == latest_day].copy()
-        quote_date_str = str(latest_day.date())
+    df, quote_date_str, qd_err = _filter_by_quote_date(ds, arguments.get("quote_date"))
+    if qd_err:
+        return _result(qd_err)
 
     option_type = arguments.get("option_type", "call")
     ot = option_type.lower()[:1]
@@ -2052,37 +1801,11 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     ds = active_ds
 
     if "implied_volatility" not in ds.columns:
-        return _result(
-            "Dataset does not contain 'implied_volatility'. "
-            "Fetch data from a provider that includes IV (e.g. EODHD) "
-            "or load a CSV with an implied_volatility column."
-        )
+        return _result(_IV_COLUMN_MISSING_MSG)
 
-    # Convert to datetime without mutating the active dataset
-    try:
-        quote_dates = pd.to_datetime(ds["quote_date"])
-    except (ValueError, TypeError) as e:
-        return _result(f"Cannot parse quote_date column as datetime: {e}")
-
-    quote_date_str = arguments.get("quote_date")
-    if quote_date_str:
-        target_date = pd.to_datetime(quote_date_str)
-        df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
-        if df.empty:
-            available = sorted(quote_dates.dt.date.unique())
-            closest = min(
-                available, key=lambda d: abs((pd.Timestamp(d) - target_date).days)
-            )
-            return _result(
-                f"No data for {quote_date_str}. "
-                f"Closest available date: {closest}. "
-                f"Try quote_date='{closest}'."
-            )
-    else:
-        normalized_dates = quote_dates.dt.normalize()
-        latest_day = normalized_dates.max()
-        df = ds[normalized_dates == latest_day].copy()
-        quote_date_str = str(latest_day.date())
+    df, quote_date_str, qd_err = _filter_by_quote_date(ds, arguments.get("quote_date"))
+    if qd_err:
+        return _result(qd_err)
 
     df = df.dropna(subset=["implied_volatility", "underlying_price"])
 
