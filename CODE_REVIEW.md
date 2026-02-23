@@ -692,22 +692,32 @@ Both handlers reference these constants.
 
 ## 9. Summary of DRY / Refactoring Priorities
 
-| # | Issue | Impact | Effort | Location |
-|---|-------|--------|--------|----------|
-| 8.2.2 | Signal resolution duplicated between `run_strategy` and `simulate` | High | Medium | `_executor.py` |
-| 8.2.1 | `iv_rank_above`/`iv_rank_below` near-identical | Medium | Low | `signals.py` |
-| 8.1.1 | Profit factor reimplemented in 3 places | Medium | Low | `simulator.py`, `_helpers.py` |
-| 8.1.2 | Win rate reimplemented in 3 places | Medium | Low | `simulator.py`, `_helpers.py` |
-| 8.3.1 | `compare_results` handler is 245 lines | Medium | Medium | `_executor.py` |
-| 8.2.4 | Quote date + closest-date logic duplicated in vol tools | Low | Low | `_executor.py` |
-| 8.2.3 | IV error message repeated 4+ times | Low | Low | `_executor.py` |
-| 8.4.1 | Signal param key sets duplicated | Low | Low | `_executor.py` |
-| 8.3.2 | Column formatting uses repetitive lambdas | Low | Low | `_executor.py` |
+| # | Issue | Impact | Effort | Status |
+|---|-------|--------|--------|--------|
+| 8.2.2 | Signal resolution duplicated between `run_strategy` and `simulate` | High | Medium | ✅ Done |
+| 8.2.1 | `iv_rank_above`/`iv_rank_below` near-identical | Medium | Low | ✅ Done |
+| 8.1.1 | Profit factor reimplemented in 3 places | Medium | Low | ✅ Done |
+| 8.1.2 | Win rate reimplemented in 3 places | Medium | Low | ✅ Done |
+| 8.3.1 | `compare_results` handler formatting/LLM summary | Medium | Medium | ✅ Done |
+| 8.2.4 | Quote date + closest-date logic duplicated in vol tools | Low | Low | ✅ Done |
+| 8.2.3 | IV error message repeated 4+ times | Low | Low | ✅ Done |
+| 8.4.1 | Signal param key sets duplicated | Low | Low | ✅ Done |
+| 8.3.2 | Column formatting uses repetitive lambdas | Low | Low | ✅ Done |
 
-### Recommended Order of Attack
+### What Was Done
 
-1. **Signal resolution extraction** (8.2.2) — Highest impact, eliminates ~80 duplicated lines and the main maintenance risk. If the signal resolution logic changes (e.g., new signal types, new validation), you'd currently need to update two places.
-2. **IV rank signal factory** (8.2.1) — Quick win, follows existing patterns in the file.
-3. **Metrics reuse in simulator** (8.1.1 + 8.1.2) — Quick win, just replace inline code with function calls.
-4. **Compare results decomposition** (8.3.1) — Improves readability, enables easier testing of individual parts.
-5. **Everything else** — Low effort, opportunistic.
+All 9 DRY/refactoring items from section 8 have been implemented:
+
+1. **Signal resolution extraction** (8.2.2) — Extracted `_resolve_signals_for_strategy()` in `_helpers.py`. Both `run_strategy` and `simulate` now call this single helper, eliminating ~80 duplicated lines of slot resolution, inline signal validation, data source classification, and signal-to-dates conversion.
+
+2. **IV rank signal factory** (8.2.1) — Extracted `_iv_rank_signal(threshold, window, compare_op)` factory in `signals.py`. `iv_rank_above` and `iv_rank_below` are now thin wrappers passing `operator.gt` / `operator.lt`, following the same pattern as `_bb_signal`, `_atr_signal`, and `_crossover_signal`.
+
+3. **Metrics reuse** (8.1.1 + 8.1.2) — `simulator._compute_summary()` now imports and calls `metrics.profit_factor()` and `metrics.win_rate()` instead of reimplementing the logic inline. `_helpers._make_result_summary()` does the same for raw-mode results.
+
+4. **Compare results formatting** (8.3.1 + 8.3.2 + 8.3.3) — Replaced repetitive lambda formatting blocks with a `_COMPARISON_FORMATS` config dict and a single loop. Replaced repetitive LLM summary metric formatting with a `_LLM_METRICS` config list.
+
+5. **Quote date filtering** (8.2.4) — Extracted `_filter_by_quote_date()` in `_helpers.py`. Both `plot_vol_surface` and `iv_term_structure` now call this helper instead of duplicating ~20 lines of date parsing and closest-date logic.
+
+6. **IV error messages** (8.2.3) — Defined `_IV_MISSING_MSG` and `_IV_COLUMN_MISSING_MSG` constants in `_helpers.py`. All 4+ occurrences now reference these constants.
+
+7. **Signal param key sets** (8.4.1) — Defined `_SIGNAL_PARAM_KEYS` and `_SIM_PARAM_KEYS` as module-level frozensets in `_helpers.py`. Both `run_strategy` and `simulate` reference these constants instead of defining inline sets.
