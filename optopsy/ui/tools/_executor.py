@@ -675,6 +675,16 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
                     f"**Option Type Balance** — MISSING '{required_type}' "
                     f"(required for {strategy_name})\n"
                 )
+            else:
+                required_count = int((df["option_type"] == required_type).sum())
+                findings.append(
+                    f"PASS: required option type '{required_type}' present "
+                    f"({required_count:,}) for {strategy_name}"
+                )
+                display_parts.append(
+                    f"**Option Type Balance** — '{required_type}' options: "
+                    f"{required_count:,}\n"
+                )
 
     # 10. Strike density
     if (

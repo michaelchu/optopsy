@@ -350,6 +350,17 @@ class TestOptionTypeBalance:
         assert "FAIL" in result.llm_summary
         assert "call" in result.llm_summary.lower()
 
+    def test_call_strategy_calls_present(self, clean_data):
+        """long_calls requires calls; calls-present should pass with count."""
+        df = clean_data[clean_data["option_type"] == "call"].copy()
+        result = execute_tool(
+            "check_data_quality",
+            {"strategy_name": "long_calls"},
+            df,
+        )
+        assert "PASS" in result.llm_summary
+        assert "call" in result.llm_summary.lower()
+
     def test_no_strategy_skips_check(self, clean_data):
         """Without strategy_name, option type balance check is skipped."""
         df = clean_data[clean_data["option_type"] == "call"].copy()
