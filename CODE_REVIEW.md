@@ -367,3 +367,347 @@ for target_date in all_exit_dates:
 
 - Missing test coverage for the UI integration layer (`execute_tool` handlers, `agent.py`)
 - Minor pandas performance wins still available (mid-price refactor)
+
+---
+
+## 8. Enhancement Roadmap Items 1–3: Code Review
+
+Review of the implementations for Risk Metrics (item 1), IV Rank Signals (item 2), and Strategy Comparison Report (item 3) from `docs/ideas/ai-agent-enhancement-roadmap.md`.
+
+### 8.1 — Risk Metrics (`metrics.py`, `simulator.py`, `core.py`)
+
+**Overall assessment:** Well-structured, well-tested, clean separation of concerns.
+
+#### 8.1.1 — DRY: Profit factor reimplemented in 3 places
+
+**Files:**
+- `optopsy/metrics.py:182-203` — canonical `profit_factor()` function
+- `optopsy/simulator.py:463-467` — inline reimplementation in `_compute_summary()`
+- `optopsy/ui/tools/_helpers.py:440-446` — inline reimplementation in `_make_result_summary()`
+
+**Problem:** The simulator computes profit factor inline:
+
+```python
+# simulator.py:463-467
+"profit_factor": (
+    abs(total_wins / total_losses)
+    if total_losses != 0
+    else (float("inf") if total_wins > 0 else 0.0)
+),
+```
+
+And `_make_result_summary` does the same:
+
+```python
+# _helpers.py:440-446
+if losses == 0:
+    pf = float("inf") if wins > 0 else 0.0
+else:
+    pf = abs(wins) / abs(losses)
+```
+
+Both duplicate the exact logic from `metrics.profit_factor()`. The simulator already imports from `metrics` (sharpe, sortino, VaR, CVaR, calmar, max_drawdown) but skips `profit_factor` and `win_rate`.
+
+**Fix:** Import and call `metrics.profit_factor(pnl)` in `_compute_summary()`. In `_make_result_summary()`, call `metrics.profit_factor(pct)` for raw-mode results. For aggregated-mode results (lines 469-479), the group-level aggregation logic is different enough to justify keeping it separate, but add a comment explaining why.
+
+#### 8.1.2 — DRY: Win rate reimplemented in 3 places
+
+**Files:**
+- `optopsy/metrics.py:167-179` — canonical `win_rate()` function
+- `optopsy/simulator.py:455` — inline: `len(wins) / len(trade_log)`
+- `optopsy/ui/tools/_helpers.py:452` — inline: `float((pct > 0).mean())`
+
+**Problem:** Same pattern as profit factor. Three independent calculations of the same metric.
+
+**Fix:** Use `metrics.win_rate()` in both `_compute_summary()` and `_make_result_summary()`.
+
+#### 8.1.3 — `_compute_summary` selectively imports from metrics
+
+**File:** `optopsy/simulator.py:375-384`
+
+**Problem:** The function imports `sharpe_ratio`, `sortino_ratio`, `value_at_risk`, `conditional_value_at_risk`, `calmar_ratio`, and `max_drawdown` from `metrics` — but manually computes `win_rate` (line 455) and `profit_factor` (lines 463-467). This inconsistency makes the code harder to reason about: a reader sees the imports and assumes all metrics come from the module, then finds inline reimplementations.
+
+**Fix:** Import `win_rate` and `profit_factor` from `metrics` and use them. The `_compute_summary` function can then be simplified to ~10 fewer lines with no logic duplication.
+
+#### 8.1.4 — `_fmt_pf` utility could live in a shared location
+
+**File:** `optopsy/ui/tools/_executor.py:73-79`
+
+**Observation:** The `_fmt_pf()` helper formats profit factor for display (handling infinity and NaN). It's used by both `_handle_simulate` and `_handle_compare_results` in the same file, so this is fine for now. But if profit_factor formatting is needed elsewhere (e.g., future tools), consider moving it to `_helpers.py`.
+
+---
+
+### 8.2 — IV Rank Signals (`signals.py`, `eodhd.py`, `core.py`)
+
+**Overall assessment:** Good design — conditional passthrough, per-strike preservation, signal incompatibility checks are all well thought out. The main issue is duplication in the signal functions themselves and in the executor's signal resolution logic.
+
+#### 8.2.1 — DRY: `iv_rank_above` and `iv_rank_below` are near-identical (HIGH)
+
+**File:** `optopsy/signals.py:613-693`
+
+**Problem:** These two functions are ~40 lines each and differ by exactly one character: `>` vs `<` on the comparison line. The entire body — checking for `implied_volatility` column, computing ATM IV, computing rank, building the MultiIndex lookup, mapping rank back to original rows — is identical.
+
+Compare:
+- `iv_rank_above` line 649: `return (iv_rank_for_rows > threshold).fillna(False)`
+- `iv_rank_below` line 690: `return (iv_rank_for_rows < threshold).fillna(False)`
+
+**Fix:** Extract a `_iv_rank_signal(threshold, window, compare_op)` factory:
+
+```python
+def _iv_rank_signal(threshold: float, window: int, compare_op) -> SignalFunc:
+    def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
+        if "implied_volatility" not in data.columns:
+            return pd.Series(False, index=data.index)
+        atm_iv = _compute_atm_iv(data)
+        if atm_iv.empty:
+            return pd.Series(False, index=data.index)
+        rank = _compute_iv_rank_series(atm_iv, window)
+        rank_lookup = pd.Series(
+            rank.values,
+            index=pd.MultiIndex.from_arrays(
+                [atm_iv["underlying_symbol"], atm_iv["quote_date"]]
+            ),
+        )
+        keys = pd.MultiIndex.from_arrays(
+            [data["underlying_symbol"], data["quote_date"]]
+        )
+        iv_rank_for_rows = pd.Series(rank_lookup.reindex(keys).values, index=data.index)
+        return compare_op(iv_rank_for_rows, threshold).fillna(False)
+    _signal.requires_per_strike = True
+    return _signal
+
+def iv_rank_above(threshold: float = 0.5, window: int = 252) -> SignalFunc:
+    """True when IV rank exceeds a threshold. ..."""
+    return _iv_rank_signal(threshold, window, operator.gt)
+
+def iv_rank_below(threshold: float = 0.5, window: int = 252) -> SignalFunc:
+    """True when IV rank is below a threshold. ..."""
+    return _iv_rank_signal(threshold, window, operator.lt)
+```
+
+This follows the same pattern already used by `_bb_signal`, `_atr_signal`, and `_crossover_signal` in the same file. The `operator` module is already imported.
+
+#### 8.2.2 — DRY: Signal resolution logic duplicated between `run_strategy` and `simulate` (HIGH)
+
+**File:** `optopsy/ui/tools/_executor.py`
+- `_handle_run_strategy`: lines 671-774
+- `_handle_simulate`: lines 972-1070
+
+**Problem:** These two handlers contain ~100 lines of nearly identical signal resolution code:
+
+1. **Entry/exit slot resolution** (checking slot exists, retrieving from `signals` dict)
+2. **Inline signal name validation** (checking against `SIGNAL_REGISTRY`)
+3. **Data source classification** (`needs_stock`, `needs_iv`, `has_non_iv_signal`)
+4. **Data fetching** (stock data, IV data, date-only fallback)
+5. **The for-loop resolving inline signals** via `_resolve_inline_signal()`
+
+The only differences are:
+- `simulate` also strips simulation-specific keys (`capital`, `quantity`, etc.)
+- Variable names differ slightly (`iv_signal_data` vs `iv_signal_data_sim`, `has_non_iv_signal` vs `has_non_iv_signal_sim`)
+
+**Fix:** Extract a `_resolve_signals_for_strategy()` helper in `_helpers.py` that:
+- Takes `arguments`, `signals`, `dataset`, `_result`
+- Returns `(strat_kwargs_update, error_result)` where `strat_kwargs_update` is a dict with `entry_dates` and/or `exit_dates` if signals were resolved
+- Both handlers call this helper and merge the result into their `strat_kwargs`
+
+This would eliminate ~80 duplicated lines and ensure signal resolution stays consistent between `run_strategy` and `simulate`.
+
+#### 8.2.3 — DRY: IV error message repeated 4+ times
+
+**Files:**
+- `_executor.py:452-457` (build_signal)
+- `_executor.py:745-750` (run_strategy)
+- `_executor.py:1043-1048` (simulate)
+- `_executor.py:1966-1970` (plot_vol_surface)
+- `_executor.py:2054-2059` (iv_term_structure)
+
+**Problem:** The error message about needing an `implied_volatility` column is repeated verbatim:
+
+```python
+"IV rank signals require options data with an "
+"'implied_volatility' column. Fetch data from a provider "
+"that includes IV (e.g. EODHD), or load a CSV with an "
+"implied_volatility column."
+```
+
+And the `plot_vol_surface`/`iv_term_structure` variants:
+
+```python
+"Dataset does not contain 'implied_volatility'. "
+"Fetch data from a provider that includes IV (e.g. EODHD) "
+"or load a CSV with an implied_volatility column."
+```
+
+**Fix:** Define a constant `_IV_MISSING_MSG` in `_helpers.py` and reference it. Or add a `_require_iv_column(ds, _result)` helper that returns an error ToolResult if the column is missing, similar to `_require_dataset()`.
+
+#### 8.2.4 — DRY: Quote date parsing + closest-date logic in vol surface tools
+
+**File:** `optopsy/ui/tools/_executor.py`
+- `_handle_plot_vol_surface`: lines 1972-1995
+- `_handle_iv_term_structure`: lines 2062-2085
+
+**Problem:** Both handlers follow the exact same pattern:
+
+```python
+quote_dates = pd.to_datetime(ds["quote_date"])
+if quote_date_str:
+    target_date = pd.to_datetime(quote_date_str)
+    df = ds[quote_dates.dt.normalize() == target_date.normalize()].copy()
+    if df.empty:
+        available = sorted(quote_dates.dt.date.unique())
+        closest = min(available, key=lambda d: abs(...))
+        return _result(f"No data for {quote_date_str}. Closest: {closest}...")
+else:
+    latest_day = quote_dates.dt.normalize().max()
+    df = ds[quote_dates.dt.normalize() == latest_day].copy()
+    quote_date_str = str(latest_day.date())
+```
+
+**Fix:** Extract `_filter_by_quote_date(ds, quote_date_str, _result)` that returns `(filtered_df, resolved_date_str, error_result)`. Both handlers call it and proceed with the filtered data.
+
+#### 8.2.5 — `_compute_atm_iv` uses `idxmin` which selects only one strike per group
+
+**File:** `optopsy/signals.py:560`
+
+**Observation:** The ATM strike selection uses `groupby(...).idxmin()` which returns a single row per group. If two strikes are equidistant from the underlying (e.g., underlying=100, strikes at 99 and 101), only one is used. This is acceptable for practical purposes but worth noting — averaging both equidistant strikes would be slightly more robust.
+
+---
+
+### 8.3 — Strategy Comparison Report (`_executor.py:1284-1529`)
+
+**Overall assessment:** Functional and complete. The main concern is the handler's length (~245 lines) and the formatting logic that could be reusable.
+
+#### 8.3.1 — `_handle_compare_results` is 245 lines and does too many things
+
+**File:** `optopsy/ui/tools/_executor.py:1284-1529`
+
+**Problem:** This single function handles:
+1. Input validation and result selection (lines 1286-1307)
+2. Building comparison rows from heterogeneous result types (lines 1312-1356)
+3. Sorting and verdict computation (lines 1358-1401)
+4. Display column formatting with multiple format patterns (lines 1403-1436)
+5. Markdown table generation (lines 1438)
+6. LLM summary generation (lines 1449-1468)
+7. User display assembly (lines 1470-1476)
+8. Plotly chart creation (lines 1478-1527)
+
+**Fix:** Break into smaller helpers:
+- `_build_comparison_rows(selected)` → returns `pd.DataFrame`
+- `_compute_verdicts(df, metric_cols)` → returns `dict`
+- `_format_comparison_table(df)` → returns formatted display DataFrame
+- Keep the chart creation inline or extract to `_build_comparison_chart(df)`
+
+#### 8.3.2 — Column formatting uses repetitive lambda patterns
+
+**File:** `optopsy/ui/tools/_executor.py:1417-1436`
+
+**Problem:**
+
+```python
+for col in ["mean_return", "std"]:
+    if col in format_df.columns:
+        format_df[col] = format_df[col].apply(
+            lambda x: f"{x:.4f}" if pd.notna(x) else "—"
+        )
+for col in ["win_rate", "max_drawdown"]:
+    if col in format_df.columns:
+        format_df[col] = format_df[col].apply(
+            lambda x: f"{x:.2%}" if pd.notna(x) else "—"
+        )
+# ... similar blocks for sharpe, profit_factor
+```
+
+**Fix:** Use a formatting config dict:
+
+```python
+_COMPARISON_FORMATS = {
+    "mean_return": ".4f", "std": ".4f",
+    "win_rate": ".2%", "max_drawdown": ".2%",
+    "sharpe": ".4f", "profit_factor": ".2f",
+}
+for col, fmt in _COMPARISON_FORMATS.items():
+    if col in format_df.columns:
+        format_df[col] = format_df[col].apply(
+            lambda x, f=fmt: f"{x:{f}}" if pd.notna(x) else "—"
+        )
+```
+
+This is more concise and makes the format specs easy to adjust in one place.
+
+#### 8.3.3 — LLM summary row building is verbose
+
+**File:** `optopsy/ui/tools/_executor.py:1451-1463`
+
+**Problem:** The per-row LLM summary manually checks and formats each metric:
+
+```python
+if pd.notna(row.get("mean_return")):
+    parts.append(f"mean={row['mean_return']:.4f}")
+if pd.notna(row.get("win_rate")):
+    parts.append(f"wr={row['win_rate']:.2%}")
+# ... repeated for sharpe, max_drawdown, profit_factor
+```
+
+**Fix:** Use a metric config list:
+
+```python
+_LLM_METRICS = [
+    ("mean_return", "mean", ".4f"),
+    ("win_rate", "wr", ".2%"),
+    ("sharpe", "sharpe", ".4f"),
+    ("max_drawdown", "mdd", ".2%"),
+    ("profit_factor", "pf", ".2f"),
+]
+for col, abbrev, fmt in _LLM_METRICS:
+    if pd.notna(row.get(col)):
+        parts.append(f"{abbrev}={row[col]:{fmt}}")
+```
+
+---
+
+### 8.4 — Cross-cutting Issues
+
+#### 8.4.1 — `_non_strat_keys` sets duplicated between `run_strategy` and `simulate`
+
+**File:** `optopsy/ui/tools/_executor.py`
+- `_handle_run_strategy` lines 653-663: `_signal_keys` set
+- `_handle_simulate` lines 948-964: `_non_strat_keys` set
+
+**Problem:** Both handlers define local sets of keys to strip from `arguments` before passing to the strategy function. The signal-related keys are the same; `simulate` just adds the simulation-specific keys (`capital`, `quantity`, etc.). These sets are defined inline as literals in each handler, so if a new signal parameter is added, both must be updated.
+
+**Fix:** Define `_SIGNAL_PARAM_KEYS` as a module-level frozenset in `_executor.py` or `_schemas.py`:
+
+```python
+_SIGNAL_PARAM_KEYS = frozenset({
+    "strategy_name", "entry_signal", "entry_signal_params",
+    "entry_signal_days", "exit_signal", "exit_signal_params",
+    "exit_signal_days", "entry_signal_slot", "exit_signal_slot",
+})
+_SIM_PARAM_KEYS = frozenset({"capital", "quantity", "max_positions", "multiplier", "selector"})
+```
+
+Both handlers reference these constants.
+
+---
+
+## 9. Summary of DRY / Refactoring Priorities
+
+| # | Issue | Impact | Effort | Location |
+|---|-------|--------|--------|----------|
+| 8.2.2 | Signal resolution duplicated between `run_strategy` and `simulate` | High | Medium | `_executor.py` |
+| 8.2.1 | `iv_rank_above`/`iv_rank_below` near-identical | Medium | Low | `signals.py` |
+| 8.1.1 | Profit factor reimplemented in 3 places | Medium | Low | `simulator.py`, `_helpers.py` |
+| 8.1.2 | Win rate reimplemented in 3 places | Medium | Low | `simulator.py`, `_helpers.py` |
+| 8.3.1 | `compare_results` handler is 245 lines | Medium | Medium | `_executor.py` |
+| 8.2.4 | Quote date + closest-date logic duplicated in vol tools | Low | Low | `_executor.py` |
+| 8.2.3 | IV error message repeated 4+ times | Low | Low | `_executor.py` |
+| 8.4.1 | Signal param key sets duplicated | Low | Low | `_executor.py` |
+| 8.3.2 | Column formatting uses repetitive lambdas | Low | Low | `_executor.py` |
+
+### Recommended Order of Attack
+
+1. **Signal resolution extraction** (8.2.2) — Highest impact, eliminates ~80 duplicated lines and the main maintenance risk. If the signal resolution logic changes (e.g., new signal types, new validation), you'd currently need to update two places.
+2. **IV rank signal factory** (8.2.1) — Quick win, follows existing patterns in the file.
+3. **Metrics reuse in simulator** (8.1.1 + 8.1.2) — Quick win, just replace inline code with function calls.
+4. **Compare results decomposition** (8.3.1) — Improves readability, enables easier testing of individual parts.
+5. **Everything else** — Low effort, opportunistic.
