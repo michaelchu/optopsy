@@ -4,7 +4,9 @@
 [![Python](https://img.shields.io/pypi/pyversions/optopsy)](https://pypi.org/project/optopsy/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-# Optopsy
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Optopsy" width="280">
+</p>
 
 A fast, flexible backtesting library for options strategies in Python.
 
