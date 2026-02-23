@@ -672,6 +672,27 @@ class GetSimulationTradesArgs(BaseModel):
     )
 
 
+class CheckDataQualityArgs(BaseModel):
+    dataset_name: str | None = Field(
+        None,
+        description=("Dataset to check. Omit to use the most-recently-loaded dataset."),
+    )
+    strategy_name: str | None = Field(
+        None,
+        json_schema_extra={"enum": STRATEGY_NAMES},  # type: ignore[dict-item]
+        description=(
+            "Optional: tailor checks for a specific strategy. "
+            "Adds option-type balance, strike density, and "
+            "expiration coverage checks relevant to the strategy."
+        ),
+    )
+
+    @field_validator("strategy_name", mode="before")
+    @classmethod
+    def _validate_strategy_name(cls, v: str | None) -> str | None:
+        return _check_strategy_name(v)
+
+
 class DownloadOptionsDataArgs(BaseModel):
     symbol: str = Field(
         ...,
@@ -802,6 +823,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "iv_term_structure": IVTermStructureArgs,
     "simulate": SimulateArgs,
     "get_simulation_trades": GetSimulationTradesArgs,
+    "check_data_quality": CheckDataQualityArgs,
     "download_options_data": DownloadOptionsDataArgs,
     "fetch_options_data": FetchOptionsDataArgs,
 }
