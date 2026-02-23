@@ -7,10 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-# Install dependencies and create .venv (core + dev)
-uv sync
-
-# Install with UI/chat extras
+# Install all dependencies (core + dev + UI)
 uv sync --extra ui
 ```
 
