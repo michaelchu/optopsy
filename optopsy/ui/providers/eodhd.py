@@ -1,3 +1,20 @@
+"""EODHD data provider for historical US equity options chains.
+
+Implements the ``DataProvider`` interface to fetch options data from the
+EODHD Marketplace API.  Key features:
+
+- **Bulk download** (``download_options_data``) — fetches the complete
+  historical options chain for a symbol, split by option type and paginated
+  in ~30-day windows to stay within the 10K-offset API cap.  Supports
+  resumable downloads: only rows newer than the latest cached date are fetched.
+- **Local read** (``fetch_options_data``) — reads previously downloaded data
+  from the parquet cache and applies date/type/expiration filters.
+- **Rate limiting** — adaptive throttle based on ``X-RateLimit-Remaining``
+  header, with exponential backoff on 429 and 5xx errors.
+- **Progress callbacks** — ``download_with_progress()`` accepts callbacks for
+  Rich live-display integration in the CLI.
+"""
+
 from __future__ import annotations
 
 import logging

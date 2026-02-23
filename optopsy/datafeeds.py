@@ -1,3 +1,16 @@
+"""CSV data import and column normalization for option chain data.
+
+The primary entry point is ``csv_data()``, which reads a CSV file and maps
+its columns to the standardized names used throughout optopsy (e.g.
+``underlying_symbol``, ``quote_date``, ``strike``).  Column positions are
+specified by integer index, allowing the library to work with any CSV layout.
+
+The module also handles:
+- Date column inference (``_infer_date_cols``)
+- Optional date-range filtering (``_trim_dates``)
+- Optional Greek and liquidity columns (delta, gamma, volume, etc.)
+"""
+
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd

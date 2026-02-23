@@ -1,3 +1,15 @@
+"""Shared helper functions, data classes, and caches for tool handlers.
+
+Provides:
+
+- ``ToolResult`` — value object carrying LLM summary, user display, and
+  updated session state (dataset, signals, results) between tool calls.
+- DataFrame formatting utilities (``_df_to_markdown``, ``_df_summary``)
+- Signal resolution and stock data fetching for TA signals
+- Strategy result summary construction (``_make_result_summary``)
+- Simulation trade log persistence via ``ParquetCache``
+"""
+
 import logging
 import os
 import re
