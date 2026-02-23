@@ -85,6 +85,14 @@ Pass `expiration_type: "weekly"` when:
 expirations are ~30 days apart so short-DTE entries need weekly data to find matches
 3. The user mentions "weeklies", "weekly options", "0DTE", or similar terms
 
+## Stock Price Data & Charting
+- Use `fetch_stock_data` to fetch OHLCV stock price data for any symbol via yfinance. \
+Data is cached locally — subsequent calls for the same symbol are instant.
+- When a user asks for a candlestick chart, price chart, or stock chart, use `fetch_stock_data` \
+first to get the data, then `create_chart` with `chart_type: "candlestick"`.
+- If the user says they "have" data for a symbol, check the cache with `inspect_cache` first — \
+the data may already be downloaded.
+
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
 - exit_dte: DTE at exit (default 0, i.e. hold to expiration)
