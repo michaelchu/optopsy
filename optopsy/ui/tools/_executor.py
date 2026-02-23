@@ -306,6 +306,271 @@ def _handle_describe_data(arguments, dataset, signals, datasets, results, _resul
     return _result(llm_summary, user_display=user_display)
 
 
+@_register("check_data_quality")
+def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _result):
+    active_ds, label, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+
+    df = active_ds
+    findings: list[str] = []
+    display_parts: list[str] = [f"### Data Quality: {label}\n"]
+
+    # ---------------------------------------------------------------
+    # 1. Required columns check
+    # ---------------------------------------------------------------
+    # The 7 core columns the backtesting engine needs.
+    # underlying_price is NOT required — signals handle their own
+    # stock data.  It IS in checks.expected_types but the agent tool
+    # deliberately excludes it so that a dataset missing only
+    # underlying_price still passes the "required columns" section.
+    _CORE_REQUIRED_COLS: dict[str, tuple[str, ...]] = {
+        "underlying_symbol": ("object", "str"),
+        "option_type": ("object", "str"),
+        "expiration": ("datetime64[ns]", "datetime64[us]"),
+        "quote_date": ("datetime64[ns]", "datetime64[us]"),
+        "strike": ("int64", "float64"),
+        "bid": ("int64", "float64"),
+        "ask": ("int64", "float64"),
+    }
+
+    df_types = df.dtypes.astype(str).to_dict()
+    missing_cols: list[str] = []
+    dtype_mismatches: list[str] = []
+    for col, expected in _CORE_REQUIRED_COLS.items():
+        if col not in df_types:
+            missing_cols.append(col)
+        elif all(df_types[col] != t for t in expected):
+            dtype_mismatches.append(f"{col} (got {df_types[col]})")
+
+    if missing_cols:
+        findings.append(f"FAIL: missing required columns: {', '.join(missing_cols)}")
+        display_parts.append(
+            f"**Required Columns** — MISSING: {', '.join(missing_cols)}\n"
+        )
+    elif dtype_mismatches:
+        findings.append(f"WARN: dtype mismatches: {'; '.join(dtype_mismatches)}")
+        display_parts.append(
+            f"**Required Columns** — dtype mismatches: {'; '.join(dtype_mismatches)}\n"
+        )
+    else:
+        findings.append("PASS: all 7 required columns present with correct dtypes")
+        display_parts.append(
+            "**Required Columns** — all 7 present with correct dtypes\n"
+        )
+
+    # ---------------------------------------------------------------
+    # 2. Optional columns availability
+    # ---------------------------------------------------------------
+    _OPTIONAL_COLS = {
+        "greeks": ["delta", "gamma", "theta", "vega"],
+        "volatility": ["implied_volatility"],
+        "liquidity": ["volume", "open_interest"],
+        "price": ["underlying_price"],
+    }
+    available_optional: list[str] = []
+    for _group, cols in _OPTIONAL_COLS.items():
+        present = [c for c in cols if c in df.columns]
+        available_optional.extend(present)
+
+    if available_optional:
+        features: list[str] = []
+        if "delta" in available_optional:
+            features.append("delta filtering supported")
+        if "implied_volatility" in available_optional:
+            features.append("IV surface/signals available")
+        if "volume" in available_optional:
+            features.append("liquidity slippage available")
+        if "underlying_price" in available_optional:
+            features.append("underlying_price present")
+        feat_str = "; ".join(features) if features else ""
+        findings.append(
+            f"INFO: optional columns available: {', '.join(available_optional)}"
+            + (f" ({feat_str})" if feat_str else "")
+        )
+        display_parts.append(
+            f"**Optional Columns** — {', '.join(available_optional)}\n"
+        )
+    else:
+        findings.append("INFO: no optional columns (Greeks, volume, IV) found")
+        display_parts.append("**Optional Columns** — none found\n")
+
+    # ---------------------------------------------------------------
+    # 3. Null analysis on critical columns
+    # ---------------------------------------------------------------
+    _NULL_CHECK_COLS = ["bid", "ask", "volume", "open_interest"]
+    null_rows: list[str] = []
+    null_display_rows: list[str] = []
+    n_rows = len(df)
+    for col in _NULL_CHECK_COLS:
+        if col not in df.columns:
+            continue
+        n_null = int(df[col].isna().sum())
+        if n_null > 0:
+            pct = n_null / n_rows * 100
+            null_rows.append(f"{col} {pct:.1f}% null")
+            null_display_rows.append(f"| {col} | {n_null:,} | {pct:.1f}% |")
+
+    if null_rows:
+        findings.append(f"WARN: {'; '.join(null_rows)}")
+        display_parts.append(
+            "**Null Analysis**\n\n"
+            "| Column | Null Count | % |\n|---|---|---|\n"
+            + "\n".join(null_display_rows)
+            + "\n"
+        )
+    else:
+        present_checked = [c for c in _NULL_CHECK_COLS if c in df.columns]
+        if present_checked:
+            display_parts.append(
+                f"**Null Analysis** — no nulls in {', '.join(present_checked)}\n"
+            )
+
+    # ---------------------------------------------------------------
+    # 4. Bid/ask quality
+    # ---------------------------------------------------------------
+    if "bid" in df.columns and "ask" in df.columns:
+        bid = df["bid"]
+        ask = df["ask"]
+
+        # Zero-bid rows
+        non_null_bid = bid.dropna()
+        n_zero_bid = int((non_null_bid == 0).sum())
+        zero_bid_pct = n_zero_bid / n_rows * 100 if n_rows > 0 else 0
+
+        # Crossed markets (bid > ask), ignoring NaN
+        valid_mask = bid.notna() & ask.notna()
+        n_crossed = int((bid[valid_mask] > ask[valid_mask]).sum())
+
+        # Spread stats
+        spread = (ask - bid).dropna()
+        if not spread.empty:
+            spread_mean = float(spread.mean())
+            spread_median = float(spread.median())
+            spread_max = float(spread.max())
+        else:
+            spread_mean = spread_median = spread_max = 0.0
+
+        ba_parts: list[str] = []
+        if n_zero_bid > 0:
+            ba_parts.append(f"{zero_bid_pct:.1f}% zero-bid rows")
+        if n_crossed > 0:
+            ba_parts.append(f"{n_crossed:,} crossed markets (bid > ask)")
+
+        if ba_parts:
+            findings.append(f"WARN: {'; '.join(ba_parts)}")
+        else:
+            findings.append("PASS: no zero-bid or crossed-market rows")
+
+        display_parts.append(
+            "**Bid/Ask Quality**\n\n"
+            f"| Metric | Value |\n|---|---|\n"
+            f"| Zero-bid rows | {n_zero_bid:,} ({zero_bid_pct:.1f}%) |\n"
+            f"| Crossed markets | {n_crossed:,} |\n"
+            f"| Spread mean | {spread_mean:.4f} |\n"
+            f"| Spread median | {spread_median:.4f} |\n"
+            f"| Spread max | {spread_max:.4f} |\n"
+        )
+
+    # ---------------------------------------------------------------
+    # 5. Date coverage & gaps
+    # ---------------------------------------------------------------
+    if "quote_date" in df.columns:
+        dates = pd.to_datetime(df["quote_date"], errors="coerce").dropna()
+        if not dates.empty:
+            date_min = dates.min().date()
+            date_max = dates.max().date()
+            unique_dates = sorted(dates.dt.date.unique())
+            n_unique = len(unique_dates)
+
+            # Find gaps > 4 calendar days (non-trading day gaps)
+            gaps: list[str] = []
+            for i in range(1, len(unique_dates)):
+                gap_days = (unique_dates[i] - unique_dates[i - 1]).days
+                if gap_days > 4:
+                    gaps.append(
+                        f"{unique_dates[i - 1]} → {unique_dates[i]} ({gap_days}d)"
+                    )
+
+            gap_str = f", {len(gaps)} gap(s) > 4d" if gaps else ", no gaps"
+            findings.append(
+                f"INFO: quote_date {date_min} to {date_max}, "
+                f"{n_unique} trading days{gap_str}"
+            )
+            display_parts.append(
+                f"**Date Coverage**\n\n"
+                f"Range: {date_min} to {date_max} ({n_unique} unique trading days)\n"
+            )
+            if gaps:
+                gap_lines = "\n".join(f"- {g}" for g in gaps[:10])
+                if len(gaps) > 10:
+                    gap_lines += f"\n- ... and {len(gaps) - 10} more"
+                display_parts.append(f"Gaps (> 4 calendar days):\n{gap_lines}\n")
+
+    # ---------------------------------------------------------------
+    # 6. Monthly row distribution
+    # ---------------------------------------------------------------
+    if "quote_date" in df.columns:
+        dates = pd.to_datetime(df["quote_date"], errors="coerce").dropna()
+        if not dates.empty:
+            monthly = dates.dt.to_period("M").value_counts().sort_index()
+            min_month = monthly.idxmin()
+            min_count = int(monthly.min())
+            max_count = int(monthly.max())
+            median_count = int(monthly.median())
+
+            # Flag thin months (< 25% of median)
+            thin_threshold = median_count * 0.25
+            thin_months = monthly[monthly < thin_threshold]
+            if not thin_months.empty:
+                thin_list = [f"{str(p)} ({c:,})" for p, c in thin_months.items()]
+                findings.append(
+                    f"WARN: {len(thin_list)} thin month(s) "
+                    f"(< 25% of median {median_count:,}): " + ", ".join(thin_list[:5])
+                )
+            display_parts.append(
+                f"**Monthly Distribution** — "
+                f"min {min_count:,} ({min_month}), "
+                f"median {median_count:,}, max {max_count:,} rows/month\n"
+            )
+
+    # ---------------------------------------------------------------
+    # 7. Actionable recommendations
+    # ---------------------------------------------------------------
+    recommendations: list[str] = []
+    # Slippage recommendation
+    if "volume" in df.columns:
+        vol_null_pct = df["volume"].isna().sum() / n_rows * 100 if n_rows > 0 else 0
+        if vol_null_pct > 10:
+            recommendations.append(
+                f"use slippage='mid' (volume is {vol_null_pct:.0f}% null)"
+            )
+        else:
+            recommendations.append(
+                "volume data available — slippage='liquidity' viable"
+            )
+    else:
+        recommendations.append("use slippage='mid' or 'spread' (no volume column)")
+
+    if recommendations:
+        findings.append("RECO: " + "; ".join(recommendations))
+        display_parts.append(
+            "**Recommendations**\n\n"
+            + "\n".join(f"- {r}" for r in recommendations)
+            + "\n"
+        )
+
+    # ---------------------------------------------------------------
+    # Build output
+    # ---------------------------------------------------------------
+    llm_summary = (
+        f"check_data_quality({label}): {len(findings)} findings\n"
+        + "\n".join(f"- {f}" for f in findings)
+    )
+    user_display = "\n".join(display_parts)
+    return _result(llm_summary, user_display=user_display)
+
+
 @_register("suggest_strategy_params")
 def _handle_suggest_strategy_params(
     arguments, dataset, signals, datasets, results, _result

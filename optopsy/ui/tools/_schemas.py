@@ -322,6 +322,17 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "distributions for a dataset. Use for data quality checks "
         "and debugging."
     ),
+    "check_data_quality": (
+        "Run an integrity check on a loaded dataset against the columns "
+        "and data quality the backtesting engine requires. Reports "
+        "missing/mistyped required columns, optional column availability "
+        "(Greeks, volume, IV), null analysis on critical columns, bid/ask "
+        "quality (zero bids, crossed markets, spread stats), date coverage "
+        "and gaps, and monthly row distribution. Returns actionable "
+        "recommendations (e.g. slippage model choice, reliable date range, "
+        "delta filtering availability). Use this after loading data and "
+        "before running strategies to make informed parameter choices."
+    ),
     "suggest_strategy_params": (
         "Analyze a loaded dataset and suggest good starting parameters "
         "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "

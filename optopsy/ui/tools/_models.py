@@ -672,6 +672,13 @@ class GetSimulationTradesArgs(BaseModel):
     )
 
 
+class CheckDataQualityArgs(BaseModel):
+    dataset_name: str | None = Field(
+        None,
+        description=("Dataset to check. Omit to use the most-recently-loaded dataset."),
+    )
+
+
 class DownloadOptionsDataArgs(BaseModel):
     symbol: str = Field(
         ...,
@@ -802,6 +809,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "iv_term_structure": IVTermStructureArgs,
     "simulate": SimulateArgs,
     "get_simulation_trades": GetSimulationTradesArgs,
+    "check_data_quality": CheckDataQualityArgs,
     "download_options_data": DownloadOptionsDataArgs,
     "fetch_options_data": FetchOptionsDataArgs,
 }
