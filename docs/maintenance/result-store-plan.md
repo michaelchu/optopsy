@@ -1,6 +1,6 @@
 # Plan: Global Result Store with Query Tool
 
-Last updated: 2026-02-24
+Last updated: 2026-02-25
 
 ## Context
 
@@ -12,7 +12,7 @@ Additionally, strategy backtests and simulations are expensive and deterministic
 
 **Global result cache with content-hashed keys, queryable via a tool. Unified caching for both strategy results and simulator trade logs.**
 
-- **Cache key:** Deterministic SHA-256 hash of (name, all params, dataset content hash). Uses `pd.util.hash_pandas_object(df, index=False).sum()` to fingerprint the dataset (~15-30ms for 50k rows, computed once per dataset load). Same inputs = same key = cache hit.
+- **Cache key:** Deterministic SHA-256 hash of (name, all params, dataset content hash). Uses `pd.util.hash_pandas_object(df, index=False).sum()` to fingerprint the dataset (computed once per dataset load; performance varies with column types and data complexity). Same inputs = same key = cache hit. The fingerprint covers all rows and columns, so loading the same symbol with a different date range produces a different fingerprint and a different cache key.
 - **Writing:** Handlers check cache before executing. On miss, run and write. On hit, return cached result instantly.
 - **Reading:** A new `query_results` tool lets the LLM read, sort, filter, and slice stored results.
 - **No thread_id scoping:** Results are global. Any session can reuse cached results.
@@ -47,9 +47,10 @@ This also **retires the simulator's existing persistence** (`write_sim_trade_log
 ## Cache Key Design
 
 ```python
-import hashlib, json, pandas as pd
+import hashlib, json
 
-def make_cache_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
+# Implemented as ResultStore.make_key() static method
+def make_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
     """Deterministic cache key for any result (strategy or simulation)."""
     param_keys = sorted(k for k in arguments.keys() if k not in ("strategy_name",))
     params_str = json.dumps({k: arguments[k] for k in param_keys}, sort_keys=True)
@@ -84,6 +85,26 @@ hash("sim:long_calls:{"initial_capital":10000,...}:9823745...") → "f1a2b3c4d5e
 ```
 
 A single `_index.json` maps hashes to metadata. The `type` field distinguishes `"strategy"` from `"simulation"`.
+
+Example `_index.json`:
+
+```json
+{
+  "a3f8b2c1d4e5f678": {
+    "type": "strategy",
+    "strategy": "long_calls",
+    "display_key": "long_calls:dte=45,exit=0,otm=0.50,slip=mid",
+    "params": {"max_entry_dte": 45, "exit_dte": 0, "max_otm_pct": 0.5, "slippage": "mid"}
+  },
+  "f1a2b3c4d5e6f789": {
+    "type": "simulation",
+    "strategy": "short_puts",
+    "display_key": "sim:short_puts",
+    "params": {"capital": 100000, "max_entry_dte": 45},
+    "summary": {"total_trades": 52, "win_rate": 0.73, "total_return": 0.15, "sharpe_ratio": 1.42, "...": "..."}
+  }
+}
+```
 
 ## Files to Change
 
@@ -135,7 +156,10 @@ def _cached_run(
         return None, cache_key, err
 
     if cache_key and df is not None and not df.empty:
-        store.write(cache_key, df, metadata)
+        try:
+            store.write(cache_key, df, metadata)
+        except OSError:
+            pass  # Non-fatal — result is still returned, just not cached
 
     return df, cache_key, ""
 ```
@@ -220,7 +244,12 @@ def _pop_internal_keys(arguments: dict) -> str | None:
 
 ```python
 def _with_cache_key(summary: dict, cache_key: str | None) -> dict:
-    """Add _cache_key to a result summary for later ResultStore lookups."""
+    """Add _cache_key to a result summary for later ResultStore lookups.
+
+    Must be called before inserting the summary into agent.results so that
+    query_results and get_simulation_trades can recover the parquet file
+    via results[key]["_cache_key"].
+    """
     if cache_key:
         summary["_cache_key"] = cache_key
     return summary
@@ -314,6 +343,16 @@ else:
         })
 ```
 
+Then when building the results dict entry, attach the cache key so `query_results` can find the parquet file:
+
+```python
+summary = _make_result_summary(strategy_name, result_df, arguments)
+updated_results = {
+    **results,
+    result_key: _with_cache_key(summary, cache_key),  # Adds {"_cache_key": "a3f8..."} to the entry
+}
+```
+
 Same pattern for `scan_strategies` (cache the leaderboard).
 
 ### 5. Cache check in simulator
@@ -328,24 +367,22 @@ cache_key = store.make_key(f"sim:{strategy_name}", all_params, ds_fp) if ds_fp e
 
 if cache_key and store.has(cache_key):
     trade_log = store.read(cache_key)
-    # Reconstruct summary from trade log (or store summary alongside)
+    # Recover the 18 scalar summary metrics from _index.json metadata
+    # instead of re-deriving from the trade log (avoids importing simulator internals).
+    s = store.get_metadata(cache_key).get("summary", {})
 else:
     result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
     trade_log = result.trade_log
+    s = result.summary
     if cache_key and not trade_log.empty:
         store.write(cache_key, trade_log, metadata={
             "type": "simulation",
             "strategy": strategy_name,
             "display_key": sim_key,
             "params": all_params,
+            "summary": s,  # Store scalar summary alongside so cache hits don't need to re-derive
         })
 ```
-
-**Note:** The simulator summary (18 scalar metrics) is derived from the trade log. On cache hit, we need to either:
-- Re-derive the summary from the cached trade log (requires importing the summary logic)
-- Store summary in `_index.json` metadata alongside the hash
-
-Storing summary in metadata is simpler — it avoids re-importing simulator internals.
 
 ### 6. Retire old simulator persistence
 
