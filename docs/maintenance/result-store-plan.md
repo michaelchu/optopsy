@@ -6,16 +6,17 @@ Last updated: 2026-02-24
 
 The LLM agent loses access to full strategy result data after message compaction (300-char truncation). It only has scalar summaries (mean, std, win_rate), so it can't answer follow-up questions like "sort by returns" or "which bucket performed best."
 
-Additionally, strategy backtests are expensive and deterministic — same strategy + same params + same data always produces the same result. We should cache results globally so they can be reused across sessions.
+Additionally, strategy backtests and simulations are expensive and deterministic — same inputs always produce the same result. We should cache results globally so they can be reused across sessions.
 
 ## Approach
 
-**Global result cache with content-hashed keys, queryable via a tool.**
+**Global result cache with content-hashed keys, queryable via a tool. Unified caching for both strategy results and simulator trade logs.**
 
-- **Cache key:** Deterministic hash of (strategy_name, all params, dataset content hash). Uses `pd.util.hash_pandas_object(df, index=False).sum()` to fingerprint the dataset (~15-30ms for 50k rows, computed once per dataset load). Same inputs = same key = cache hit.
-- **Writing:** Strategy handler checks cache before executing. On miss, runs strategy and writes result. On hit, returns cached result instantly.
-- **Reading:** A new `query_results` tool lets the LLM read, sort, filter, and slice stored results from the current session.
+- **Cache key:** Deterministic SHA-256 hash of (name, all params, dataset content hash). Uses `pd.util.hash_pandas_object(df, index=False).sum()` to fingerprint the dataset (~15-30ms for 50k rows, computed once per dataset load). Same inputs = same key = cache hit.
+- **Writing:** Handlers check cache before executing. On miss, run and write. On hit, return cached result instantly.
+- **Reading:** A new `query_results` tool lets the LLM read, sort, filter, and slice stored results.
 - **No thread_id scoping:** Results are global. Any session can reuse cached results.
+- **Both raw and aggregated** strategy results are cached as separate entries (the `raw` param is part of the hash, producing different keys).
 
 ### Why global over per-session
 
@@ -27,48 +28,77 @@ Additionally, strategy backtests are expensive and deterministic — same strate
 | Key collisions | Same params overwrite (signals/dataset ignored) | Content hash prevents collisions |
 | Session resume | Works (files on disk per thread) | Works (files on disk, global) |
 
+### Unified caching for strategies and simulations
+
+Strategy results and simulator results have different formats but the **caching mechanism is identical**: hash inputs, store DataFrame, return on cache hit.
+
+| | Strategy results | Simulator results |
+|---|---|---|
+| Output format | Trades (raw) or bucketed stats (aggregated) | Trade log with equity curve |
+| Key metrics | mean return, win rate per bucket | Sharpe, Sortino, max drawdown, VaR |
+| Capital tracking | No | Yes (sequential equity simulation) |
+| What's cached | Result DataFrame | Trade log DataFrame |
+| Scalar summary in `agent.results` | count, mean_return, std, win_rate, profit_factor | 18 metrics (total_return, sharpe, etc.) |
+
+The result **formats stay different** — they answer different analytical questions. What's unified is the **caching layer**: same `ResultStore`, same content-hashing, same `_cache_key` pattern in `agent.results`.
+
+This also **retires the simulator's existing persistence** (`write_sim_trade_log` / `read_sim_trade_log` using `ParquetCache` with lossy `_sim_fs_key` sanitization) in favor of ResultStore.
+
 ## Cache Key Design
 
 ```python
 import hashlib, json, pandas as pd
 
-def make_cache_key(strategy_name: str, arguments: dict, dataset_fingerprint: str) -> str:
-    """Deterministic cache key for a strategy run."""
-    # Strategy params (sorted for determinism, excluding non-strategy keys)
-    param_keys = sorted(k for k in arguments.keys() if k != "strategy_name")
+def make_cache_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
+    """Deterministic cache key for any result (strategy or simulation)."""
+    param_keys = sorted(k for k in arguments.keys() if k not in ("strategy_name",))
     params_str = json.dumps({k: arguments[k] for k in param_keys}, sort_keys=True)
-
-    # Combine into a single hash
-    raw = f"{strategy_name}:{params_str}:{dataset_fingerprint}"
+    raw = f"{name}:{params_str}:{dataset_fingerprint}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 ```
 
 Produces a short hex string like `"a3f8b2c1d4e5f678"` — no sanitization needed, no collisions.
 
-The human-readable display key (`long_calls:dte=45,...`) is stored as metadata alongside the hash.
+Examples of how the same strategy with different params produces different keys:
+
+```
+# Aggregated (raw=false, default)
+hash("long_calls:{"max_entry_dte":45,"raw":false,...}:9823745...") → "a3f8b2c1d4e5f678"
+
+# Raw trades (raw=true)
+hash("long_calls:{"max_entry_dte":45,"raw":true,...}:9823745...") → "7e2d9f04b1c3a896"
+
+# Different dataset
+hash("long_calls:{"max_entry_dte":45,"raw":false,...}:5567812...") → "c4d1e8f2a9b30756"
+
+# Simulation
+hash("sim:long_calls:{"initial_capital":10000,...}:9823745...") → "f1a2b3c4d5e6f789"
+```
 
 ## Directory Structure
 
 ```
 ~/.optopsy/results/
-  {hash}.parquet          # full result DataFrame
-  _index.json             # maps hash → {strategy, params, display_key, created_at}
+  {hash}.parquet          # full result DataFrame (strategy or trade log)
+  _index.json             # maps hash → {type, strategy, params, display_key, created_at}
 ```
 
-A single `_index.json` maps hashes to metadata for listing and display.
+A single `_index.json` maps hashes to metadata. The `type` field distinguishes `"strategy"` from `"simulation"`.
 
 ## Files to Change
 
 | File | Change |
 |---|---|
 | `optopsy/ui/providers/result_store.py` | **New.** `ResultStore` class with content-hashed keys |
-| `optopsy/ui/tools/_strategy_runners.py` | Check cache before running; write on miss |
-| `optopsy/ui/tools/_executor.py` | Pass `dataset_fingerprint` for strategy tools |
-| `optopsy/ui/tools/_results_manager.py` | Add `query_results` handler |
+| `optopsy/ui/tools/_strategy_runners.py` | Check cache before running strategy; write on miss |
+| `optopsy/ui/tools/_simulators.py` | Check cache before running simulation; write on miss; retire `write_sim_trade_log` |
+| `optopsy/ui/tools/_helpers.py` | Remove `write_sim_trade_log`, `read_sim_trade_log`, `_sim_cache`, `_sim_fs_key` |
+| `optopsy/ui/tools/_executor.py` | Pass `dataset_fingerprint` for strategy/simulation tools |
+| `optopsy/ui/tools/_results_manager.py` | Add `query_results` handler; update `get_simulation_trades` to use ResultStore |
 | `optopsy/ui/tools/_models.py` | Add `QueryResultsArgs` Pydantic model |
 | `optopsy/ui/tools/_schemas.py` | Add `query_results` tool schema |
 | `optopsy/ui/agent.py` | Compute + cache dataset fingerprint; simplify results memo |
-| `tests/` | Add tests for `ResultStore` and `query_results` |
+| `tests/` | Add tests for `ResultStore`, `query_results`, cache hit paths |
 
 ## Step-by-Step
 
@@ -76,14 +106,14 @@ A single `_index.json` maps hashes to metadata for listing and display.
 
 ```python
 class ResultStore:
-    """Global parquet cache for strategy result DataFrames.
+    """Global parquet cache for result DataFrames (strategies + simulations).
 
-    Keys are SHA-256 hashes of (strategy_name, params, dataset_fingerprint).
+    Keys are SHA-256 hashes of (name, params, dataset_fingerprint).
     A JSON index maps hashes to human-readable metadata.
     """
 
     def __init__(self, results_dir="~/.optopsy/results"): ...
-    def make_key(strategy_name, arguments, dataset_fingerprint) -> str: ...
+    def make_key(name, arguments, dataset_fingerprint) -> str: ...
     def write(key, df, metadata) -> None: ...
     def read(key) -> pd.DataFrame | None: ...
     def has(key) -> bool: ...
@@ -105,16 +135,18 @@ if result.dataset is not None:
     )
 ```
 
-Computed once per dataset load. Reused for all subsequent strategy runs.
+Computed once per dataset load. Reused for all subsequent strategy/simulation runs.
 
 ### 3. Pass fingerprint through executor
 
-Add `dataset_fingerprint: str | None = None` to `execute_tool`. Inject into arguments for strategy tools only:
+Add `dataset_fingerprint: str | None = None` to `execute_tool`. Inject into arguments for strategy and simulation tools only:
 
 ```python
+_CACHEABLE_TOOLS = ("run_strategy", "scan_strategies", "simulate")
+
 def execute_tool(..., dataset_fingerprint=None):
     ...
-    if dataset_fingerprint and tool_name in ("run_strategy", "scan_strategies"):
+    if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
         arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
     ...
 ```
@@ -137,18 +169,65 @@ if cache_key and store.has(cache_key):
     result_df = store.read(cache_key)
 else:
     result_df, err = _run_one_strategy(strategy_name, dataset, strat_kwargs)
-    # Write to cache on success
     if cache_key and result_df is not None and not result_df.empty:
         store.write(cache_key, result_df, metadata={
+            "type": "strategy",
             "strategy": strategy_name,
             "display_key": _make_result_key(strategy_name, arguments),
             "params": strat_kwargs,
         })
 ```
 
-Same approach for `scan_strategies` (cache the leaderboard).
+Same pattern for `scan_strategies` (cache the leaderboard).
 
-### 5. Add `query_results` tool
+### 5. Cache check in simulator
+
+In `_handle_simulate`, before calling `_simulate`:
+
+```python
+store = ResultStore()
+ds_fp = arguments.pop("_dataset_fingerprint", None)
+all_params = {**sim_params, **strat_kwargs}
+cache_key = store.make_key(f"sim:{strategy_name}", all_params, ds_fp) if ds_fp else None
+
+if cache_key and store.has(cache_key):
+    trade_log = store.read(cache_key)
+    # Reconstruct summary from trade log (or store summary alongside)
+else:
+    result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
+    trade_log = result.trade_log
+    if cache_key and not trade_log.empty:
+        store.write(cache_key, trade_log, metadata={
+            "type": "simulation",
+            "strategy": strategy_name,
+            "display_key": sim_key,
+            "params": all_params,
+        })
+```
+
+**Note:** The simulator summary (18 scalar metrics) is derived from the trade log. On cache hit, we need to either:
+- Re-derive the summary from the cached trade log (requires importing the summary logic)
+- Store summary in `_index.json` metadata alongside the hash
+
+Storing summary in metadata is simpler — it avoids re-importing simulator internals.
+
+### 6. Retire old simulator persistence
+
+Remove from `_helpers.py`:
+- `_sim_cache` (ParquetCache instance)
+- `_SIM_CATEGORY`
+- `_sim_fs_key()` (lossy sanitization)
+- `write_sim_trade_log()`
+- `read_sim_trade_log()`
+
+Update `get_simulation_trades` in `_simulators.py` to read from ResultStore:
+
+```python
+cache_key = results[sim_key].get("_cache_key")
+trade_log = ResultStore().read(cache_key) if cache_key else None
+```
+
+### 7. Add `query_results` tool
 
 **Model** (`_models.py`):
 - `result_key: str | None` — display key from `list_results`. Omit to list available.
@@ -161,10 +240,11 @@ Same approach for `scan_strategies` (cache the leaderboard).
 **Handler** (`_results_manager.py`):
 - If no `result_key`: list keys from current session's `agent.results` with summaries
 - If `result_key`: look up `_cache_key` from `agent.results`, read from store, apply sort/filter/slice, return markdown table (up to 50 rows)
+- Works for both strategy and simulation results — format-agnostic
 
-Session's `agent.results` dict stores `{"_cache_key": hash, ...}` so the handler can find the parquet file.
+Session's `agent.results` entries all carry `{"_cache_key": hash, ...}` so the handler can find any parquet file.
 
-### 6. Simplify results memo in system prompt
+### 8. Simplify results memo in system prompt
 
 Replace top-5 detailed memo (invalidates Anthropic prompt cache every call) with:
 
@@ -174,31 +254,33 @@ Replace top-5 detailed memo (invalidates Anthropic prompt cache every call) with
 
 Stable text reduces cache invalidation.
 
-### 7. Update system prompt
+### 9. Update system prompt
 
 Add to `## Workflow`:
 
 ```
 - Use `query_results` to examine, sort, filter, or slice results from previous strategy
-  runs without re-running them. This is the preferred way to answer follow-up questions
-  about results.
-- Strategy results are cached globally — if the same strategy with identical parameters
-  has been run before on the same data, the cached result is returned instantly.
+  runs or simulations without re-running them. This is the preferred way to answer
+  follow-up questions about results.
+- Strategy and simulation results are cached globally — if the same run with identical
+  parameters has been done before on the same data, the cached result is returned instantly.
 ```
 
-### 8. Update session resume message
+### 10. Update session resume message
 
 ```
 "[Session resumed] In-memory datasets and signals were cleared.
-Previous strategy results are still accessible via query_results."
+Previous strategy and simulation results are still accessible via query_results."
 ```
 
-### 9. Tests
+### 11. Tests
 
 - `ResultStore`: write/read round-trip, `make_key` determinism, `has()`, `list_all`, `clear`
 - `query_results` handler: list mode, sort, filter, head/tail, missing key
-- Cache hit: `run_strategy` returns cached result without re-executing
+- Strategy cache hit: `run_strategy` returns cached result without re-executing
+- Simulation cache hit: `simulate` returns cached trade log without re-executing
 - Content hash: same data → same fingerprint, different data → different fingerprint
+- `get_simulation_trades` reads from ResultStore instead of old ParquetCache path
 
 ## Verification
 
@@ -208,5 +290,7 @@ Previous strategy results are still accessible via query_results."
    - Start chat, load data, run a strategy → result stored in global cache
    - Ask "sort the results by mean return descending" → LLM calls `query_results`
    - Run the same strategy again → instant cache hit, no recomputation
+   - Run a simulation → trade log cached
+   - Run same simulation again → instant cache hit
    - New session, load same data, run same strategy → cache hit across sessions
-   - Reload page (session resume) → `query_results` still works
+   - Reload page (session resume) → `query_results` still works for both types
