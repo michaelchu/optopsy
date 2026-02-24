@@ -1335,7 +1335,7 @@ class TestDecodeBdata:
 
         from optopsy.ui.app import _decode_bdata
 
-        values = [50.0, 55.2, float("nan"), float("inf"), 48.3]
+        values = [50.0, 55.2, float("nan"), float("inf"), float("-inf"), 48.3]
         raw = struct.pack(f"<{len(values)}d", *values)
         encoded = base64.b64encode(raw).decode()
 
@@ -1355,8 +1355,9 @@ class TestDecodeBdata:
         assert y[0] == 50.0
         assert y[1] == 55.2
         assert y[2] is None  # was NaN
-        assert y[3] is None  # was Infinity
-        assert y[4] == 48.3
+        assert y[3] is None  # was +Infinity
+        assert y[4] is None  # was -Infinity
+        assert y[5] == 48.3
 
 
 class TestToolResultResultDf:
