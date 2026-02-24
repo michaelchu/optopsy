@@ -442,6 +442,14 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "expirations) for a given date. Shows how IV varies by "
         "time to expiration. Requires implied_volatility in the dataset."
     ),
+    "query_results": (
+        "Query, sort, filter, and slice the full data from a previous "
+        "strategy run or simulation. Results are cached globally — use "
+        "this instead of re-running strategies to answer follow-up "
+        "questions about results (e.g. 'sort by returns', 'show the top "
+        "5 buckets', 'filter to DTE > 30'). Omit result_key to list "
+        "all available result keys."
+    ),
 }
 
 # Tools owned by data providers — excluded from core tool schema generation.

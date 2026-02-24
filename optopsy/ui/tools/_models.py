@@ -747,6 +747,54 @@ class GetSimulationTradesArgs(BaseModel):
     )
 
 
+class FilterOp(str, Enum):
+    gt = "gt"
+    lt = "lt"
+    eq = "eq"
+    gte = "gte"
+    lte = "lte"
+    contains = "contains"
+
+
+class QueryResultsArgs(BaseModel):
+    result_key: str | None = Field(
+        None,
+        description=(
+            "Display key from list_results (e.g. 'long_calls:dte=45,exit=0,...'). "
+            "Omit to list all available result keys with summaries."
+        ),
+    )
+    sort_by: str | None = Field(
+        None,
+        description="Column name to sort by (e.g. 'mean', 'pct_change', 'count').",
+    )
+    ascending: bool | None = Field(
+        None,
+        description="Sort ascending (default: false = descending).",
+    )
+    head: int | None = Field(
+        None,
+        ge=1,
+        description="Return only the first N rows after sorting/filtering.",
+    )
+    filter_column: str | None = Field(
+        None,
+        description="Column to filter on.",
+    )
+    filter_op: FilterOp | None = Field(
+        None,
+        description="Filter operation: gt, lt, eq, gte, lte, contains.",
+    )
+    filter_value: str | None = Field(
+        None,
+        description="Value to filter against (will be cast to column dtype).",
+    )
+    columns: list[str] | None = Field(
+        None,
+        description="Select specific columns to return. Omit for all.",
+    )
+
+
 class CheckDataQualityArgs(BaseModel):
     dataset_name: str | None = Field(
         None,
@@ -894,6 +942,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "clear_cache": ClearCacheArgs,
     "fetch_stock_data": FetchStockDataArgs,
     "compare_results": CompareResultsArgs,
+    "query_results": QueryResultsArgs,
     "create_chart": CreateChartArgs,
     "plot_vol_surface": PlotVolSurfaceArgs,
     "iv_term_structure": IVTermStructureArgs,
