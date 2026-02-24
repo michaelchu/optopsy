@@ -8,10 +8,10 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 ## Priority Summary
 
-| Module | Lines | Library Replacement | Priority | Impact |
+| Module | Lines | Library Replacement | Priority | Status |
 |---|---|---|---|---|
-| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
-| `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math, add omega/tail ratio (adds dependency) |
+| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Pending |
+| ~~`metrics.py`~~ | ~~275~~ | ~~empyrical-reloaded~~ | ~~Low~~ | **Done** |
 
 ---
 
@@ -76,50 +76,40 @@ schema.validate(df)
 
 ---
 
-## 2. `metrics.py` — Risk-Adjusted Performance Metrics (Medium Priority)
+## 2. `metrics.py` — Risk-Adjusted Performance Metrics (Done)
 
-### Current State
+Completed in `claude/review-external-libs` branch.
 
-~275 lines implementing Sharpe ratio, Sortino ratio, max drawdown, Value at Risk, Calmar ratio, profit factor, and win rate with numpy. Includes manual edge-case handling (zero division, insufficient data, annualization factors).
+### What Changed
 
-### What To Replace
+Replaced hand-rolled Sharpe, Sortino, VaR, CVaR, Calmar, and `max_drawdown_from_returns` with thin wrappers over `empyrical-reloaded`, preserving edge-case guards (return 0.0 on empty/NaN/inf). Added `omega_ratio` and `tail_ratio` as new metrics.
 
-| Metric | Current | empyrical Equivalent |
-|---|---|---|
-| Sharpe ratio | Manual annualized excess return / std | `empyrical.sharpe_ratio()` |
-| Sortino ratio | Manual downside deviation | `empyrical.sortino_ratio()` |
-| Max drawdown | Manual running-max accumulation | `empyrical.max_drawdown()` |
-| Value at Risk | `np.percentile()` | `empyrical.value_at_risk()` |
-| Calmar ratio | Manual return / max_drawdown | `empyrical.calmar_ratio()` |
-| Omega ratio | *(new metric)* | `empyrical.omega_ratio()` |
-| Tail ratio | *(new metric)* | `empyrical.tail_ratio()` |
+| Metric | Status |
+|---|---|
+| Sharpe ratio | Delegated to `empyrical.sharpe_ratio()` |
+| Sortino ratio | Delegated to `empyrical.sortino_ratio()` |
+| Max drawdown (returns) | Delegated to `empyrical.max_drawdown()` |
+| Max drawdown (equity) | Kept in-house (empyrical only takes returns) |
+| Value at Risk | Delegated to `empyrical.value_at_risk()` |
+| CVaR | Delegated to `empyrical.conditional_value_at_risk()` |
+| Calmar ratio | Delegated to `empyrical.calmar_ratio()` |
+| Omega ratio | **New** — `empyrical.omega_ratio()` |
+| Tail ratio | **New** — `empyrical.tail_ratio()` |
+| `win_rate`, `profit_factor` | Kept in-house (no empyrical equivalent) |
 
-`win_rate()` and `profit_factor()` are simple enough to keep in-house (3-5 lines each).
+### Result
 
-**New metrics to add:** Omega ratio and tail ratio are not currently implemented but are especially valuable for options strategies due to non-normal return distributions. Omega ratio captures the full return distribution (not just mean/variance), while tail ratio measures the relationship between right and left tail extremes.
-
-### Expected Reduction
-
-~180 lines removed. The `compute_risk_metrics()` aggregation wrapper would stay but delegate to empyrical.
-
-### New Dependencies
-
-- `empyrical-reloaded` — community-maintained fork of Quantopian's empyrical. Lightweight, numpy/pandas only.
-
-### Risks
-
-- empyrical assumes daily returns by default; must pass correct `period` or `annualization` factor for options trade frequency.
-- The original `empyrical` is unmaintained; use `empyrical-reloaded` fork.
-- Subtle differences in annualization conventions could change metric values — verify against existing test fixtures.
+- `metrics.py`: 275 → 323 lines (net +48 from new metrics; ~100 lines of implementation replaced with 1-line delegations)
+- New dependency: `empyrical-reloaded>=0.5.7` + `pytz` (transitive dep not declared by empyrical)
+- All 1098 existing + new tests pass
+- `omega_ratio` and `tail_ratio` added to `compute_risk_metrics()` and simulator `_compute_summary()`
 
 ---
 
 ## Implementation Order
 
-Status and recommended sequencing:
-
-1. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-2. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency. Also add omega ratio and tail ratio as new metrics.
+1. ~~**`metrics.py`**~~ — **Done.** Replaced with empyrical-reloaded wrappers, added omega/tail ratio.
+2. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
 
 ---
 
@@ -129,4 +119,5 @@ Status and recommended sequencing:
 |---|---|---|---|---|
 | pydantic | >= 2.0 | ~5MB | Promote from optional | Candidate for checks.py |
 | pandera | >= 0.20 | ~3MB | Yes | Optional — skip initially |
-| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | Candidate for metrics.py |
+| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | **Installed** |
+| pytz | any | ~500KB | Yes | **Installed** (transitive dep of empyrical) |
