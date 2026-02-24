@@ -420,7 +420,9 @@ def _strategy_llm_summary(df: pd.DataFrame, strategy_name: str, mode: str) -> st
 
     lines.append(
         "STOP — results are ready. DO NOT call run_strategy again. "
-        "Present these results to the user and explain the key takeaways."
+        "The UI already shows an interactive table with the full results. "
+        "Do NOT reproduce the data as a table in your response — just "
+        "explain the key takeaways and insights in plain text."
     )
     return "\n".join(lines)
 
