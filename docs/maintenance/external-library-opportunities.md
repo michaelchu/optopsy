@@ -10,44 +10,40 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 | Module | Lines | Library Replacement | Priority | Impact |
 |---|---|---|---|---|
-| `signals.py` | 943 | pandas-ta (already a dep) | **High** | Largest code reduction, zero new deps |
-| `checks.py` | 324 | Pydantic + Pandera | **High** | Eliminates boilerplate, gains serialization |
-| `metrics.py` | 275 | empyrical | **Medium** | Battle-tested financial math |
-| `evaluation.py` | 188 | `pd.merge_asof()` | **Medium** | Cleaner exit matching, built into pandas |
-| `simulator.py` | 704 | vectorbt | **Low** | Biggest win but biggest migration |
-| `rules.py` | 134 | Boolean indexing | **Low** | Cosmetic; replaces query strings |
+| `signals.py` | 943 | pandas-ta (already a dep) | **Done** | Already fully integrated — all 6 indicators delegate to pandas-ta |
+| `rules.py` | 134 | Boolean indexing | **Done** | IDE support, type checking, no string interpolation |
+| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
+| `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math (adds dependency) |
+| `evaluation.py` | 188 | `pd.merge_asof()` | **Low** | Cleaner exit matching, built into pandas (behavior risk) |
+| `simulator.py` | 704 | vectorbt | **Deferred** | Biggest win but biggest migration |
 
 ---
 
-## 1. `signals.py` — Technical Indicators (High Priority)
+## 1. `signals.py` — Technical Indicators (Already Done)
 
 ### Current State
 
-~943 lines implementing RSI, SMA/EMA crossovers, Bollinger Bands, MACD, and ATR from pandas primitives. Only `pandas_ta.rsi()` is used from the existing `pandas-ta` dependency — everything else is hand-rolled with `.rolling().mean()`, `.ewm().mean()`, and manual band calculations.
+~943 lines total. **All 6 technical indicators already delegate to pandas-ta**:
 
-### What To Replace
-
-| Signal | Current Implementation | pandas-ta Equivalent |
+| Signal | Implementation | pandas-ta Call |
 |---|---|---|
-| SMA crossover | `.rolling(window).mean()` | `ta.sma(close, length)` |
-| EMA crossover | `.ewm(span).mean()` | `ta.ema(close, length)` |
-| Bollinger Bands | Manual mean + `rolling().std()` * multiplier | `ta.bbands(close, length, std)` |
-| MACD | Manual EMA difference + signal line | `ta.macd(close, fast, slow, signal)` |
-| ATR | Manual true range + smoothing | `ta.atr(high, low, close, length)` |
-| RSI | Already uses `pandas_ta.rsi()` | No change needed |
+| RSI | `ta.rsi(prices, length=period)` | Fully outsourced |
+| SMA | `ta.sma(prices, length=period)` | Fully outsourced |
+| EMA | `ta.ema(prices, length=fast/slow)` | Fully outsourced |
+| MACD | `ta.macd(prices, fast, slow, signal)` | Fully outsourced |
+| Bollinger Bands | `ta.bbands(prices, length, std)` | Fully outsourced |
+| ATR | `ta.atr(high, low, close, length)` | Fully outsourced |
 
-### Expected Reduction
+The remaining ~600 lines are custom logic that **should stay**:
+- Signal composition framework (`Signal` class, `and_signals`, `or_signals`, `sustained`)
+- Calendar signals (`day_of_week`)
+- IV Rank signals (`_compute_atm_iv`, `_compute_iv_rank_series`) — options-domain-specific, no library equivalent
+- Per-symbol isolation (`_per_symbol_signal`) and crossover detection (`_crossover_signal`)
+- NaN handling and signal application (`apply_signal`)
 
-~400-500 lines removed. The signal composition logic (`and_signals`, `or_signals`, `Signal` class) and calendar-based signals (`day_of_week`, `day_of_month`) are custom and should stay.
+### Action Required
 
-### New Dependencies
-
-None — `pandas-ta >= 0.4.67b0` is already in `pyproject.toml`.
-
-### Risks
-
-- pandas-ta function signatures and return shapes must be verified against current behavior (e.g., `ta.bbands()` returns a DataFrame with upper/mid/lower columns).
-- NaN handling at series boundaries may differ slightly; existing tests should catch regressions.
+None — pandas-ta integration is already complete. No further code reduction is possible here.
 
 ---
 
@@ -232,58 +228,38 @@ trades = pf.trades.records_readable
 
 ---
 
-## 6. `rules.py` — Strike Validation (Low Priority)
+## 6. `rules.py` — Strike Validation (Done)
 
-### Current State
+Replaced `.query()` string-based filters with direct boolean indexing.
 
-~134 lines using `df.query("leg1_strike < leg2_strike")` style string-based filters for structural constraints (ascending strikes, equal butterfly wings, iron condor ordering).
+**Benefits gained:**
+- IDE autocomplete and type checking for column names
+- No string interpolation bugs
+- Identical runtime behaviour (both are standard pandas operations)
 
-### What To Replace
-
-Replace query strings with direct boolean indexing:
-
-```python
-# Before
-df.query("leg1_strike < leg2_strike")
-
-# After
-df[df["leg1_strike"] < df["leg2_strike"]]
-```
-
-### Expected Reduction
-
-Minimal line reduction. The benefit is IDE support (autocomplete, type checking, refactoring) and avoiding string-interpolation bugs.
-
-### New Dependencies
-
-None.
-
-### Risks
-
-- Essentially zero risk — both approaches are equivalent pandas operations.
-- Could be done opportunistically alongside other refactors.
+No line reduction — this was a quality-of-life improvement, not a code reduction.
 
 ---
 
 ## Implementation Order
 
-Recommended sequencing based on risk/reward:
+Status and recommended sequencing:
 
-1. **`signals.py`** — Zero new deps, largest code reduction, existing tests cover behavior.
-2. **`evaluation.py`** — Zero new deps, small change, uses built-in pandas.
+1. ~~**`signals.py`**~~ — **Done.** Already fully integrated with pandas-ta.
+2. ~~**`rules.py`**~~ — **Done.** Replaced `.query()` strings with boolean indexing.
 3. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-4. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions.
-5. **`rules.py`** — Opportunistic, bundle with other changes.
+4. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
+5. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency.
 6. **`simulator.py`** — Defer unless simulator maintenance becomes painful.
 
 ---
 
 ## Dependencies Impact
 
-| Library | Version | Size | New? | Used By |
+| Library | Version | Size | New? | Status |
 |---|---|---|---|---|
-| pandas-ta | >= 0.4.67b0 | ~2MB | No (existing) | signals.py |
-| pydantic | >= 2.0 | ~5MB | Promote from optional | checks.py, types.py |
-| pandera | >= 0.20 | ~3MB | Yes | checks.py (optional) |
-| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | metrics.py |
-| vectorbt | >= 0.26 | ~50MB+ | Yes | simulator.py (deferred) |
+| pandas-ta | >= 0.4.67b0 | ~2MB | No (existing) | Already integrated in signals.py |
+| pydantic | >= 2.0 | ~5MB | Promote from optional | Candidate for checks.py |
+| pandera | >= 0.20 | ~3MB | Yes | Optional — skip initially |
+| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | Candidate for metrics.py |
+| vectorbt | >= 0.26 | ~50MB+ | Yes | Deferred (simulator.py) |
