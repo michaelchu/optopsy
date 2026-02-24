@@ -1,0 +1,137 @@
+"""Global parquet cache for result DataFrames (strategies + simulations).
+
+Keys are SHA-256 content hashes of (name, params, dataset_fingerprint).
+A JSON index maps hashes to human-readable metadata (type, strategy, params,
+display_key, and for simulations: summary).
+
+Storage layout::
+
+    ~/.optopsy/results/
+      {hash}.parquet          # full result DataFrame
+      _index.json             # hash -> metadata mapping
+"""
+
+import hashlib
+import json
+import logging
+import os
+
+import pandas as pd
+
+_log = logging.getLogger(__name__)
+
+_RESULTS_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "results")
+
+
+class ResultStore:
+    """Global parquet cache for result DataFrames (strategies + simulations).
+
+    Keys are SHA-256 hashes of (name, params, dataset_fingerprint).
+    A JSON index maps hashes to human-readable metadata.
+    """
+
+    def __init__(self, results_dir: str | None = None):
+        self._dir = results_dir or _RESULTS_DIR
+
+    @staticmethod
+    def make_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
+        """Deterministic cache key for any result (strategy or simulation)."""
+        param_keys = sorted(k for k in arguments.keys() if k not in ("strategy_name",))
+        params_str = json.dumps(
+            {k: arguments[k] for k in param_keys}, sort_keys=True, default=str
+        )
+        raw = f"{name}:{params_str}:{dataset_fingerprint}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+    def _parquet_path(self, key: str) -> str:
+        return os.path.join(self._dir, f"{key}.parquet")
+
+    def _index_path(self) -> str:
+        return os.path.join(self._dir, "_index.json")
+
+    def _read_index(self) -> dict[str, dict]:
+        path = self._index_path()
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+    def _write_index(self, index: dict[str, dict]) -> None:
+        os.makedirs(self._dir, exist_ok=True)
+        with open(self._index_path(), "w") as f:
+            json.dump(index, f, indent=2, default=str)
+
+    def write(self, key: str, df: pd.DataFrame, metadata: dict) -> None:
+        """Persist a result DataFrame and its metadata."""
+        os.makedirs(self._dir, exist_ok=True)
+        df.to_parquet(self._parquet_path(key), index=False, engine="pyarrow")
+        index = self._read_index()
+        index[key] = metadata
+        self._write_index(index)
+        _log.debug("ResultStore: wrote %s (%d rows)", key, len(df))
+
+    def read(self, key: str) -> pd.DataFrame | None:
+        """Load a result DataFrame by key, or None if not found."""
+        path = self._parquet_path(key)
+        if not os.path.exists(path):
+            return None
+        try:
+            return pd.read_parquet(path)
+        except Exception as exc:
+            _log.warning("ResultStore: failed to read %s: %s", key, exc)
+            return None
+
+    def has(self, key: str) -> bool:
+        """Check if a result exists on disk."""
+        return os.path.exists(self._parquet_path(key))
+
+    def get_metadata(self, key: str) -> dict:
+        """Return metadata for a key, or empty dict if not found."""
+        return self._read_index().get(key, {})
+
+    def list_all(self) -> dict[str, dict]:
+        """Return the full index: {hash -> metadata}."""
+        return self._read_index()
+
+    def clear(self, key: str | None = None) -> int:
+        """Remove cached results. If key is given, remove just that entry.
+
+        Returns number of files deleted.
+        """
+        if not os.path.exists(self._dir):
+            return 0
+
+        if key:
+            count = 0
+            path = self._parquet_path(key)
+            if os.path.exists(path):
+                os.remove(path)
+                count = 1
+            index = self._read_index()
+            if key in index:
+                del index[key]
+                self._write_index(index)
+            return count
+
+        # Clear everything
+        count = 0
+        for fname in os.listdir(self._dir):
+            fpath = os.path.join(self._dir, fname)
+            if os.path.isfile(fpath):
+                os.remove(fpath)
+                count += 1
+        return count
+
+    def total_size_bytes(self) -> int:
+        """Return total size of all cached result files in bytes."""
+        if not os.path.exists(self._dir):
+            return 0
+        total = 0
+        for fname in os.listdir(self._dir):
+            fpath = os.path.join(self._dir, fname)
+            if os.path.isfile(fpath):
+                total += os.path.getsize(fpath)
+        return total

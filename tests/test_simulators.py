@@ -56,16 +56,17 @@ def test_simulate_zero_trades(mock_sim, mock_signals):
     mock_signals.return_value = ({}, None)
     mock_result = MagicMock()
     mock_result.summary = {"total_trades": 0}
+    mock_result.trade_log = pd.DataFrame()
     mock_sim.return_value = mock_result
     df = pd.DataFrame({"col": [1]})
     result = execute_tool("simulate", {"strategy_name": "long_calls"}, dataset=df)
     assert "no trades generated" in result.llm_summary
 
 
-@patch("optopsy.ui.tools._simulators.write_sim_trade_log")
+@patch("optopsy.ui.tools._simulators.ResultStore")
 @patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
 @patch("optopsy.simulator.simulate")
-def test_simulate_success(mock_sim, mock_signals, mock_write):
+def test_simulate_success(mock_sim, mock_signals, mock_store_cls):
     """Successful simulation should return stats and update results."""
     mock_signals.return_value = ({}, None)
     mock_result = MagicMock()
@@ -104,13 +105,17 @@ def test_simulate_success(mock_sim, mock_signals, mock_write):
     )
     mock_sim.return_value = mock_result
 
+    # Mock the store so it doesn't hit disk
+    mock_store = MagicMock()
+    mock_store.has.return_value = False
+    mock_store_cls.return_value = mock_store
+
     df = pd.DataFrame({"col": [1]})
     result = execute_tool("simulate", {"strategy_name": "long_calls"}, dataset=df)
 
     assert "10 trades" in result.llm_summary
     assert "win_rate=60.0%" in result.llm_summary
     assert result.results  # results dict should be updated
-    mock_write.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -139,12 +144,18 @@ def test_get_trades_invalid_key():
     assert "sim:long_calls" in result.llm_summary
 
 
-@patch("optopsy.ui.tools._simulators.read_sim_trade_log")
-def test_get_trades_no_trade_log(mock_read):
+@patch("optopsy.ui.tools._simulators.ResultStore")
+def test_get_trades_no_trade_log(mock_store_cls):
     """Simulation exists but trade log is missing/empty."""
-    mock_read.return_value = None
+    mock_store = MagicMock()
+    mock_store.read.return_value = None
+    mock_store_cls.return_value = mock_store
     results = {
-        "sim:long_calls": {"type": "simulation", "strategy": "long_calls"},
+        "sim:long_calls": {
+            "type": "simulation",
+            "strategy": "long_calls",
+            "_cache_key": "abc123",
+        },
     }
     result = execute_tool(
         "get_simulation_trades",
@@ -152,16 +163,22 @@ def test_get_trades_no_trade_log(mock_read):
         dataset=None,
         results=results,
     )
-    assert "no trades" in result.llm_summary
+    assert "no cached trade log" in result.llm_summary
 
 
-@patch("optopsy.ui.tools._simulators.read_sim_trade_log")
-def test_get_trades_with_key(mock_read):
+@patch("optopsy.ui.tools._simulators.ResultStore")
+def test_get_trades_with_key(mock_store_cls):
     """Retrieve trades for a specific simulation key."""
     trade_df = pd.DataFrame({"trade_id": [1, 2], "pnl": [100, -50]})
-    mock_read.return_value = trade_df
+    mock_store = MagicMock()
+    mock_store.read.return_value = trade_df
+    mock_store_cls.return_value = mock_store
     results = {
-        "sim:long_calls": {"type": "simulation", "strategy": "long_calls"},
+        "sim:long_calls": {
+            "type": "simulation",
+            "strategy": "long_calls",
+            "_cache_key": "abc123",
+        },
     }
     result = execute_tool(
         "get_simulation_trades",
@@ -173,14 +190,20 @@ def test_get_trades_with_key(mock_read):
     assert result.user_display is not None
 
 
-@patch("optopsy.ui.tools._simulators.read_sim_trade_log")
-def test_get_trades_no_key_fallback(mock_read):
+@patch("optopsy.ui.tools._simulators.ResultStore")
+def test_get_trades_no_key_fallback(mock_store_cls):
     """Without a key, should use the most recent simulation."""
     trade_df = pd.DataFrame({"trade_id": [1], "pnl": [100]})
-    mock_read.return_value = trade_df
+    mock_store = MagicMock()
+    mock_store.read.return_value = trade_df
+    mock_store_cls.return_value = mock_store
     results = {
         "run:long_calls": {"type": "strategy", "strategy": "long_calls"},
-        "sim:short_puts": {"type": "simulation", "strategy": "short_puts"},
+        "sim:short_puts": {
+            "type": "simulation",
+            "strategy": "short_puts",
+            "_cache_key": "def456",
+        },
     }
     result = execute_tool(
         "get_simulation_trades",
@@ -189,4 +212,4 @@ def test_get_trades_no_key_fallback(mock_read):
         results=results,
     )
     assert "1 trades" in result.llm_summary
-    mock_read.assert_called_once_with("sim:short_puts")
+    mock_store.read.assert_called_once_with("def456")

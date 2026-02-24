@@ -11,8 +11,7 @@ Provides:
 """
 
 import logging
-import os
-import re
+from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
 
@@ -24,6 +23,7 @@ from optopsy.metrics import win_rate as _win_rate
 from optopsy.signals import apply_signal
 
 from ..providers.cache import ParquetCache
+from ..providers.result_store import ResultStore
 from ._models import StrategyResultSummary
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
@@ -31,6 +31,7 @@ from ._schemas import (
     SIGNAL_NAMES,
     SIGNAL_REGISTRY,
     STRATEGIES,
+    STRATEGY_NAMES,
 )
 
 _log = logging.getLogger(__name__)
@@ -40,33 +41,6 @@ _log = logging.getLogger(__name__)
 _yf_cache = ParquetCache()
 _YF_CACHE_CATEGORY = "yf_stocks"
 _YF_DEDUP_COLS = ["date"]
-
-# Shared simulation cache instance and helpers.
-_sim_cache = ParquetCache(
-    cache_dir=os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
-)
-_SIM_CATEGORY = "simulations"
-
-
-def _sim_fs_key(sim_key: str) -> str:
-    """Sanitize a simulation key for filesystem safety."""
-    return re.sub(r"[^a-zA-Z0-9._-]", "_", sim_key)
-
-
-def write_sim_trade_log(sim_key: str, trade_log: pd.DataFrame) -> None:
-    """Persist a simulation trade log to the cache."""
-    _sim_cache.write(_SIM_CATEGORY, _sim_fs_key(sim_key), trade_log)
-
-
-def read_sim_trade_log(sim_key: str) -> pd.DataFrame | None:
-    """Read a simulation trade log from the cache.
-
-    Returns the DataFrame or None if not found / empty.
-    """
-    df = _sim_cache.read(_SIM_CATEGORY, _sim_fs_key(sim_key))
-    if df is None or df.empty:
-        return None
-    return df
 
 
 MAX_ROWS = 50
@@ -445,6 +419,111 @@ def _run_one_strategy(
         return func(dataset, **strat_kwargs), ""
     except Exception as e:
         return None, str(e)
+
+
+# ---------------------------------------------------------------------------
+# Result caching helpers (plan steps 2-6)
+# ---------------------------------------------------------------------------
+
+
+def _cached_run(
+    store: ResultStore,
+    name: str,
+    params: dict,
+    dataset_fingerprint: str | None,
+    execute_fn: Callable[[], tuple[pd.DataFrame | None, str]],
+    metadata: dict,
+) -> tuple[pd.DataFrame | None, str | None, str]:
+    """Check ResultStore cache, execute on miss, write on miss.
+
+    Returns ``(result_df, cache_key, error_str)``.
+    """
+    cache_key = (
+        store.make_key(name, params, dataset_fingerprint)
+        if dataset_fingerprint
+        else None
+    )
+
+    if cache_key and store.has(cache_key):
+        return store.read(cache_key), cache_key, ""
+
+    df, err = execute_fn()
+    if err:
+        return None, cache_key, err
+
+    if cache_key and df is not None and not df.empty:
+        try:
+            store.write(cache_key, df, metadata)
+        except OSError:
+            pass  # Non-fatal — result is still returned, just not cached
+
+    return df, cache_key, ""
+
+
+def _validate_strategy_and_dataset(
+    arguments: dict,
+    dataset: pd.DataFrame | None,
+    datasets: dict,
+    _result: Callable,
+) -> tuple[str, Callable | None, pd.DataFrame | None, "ToolResult | None"]:
+    """Validate strategy name and require active dataset.
+
+    Returns ``(strategy_name, strategy_func, active_dataset, error_or_None)``.
+    """
+    from ._executor import _require_dataset
+
+    strategy_name = arguments.get("strategy_name")
+    if not strategy_name or strategy_name not in STRATEGIES:
+        return (
+            "",
+            None,
+            None,
+            _result(
+                f"Unknown strategy '{strategy_name}'. "
+                f"Available: {', '.join(STRATEGY_NAMES)}",
+            ),
+        )
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return "", None, None, err
+    func, _, _ = STRATEGIES[strategy_name]
+    return strategy_name, func, active_ds, None
+
+
+def _build_strat_kwargs(
+    arguments: dict,
+    strategy_name: str,
+    extra_exclude: frozenset[str] = frozenset(),
+) -> dict:
+    """Build clean strategy kwargs, stripping non-strategy keys."""
+    from ._schemas import CALENDAR_EXTRA_PARAMS, CALENDAR_STRATEGIES
+
+    exclude = (
+        _SIGNAL_PARAM_KEYS | extra_exclude | {"dataset_name", "_dataset_fingerprint"}
+    )
+    return {
+        k: v
+        for k, v in arguments.items()
+        if k not in exclude
+        and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
+    }
+
+
+def _pop_internal_keys(arguments: dict) -> str | None:
+    """Pop and return ``_dataset_fingerprint`` from arguments dict."""
+    return arguments.pop("_dataset_fingerprint", None)
+
+
+def _with_cache_key(summary: dict, cache_key: str | None) -> dict:
+    """Add ``_cache_key`` to a result summary for later ResultStore lookups.
+
+    Must be called before inserting the summary into ``agent.results`` so that
+    ``query_results`` and ``get_simulation_trades`` can recover the parquet
+    file via ``results[key]["_cache_key"]``.
+    """
+    if cache_key:
+        summary["_cache_key"] = cache_key
+    return summary
 
 
 def _select_results(

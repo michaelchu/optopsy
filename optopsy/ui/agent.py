@@ -53,6 +53,11 @@ data into memory, filtered by date range, option type, and expiration type.
 it is automatically loaded and set as the active dataset — no tool call needed.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
+- Use `query_results` to examine, sort, filter, or slice results from previous strategy \
+runs or simulations without re-running them. This is the preferred way to answer follow-up \
+questions about results.
+- Strategy and simulation results are cached globally — if the same run with identical \
+parameters has been done before on the same data, the cached result is returned instantly.
 - Only tools that appear in your tool list are available. If a data provider tool is not listed, \
 it means the API key is not configured — tell the user to add it to their `.env` file.
 
@@ -431,6 +436,9 @@ class OptopsyAgent:
         # Session-scoped strategy run registry — keyed by result key string,
         # values are lightweight scalar summaries (no DataFrames).
         self.results: dict[str, dict] = {}
+        # Content hash of the active dataset — computed once per dataset load
+        # and passed to execute_tool so handlers can build cache keys.
+        self._dataset_fingerprint: str | None = None
 
     async def chat(
         self,
@@ -475,39 +483,13 @@ class OptopsyAgent:
                     "cache_control": {"type": "ephemeral"},
                 }
             ]
-            # Append a compact memo of session results so the LLM can compare
-            # strategies without calling list_results again.  Not cached —
-            # it changes after each run — but it's tiny (~50-200 chars).
+            # Append a stable memo of session results count.  The LLM can
+            # use query_results to access full data.  This avoids cache
+            # invalidation — only the count changes, not full result details.
             if self.results:
-                top = sorted(
-                    self.results.values(),
-                    key=lambda r: r.get("mean_return") or float("-inf"),
-                    reverse=True,
-                )[:5]
-                lines = []
-                for r in top:
-                    parts = [str(r.get("strategy", "?"))]
-                    if "max_entry_dte" in r:
-                        parts.append(f"dte={r['max_entry_dte']}")
-                    if "exit_dte" in r:
-                        parts.append(f"exit={r['exit_dte']}")
-                    if "max_otm_pct" in r:
-                        parts.append(f"otm={r['max_otm_pct']:.2f}")
-                    if r.get("mean_return") is not None:
-                        parts.append(f"mean={r['mean_return']:.4f}")
-                    if r.get("win_rate") is not None:
-                        parts.append(f"wr={r['win_rate']:.2%}")
-                    lines.append(" | ".join(parts))
-                n_total = len(self.results)
-                n_shown = len(top)
-                more = (
-                    f" ({n_total - n_shown} more not shown)"
-                    if n_total > n_shown
-                    else ""
-                )
                 memo = (
-                    f"Session results so far ({n_total} run(s), top {n_shown} by mean_return{more}):\n"
-                    + "\n".join(lines)
+                    f"Session has {len(self.results)} strategy/simulation result(s). "
+                    "Use query_results to access full data."
                 )
                 system_content.append({"type": "text", "text": memo})
             system_msg = {"role": "system", "content": system_content}
@@ -658,9 +640,20 @@ class OptopsyAgent:
                         self.signals,
                         self.datasets,
                         self.results,
+                        dataset_fingerprint=self._dataset_fingerprint,
                     ),
                 )
-                self.dataset = result.dataset
+                # Update dataset and recompute fingerprint if it changed
+                if result.dataset is not self.dataset:
+                    self.dataset = result.dataset
+                    if self.dataset is not None:
+                        self._dataset_fingerprint = str(
+                            pd.util.hash_pandas_object(self.dataset, index=False).sum()
+                        )
+                    else:
+                        self._dataset_fingerprint = None
+                else:
+                    self.dataset = result.dataset
                 if result.signals is not None:
                     self.signals = result.signals
                 if result.datasets is not None:

@@ -339,6 +339,7 @@ class TestSchemaGeneration:
             "check_data_quality",
             "plot_vol_surface",
             "iv_term_structure",
+            "query_results",
         }
         assert set(TOOL_ARG_MODELS.keys()) == expected
 

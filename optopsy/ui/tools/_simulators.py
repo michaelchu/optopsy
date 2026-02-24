@@ -1,19 +1,15 @@
 """Simulation tool handlers: simulate, get_simulation_trades."""
 
-from ._executor import _fmt_pf, _register, _require_dataset
+from ..providers.result_store import ResultStore
+from ._executor import _fmt_pf, _register
 from ._helpers import (
-    _SIGNAL_PARAM_KEYS,
     _SIM_PARAM_KEYS,
+    _build_strat_kwargs,
     _df_to_markdown,
+    _pop_internal_keys,
     _resolve_signals_for_strategy,
-    read_sim_trade_log,
-    write_sim_trade_log,
-)
-from ._schemas import (
-    CALENDAR_EXTRA_PARAMS,
-    CALENDAR_STRATEGIES,
-    STRATEGIES,
-    STRATEGY_NAMES,
+    _validate_strategy_and_dataset,
+    _with_cache_key,
 )
 
 
@@ -21,19 +17,14 @@ from ._schemas import (
 def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     from optopsy.simulator import simulate as _simulate
 
-    strategy_name = arguments.get("strategy_name")
-    if not strategy_name or strategy_name not in STRATEGIES:
-        return _result(
-            f"Unknown strategy '{strategy_name}'. "
-            f"Available: {', '.join(STRATEGY_NAMES)}",
-        )
-
-    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    strategy_name, func, active_ds, err = _validate_strategy_and_dataset(
+        arguments, dataset, datasets, _result
+    )
     if err:
         return err
     assert active_ds is not None
 
-    func, _, _ = STRATEGIES[strategy_name]
+    ds_fp = _pop_internal_keys(arguments)
 
     # Extract simulation-specific params
     sim_params: dict = {}
@@ -42,13 +33,9 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
             sim_params[key] = arguments[key]
 
     # Build strategy kwargs — strip sim-specific and signal keys
-    _non_strat_keys = _SIGNAL_PARAM_KEYS | _SIM_PARAM_KEYS | {"dataset_name"}
-    strat_kwargs = {
-        k: v
-        for k, v in arguments.items()
-        if k not in _non_strat_keys
-        and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
-    }
+    strat_kwargs = _build_strat_kwargs(
+        arguments, strategy_name, extra_exclude=_SIM_PARAM_KEYS
+    )
 
     # Resolve entry/exit signals (slots and inline) via shared helper
     sig_update, sig_err = _resolve_signals_for_strategy(arguments, signals, active_ds)
@@ -56,32 +43,68 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         return _result(sig_err)
     strat_kwargs.update(sig_update)
 
-    try:
-        result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
-    except Exception as e:
-        return _result(f"Error running simulation: {e}")
+    store = ResultStore()
+    all_params = {**sim_params, **strat_kwargs}
 
-    s = result.summary
-    if s["total_trades"] == 0:
+    # For cache: we need to handle the simulation differently because
+    # on cache hit we need the summary from metadata, not re-derived.
+    cache_key = (
+        store.make_key(f"sim:{strategy_name}", all_params, ds_fp) if ds_fp else None
+    )
+
+    trade_log = None
+    s = None
+
+    if cache_key and store.has(cache_key):
+        trade_log = store.read(cache_key)
+        s = store.get_metadata(cache_key).get("summary", {})
+    else:
+        try:
+            result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
+        except Exception as e:
+            return _result(f"Error running simulation: {e}")
+
+        trade_log = result.trade_log
+        s = result.summary
+
+        if cache_key and not trade_log.empty:
+            try:
+                store.write(
+                    cache_key,
+                    trade_log,
+                    {
+                        "type": "simulation",
+                        "strategy": strategy_name,
+                        "display_key": f"sim:{strategy_name}",
+                        "params": {
+                            k: v
+                            for k, v in all_params.items()
+                            if not hasattr(v, "__len__") or isinstance(v, str)
+                        },
+                        "summary": s,
+                    },
+                )
+            except OSError:
+                pass
+
+    if trade_log is None or trade_log.empty or not s or s.get("total_trades", 0) == 0:
         return _result(f"simulate({strategy_name}): no trades generated.")
 
     # Build result key — include all params that affect output
     key_parts = [f"sim:{strategy_name}"]
     for k in sorted(arguments.keys()):
-        if k not in ("strategy_name", "dataset_name"):
+        if k not in ("strategy_name", "dataset_name", "_dataset_fingerprint"):
             key_parts.append(f"{k}={arguments[k]}")
     sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
-
-    # Persist trade log to disk; keep only summary stats in session memory
-    write_sim_trade_log(sim_key, result.trade_log)
 
     from ._models import SimulationResultEntry
 
     updated_results = dict(results)
-    updated_results[sim_key] = SimulationResultEntry(
+    entry = SimulationResultEntry(
         strategy=strategy_name,
         summary=s,
     ).model_dump()
+    updated_results[sim_key] = _with_cache_key(entry, cache_key)
 
     # Format output
     pf_str = _fmt_pf(s["profit_factor"])
@@ -131,14 +154,14 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
         "realized_pnl",
         "equity",
     ]
-    available_cols = [c for c in preview_cols if c in result.trade_log.columns]
-    preview = result.trade_log[available_cols].head(20)
+    available_cols = [c for c in preview_cols if c in trade_log.columns]
+    preview = trade_log[available_cols].head(20)
 
     user_display = (
         f"### Simulation: {strategy_name}\n\n"
         f"{stats_table}\n\n"
-        f"**Trade Log** (first {min(20, len(result.trade_log))} of "
-        f"{len(result.trade_log)} trades)\n\n"
+        f"**Trade Log** (first {min(20, len(trade_log))} of "
+        f"{len(trade_log)} trades)\n\n"
         f"{_df_to_markdown(preview)}"
     )
 
@@ -169,9 +192,13 @@ def _handle_get_simulation_trades(
             return _result("No simulations run yet. Use simulate first.")
         sim_key, entry = sim_entries[-1]
 
-    trade_log = read_sim_trade_log(sim_key)
+    # Read trade log from ResultStore via _cache_key
+    cache_key = entry.get("_cache_key")
+    store = ResultStore()
+    trade_log = store.read(cache_key) if cache_key else None
+
     if trade_log is None:
-        return _result(f"Simulation '{sim_key}' has no trades.")
+        return _result(f"Simulation '{sim_key}' has no cached trade log.")
 
     llm_summary = f"get_simulation_trades({sim_key}): {len(trade_log)} trades"
     user_display = f"### Trade Log: {sim_key}\n\n{_df_to_markdown(trade_log)}"

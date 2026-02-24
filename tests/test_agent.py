@@ -633,8 +633,8 @@ class TestAgentChat:
             # Should have 2 content blocks: prompt + results memo
             assert len(system_msg["content"]) == 2
             memo_text = system_msg["content"][1]["text"]
-            assert "long_calls" in memo_text
-            assert "mean=" in memo_text
+            assert "1 strategy/simulation result(s)" in memo_text
+            assert "query_results" in memo_text
 
         asyncio.run(_run())
 
@@ -739,8 +739,8 @@ class TestAgentChat:
         for tool in agent.tools:
             assert "cache_control" not in tool
 
-    def test_results_memo_truncates_to_top_5(self):
-        """Results memo shows only top 5 results by mean_return."""
+    def test_results_memo_shows_count(self):
+        """Results memo shows count and query_results hint."""
 
         async def _run():
             agent = OptopsyAgent(model="anthropic/claude-test")
@@ -764,14 +764,9 @@ class TestAgentChat:
             call_kwargs = mock_llm.call_args[1]
             system_msg = call_kwargs["messages"][0]
             memo_text = system_msg["content"][1]["text"]
-            # Should mention 7 total runs
-            assert "7 run(s)" in memo_text
-            # Should mention 2 more not shown (7 - 5 = 2)
-            assert "2 more not shown" in memo_text
-            # Top strategy (strategy_6, mean=0.06) should be present
-            assert "strategy_6" in memo_text
-            # Bottom strategy (strategy_0, mean=0.0) should NOT be present
-            assert "strategy_0" not in memo_text
+            # Should mention 7 results and query_results tool
+            assert "7 strategy/simulation result(s)" in memo_text
+            assert "query_results" in memo_text
 
         asyncio.run(_run())
 

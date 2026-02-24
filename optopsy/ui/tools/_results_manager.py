@@ -1,8 +1,9 @@
-"""Result management tool handlers: compare_results, list_results, inspect_cache, clear_cache."""
+"""Result management tool handlers: compare_results, list_results, inspect_cache, clear_cache, query_results."""
 
 import pandas as pd
 
 from ..providers.cache import ParquetCache
+from ..providers.result_store import ResultStore
 from ._executor import _register
 from ._helpers import _df_to_markdown, _select_results
 
@@ -393,4 +394,138 @@ def _handle_list_results(arguments, dataset, signals, datasets, results, _result
         "Sorted by mean_return descending.*\n\n"
         f"{_df_to_markdown(df)}"
     )
+    return _result(llm_summary, user_display=user_display)
+
+
+@_register("query_results")
+def _handle_query_results(arguments, dataset, signals, datasets, results, _result):
+    result_key = arguments.get("result_key")
+    store = ResultStore()
+
+    # List mode — no result_key specified
+    if not result_key:
+        if not results:
+            # Fall back to global store
+            all_entries = store.list_all()
+            if not all_entries:
+                return _result(
+                    "No results available. Run a strategy or simulation first."
+                )
+            lines = ["Available cached results (global store):"]
+            for key, meta in all_entries.items():
+                display = meta.get("display_key", key[:12])
+                rtype = meta.get("type", "?")
+                lines.append(f"  {display} ({rtype})")
+            return _result("\n".join(lines))
+
+        lines = [f"Session has {len(results)} result(s):"]
+        for key, entry in results.items():
+            rtype = entry.get("type", "strategy")
+            parts = [f"  {key} ({rtype})"]
+            if rtype == "simulation":
+                s = entry.get("summary", {})
+                if s:
+                    parts.append(
+                        f"  trades={s.get('total_trades', '?')}, "
+                        f"return={s.get('total_return', '?')}"
+                    )
+            else:
+                mr = entry.get("mean_return")
+                wr = entry.get("win_rate")
+                if mr is not None:
+                    parts.append(f"mean={mr:.4f}")
+                if wr is not None:
+                    parts.append(f"wr={wr:.2%}")
+            lines.append(" | ".join(parts))
+        return _result("\n".join(lines))
+
+    # Query mode — result_key specified
+    # Look up _cache_key from session results
+    entry = results.get(result_key)
+    cache_key = entry.get("_cache_key") if entry else None
+
+    if not cache_key:
+        # Try to find by display_key in global store
+        for k, meta in store.list_all().items():
+            if meta.get("display_key") == result_key:
+                cache_key = k
+                break
+
+    if not cache_key:
+        available = list(results.keys()) if results else []
+        return _result(
+            f"Result key '{result_key}' not found. "
+            f"Available: {available or 'none — run a strategy first'}"
+        )
+
+    df = store.read(cache_key)
+    if df is None or df.empty:
+        return _result(f"No data found for '{result_key}' (cache key: {cache_key}).")
+
+    # Apply column selection
+    columns = arguments.get("columns")
+    if columns:
+        valid_cols = [c for c in columns if c in df.columns]
+        if not valid_cols:
+            return _result(
+                f"None of the requested columns {columns} exist. "
+                f"Available: {list(df.columns)}"
+            )
+        df = df[valid_cols]
+
+    # Apply filter
+    filter_col = arguments.get("filter_column")
+    filter_op = arguments.get("filter_op")
+    filter_val = arguments.get("filter_value")
+    if filter_col and filter_op and filter_val is not None:
+        if filter_col not in df.columns:
+            return _result(
+                f"Filter column '{filter_col}' not found. Available: {list(df.columns)}"
+            )
+        col = df[filter_col]
+        try:
+            if filter_op == "contains":
+                mask = col.astype(str).str.contains(filter_val, case=False, na=False)
+            else:
+                # Cast filter_value to column dtype for numeric comparisons
+                try:
+                    val = col.dtype.type(filter_val)
+                except (ValueError, TypeError):
+                    val = float(filter_val)
+                ops = {
+                    "gt": col > val,
+                    "lt": col < val,
+                    "eq": col == val,
+                    "gte": col >= val,
+                    "lte": col <= val,
+                }
+                mask = ops.get(filter_op)
+                if mask is None:
+                    return _result(f"Unknown filter_op '{filter_op}'.")
+            df = df[mask]
+        except Exception as e:
+            return _result(f"Filter error: {e}")
+
+    # Apply sort
+    sort_by = arguments.get("sort_by")
+    ascending = arguments.get("ascending", False)
+    if sort_by:
+        if sort_by in df.columns:
+            df = df.sort_values(sort_by, ascending=ascending, na_position="last")
+        else:
+            return _result(
+                f"Sort column '{sort_by}' not found. Available: {list(df.columns)}"
+            )
+
+    # Apply head
+    head = arguments.get("head")
+    if head:
+        df = df.head(head)
+
+    df = df.reset_index(drop=True)
+    table = _df_to_markdown(df)
+    llm_summary = (
+        f"query_results({result_key}): {len(df)} rows, columns={list(df.columns)}"
+    )
+    user_display = f"### Query: {result_key}\n\n{table}"
     return _result(llm_summary, user_display=user_display)
