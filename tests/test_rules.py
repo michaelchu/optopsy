@@ -23,7 +23,7 @@ class TestRuleNonOverlappingStrike:
         assert len(result) == 4
         assert "call" in list(result["option_type"].values)
 
-    def test_two_legs_filters_overlapping(self):
+    def test_spread_filters_overlapping(self):
         """Two-leg data should only keep rows where leg1 strike < leg2 strike."""
         df = pd.DataFrame(
             {
