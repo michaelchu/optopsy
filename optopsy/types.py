@@ -48,6 +48,9 @@ class StrategyParamsDict(TypedDict, total=False):
     fill_ratio: float
     reference_volume: int
 
+    # Side
+    side: Literal["long", "short"]
+
     # Output control
     raw: bool
     drop_nan: bool
