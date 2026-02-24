@@ -417,23 +417,6 @@ def _strategy_llm_summary(df: pd.DataFrame, strategy_name: str, mode: str) -> st
         )
     if mode == "aggregated stats" and "count" in df.columns:
         lines.append(f"Buckets with positive mean: {(df['mean'] > 0).sum()}/{len(df)}")
-        # Include per-bucket data so the LLM can answer sorting/filtering questions.
-        sorted_df = df.sort_values("mean", ascending=False)
-        lines.append("Buckets (sorted by mean return desc):")
-        for _, row in sorted_df.iterrows():
-            parts = []
-            for col in ("dte_range", "otm_pct_range"):
-                if col in row.index:
-                    parts.append(f"{col}={row[col]}")
-            # Also check multi-leg otm columns
-            for col in sorted_df.columns:
-                if col.startswith("otm_pct_range_leg") and col in row.index:
-                    parts.append(f"{col}={row[col]}")
-            parts.append(f"count={row['count']}")
-            parts.append(f"mean={row['mean']:.4f}")
-            if "std" in row.index and pd.notna(row.get("std")):
-                parts.append(f"std={row['std']:.4f}")
-            lines.append("  " + ", ".join(parts))
 
     lines.append(
         "STOP — results are ready. DO NOT call run_strategy again. "
