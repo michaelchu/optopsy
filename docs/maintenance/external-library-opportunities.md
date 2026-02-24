@@ -10,44 +10,14 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 | Module | Lines | Library Replacement | Priority | Impact |
 |---|---|---|---|---|
-| `signals.py` | 943 | pandas-ta (already a dep) | **Done** | Already fully integrated — all 6 indicators delegate to pandas-ta |
-| `rules.py` | 134 | Boolean indexing | **Done** | IDE support, type checking, no string interpolation |
+| `rules.py` | 147 | Boolean indexing | **Done** | IDE support, type checking, no string interpolation |
 | `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
 | `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math (adds dependency) |
 | `evaluation.py` | 188 | `pd.merge_asof()` | **Low** | Cleaner exit matching, built into pandas (behavior risk) |
-| `simulator.py` | 704 | vectorbt | **Deferred** | Biggest win but biggest migration |
 
 ---
 
-## 1. `signals.py` — Technical Indicators (Already Done)
-
-### Current State
-
-~943 lines total. **All 6 technical indicators already delegate to pandas-ta**:
-
-| Signal | Implementation | pandas-ta Call |
-|---|---|---|
-| RSI | `ta.rsi(prices, length=period)` | Fully outsourced |
-| SMA | `ta.sma(prices, length=period)` | Fully outsourced |
-| EMA | `ta.ema(prices, length=fast/slow)` | Fully outsourced |
-| MACD | `ta.macd(prices, fast, slow, signal)` | Fully outsourced |
-| Bollinger Bands | `ta.bbands(prices, length, std)` | Fully outsourced |
-| ATR | `ta.atr(high, low, close, length)` | Fully outsourced |
-
-The remaining ~600 lines are custom logic that **should stay**:
-- Signal composition framework (`Signal` class, `and_signals`, `or_signals`, `sustained`)
-- Calendar signals (`day_of_week`)
-- IV Rank signals (`_compute_atm_iv`, `_compute_iv_rank_series`) — options-domain-specific, no library equivalent
-- Per-symbol isolation (`_per_symbol_signal`) and crossover detection (`_crossover_signal`)
-- NaN handling and signal application (`apply_signal`)
-
-### Action Required
-
-None — pandas-ta integration is already complete. No further code reduction is possible here.
-
----
-
-## 2. `checks.py` — Parameter & DataFrame Validation (High Priority)
+## 1. `checks.py` — Parameter & DataFrame Validation (High Priority)
 
 ### Current State
 
@@ -108,7 +78,7 @@ schema.validate(df)
 
 ---
 
-## 3. `metrics.py` — Risk-Adjusted Performance Metrics (Medium Priority)
+## 2. `metrics.py` — Risk-Adjusted Performance Metrics (Medium Priority)
 
 ### Current State
 
@@ -142,7 +112,7 @@ schema.validate(df)
 
 ---
 
-## 4. `evaluation.py` — Entry/Exit Matching (Medium Priority)
+## 3. `evaluation.py` — Entry/Exit Matching (Medium Priority)
 
 ### Current State
 
@@ -186,51 +156,9 @@ None — `pd.merge_asof()` is built into pandas.
 
 ---
 
-## 5. `simulator.py` — Position-Level Backtesting (Low Priority)
+## 4. `rules.py` — Strike Validation (Done)
 
-### Current State
-
-~704 lines of iterative simulation with manual position state tracking. Iterates row-by-row through strategy results, maintaining a list of active positions, checking exit conditions (profit target, stop loss, trailing stop, time exit), and accumulating an equity curve.
-
-### What To Replace
-
-**vectorbt** provides vectorized portfolio simulation:
-
-```python
-import vectorbt as vbt
-
-pf = vbt.Portfolio.from_signals(
-    close=prices,
-    entries=entry_signals,
-    exits=exit_signals,
-    sl_stop=stop_loss,
-    tp_stop=take_profit,
-    size=position_size,
-)
-equity = pf.value()
-trades = pf.trades.records_readable
-```
-
-### Expected Reduction
-
-~500 lines removed. vectorbt handles position sizing, concurrent position limits, stop-loss/take-profit, equity tracking, and trade logging.
-
-### New Dependencies
-
-- `vectorbt` — heavy dependency (pulls in numba, plotly, scipy). Consider `vectorbt-pro` for lighter install.
-
-### Risks
-
-- **Largest migration effort** — the current simulator has options-specific logic (multi-leg P&L, expiration-based exits) that vectorbt doesn't natively support.
-- vectorbt is designed for single-instrument equity/futures; adapting it to multi-leg options positions may require significant wrapper code, potentially negating the benefit.
-- Heavy dependency footprint may not be acceptable for a lightweight library.
-- **Recommendation**: Defer this unless the simulator becomes a maintenance burden. The current implementation is self-contained and well-tested.
-
----
-
-## 6. `rules.py` — Strike Validation (Done)
-
-Replaced `.query()` string-based filters with direct boolean indexing.
+~147 lines. Replaced `.query()` string-based filters with direct boolean indexing.
 
 **Benefits gained:**
 - IDE autocomplete and type checking for column names
@@ -245,12 +173,10 @@ No line reduction — this was a quality-of-life improvement, not a code reducti
 
 Status and recommended sequencing:
 
-1. ~~**`signals.py`**~~ — **Done.** Already fully integrated with pandas-ta.
-2. ~~**`rules.py`**~~ — **Done.** Replaced `.query()` strings with boolean indexing.
-3. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-4. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
-5. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency.
-6. **`simulator.py`** — Defer unless simulator maintenance becomes painful.
+1. ~~**`rules.py`**~~ — **Done.** Replaced `.query()` strings with boolean indexing.
+2. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
+3. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
+4. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency.
 
 ---
 
@@ -258,8 +184,6 @@ Status and recommended sequencing:
 
 | Library | Version | Size | New? | Status |
 |---|---|---|---|---|
-| pandas-ta | >= 0.4.67b0 | ~2MB | No (existing) | Already integrated in signals.py |
 | pydantic | >= 2.0 | ~5MB | Promote from optional | Candidate for checks.py |
 | pandera | >= 0.20 | ~3MB | Yes | Optional — skip initially |
 | empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | Candidate for metrics.py |
-| vectorbt | >= 0.26 | ~50MB+ | Yes | Deferred (simulator.py) |
