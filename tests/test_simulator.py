@@ -443,6 +443,8 @@ class TestSimulateSmoke:
             "var_95",
             "cvar_95",
             "calmar_ratio",
+            "omega_ratio",
+            "tail_ratio",
         }
         assert expected_keys == set(result.summary.keys())
 

@@ -27,9 +27,11 @@ from .metrics import (
     conditional_value_at_risk,
     max_drawdown,
     max_drawdown_from_returns,
+    omega_ratio,
     profit_factor,
     sharpe_ratio,
     sortino_ratio,
+    tail_ratio,
     value_at_risk,
     win_rate,
 )
@@ -174,6 +176,8 @@ __all__ = [
     "win_rate",
     "profit_factor",
     "calmar_ratio",
+    "omega_ratio",
+    "tail_ratio",
     # Timestamp utilities
     "normalize_dates",
 ]
