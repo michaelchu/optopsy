@@ -15,6 +15,7 @@ from optopsy.signals import (
     atr_below,
     bb_above_upper,
     bb_below_lower,
+    custom_signal,
     day_of_week,
     ema_cross_above,
     ema_cross_below,
@@ -1900,3 +1901,184 @@ class TestIVRankEdgeCases:
         sig = iv_rank_above(threshold=0.5)
         result = sig(data)
         assert not result.any()
+
+
+# ============================================================================
+# TestCustomSignal — custom_signal() function
+# ============================================================================
+
+
+class TestCustomSignal:
+    """Tests for custom_signal() — create SignalFunc from a pre-flagged DataFrame."""
+
+    @pytest.fixture
+    def flagged_df(self):
+        """DataFrame with underlying_symbol, quote_date, and a boolean flag."""
+        return pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "SPY", "SPY"],
+                "quote_date": pd.to_datetime(
+                    ["2018-01-02", "2018-01-03", "2018-01-04", "2018-01-05"]
+                ),
+                "signal": [True, False, True, False],
+            }
+        )
+
+    def test_returns_callable(self, flagged_df):
+        """custom_signal() should return a callable (SignalFunc)."""
+        sig = custom_signal(flagged_df)
+        assert callable(sig)
+
+    def test_true_dates_are_selected(self, flagged_df):
+        """Rows where flag is True should produce True in the signal output."""
+        sig = custom_signal(flagged_df)
+        result = sig(flagged_df)
+        assert result.tolist() == [True, False, True, False]
+
+    def test_custom_flag_col(self, flagged_df):
+        """flag_col parameter should accept any boolean column name."""
+        df = flagged_df.rename(columns={"signal": "buy"})
+        sig = custom_signal(df, flag_col="buy")
+        result = sig(df)
+        assert result.tolist() == [True, False, True, False]
+
+    def test_integer_flag_col(self, flagged_df):
+        """Integer 0/1 flag columns should be treated as False/True."""
+        df = flagged_df.copy()
+        df["signal"] = df["signal"].astype(int)
+        sig = custom_signal(df)
+        result = sig(df)
+        assert result.tolist() == [True, False, True, False]
+
+    def test_apply_signal_integration(self, flagged_df):
+        """custom_signal() returned SignalFunc should work with apply_signal()."""
+        sig = custom_signal(flagged_df)
+        result = apply_signal(flagged_df, sig)
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["underlying_symbol", "quote_date"]
+        assert len(result) == 2  # only dates where flag is True
+        assert set(result["quote_date"].dt.date) == {
+            pd.Timestamp("2018-01-02").date(),
+            pd.Timestamp("2018-01-04").date(),
+        }
+
+    def test_all_false_returns_empty(self):
+        """All-False flag column should produce an empty result from apply_signal."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY"],
+                "quote_date": pd.to_datetime(["2018-01-02", "2018-01-03"]),
+                "signal": [False, False],
+            }
+        )
+        sig = custom_signal(df)
+        result = apply_signal(df, sig)
+        assert result.empty
+
+    def test_all_true_returns_all_dates(self, flagged_df):
+        """All-True flag column should return all dates."""
+        df = flagged_df.copy()
+        df["signal"] = True
+        sig = custom_signal(df)
+        result = apply_signal(df, sig)
+        assert len(result) == len(df)
+
+    def test_composable_with_and_signals(self, flagged_df):
+        """custom_signal() result should compose with and_signals()."""
+        # All Tuesdays (day_of_week(1)) AND custom signal True
+        # 2018-01-02 is Tuesday, flagged True → should be in result
+        # 2018-01-03 is Wednesday, flagged False → not in result
+        # 2018-01-04 is Thursday, flagged True → not in result (not Tuesday)
+        sig = and_signals(custom_signal(flagged_df), day_of_week(1))
+        result = apply_signal(flagged_df, sig)
+        assert len(result) == 1
+        assert result.iloc[0]["quote_date"] == pd.Timestamp("2018-01-02")
+
+    def test_composable_with_signal_class(self, flagged_df):
+        """custom_signal() result should compose with the Signal fluent API."""
+        sig = signal(custom_signal(flagged_df)) & signal(day_of_week(1))
+        result = apply_signal(flagged_df, sig)
+        assert len(result) == 1
+        assert result.iloc[0]["quote_date"] == pd.Timestamp("2018-01-02")
+
+    def test_date_normalization(self):
+        """Dates with time components should match date-only option chain dates."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "quote_date": [pd.Timestamp("2018-01-02 09:30:00")],
+                "signal": [True],
+            }
+        )
+        sig = custom_signal(df)
+        # Query with date-only
+        query_df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "quote_date": [pd.Timestamp("2018-01-02")],
+            }
+        )
+        result = sig(query_df)
+        assert result.iloc[0]
+
+    def test_multi_symbol(self):
+        """custom_signal() should correctly scope flags per symbol."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "QQQ", "QQQ"],
+                "quote_date": pd.to_datetime(
+                    ["2018-01-02", "2018-01-03", "2018-01-02", "2018-01-03"]
+                ),
+                "signal": [True, False, False, True],
+            }
+        )
+        sig = custom_signal(df)
+        result = sig(df)
+        # SPY 2018-01-02 → True, SPY 2018-01-03 → False
+        # QQQ 2018-01-02 → False, QQQ 2018-01-03 → True
+        assert result.tolist() == [True, False, False, True]
+
+    def test_nan_in_flag_col_treated_as_false(self):
+        """NaN values in flag column should be treated as False, not True."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "SPY"],
+                "quote_date": pd.to_datetime(
+                    ["2018-01-02", "2018-01-03", "2018-01-04"]
+                ),
+                "signal": [True, None, False],
+            }
+        )
+        sig = custom_signal(df)
+        result = sig(df)
+        assert result.tolist() == [True, False, False]
+
+    def test_missing_flag_col_raises(self):
+        """Missing flag column should raise ValueError with clear message."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "quote_date": pd.to_datetime(["2018-01-02"]),
+            }
+        )
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df)
+
+    def test_missing_required_columns_raises(self):
+        """Missing underlying_symbol or quote_date should raise ValueError."""
+        df = pd.DataFrame(
+            {"signal": [True], "quote_date": pd.to_datetime(["2018-01-02"])}
+        )
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df)
+
+        df2 = pd.DataFrame({"signal": [True], "underlying_symbol": ["SPY"]})
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df2)
+
+    def test_exported_from_top_level(self):
+        """custom_signal should be importable from the top-level optopsy package."""
+        import optopsy as op
+
+        assert hasattr(op, "custom_signal")
+        assert callable(op.custom_signal)

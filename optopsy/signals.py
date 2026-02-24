@@ -800,6 +800,77 @@ def sustained(signal_func: SignalFunc, days: int = 5) -> SignalFunc:
 
 
 # ---------------------------------------------------------------------------
+# Custom signal from pre-flagged DataFrame
+# ---------------------------------------------------------------------------
+
+
+def custom_signal(df: pd.DataFrame, flag_col: str = "signal") -> SignalFunc:
+    """
+    Create a signal function from a DataFrame with a boolean flag column.
+
+    This lets you define arbitrary entry/exit conditions using any external
+    data source, model output, or manual annotation, and use the result with
+    the standard signal API (``apply_signal``, ``and_signals``, ``or_signals``,
+    ``Signal`` composition).
+
+    The ``flag_col`` column is cast to ``bool``, so integer (0/1) columns and
+    nullable boolean columns are supported.  Dates are normalised to date-only
+    so they reliably match option-chain quote dates regardless of time-of-day
+    or timezone differences.
+
+    Args:
+        df: DataFrame with at least ``underlying_symbol``, ``quote_date``, and
+            the boolean flag column.
+        flag_col: Name of the column whose truthy values mark valid signal dates.
+                  Defaults to ``"signal"``.
+
+    Returns:
+        SignalFunc that returns True for ``(underlying_symbol, quote_date)``
+        pairs where ``flag_col`` is True in *df*.
+
+    Example:
+        >>> import pandas as pd
+        >>> import optopsy as op
+        >>>
+        >>> # Any DataFrame with dates and a boolean flag works
+        >>> my_signals = pd.DataFrame({
+        ...     "underlying_symbol": ["SPY", "SPY", "SPY"],
+        ...     "quote_date": ["2018-01-02", "2018-01-03", "2018-01-04"],
+        ...     "buy": [True, False, True],
+        ... })
+        >>>
+        >>> # Use directly
+        >>> sig = op.custom_signal(my_signals, flag_col="buy")
+        >>> entry_dates = op.apply_signal(my_signals, sig)
+        >>>
+        >>> # Compose with other signals
+        >>> combined = op.signal(sig) & op.signal(op.day_of_week(1))
+        >>> entry_dates = op.apply_signal(my_signals, combined)
+        >>>
+        >>> # Pass to a strategy
+        >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
+    """
+    required = {"underlying_symbol", "quote_date", flag_col}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"DataFrame is missing required columns: {sorted(missing)}")
+
+    flags = df[flag_col].fillna(False).astype(bool)
+    valid = df.loc[flags, ["underlying_symbol", "quote_date"]].copy()
+    valid["quote_date"] = normalize_dates(valid["quote_date"])
+    valid_idx = pd.MultiIndex.from_arrays(
+        [valid["underlying_symbol"], valid["quote_date"]]
+    )
+
+    def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
+        dates = normalize_dates(data["quote_date"])
+        lookup = pd.MultiIndex.from_arrays([data["underlying_symbol"], dates])
+        return pd.Series(lookup.isin(valid_idx), index=data.index, dtype=bool)
+
+    return _signal
+
+
+# ---------------------------------------------------------------------------
 # Fluent Signal class
 # ---------------------------------------------------------------------------
 

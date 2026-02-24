@@ -324,6 +324,7 @@ class TestSchemaGeneration:
             "run_strategy",
             "scan_strategies",
             "build_signal",
+            "build_custom_signal",
             "preview_signal",
             "list_signals",
             "list_results",

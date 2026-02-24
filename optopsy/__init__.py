@@ -43,6 +43,7 @@ from .signals import (
     atr_below,
     bb_above_upper,
     bb_below_lower,
+    custom_signal,
     day_of_week,
     ema_cross_above,
     ema_cross_below,
@@ -162,6 +163,7 @@ __all__ = [
     "sustained",
     "Signal",
     "signal",
+    "custom_signal",
     # Simulation
     "simulate",
     "SimulationResult",
