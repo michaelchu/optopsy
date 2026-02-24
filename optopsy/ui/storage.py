@@ -25,7 +25,7 @@ class LocalStorageClient(BaseStorageClient):
     def _safe_path(self, object_key: str) -> Path:
         """Resolve *object_key* under the storage dir, rejecting traversal."""
         resolved = (self._storage_dir / object_key).resolve()
-        if not str(resolved).startswith(str(self._storage_dir.resolve())):
+        if not resolved.is_relative_to(self._storage_dir.resolve()):
             raise ValueError("Invalid object_key — path traversal detected")
         return resolved
 
@@ -41,9 +41,12 @@ class LocalStorageClient(BaseStorageClient):
         if not overwrite and file_path.exists():
             raise FileExistsError(f"File already exists: {object_key}")
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        mode = "wb" if isinstance(data, bytes) else "w"
-        async with aiofiles.open(file_path, mode) as f:
-            await f.write(data)
+        if isinstance(data, bytes):
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(data)
+        else:
+            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+                await f.write(data)
         return {
             "object_key": object_key,
             "url": f"{STORAGE_ROUTE_PREFIX}/{object_key}",
