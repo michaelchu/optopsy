@@ -534,17 +534,6 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
         )
     )
 
-    # Downloadable CSV file
-    csv_bytes = df.to_csv(index=False).encode("utf-8")
-    df_elements.append(
-        cl.File(
-            name=f"{tool_name}_results.csv",
-            content=csv_bytes,
-            display="inline",
-            mime="text/csv",
-        )
-    )
-
 
 def _build_strategy_actions(last_strategy_info: dict) -> list[cl.Action]:
     """Build quick follow-up action buttons after a strategy run."""
@@ -595,6 +584,16 @@ def _build_strategy_actions(last_strategy_info: dict) -> list[cl.Action]:
             )
         )
 
+    # "Download CSV" button
+    actions.append(
+        cl.Action(
+            name="download_csv_action",
+            payload={"strategy": strategy},
+            label="Download CSV",
+            tooltip="Download the results as a CSV file",
+        )
+    )
+
     # "Create chart" button
     actions.append(
         cl.Action(
@@ -631,6 +630,30 @@ async def on_rerun_strategy(action: cl.Action):
     # Process through the message handler
     msg = cl.Message(content=prompt)
     await on_message(msg)
+
+
+@cl.action_callback("download_csv_action")
+async def on_download_csv(action: cl.Action):
+    """Handle CSV download action button."""
+    import pandas as pd
+
+    last_df: pd.DataFrame | None = cl.user_session.get("last_result_df")
+    strategy = action.payload.get("strategy", "")
+    if last_df is None or last_df.empty:
+        await cl.Message(content="No results available to download.").send()
+        return
+    csv_bytes = last_df.to_csv(index=False).encode("utf-8")
+    elements = [
+        cl.File(
+            name=f"{strategy}_results.csv",
+            content=csv_bytes,
+            display="inline",
+            mime="text/csv",
+        )
+    ]
+    await cl.Message(
+        content=f"Here's the CSV for **{strategy}**:", elements=elements
+    ).send()
 
 
 @cl.action_callback("create_chart_action")
@@ -735,6 +758,8 @@ async def on_message(message: cl.Message):
             if tool_name == "run_strategy":
                 last_strategy_info["strategy_name"] = arguments.get("strategy_name", "")
                 last_strategy_info["arguments"] = arguments
+                if hasattr(result, "_result_df") and result._result_df is not None:
+                    cl.user_session.set("last_result_df", result._result_df)
 
     # Delay creating the response message until after all tool steps finish,
     # so the final answer always appears below the tool step items.
