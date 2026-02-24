@@ -454,7 +454,8 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
                 "content": (
                     "[Session resumed] In-memory datasets and signals were cleared "
                     "during the reconnect. Please reload any data before running "
-                    "strategies."
+                    "strategies. Previous strategy and simulation results are "
+                    "still accessible via query_results."
                 ),
             }
         )

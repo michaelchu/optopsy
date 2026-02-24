@@ -169,6 +169,9 @@ from . import _strategy_runners as _strategy_runners  # noqa: E402, F401
 # ---------------------------------------------------------------------------
 
 
+_CACHEABLE_TOOLS = ("run_strategy", "scan_strategies", "simulate")
+
+
 def execute_tool(
     tool_name: str,
     arguments: dict[str, Any],
@@ -176,6 +179,7 @@ def execute_tool(
     signals: dict[str, pd.DataFrame] | None = None,
     datasets: dict[str, pd.DataFrame] | None = None,
     results: dict[str, dict] | None = None,
+    dataset_fingerprint: str | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
@@ -224,6 +228,10 @@ def execute_tool(
                 datasets=datasets,
                 results=results,
             )
+
+    # Inject dataset fingerprint AFTER validation so Pydantic doesn't strip it.
+    if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
+        arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
 
     # Helper to build a ToolResult that always carries state forward.
     def _result(

@@ -4,6 +4,7 @@ from typing import Any
 
 import pandas as pd
 
+from ..providers.result_store import ResultStore
 from ._executor import _register, _require_dataset, _resolve_dataset
 from ._helpers import (
     _IV_COLUMN_MISSING_MSG,
@@ -11,7 +12,6 @@ from ._helpers import (
     _filter_by_quote_date,
     _select_results,
     _yf_cache,
-    read_sim_trade_log,
 )
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,10 @@ def _resolve_ds_simulation(arguments, _dataset, _datasets, results, _signals):
         if not sim_entries:
             return None, "", "No simulations run yet. Use simulate first."
         sim_key = sim_entries[-1]
-    trade_log = read_sim_trade_log(sim_key)
+    entry = results.get(sim_key, {})
+    cache_key = entry.get("_cache_key")
+    store = ResultStore()
+    trade_log = store.read(cache_key) if cache_key else None
     if trade_log is None:
         return None, sim_key, f"Simulation '{sim_key}' has no trade log data."
     return trade_log, sim_key, None
