@@ -71,7 +71,9 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
         **results,
         result_key: _make_result_summary(strategy_name, result_df, arguments),
     }
-    return _result(llm_summary, user_display=display, res=updated_results)
+    return _result(
+        llm_summary, user_display=display, res=updated_results, result_df=result_df
+    )
 
 
 @_register("scan_strategies")
@@ -197,4 +199,6 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     llm_summary = "\n".join(header_parts)
     table = _df_to_markdown(leaderboard)
     user_display = f"### Strategy Scan Results\n\n{llm_summary}\n\n{table}"
-    return _result(llm_summary, user_display=user_display, res=scan_results)
+    return _result(
+        llm_summary, user_display=user_display, res=scan_results, result_df=leaderboard
+    )
