@@ -100,6 +100,142 @@ A single `_index.json` maps hashes to metadata. The `type` field distinguishes `
 | `optopsy/ui/agent.py` | Compute + cache dataset fingerprint; simplify results memo |
 | `tests/` | Add tests for `ResultStore`, `query_results`, cache hit paths |
 
+## Reusable Helpers
+
+Shared helpers in `_helpers.py` to keep the cache integration DRY across `run_strategy`, `scan_strategies`, and `simulate`.
+
+### `_cached_run()` — cache check/execute/write wrapper
+
+The core caching pattern extracted into a single function. All three cacheable handlers use this instead of duplicating cache logic.
+
+```python
+def _cached_run(
+    store: ResultStore,
+    name: str,
+    params: dict,
+    dataset_fingerprint: str | None,
+    execute_fn: Callable[[], tuple[pd.DataFrame | None, str]],
+    metadata: dict,
+) -> tuple[pd.DataFrame | None, str | None, str]:
+    """Check ResultStore cache, execute on miss, write on miss.
+
+    Returns (result_df, cache_key, error_str).
+    """
+    cache_key = (
+        store.make_key(name, params, dataset_fingerprint)
+        if dataset_fingerprint
+        else None
+    )
+
+    if cache_key and store.has(cache_key):
+        return store.read(cache_key), cache_key, ""
+
+    df, err = execute_fn()
+    if err:
+        return None, cache_key, err
+
+    if cache_key and df is not None and not df.empty:
+        store.write(cache_key, df, metadata)
+
+    return df, cache_key, ""
+```
+
+**Usage in `run_strategy`:**
+```python
+store = ResultStore()
+ds_fp = _pop_internal_keys(strat_kwargs)
+result_df, cache_key, err = _cached_run(
+    store, strategy_name, strat_kwargs, ds_fp,
+    execute_fn=lambda: _run_one_strategy(strategy_name, dataset, strat_kwargs),
+    metadata={"type": "strategy", "strategy": strategy_name, ...},
+)
+```
+
+**Usage in `simulate`:**
+```python
+result_df, cache_key, err = _cached_run(
+    store, f"sim:{strategy_name}", all_params, ds_fp,
+    execute_fn=lambda: _run_simulation(active_ds, func, sim_params, strat_kwargs),
+    metadata={"type": "simulation", "strategy": strategy_name, "summary": s, ...},
+)
+```
+
+### `_validate_strategy_and_dataset()` — deduplicate handler preamble
+
+Both `run_strategy` and `simulate` repeat the same 12 lines of validation. Extract to:
+
+```python
+def _validate_strategy_and_dataset(
+    arguments: dict,
+    dataset: pd.DataFrame | None,
+    datasets: dict,
+    _result: Callable,
+) -> tuple[str, Callable, pd.DataFrame, ToolResult | None]:
+    """Validate strategy name and require active dataset.
+
+    Returns (strategy_name, strategy_func, active_dataset, error_or_None).
+    """
+    strategy_name = arguments.get("strategy_name")
+    if not strategy_name or strategy_name not in STRATEGIES:
+        return "", None, None, _result(
+            f"Unknown strategy '{strategy_name}'. "
+            f"Available: {', '.join(STRATEGY_NAMES)}",
+        )
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return "", None, None, err
+    func, _, _ = STRATEGIES[strategy_name]
+    return strategy_name, func, active_ds, None
+```
+
+### `_build_strat_kwargs()` — clean kwargs extraction
+
+Both handlers strip signal keys and calendar extra params. Simulator also strips sim-specific keys. Unified:
+
+```python
+def _build_strat_kwargs(
+    arguments: dict,
+    strategy_name: str,
+    extra_exclude: frozenset[str] = frozenset(),
+) -> dict:
+    """Build clean strategy kwargs, stripping non-strategy keys."""
+    exclude = _SIGNAL_PARAM_KEYS | extra_exclude | {"dataset_name", "_dataset_fingerprint"}
+    return {
+        k: v
+        for k, v in arguments.items()
+        if k not in exclude
+        and (strategy_name in CALENDAR_STRATEGIES or k not in CALENDAR_EXTRA_PARAMS)
+    }
+```
+
+### `_pop_internal_keys()` — extract injected fingerprint
+
+```python
+def _pop_internal_keys(arguments: dict) -> str | None:
+    """Pop and return _dataset_fingerprint from arguments dict."""
+    return arguments.pop("_dataset_fingerprint", None)
+```
+
+### `_with_cache_key()` — attach cache key to result summary
+
+```python
+def _with_cache_key(summary: dict, cache_key: str | None) -> dict:
+    """Add _cache_key to a result summary for later ResultStore lookups."""
+    if cache_key:
+        summary["_cache_key"] = cache_key
+    return summary
+```
+
+### Helper summary
+
+| Helper | Location | Used by | Purpose |
+|---|---|---|---|
+| `_cached_run()` | `_helpers.py` | `run_strategy`, `scan_strategies`, `simulate` | Cache check → execute → cache write |
+| `_validate_strategy_and_dataset()` | `_helpers.py` | `run_strategy`, `scan_strategies`, `simulate` | Strategy name + dataset validation |
+| `_build_strat_kwargs()` | `_helpers.py` | `run_strategy`, `simulate` | Clean kwargs extraction |
+| `_pop_internal_keys()` | `_helpers.py` | All cacheable handlers | Extract `_dataset_fingerprint` |
+| `_with_cache_key()` | `_helpers.py` | `run_strategy`, `simulate` | Attach cache key to result entry |
+
 ## Step-by-Step
 
 ### 1. Create `ResultStore` (`optopsy/ui/providers/result_store.py`)
