@@ -217,7 +217,7 @@ _storage_client = LocalStorageClient()
 async def _serve_storage_file(file_path: str):
     """Serve persisted element files (e.g. Plotly chart JSON) from local storage."""
     full_path = (STORAGE_DIR / file_path).resolve()
-    if not str(full_path).startswith(str(STORAGE_DIR.resolve())):
+    if not full_path.is_relative_to(STORAGE_DIR.resolve()):
         raise HTTPException(status_code=400, detail="Invalid path")
     if not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
