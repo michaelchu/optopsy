@@ -10,9 +10,11 @@ from optopsy.metrics import (
     conditional_value_at_risk,
     max_drawdown,
     max_drawdown_from_returns,
+    omega_ratio,
     profit_factor,
     sharpe_ratio,
     sortino_ratio,
+    tail_ratio,
     value_at_risk,
     win_rate,
 )
@@ -258,6 +260,54 @@ class TestCalmarRatio:
 
 
 # ---------------------------------------------------------------------------
+# omega_ratio
+# ---------------------------------------------------------------------------
+
+
+class TestOmegaRatio:
+    def test_basic_computation(self):
+        result = omega_ratio(_SIMPLE_RETURNS)
+        # Positive returns dominate → omega > 1
+        assert result > 1.0
+        assert isinstance(result, float)
+
+    def test_empty_returns_zero(self):
+        assert omega_ratio(_EMPTY) == 0.0
+
+    def test_single_element_returns_zero(self):
+        assert omega_ratio(_SINGLE) == 0.0
+
+    def test_all_losses(self):
+        result = omega_ratio(_ALL_LOSSES)
+        # Losses dominate → omega < 1
+        assert result < 1.0
+
+
+# ---------------------------------------------------------------------------
+# tail_ratio
+# ---------------------------------------------------------------------------
+
+
+class TestTailRatio:
+    def test_basic_computation(self):
+        result = tail_ratio(_SIMPLE_RETURNS)
+        assert result > 0
+        assert isinstance(result, float)
+
+    def test_empty_returns_zero(self):
+        assert tail_ratio(_EMPTY) == 0.0
+
+    def test_single_element_returns_zero(self):
+        assert tail_ratio(_SINGLE) == 0.0
+
+    def test_symmetric_returns(self):
+        # Symmetric distribution → tail ratio close to 1
+        symmetric = np.array([0.05, -0.05, 0.03, -0.03, 0.01, -0.01])
+        result = tail_ratio(symmetric)
+        assert result == pytest.approx(1.0, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
 # compute_risk_metrics (convenience function)
 # ---------------------------------------------------------------------------
 
@@ -274,6 +324,8 @@ class TestComputeRiskMetrics:
             "win_rate",
             "profit_factor",
             "calmar_ratio",
+            "omega_ratio",
+            "tail_ratio",
         }
         assert set(result.keys()) == expected_keys
 
@@ -314,6 +366,8 @@ class TestSimulatorIntegration:
             "var_95",
             "cvar_95",
             "calmar_ratio",
+            "omega_ratio",
+            "tail_ratio",
         ):
             assert key in summary, f"Missing key: {key}"
             assert summary[key] == 0.0
