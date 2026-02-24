@@ -887,8 +887,8 @@ class TestBuildStrategyActions:
 
 
 class TestAttachResultElements:
-    def test_attaches_dataframe_and_csv(self):
-        """Attaching results adds Dataframe and File elements."""
+    def test_attaches_dataframe_only(self):
+        """Attaching results adds only a Dataframe element (CSV is on-demand)."""
         from optopsy.ui.app import _attach_result_elements
 
         df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
@@ -900,27 +900,17 @@ class TestAttachResultElements:
         import chainlit as cl
 
         mock_df_element = MagicMock()
-        mock_file_element = MagicMock()
 
-        with (
-            patch.object(cl, "Dataframe", return_value=mock_df_element) as mock_df_cls,
-            patch.object(cl, "File", return_value=mock_file_element) as mock_file_cls,
-        ):
+        with patch.object(cl, "Dataframe", return_value=mock_df_element) as mock_df_cls:
             _attach_result_elements(result, "run_strategy", elements)
 
-        assert len(elements) == 2
+        assert len(elements) == 1
         assert elements[0] is mock_df_element
-        assert elements[1] is mock_file_element
         # Verify Dataframe was created with correct args
         mock_df_cls.assert_called_once()
         call_kwargs = mock_df_cls.call_args[1]
         assert call_kwargs["name"] == "Run Strategy Results"
         assert call_kwargs["display"] == "inline"
-        # Verify File was created with CSV content
-        mock_file_cls.assert_called_once()
-        file_kwargs = mock_file_cls.call_args[1]
-        assert file_kwargs["name"] == "run_strategy_results.csv"
-        assert file_kwargs["mime"] == "text/csv"
 
     def test_empty_df_skips(self):
         """Empty DataFrame produces no elements."""
