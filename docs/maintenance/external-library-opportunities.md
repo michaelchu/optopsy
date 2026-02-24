@@ -10,14 +10,13 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 | Module | Lines | Library Replacement | Priority | Impact |
 |---|---|---|---|---|
-| `rules.py` | 147 | Boolean indexing | **Done** | IDE support, type checking, no string interpolation |
 | `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
-| `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math (adds dependency) |
+| `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math, add omega/tail ratio (adds dependency) |
 | `evaluation.py` | 188 | `pd.merge_asof()` | **Low** | Cleaner exit matching, built into pandas (behavior risk) |
 
 ---
 
-## 1. `checks.py` — Parameter & DataFrame Validation (High Priority)
+## 1. `checks.py` — Parameter & DataFrame Validation (Medium Priority)
 
 ### Current State
 
@@ -93,8 +92,12 @@ schema.validate(df)
 | Max drawdown | Manual running-max accumulation | `empyrical.max_drawdown()` |
 | Value at Risk | `np.percentile()` | `empyrical.value_at_risk()` |
 | Calmar ratio | Manual return / max_drawdown | `empyrical.calmar_ratio()` |
+| Omega ratio | *(new metric)* | `empyrical.omega_ratio()` |
+| Tail ratio | *(new metric)* | `empyrical.tail_ratio()` |
 
 `win_rate()` and `profit_factor()` are simple enough to keep in-house (3-5 lines each).
+
+**New metrics to add:** Omega ratio and tail ratio are not currently implemented but are especially valuable for options strategies due to non-normal return distributions. Omega ratio captures the full return distribution (not just mean/variance), while tail ratio measures the relationship between right and left tail extremes.
 
 ### Expected Reduction
 
@@ -112,7 +115,7 @@ schema.validate(df)
 
 ---
 
-## 3. `evaluation.py` — Entry/Exit Matching (Medium Priority)
+## 3. `evaluation.py` — Entry/Exit Matching (Low Priority)
 
 ### Current State
 
@@ -156,27 +159,13 @@ None — `pd.merge_asof()` is built into pandas.
 
 ---
 
-## 4. `rules.py` — Strike Validation (Done)
-
-~147 lines. Replaced `.query()` string-based filters with direct boolean indexing.
-
-**Benefits gained:**
-- IDE autocomplete and type checking for column names
-- No string interpolation bugs
-- Identical runtime behaviour (both are standard pandas operations)
-
-No line reduction — this was a quality-of-life improvement, not a code reduction.
-
----
-
 ## Implementation Order
 
 Status and recommended sequencing:
 
-1. ~~**`rules.py`**~~ — **Done.** Replaced `.query()` strings with boolean indexing.
-2. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-3. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
-4. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency.
+1. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
+2. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
+3. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency. Also add omega ratio and tail ratio as new metrics.
 
 ---
 
