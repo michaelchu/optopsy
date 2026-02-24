@@ -2,6 +2,7 @@
 
 import logging
 from datetime import date
+from typing import Any
 
 import pandas as pd
 
@@ -157,6 +158,40 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     return _result(summary, user_display=display, sigs=updated_signals)
 
 
+# Restricted builtins for build_custom_signal sandbox.
+# Blocks import, open, exec, eval, compile, __import__, globals, locals, etc.
+_SAFE_BUILTINS: dict[str, Any] = {
+    "abs": abs,
+    "all": all,
+    "any": any,
+    "bool": bool,
+    "dict": dict,
+    "enumerate": enumerate,
+    "filter": filter,
+    "float": float,
+    "int": int,
+    "isinstance": isinstance,
+    "len": len,
+    "list": list,
+    "map": map,
+    "max": max,
+    "min": min,
+    "print": print,
+    "range": range,
+    "round": round,
+    "set": set,
+    "sorted": sorted,
+    "str": str,
+    "sum": sum,
+    "tuple": tuple,
+    "type": type,
+    "zip": zip,
+    "True": True,
+    "False": False,
+    "None": None,
+}
+
+
 @_register("build_custom_signal")
 def _handle_build_custom_signal(
     arguments, dataset, signals, datasets, results, _result
@@ -187,38 +222,6 @@ def _handle_build_custom_signal(
             "(`pip install yfinance`) and try again.",
         )
 
-    # Restricted builtins — block import, open, exec, eval, compile, etc.
-    _SAFE_BUILTINS = {
-        "abs": abs,
-        "all": all,
-        "any": any,
-        "bool": bool,
-        "dict": dict,
-        "enumerate": enumerate,
-        "filter": filter,
-        "float": float,
-        "int": int,
-        "isinstance": isinstance,
-        "len": len,
-        "list": list,
-        "map": map,
-        "max": max,
-        "min": min,
-        "print": print,
-        "range": range,
-        "round": round,
-        "set": set,
-        "sorted": sorted,
-        "str": str,
-        "sum": sum,
-        "tuple": tuple,
-        "type": type,
-        "zip": zip,
-        "True": True,
-        "False": False,
-        "None": None,
-    }
-
     flagged_frames = []
     symbols = signal_data["underlying_symbol"].unique()
     errors = []
@@ -241,9 +244,12 @@ def _handle_build_custom_signal(
             errors.append(f"{sym}: {type(exc).__name__}: {exc}")
             continue
 
+        # Check exec_locals first (simple top-level assignments), then
+        # exec_globals (signal assigned inside a function that writes to
+        # the global scope).  Use `is None` — not `or` — because a
+        # pandas Series raises ValueError on truthiness tests.
         sig = exec_locals.get("signal")
         if sig is None:
-            # Also check exec_globals in case user wrote `signal = ...` at top level
             sig = exec_globals.get("signal")
         if sig is None:
             errors.append(
@@ -258,14 +264,24 @@ def _handle_build_custom_signal(
             )
             continue
 
+        if len(sig) != len(sym_df):
+            errors.append(
+                f"{sym}: `signal` length ({len(sig)}) does not match "
+                f"DataFrame length ({len(sym_df)}). Ensure `signal` is "
+                f"derived from `df` without changing its length."
+            )
+            continue
+
         # Coerce to bool, filling NaN with False
         sig = sig.fillna(False).astype(bool)
 
-        flagged = sym_df.loc[sig, ["underlying_symbol", "quote_date"]].copy()
+        flagged = sym_df.loc[sig.values, ["underlying_symbol", "quote_date"]].copy()
         if not flagged.empty:
             flagged_frames.append(flagged)
 
-    if errors:
+    # If ALL symbols failed, return error so the LLM can retry.
+    # If only some failed, proceed with partial results and warn.
+    if errors and not flagged_frames:
         error_detail = "\n".join(errors)
         return _result(
             f"Custom signal code failed:\n{error_detail}\n\n"
@@ -289,6 +305,10 @@ def _handle_build_custom_signal(
     n_dates, syms, date_min, date_max = _signal_slot_summary(valid_dates)
     summary = f"Signal '{slot}' built: {desc} → {n_dates} valid dates for {syms}"
     display_lines = [summary]
+    if errors:
+        display_lines.append(
+            f"WARNING: Code failed for {len(errors)} symbol(s): " + "; ".join(errors)
+        )
     if n_dates > 0:
         display_lines.append(f"Date range: {date_min} to {date_max}")
     else:

@@ -159,6 +159,12 @@ class TestBuildCustomSignalErrors:
         result = _run("signal = 42", options, stock)
         assert "Series" in result.llm_summary or "type" in result.llm_summary.lower()
 
+    def test_signal_length_mismatch(self, options, stock):
+        """Signal with wrong length should return clear error."""
+        code = "signal = pd.Series([True, False])"  # shorter than df
+        result = _run(code, options, stock)
+        assert "length" in result.llm_summary.lower()
+
     def test_nan_handled_as_false(self, options, stock):
         """NaN values in signal should be treated as False, not cause errors."""
         # shift(1) produces NaN for first row
@@ -266,6 +272,40 @@ class TestBuildCustomSignalMultiSymbol:
         symbols = valid["underlying_symbol"].unique().tolist()
         assert "SPY" in symbols
         assert "AAPL" in symbols
+
+    def test_partial_success_returns_results_with_warning(self):
+        """If code fails for one symbol but succeeds for another, return partial results."""
+        opts_spy = _make_options("SPY")
+        opts_aapl = _make_options("AAPL")
+        options = pd.concat([opts_spy, opts_aapl], ignore_index=True)
+
+        stock_spy = _make_stock("SPY")
+        # Give AAPL stock data a column the code will reference that SPY also has,
+        # but make AAPL data have a unique column that we can use to cause failure
+        stock_aapl = _make_stock("AAPL")
+        stock_aapl["extra_col"] = 1.0
+        stock = pd.concat([stock_spy, stock_aapl], ignore_index=True)
+
+        # Code references extra_col — SPY doesn't have it (KeyError),
+        # but AAPL does. However, since per-symbol slicing copies columns,
+        # SPY's df won't have extra_col. Use a code path that fails on one.
+        # Simpler: reference a column name that only exists after we add it
+        # for AAPL but not SPY — but concat fills missing with NaN.
+        # Instead, use code that conditionally fails based on data values.
+        code = (
+            "if df['underlying_symbol'].iloc[0] == 'SPY':\n"
+            "    raise ValueError('intentional failure')\n"
+            "signal = df['close'] > 471"
+        )
+        result = _run(code, options, stock)
+        # Should succeed partially — AAPL results exist
+        assert result.signals is not None
+        assert "test" in result.signals
+        valid = result.signals["test"]
+        assert not valid.empty
+        assert "AAPL" in valid["underlying_symbol"].values
+        # Should warn about SPY failure
+        assert "WARNING" in result.user_display
 
 
 # ---------------------------------------------------------------------------
