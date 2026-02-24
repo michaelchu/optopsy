@@ -6,12 +6,15 @@ strategy output (``core.py``) to enrich results beyond basic descriptive
 statistics.
 
 All functions accept pandas Series or numpy arrays and return scalar floats.
+Delegates to `empyrical-reloaded <https://github.com/stefan-jansen/empyrical-reloaded>`_
+for core calculations while preserving edge-case guards (0.0 on empty/NaN).
 """
 
 from __future__ import annotations
 
 from typing import Union
 
+import empyrical
 import numpy as np
 import pandas as pd
 
@@ -28,8 +31,6 @@ def sharpe_ratio(
 ) -> float:
     """Annualised Sharpe ratio.
 
-    ``(mean(returns) - risk_free_daily) / std(returns) * sqrt(trading_days)``
-
     Args:
         returns: Series of periodic returns (e.g. per-trade or daily).
         trading_days: Annualisation factor.
@@ -41,12 +42,13 @@ def sharpe_ratio(
     returns = _to_array(returns)
     if len(returns) < 2:
         return 0.0
-    daily_rf = risk_free_rate / trading_days
-    excess = returns - daily_rf
-    std = float(np.nanstd(excess, ddof=1))
-    if std < 1e-12:
+    # Guard: near-zero std produces astronomically large values
+    if float(np.nanstd(returns, ddof=1)) < 1e-12:
         return 0.0
-    return float(np.nanmean(excess) / std * np.sqrt(trading_days))
+    result = empyrical.sharpe_ratio(
+        returns, risk_free=risk_free_rate / trading_days, annualization=trading_days
+    )
+    return 0.0 if np.isnan(result) or np.isinf(result) else float(result)
 
 
 def sortino_ratio(
@@ -70,14 +72,14 @@ def sortino_ratio(
     if len(returns) < 2:
         return 0.0
     daily_rf = risk_free_rate / trading_days
+    # Guard: no downside returns → return 0.0 (matches original behaviour)
     excess = returns - daily_rf
-    downside = excess[excess < 0]
-    if len(downside) == 0:
+    if not np.any(excess < 0):
         return 0.0
-    downside_std = float(np.sqrt(np.nanmean(downside**2)))
-    if downside_std == 0:
-        return 0.0
-    return float(np.nanmean(excess) / downside_std * np.sqrt(trading_days))
+    result = empyrical.sortino_ratio(
+        returns, required_return=daily_rf, annualization=trading_days
+    )
+    return 0.0 if np.isnan(result) or np.isinf(result) else float(result)
 
 
 def max_drawdown(equity: _ArrayLike) -> float:
@@ -105,11 +107,11 @@ def max_drawdown(equity: _ArrayLike) -> float:
 def max_drawdown_from_returns(
     returns: _ArrayLike, initial_capital: float = 1.0
 ) -> float:
-    """Compute max drawdown from a returns series by reconstructing the equity curve.
+    """Compute max drawdown from a returns series.
 
     Args:
         returns: Series of periodic returns.
-        initial_capital: Starting equity value.
+        initial_capital: Starting equity value (unused, kept for API compat).
 
     Returns:
         Max drawdown as a negative float.
@@ -117,9 +119,8 @@ def max_drawdown_from_returns(
     returns = _to_array(returns)
     if len(returns) == 0:
         return 0.0
-    equity = initial_capital * np.cumprod(1 + returns)
-    equity = np.insert(equity, 0, initial_capital)
-    return max_drawdown(equity)
+    result = empyrical.max_drawdown(returns)
+    return 0.0 if np.isnan(result) else float(result)
 
 
 def value_at_risk(returns: _ArrayLike, confidence: float = 0.95) -> float:
@@ -139,7 +140,7 @@ def value_at_risk(returns: _ArrayLike, confidence: float = 0.95) -> float:
     returns = _to_array(returns)
     if len(returns) == 0:
         return 0.0
-    return float(np.nanpercentile(returns, (1 - confidence) * 100))
+    return float(empyrical.value_at_risk(returns, cutoff=1 - confidence))
 
 
 def conditional_value_at_risk(returns: _ArrayLike, confidence: float = 0.95) -> float:
@@ -157,11 +158,7 @@ def conditional_value_at_risk(returns: _ArrayLike, confidence: float = 0.95) -> 
     returns = _to_array(returns)
     if len(returns) == 0:
         return 0.0
-    var = value_at_risk(returns, confidence)
-    tail = returns[returns <= var]
-    if len(tail) == 0:
-        return float(var)
-    return float(np.nanmean(tail))
+    return float(empyrical.conditional_value_at_risk(returns, cutoff=1 - confidence))
 
 
 def win_rate(pnl: _ArrayLike) -> float:
@@ -213,7 +210,7 @@ def calmar_ratio(
     Args:
         returns: Series of periodic returns.
         trading_days: Number of trading days per year for annualisation.
-        initial_capital: Starting equity for drawdown computation.
+        initial_capital: Unused, kept for API compatibility.
 
     Returns:
         Calmar ratio as a float, or 0.0 if max drawdown is zero or data
@@ -222,11 +219,58 @@ def calmar_ratio(
     returns = _to_array(returns)
     if len(returns) < 2:
         return 0.0
-    ann_return = float(np.nanmean(returns)) * trading_days
-    mdd = max_drawdown_from_returns(returns, initial_capital)
-    if mdd == 0:
+    result = empyrical.calmar_ratio(returns, annualization=trading_days)
+    return 0.0 if np.isnan(result) or np.isinf(result) else float(result)
+
+
+def omega_ratio(
+    returns: _ArrayLike,
+    trading_days: int = _TRADING_DAYS,
+    risk_free_rate: float = 0.0,
+) -> float:
+    """Omega ratio — captures full return distribution, not just mean/variance.
+
+    Ratio of probability-weighted gains to probability-weighted losses relative
+    to a threshold return. Values > 1 indicate gains outweigh losses.
+
+    Args:
+        returns: Series of periodic returns.
+        trading_days: Annualisation factor.
+        risk_free_rate: Annual risk-free rate (default 0).
+
+    Returns:
+        Omega ratio as a float, or 0.0 if data is insufficient.
+    """
+    returns = _to_array(returns)
+    if len(returns) < 2:
         return 0.0
-    return float(ann_return / abs(mdd))
+    result = empyrical.omega_ratio(
+        returns,
+        risk_free=risk_free_rate,
+        required_return=0.0,
+        annualization=trading_days,
+    )
+    return 0.0 if np.isnan(result) or np.isinf(result) else float(result)
+
+
+def tail_ratio(returns: _ArrayLike) -> float:
+    """Ratio of right tail (95th percentile) to left tail (5th percentile).
+
+    Values > 1 indicate the right tail is fatter, meaning large gains are
+    more likely than large losses. Particularly useful for options strategies
+    where tail behaviour drives performance.
+
+    Args:
+        returns: Series of periodic returns.
+
+    Returns:
+        Tail ratio as a float, or 0.0 if data is insufficient.
+    """
+    returns = _to_array(returns)
+    if len(returns) < 2:
+        return 0.0
+    result = empyrical.tail_ratio(returns)
+    return 0.0 if np.isnan(result) or np.isinf(result) else float(result)
 
 
 def compute_risk_metrics(
@@ -247,7 +291,8 @@ def compute_risk_metrics(
 
     Returns:
         Dict with keys: sharpe_ratio, sortino_ratio, max_drawdown, var_95,
-        cvar_95, win_rate, profit_factor, calmar_ratio.
+        cvar_95, win_rate, profit_factor, calmar_ratio, omega_ratio,
+        tail_ratio.
     """
     returns = _to_array(returns)
 
@@ -266,6 +311,8 @@ def compute_risk_metrics(
         "win_rate": win_rate(returns),
         "profit_factor": profit_factor(returns),
         "calmar_ratio": calmar_ratio(returns, trading_days),
+        "omega_ratio": omega_ratio(returns, trading_days),
+        "tail_ratio": tail_ratio(returns),
     }
 
 

@@ -375,8 +375,10 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
     from .metrics import (
         calmar_ratio,
         conditional_value_at_risk,
+        omega_ratio,
         sharpe_ratio,
         sortino_ratio,
+        tail_ratio,
         value_at_risk,
     )
     from .metrics import (
@@ -395,6 +397,8 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         "var_95": 0.0,
         "cvar_95": 0.0,
         "calmar_ratio": 0.0,
+        "omega_ratio": 0.0,
+        "tail_ratio": 0.0,
     }
 
     if trade_log.empty:
@@ -472,6 +476,8 @@ def _compute_summary(trade_log: pd.DataFrame, capital: float) -> dict[str, Any]:
         "var_95": value_at_risk(per_trade_returns, 0.95),
         "cvar_95": conditional_value_at_risk(per_trade_returns, 0.95),
         "calmar_ratio": calmar_ratio(daily_returns),
+        "omega_ratio": omega_ratio(daily_returns),
+        "tail_ratio": tail_ratio(daily_returns),
     }
 
 

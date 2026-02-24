@@ -10,9 +10,11 @@ from optopsy.metrics import (
     conditional_value_at_risk,
     max_drawdown,
     max_drawdown_from_returns,
+    omega_ratio,
     profit_factor,
     sharpe_ratio,
     sortino_ratio,
+    tail_ratio,
     value_at_risk,
     win_rate,
 )
@@ -258,6 +260,93 @@ class TestCalmarRatio:
 
 
 # ---------------------------------------------------------------------------
+# omega_ratio
+# ---------------------------------------------------------------------------
+
+
+class TestOmegaRatio:
+    def test_pinned_value(self):
+        # gains: 0.10+0.03+0.07=0.20, losses: 0.05+0.02=0.07 → 0.20/0.07 ≈ 2.857
+        result = omega_ratio(_SIMPLE_RETURNS)
+        assert result == pytest.approx(2.857, abs=0.01)
+        assert isinstance(result, float)
+
+    def test_empty_returns_zero(self):
+        assert omega_ratio(_EMPTY) == 0.0
+
+    def test_single_element_returns_zero(self):
+        assert omega_ratio(_SINGLE) == 0.0
+
+    def test_all_losses_returns_zero(self):
+        # All negative returns → omega = 0.0 (no gains)
+        assert omega_ratio(_ALL_LOSSES) == 0.0
+
+    def test_with_risk_free_rate(self):
+        # Higher risk-free rate should reduce omega
+        base = omega_ratio(_SIMPLE_RETURNS, risk_free_rate=0.0)
+        with_rf = omega_ratio(_SIMPLE_RETURNS, risk_free_rate=0.05)
+        assert with_rf < base
+
+    def test_pandas_series_input(self):
+        series = pd.Series(_SIMPLE_RETURNS)
+        result = omega_ratio(series)
+        assert result == pytest.approx(2.857, abs=0.01)
+
+    def test_nan_handling(self):
+        data = np.array([0.10, np.nan, -0.05, 0.03])
+        result = omega_ratio(data)
+        # NaNs dropped → [0.10, -0.05, 0.03], omega ≈ 2.6
+        assert result == pytest.approx(2.6, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# tail_ratio
+# ---------------------------------------------------------------------------
+
+
+class TestTailRatio:
+    def test_pinned_value(self):
+        # 95th pctl / abs(5th pctl) of [−0.05, −0.02, 0.03, 0.07, 0.10] ≈ 2.136
+        result = tail_ratio(_SIMPLE_RETURNS)
+        assert result == pytest.approx(2.136, abs=0.01)
+        assert isinstance(result, float)
+
+    def test_empty_returns_zero(self):
+        assert tail_ratio(_EMPTY) == 0.0
+
+    def test_single_element_returns_zero(self):
+        assert tail_ratio(_SINGLE) == 0.0
+
+    def test_symmetric_returns(self):
+        # Symmetric distribution with enough points → tail ratio ≈ 1.0
+        symmetric = np.array(
+            [0.05, -0.05, 0.03, -0.03, 0.01, -0.01, 0.04, -0.04, 0.02, -0.02]
+        )
+        result = tail_ratio(symmetric)
+        assert result == pytest.approx(1.0, abs=0.01)
+
+    def test_all_positive(self):
+        # All-positive returns: right tail > left tail
+        result = tail_ratio(_ALL_WINS)
+        assert result == pytest.approx(4.302, abs=0.01)
+
+    def test_all_negative(self):
+        # All-negative: right tail < left tail → ratio < 1
+        result = tail_ratio(_ALL_LOSSES)
+        assert result == pytest.approx(0.232, abs=0.01)
+
+    def test_pandas_series_input(self):
+        series = pd.Series(_SIMPLE_RETURNS)
+        result = tail_ratio(series)
+        assert result == pytest.approx(2.136, abs=0.01)
+
+    def test_nan_handling(self):
+        data = np.array([0.10, np.nan, -0.05, 0.03])
+        result = tail_ratio(data)
+        assert result == pytest.approx(2.214, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
 # compute_risk_metrics (convenience function)
 # ---------------------------------------------------------------------------
 
@@ -274,6 +363,8 @@ class TestComputeRiskMetrics:
             "win_rate",
             "profit_factor",
             "calmar_ratio",
+            "omega_ratio",
+            "tail_ratio",
         }
         assert set(result.keys()) == expected_keys
 
@@ -314,6 +405,8 @@ class TestSimulatorIntegration:
             "var_95",
             "cvar_95",
             "calmar_ratio",
+            "omega_ratio",
+            "tail_ratio",
         ):
             assert key in summary, f"Missing key: {key}"
             assert summary[key] == 0.0

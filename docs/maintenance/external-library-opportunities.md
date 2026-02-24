@@ -8,46 +8,14 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 ## Priority Summary
 
-| Module | Lines | Library Replacement | Priority | Impact |
+| Module | Lines | Library Replacement | Priority | Status |
 |---|---|---|---|---|
-| `signals.py` | 943 | pandas-ta (already a dep) | **Done** | Already fully integrated — all 6 indicators delegate to pandas-ta |
-| `rules.py` | 134 | Boolean indexing | **Done** | IDE support, type checking, no string interpolation |
-| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
-| `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math (adds dependency) |
-| `evaluation.py` | 188 | `pd.merge_asof()` | **Low** | Cleaner exit matching, built into pandas (behavior risk) |
-| `simulator.py` | 704 | vectorbt | **Deferred** | Biggest win but biggest migration |
+| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Pending |
+| ~~`metrics.py`~~ | ~~275~~ | ~~empyrical-reloaded~~ | ~~Low~~ | **Done** |
 
 ---
 
-## 1. `signals.py` — Technical Indicators (Already Done)
-
-### Current State
-
-~943 lines total. **All 6 technical indicators already delegate to pandas-ta**:
-
-| Signal | Implementation | pandas-ta Call |
-|---|---|---|
-| RSI | `ta.rsi(prices, length=period)` | Fully outsourced |
-| SMA | `ta.sma(prices, length=period)` | Fully outsourced |
-| EMA | `ta.ema(prices, length=fast/slow)` | Fully outsourced |
-| MACD | `ta.macd(prices, fast, slow, signal)` | Fully outsourced |
-| Bollinger Bands | `ta.bbands(prices, length, std)` | Fully outsourced |
-| ATR | `ta.atr(high, low, close, length)` | Fully outsourced |
-
-The remaining ~600 lines are custom logic that **should stay**:
-- Signal composition framework (`Signal` class, `and_signals`, `or_signals`, `sustained`)
-- Calendar signals (`day_of_week`)
-- IV Rank signals (`_compute_atm_iv`, `_compute_iv_rank_series`) — options-domain-specific, no library equivalent
-- Per-symbol isolation (`_per_symbol_signal`) and crossover detection (`_crossover_signal`)
-- NaN handling and signal application (`apply_signal`)
-
-### Action Required
-
-None — pandas-ta integration is already complete. No further code reduction is possible here.
-
----
-
-## 2. `checks.py` — Parameter & DataFrame Validation (High Priority)
+## 1. `checks.py` — Parameter & DataFrame Validation (Medium Priority)
 
 ### Current State
 
@@ -108,149 +76,40 @@ schema.validate(df)
 
 ---
 
-## 3. `metrics.py` — Risk-Adjusted Performance Metrics (Medium Priority)
+## 2. `metrics.py` — Risk-Adjusted Performance Metrics (Done)
 
-### Current State
+Completed in `claude/review-external-libs` branch.
 
-~275 lines implementing Sharpe ratio, Sortino ratio, max drawdown, Value at Risk, Calmar ratio, profit factor, and win rate with numpy. Includes manual edge-case handling (zero division, insufficient data, annualization factors).
+### What Changed
 
-### What To Replace
+Replaced hand-rolled Sharpe, Sortino, VaR, CVaR, Calmar, and `max_drawdown_from_returns` with thin wrappers over `empyrical-reloaded`, preserving edge-case guards (return 0.0 on empty/NaN/inf). Added `omega_ratio` and `tail_ratio` as new metrics.
 
-| Metric | Current | empyrical Equivalent |
-|---|---|---|
-| Sharpe ratio | Manual annualized excess return / std | `empyrical.sharpe_ratio()` |
-| Sortino ratio | Manual downside deviation | `empyrical.sortino_ratio()` |
-| Max drawdown | Manual running-max accumulation | `empyrical.max_drawdown()` |
-| Value at Risk | `np.percentile()` | `empyrical.value_at_risk()` |
-| Calmar ratio | Manual return / max_drawdown | `empyrical.calmar_ratio()` |
+| Metric | Status |
+|---|---|
+| Sharpe ratio | Delegated to `empyrical.sharpe_ratio()` |
+| Sortino ratio | Delegated to `empyrical.sortino_ratio()` |
+| Max drawdown (returns) | Delegated to `empyrical.max_drawdown()` |
+| Max drawdown (equity) | Kept in-house (empyrical only takes returns) |
+| Value at Risk | Delegated to `empyrical.value_at_risk()` |
+| CVaR | Delegated to `empyrical.conditional_value_at_risk()` |
+| Calmar ratio | Delegated to `empyrical.calmar_ratio()` |
+| Omega ratio | **New** — `empyrical.omega_ratio()` |
+| Tail ratio | **New** — `empyrical.tail_ratio()` |
+| `win_rate`, `profit_factor` | Kept in-house (no empyrical equivalent) |
 
-`win_rate()` and `profit_factor()` are simple enough to keep in-house (3-5 lines each).
+### Result
 
-### Expected Reduction
-
-~180 lines removed. The `compute_risk_metrics()` aggregation wrapper would stay but delegate to empyrical.
-
-### New Dependencies
-
-- `empyrical-reloaded` — community-maintained fork of Quantopian's empyrical. Lightweight, numpy/pandas only.
-
-### Risks
-
-- empyrical assumes daily returns by default; must pass correct `period` or `annualization` factor for options trade frequency.
-- The original `empyrical` is unmaintained; use `empyrical-reloaded` fork.
-- Subtle differences in annualization conventions could change metric values — verify against existing test fixtures.
-
----
-
-## 4. `evaluation.py` — Entry/Exit Matching (Medium Priority)
-
-### Current State
-
-`_get_exits()` (~30 lines) implements tolerance-based nearest-match logic: for each entry, find the exit row with DTE closest to the target exit DTE. Uses `groupby` + absolute-difference + `idxmin` + `drop_duplicates`.
-
-### What To Replace
-
-`pd.merge_asof()` is purpose-built for "nearest key" merges on sorted data:
-
-```python
-# Before (_get_exits — ~30 lines)
-def _get_exits(data, dte):
-    data["_diff"] = (data["dte"] - dte).abs()
-    idx = data.groupby([...])["_diff"].idxmin()
-    return data.loc[idx].drop(columns="_diff").drop_duplicates(...)
-
-# After (~5 lines)
-exits = pd.merge_asof(
-    entries.sort_values("dte"),
-    data.sort_values("dte"),
-    on="dte",
-    by=["underlying_symbol", "option_type", "expiration", "strike"],
-    direction="nearest",
-    tolerance=tolerance,
-)
-```
-
-### Expected Reduction
-
-~25 lines removed, clearer intent. No temporary columns or manual index manipulation.
-
-### New Dependencies
-
-None — `pd.merge_asof()` is built into pandas.
-
-### Risks
-
-- `merge_asof` requires both DataFrames to be sorted by the `on` key. Must ensure sorting is applied before the call.
-- The `tolerance` parameter semantics differ slightly (absolute value vs. the current custom logic). Verify edge cases with existing tests.
-- Current implementation drops duplicates with `keep="first"`; `merge_asof` uses a different tie-breaking strategy. May need post-merge dedup.
-
----
-
-## 5. `simulator.py` — Position-Level Backtesting (Low Priority)
-
-### Current State
-
-~704 lines of iterative simulation with manual position state tracking. Iterates row-by-row through strategy results, maintaining a list of active positions, checking exit conditions (profit target, stop loss, trailing stop, time exit), and accumulating an equity curve.
-
-### What To Replace
-
-**vectorbt** provides vectorized portfolio simulation:
-
-```python
-import vectorbt as vbt
-
-pf = vbt.Portfolio.from_signals(
-    close=prices,
-    entries=entry_signals,
-    exits=exit_signals,
-    sl_stop=stop_loss,
-    tp_stop=take_profit,
-    size=position_size,
-)
-equity = pf.value()
-trades = pf.trades.records_readable
-```
-
-### Expected Reduction
-
-~500 lines removed. vectorbt handles position sizing, concurrent position limits, stop-loss/take-profit, equity tracking, and trade logging.
-
-### New Dependencies
-
-- `vectorbt` — heavy dependency (pulls in numba, plotly, scipy). Consider `vectorbt-pro` for lighter install.
-
-### Risks
-
-- **Largest migration effort** — the current simulator has options-specific logic (multi-leg P&L, expiration-based exits) that vectorbt doesn't natively support.
-- vectorbt is designed for single-instrument equity/futures; adapting it to multi-leg options positions may require significant wrapper code, potentially negating the benefit.
-- Heavy dependency footprint may not be acceptable for a lightweight library.
-- **Recommendation**: Defer this unless the simulator becomes a maintenance burden. The current implementation is self-contained and well-tested.
-
----
-
-## 6. `rules.py` — Strike Validation (Done)
-
-Replaced `.query()` string-based filters with direct boolean indexing.
-
-**Benefits gained:**
-- IDE autocomplete and type checking for column names
-- No string interpolation bugs
-- Identical runtime behaviour (both are standard pandas operations)
-
-No line reduction — this was a quality-of-life improvement, not a code reduction.
+- `metrics.py`: 275 → 323 lines (net +48 from new metrics; ~100 lines of implementation replaced with 1-line delegations)
+- New dependency: `empyrical-reloaded>=0.5.7` + `pytz` (transitive dep not declared by empyrical)
+- All 1098 existing + new tests pass
+- `omega_ratio` and `tail_ratio` added to `compute_risk_metrics()` and simulator `_compute_summary()`
 
 ---
 
 ## Implementation Order
 
-Status and recommended sequencing:
-
-1. ~~**`signals.py`**~~ — **Done.** Already fully integrated with pandas-ta.
-2. ~~**`rules.py`**~~ — **Done.** Replaced `.query()` strings with boolean indexing.
-3. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-4. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
-5. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency.
-6. **`simulator.py`** — Defer unless simulator maintenance becomes painful.
+1. ~~**`metrics.py`**~~ — **Done.** Replaced with empyrical-reloaded wrappers, added omega/tail ratio.
+2. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
 
 ---
 
@@ -258,8 +117,7 @@ Status and recommended sequencing:
 
 | Library | Version | Size | New? | Status |
 |---|---|---|---|---|
-| pandas-ta | >= 0.4.67b0 | ~2MB | No (existing) | Already integrated in signals.py |
 | pydantic | >= 2.0 | ~5MB | Promote from optional | Candidate for checks.py |
 | pandera | >= 0.20 | ~3MB | Yes | Optional — skip initially |
-| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | Candidate for metrics.py |
-| vectorbt | >= 0.26 | ~50MB+ | Yes | Deferred (simulator.py) |
+| empyrical-reloaded | >= 0.5.7 | ~500KB | Yes | **Installed** |
+| pytz | any | ~500KB | Yes | **Installed** (transitive dep of empyrical) |
