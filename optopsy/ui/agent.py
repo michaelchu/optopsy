@@ -116,6 +116,10 @@ into a multi-row DataFrame with columns like `strategy`, `mean_return`, `win_rat
 
 Calendar/diagonal strategies also accept: front_dte_min, front_dte_max, back_dte_min, back_dte_max.
 
+**IMPORTANT:** Only run a strategy once per request — default to aggregated mode (raw=false). \
+Do NOT run the same strategy twice to show both aggregated and raw results. \
+The UI provides an action button for the user to toggle between views.
+
 ## CSV Format
 The CSV should have columns (in order): underlying_symbol, underlying_price, option_type, \
 expiration, quote_date, strike, bid, ask. Optional: delta, gamma, theta, vega, volume.
