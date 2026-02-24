@@ -390,6 +390,12 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
     if df is None or df.empty:
         return
 
+    # Stringify Interval columns (e.g. dte_range, otm_pct_range) so they
+    # render as readable text instead of "[object Object]" in the browser.
+    for col in df.columns:
+        if pd.api.types.is_interval_dtype(df[col]):
+            df[col] = df[col].astype(str)
+
     label = tool_name.replace("_", " ").title()
 
     # Interactive paginated table
