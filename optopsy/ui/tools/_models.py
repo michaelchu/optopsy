@@ -440,6 +440,42 @@ class BuildSignalArgs(BaseModel):
     )
 
 
+class BuildCustomSignalArgs(BaseModel):
+    slot: str = Field(
+        ...,
+        description=(
+            "Name for this custom signal slot (e.g. 'gap_up', 'volume_spike'). "
+            "Used to reference the signal in run_strategy via entry_signal_slot / "
+            "exit_signal_slot."
+        ),
+    )
+    code: str = Field(
+        ...,
+        description=(
+            "Python code that computes a boolean Series named `signal` from an "
+            "OHLCV DataFrame `df`. Available columns: underlying_symbol, "
+            "quote_date, open, high, low, close, volume. Code runs per symbol "
+            "group with `pd` (pandas) and `np` (numpy) available.\n\n"
+            "Examples:\n"
+            "- Gap up 2%: signal = df['open'] > df['close'].shift(1) * 1.02\n"
+            "- Volume spike 3x 20d avg: signal = df['volume'] > df['volume'].rolling(20).mean() * 3\n"
+            "- Close crosses above 200-day high: signal = df['close'] > df['high'].rolling(200).max().shift(1)\n"
+            "- Inside day: signal = (df['high'] < df['high'].shift(1)) & (df['low'] > df['low'].shift(1))"
+        ),
+    )
+    description: str | None = Field(
+        None,
+        description="Human-readable description of the custom signal logic.",
+    )
+    dataset_name: str | None = Field(
+        None,
+        description=(
+            "Name (ticker or filename) of the dataset to build the signal from. "
+            "Omit to use the most-recently-loaded dataset."
+        ),
+    )
+
+
 class PreviewSignalArgs(BaseModel):
     slot: str = Field(..., description="Signal slot name to preview")
 
@@ -850,6 +886,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "run_strategy": RunStrategyArgs,
     "scan_strategies": ScanStrategiesArgs,
     "build_signal": BuildSignalArgs,
+    "build_custom_signal": BuildCustomSignalArgs,
     "preview_signal": PreviewSignalArgs,
     "list_signals": ListSignalsArgs,
     "list_results": ListResultsArgs,

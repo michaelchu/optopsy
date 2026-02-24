@@ -215,7 +215,7 @@ results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 **State-based** signals are True on every bar meeting the condition. \
 **Event-based** signals fire only on the crossover bar.
 
-### Using signals — two approaches
+### Using signals — three approaches
 
 **Approach 1: Inline (single signal)** — pass `entry_signal` / `exit_signal` directly on `run_strategy`. \
 Quick for single-condition filters.
@@ -235,6 +235,13 @@ Workflow:
 
 `entry_signal_slot` / `exit_signal_slot` **cannot** be combined with `entry_signal` / `exit_signal` — \
 pick one approach per side.
+
+**Approach 3: Custom signal (build_custom_signal)** — for conditions that no built-in \
+signal can express. Write pandas/numpy code computing a boolean Series `signal` from \
+OHLCV DataFrame `df` (columns: open, high, low, close, volume). Code runs per symbol. \
+Use for: gap ups/downs, volume spikes, price vs N-day high/low, custom indicator math. \
+The result is stored as a signal slot, just like build_signal, and can be referenced via \
+entry_signal_slot / exit_signal_slot.
 
 ### Signal data requirements
 

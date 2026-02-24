@@ -373,6 +373,13 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "strategies to get a clear comparison instead of describing "
         "differences in prose. Optionally includes a grouped bar chart."
     ),
+    "build_custom_signal": (
+        "Build a custom signal from arbitrary pandas/numpy code. Use when no "
+        "built-in signal matches the user's condition (gap ups, volume spikes, "
+        "price crossing N-day highs, etc.). Write Python code that computes a "
+        "boolean Series named `signal` from OHLCV DataFrame `df`. The result "
+        "is stored as a signal slot for use with run_strategy."
+    ),
     "build_signal": (
         "Build a TA signal (or compose multiple signals) and store the "
         "resulting valid dates under a named slot. Use this to create "
