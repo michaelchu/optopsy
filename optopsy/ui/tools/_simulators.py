@@ -54,11 +54,18 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
 
     trade_log = None
     s = None
+    cache_hit = bool(cache_key and store.has(cache_key))
 
-    if cache_key and store.has(cache_key):
+    if cache_hit:
         trade_log = store.read(cache_key)
-        s = store.get_metadata(cache_key).get("summary", {})
-    else:
+        s = (store.get_metadata(cache_key) or {}).get("summary")
+        # Fall back to re-executing if cached summary is missing/corrupt
+        if not isinstance(s, dict) or not s:
+            cache_hit = False
+            trade_log = None
+            s = None
+
+    if not cache_hit:
         try:
             result = _simulate(active_ds, func, **sim_params, **strat_kwargs)
         except Exception as e:

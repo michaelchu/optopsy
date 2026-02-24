@@ -438,13 +438,14 @@ def _cached_run(
 
     Returns ``(result_df, cache_key, error_str)``.
     """
-    cache_key = (
-        store.make_key(name, params, dataset_fingerprint)
-        if dataset_fingerprint
-        else None
-    )
+    if not dataset_fingerprint:
+        _log.debug("_cached_run(%s): no dataset fingerprint, skipping cache", name)
+        cache_key = None
+    else:
+        cache_key = store.make_key(name, params, dataset_fingerprint)
 
     if cache_key and store.has(cache_key):
+        _log.debug("_cached_run(%s): cache hit (%s)", name, cache_key[:12])
         return store.read(cache_key), cache_key, ""
 
     df, err = execute_fn()

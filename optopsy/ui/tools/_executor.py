@@ -199,11 +199,6 @@ def execute_tool(
     if results is None:
         results = {}
 
-    # Inject dataset fingerprint for cacheable tools so handlers can build
-    # content-hashed cache keys without signature changes.
-    if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
-        arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
-
     # --- Pydantic validation gate ---
     # Lazy import: _models pulls in pydantic which is an optional UI dep.
     from ._models import TOOL_ARG_MODELS
@@ -233,6 +228,10 @@ def execute_tool(
                 datasets=datasets,
                 results=results,
             )
+
+    # Inject dataset fingerprint AFTER validation so Pydantic doesn't strip it.
+    if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
+        arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
 
     # Helper to build a ToolResult that always carries state forward.
     def _result(

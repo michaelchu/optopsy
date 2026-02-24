@@ -116,6 +116,71 @@ def test_simulate_success(mock_sim, mock_signals, mock_store_cls):
     assert "10 trades" in result.llm_summary
     assert "win_rate=60.0%" in result.llm_summary
     assert result.results  # results dict should be updated
+    # Verify no store.write since no dataset fingerprint was injected
+    mock_store.write.assert_not_called()
+
+
+@patch("optopsy.ui.tools._simulators.ResultStore")
+@patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
+@patch("optopsy.simulator.simulate")
+def test_simulate_caches_on_miss(mock_sim, mock_signals, mock_store_cls):
+    """With a dataset fingerprint, simulate should write to ResultStore on cache miss."""
+    mock_signals.return_value = ({}, None)
+    mock_result = MagicMock()
+    mock_result.summary = {
+        "total_trades": 10,
+        "winning_trades": 6,
+        "losing_trades": 4,
+        "win_rate": 0.6,
+        "total_pnl": 500.0,
+        "total_return": 0.05,
+        "avg_pnl": 50.0,
+        "avg_win": 120.0,
+        "avg_loss": -55.0,
+        "max_win": 300.0,
+        "max_loss": -100.0,
+        "profit_factor": 1.5,
+        "max_drawdown": -0.10,
+        "avg_days_in_trade": 30.0,
+        "sharpe_ratio": 1.2,
+        "sortino_ratio": 1.8,
+        "var_95": -0.03,
+        "cvar_95": -0.05,
+        "calmar_ratio": 0.5,
+    }
+    mock_result.trade_log = pd.DataFrame(
+        {
+            "trade_id": [1, 2],
+            "entry_date": ["2024-01-01", "2024-02-01"],
+            "exit_date": ["2024-01-15", "2024-02-15"],
+            "days_held": [14, 14],
+            "entry_cost": [-100, -100],
+            "exit_proceeds": [120, 80],
+            "realized_pnl": [20, -20],
+            "equity": [10020, 10000],
+        }
+    )
+    mock_sim.return_value = mock_result
+
+    mock_store = MagicMock()
+    mock_store.has.return_value = False
+    mock_store.make_key.return_value = "fake_cache_key"
+    mock_store_cls.return_value = mock_store
+
+    df = pd.DataFrame({"col": [1]})
+    result = execute_tool(
+        "simulate",
+        {"strategy_name": "long_calls"},
+        dataset=df,
+        dataset_fingerprint="fp123",
+    )
+
+    assert "10 trades" in result.llm_summary
+    mock_store.write.assert_called_once()
+    # Verify the cache key is attached to results
+    sim_keys = [k for k in result.results if k.startswith("sim:")]
+    assert sim_keys
+    assert result.results[sim_keys[0]].get("_cache_key") == "fake_cache_key"
 
 
 # ---------------------------------------------------------------------------
