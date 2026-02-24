@@ -123,7 +123,10 @@ def test_stale_cache_fetches_incremental(tmp_path):
     cached_df = _make_cached_df("SPY", date(2020, 1, 1), cache_end)
     cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
-    expected_start = str(cache_end + timedelta(days=1))
+    # _make_cached_df uses freq="B" (business days), so the actual last date
+    # may be earlier than cache_end if it falls on a weekend.
+    actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
+    expected_start = str(actual_cache_max + timedelta(days=1))
     expected_end = str(date.today() + timedelta(days=1))
 
     with patch("yfinance.download") as mock_dl:
