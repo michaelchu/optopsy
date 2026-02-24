@@ -94,7 +94,10 @@ first to get the data, then `create_chart` with `chart_type: "candlestick"`.
 the data may already be downloaded.
 
 ### Comparing results visually
-- After `scan_strategies` or multiple `run_strategy` calls, use `create_chart` with \
+**IMPORTANT:** Only create charts when the user explicitly asks for one. Do NOT proactively \
+generate charts after running a strategy — the UI provides a "Chart Results" action button \
+for that. The instructions below explain how to build charts when requested.
+- When charting session results, use `create_chart` with \
 `data_source: "results"` to chart all session results as a comparison. The results are assembled \
 into a multi-row DataFrame with columns like `strategy`, `mean_return`, `win_rate`, `profit_factor`.
 - Use `y_columns` to plot multiple metrics side-by-side: \
