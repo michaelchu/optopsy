@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 
 import pandas as pd
 
@@ -35,13 +36,23 @@ class ResultStore:
 
     @staticmethod
     def make_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
-        """Deterministic cache key for any result (strategy or simulation)."""
+        """Deterministic cache key for any result (strategy or simulation).
+
+        DataFrame values (e.g. signal columns) are fingerprinted via
+        ``pd.util.hash_pandas_object`` so that different signals produce
+        different cache keys.
+        """
         param_keys = sorted(k for k in arguments.keys() if k not in ("strategy_name",))
-        params_str = json.dumps(
-            {k: arguments[k] for k in param_keys}, sort_keys=True, default=str
-        )
+        serializable = {}
+        for k in param_keys:
+            v = arguments[k]
+            if isinstance(v, pd.DataFrame):
+                serializable[k] = str(pd.util.hash_pandas_object(v, index=False).sum())
+            else:
+                serializable[k] = v
+        params_str = json.dumps(serializable, sort_keys=True, default=str)
         raw = f"{name}:{params_str}:{dataset_fingerprint}"
-        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+        return hashlib.sha256(raw.encode()).hexdigest()
 
     def _parquet_path(self, key: str) -> str:
         return os.path.join(self._dir, f"{key}.parquet")
@@ -61,8 +72,19 @@ class ResultStore:
 
     def _write_index(self, index: dict[str, dict]) -> None:
         os.makedirs(self._dir, exist_ok=True)
-        with open(self._index_path(), "w") as f:
-            json.dump(index, f, indent=2, default=str)
+        # Atomic write: write to a temp file then rename to avoid partial
+        # reads if another process reads the index concurrently.
+        fd, tmp = tempfile.mkstemp(dir=self._dir, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(index, f, indent=2, default=str)
+            os.replace(tmp, self._index_path())
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     def write(self, key: str, df: pd.DataFrame, metadata: dict) -> None:
         """Persist a result DataFrame and its metadata."""

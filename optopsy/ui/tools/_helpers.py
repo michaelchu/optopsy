@@ -422,7 +422,7 @@ def _run_one_strategy(
 
 
 # ---------------------------------------------------------------------------
-# Result caching helpers (plan steps 2-6)
+# Result caching helpers — cache check / execute / write wrappers
 # ---------------------------------------------------------------------------
 
 

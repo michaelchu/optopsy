@@ -55,10 +55,10 @@ def make_key(name: str, arguments: dict, dataset_fingerprint: str) -> str:
     param_keys = sorted(k for k in arguments.keys() if k not in ("strategy_name",))
     params_str = json.dumps({k: arguments[k] for k in param_keys}, sort_keys=True)
     raw = f"{name}:{params_str}:{dataset_fingerprint}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+    return hashlib.sha256(raw.encode()).hexdigest()
 ```
 
-Produces a short hex string like `"a3f8b2c1d4e5f678"` — no sanitization needed, no collisions.
+Produces a full 64-character hex string — no sanitization needed, no truncation-related collision risk. DataFrame values in `arguments` (e.g. signal columns) are fingerprinted via `pd.util.hash_pandas_object` before JSON serialization.
 
 Examples of how the same strategy with different params produces different keys:
 

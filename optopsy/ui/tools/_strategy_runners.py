@@ -227,27 +227,6 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     table = _df_to_markdown(leaderboard)
     user_display = f"### Strategy Scan Results\n\n{llm_summary}\n\n{table}"
 
-    # Cache the scan leaderboard itself
-    if ds_fp and not leaderboard.empty:
-        scan_cache_key = store.make_key("_scan_leaderboard", arguments, ds_fp)
-        try:
-            store.write(
-                scan_cache_key,
-                leaderboard,
-                {
-                    "type": "scan",
-                    "display_key": "_scan_leaderboard",
-                    "params": {
-                        "strategy_names": strategy_names,
-                        "dte_values": dte_values,
-                        "exit_values": exit_values,
-                        "otm_values": otm_values,
-                    },
-                },
-            )
-        except OSError:
-            pass
-
     return _result(
         llm_summary, user_display=user_display, res=scan_results, result_df=leaderboard
     )

@@ -491,7 +491,13 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
                 try:
                     val = col.dtype.type(filter_val)
                 except (ValueError, TypeError):
-                    val = float(filter_val)
+                    try:
+                        val = float(filter_val)
+                    except (ValueError, TypeError):
+                        return _result(
+                            f"Invalid filter_value '{filter_val}' for column "
+                            f"'{filter_col}' (dtype {col.dtype})."
+                        )
                 ops = {
                     "gt": col > val,
                     "lt": col < val,

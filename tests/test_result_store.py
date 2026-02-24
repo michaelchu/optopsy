@@ -89,7 +89,7 @@ class TestResultStore:
         key1 = ResultStore.make_key("long_calls", {"dte": 45, "raw": False}, "fp123")
         key2 = ResultStore.make_key("long_calls", {"dte": 45, "raw": False}, "fp123")
         assert key1 == key2
-        assert len(key1) == 16
+        assert len(key1) == 64
 
     def test_make_key_different_params(self):
         key1 = ResultStore.make_key("long_calls", {"dte": 45}, "fp123")
@@ -105,6 +105,17 @@ class TestResultStore:
         key1 = ResultStore.make_key("long_calls", {"dte": 45}, "fp123")
         key2 = ResultStore.make_key("short_puts", {"dte": 45}, "fp123")
         assert key1 != key2
+
+    def test_make_key_dataframe_values(self):
+        """DataFrame values (e.g. signals) are fingerprinted, not stringified."""
+        sig1 = pd.DataFrame({"signal": [1, 0, 1]})
+        sig2 = pd.DataFrame({"signal": [0, 1, 0]})
+        key1 = ResultStore.make_key("long_calls", {"dte": 45, "entry": sig1}, "fp123")
+        key2 = ResultStore.make_key("long_calls", {"dte": 45, "entry": sig2}, "fp123")
+        assert key1 != key2
+        # Same signal should produce same key
+        key3 = ResultStore.make_key("long_calls", {"dte": 45, "entry": sig1}, "fp123")
+        assert key1 == key3
 
     def test_index_survives_corruption(self, store, sample_df):
         """If _index.json is corrupted, reads return empty."""

@@ -79,7 +79,7 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
                         "params": {
                             k: v
                             for k, v in all_params.items()
-                            if not hasattr(v, "__len__") or isinstance(v, str)
+                            if isinstance(v, (str, int, float, bool, type(None)))
                         },
                         "summary": s,
                     },

@@ -643,17 +643,16 @@ class OptopsyAgent:
                         dataset_fingerprint=self._dataset_fingerprint,
                     ),
                 )
-                # Update dataset and recompute fingerprint if it changed
-                if result.dataset is not self.dataset:
-                    self.dataset = result.dataset
-                    if self.dataset is not None:
-                        self._dataset_fingerprint = str(
-                            pd.util.hash_pandas_object(self.dataset, index=False).sum()
-                        )
-                    else:
-                        self._dataset_fingerprint = None
+                # Update dataset and recompute fingerprint.  Always
+                # recompute when a dataset is returned so that in-place
+                # mutations are reflected in the fingerprint.
+                self.dataset = result.dataset
+                if self.dataset is not None:
+                    self._dataset_fingerprint = str(
+                        pd.util.hash_pandas_object(self.dataset, index=False).sum()
+                    )
                 else:
-                    self.dataset = result.dataset
+                    self._dataset_fingerprint = None
                 if result.signals is not None:
                     self.signals = result.signals
                 if result.datasets is not None:
