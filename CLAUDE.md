@@ -160,6 +160,7 @@ Branch names are enforced by a `pre-push` hook (via pre-commit). All branches mu
 | `hotfix/` | Urgent production fixes |
 | `release/` | Release preparation |
 | `claude/` | Claude-generated branches |
+| `copilot/` | Copilot-generated branches |
 | `main` | Main branch (no prefix) |
 
 Example: `feature/add-iron-condor-strategy`, `fix/dte-filter-bug`, `claude/refactor-core`
