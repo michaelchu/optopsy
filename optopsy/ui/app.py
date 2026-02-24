@@ -214,6 +214,24 @@ _init_db_sync()
 _storage_client = LocalStorageClient()
 
 
+async def _lookup_element_mime(object_key: str) -> str | None:
+    """Look up the stored mime type for an element by its object key."""
+    import aiosqlite
+
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                'SELECT mime FROM elements WHERE "objectKey" = ? LIMIT 1',
+                (object_key,),
+            )
+            row = await cursor.fetchone()
+            if row and row[0] and row[0] != "application/octet-stream":
+                return row[0]
+    except Exception:
+        pass
+    return None
+
+
 async def _serve_storage_file(file_path: str):
     """Serve persisted element files (e.g. Plotly chart JSON) from local storage."""
     full_path = (STORAGE_DIR / file_path).resolve()
@@ -221,13 +239,17 @@ async def _serve_storage_file(file_path: str):
         raise HTTPException(status_code=400, detail="Invalid path")
     if not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    # Determine media type.  Files stored without extensions (e.g. "chart_0")
-    # have no guessable type; Chainlit's frontend ``useFetch`` hook parses
-    # the response as JSON *only* when Content-Type includes "application/json",
-    # otherwise it falls back to ``.text()`` and Plotly receives a string
-    # instead of an object — rendering an empty chart.  We sniff the first
-    # byte to detect JSON content and set the type accordingly.
-    media_type = mimetypes.guess_type(str(full_path))[0]
+    # Look up the element's stored mime type from the database first.
+    # This is important because Chainlit's frontend ``useFetch`` hook parses
+    # the response as JSON when Content-Type includes "application/json"
+    # (via ``response.json()``), but returns raw text otherwise (via
+    # ``response.text()``).  Plotly elements need ``application/json`` so the
+    # frontend receives a parsed object, while Dataframe elements need
+    # ``text/plain`` so the frontend receives a string that ``JSON.parse()``
+    # can handle in ``Dataframe.tsx``.
+    media_type = await _lookup_element_mime(file_path)
+    if not media_type:
+        media_type = mimetypes.guess_type(str(full_path))[0]
     if not media_type:
         # Sniff: if the file starts with '{' or '[' it's almost certainly JSON.
         with open(full_path, "rb") as _f:
@@ -490,8 +512,13 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
 
     # Stringify Interval columns (e.g. dte_range, otm_pct_range) so they
     # render as readable text instead of "[object Object]" in the browser.
+    # pd.cut() produces CategoricalDtype with Interval categories, not IntervalDtype.
     for col in df.columns:
-        if isinstance(df[col].dtype, pd.IntervalDtype):
+        dtype = df[col].dtype
+        if isinstance(dtype, pd.IntervalDtype) or (
+            isinstance(dtype, pd.CategoricalDtype)
+            and isinstance(dtype.categories.dtype, pd.IntervalDtype)
+        ):
             df[col] = df[col].astype(str)
 
     label = tool_name.replace("_", " ").title()
@@ -503,6 +530,7 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
             data=df,
             display="inline",
             size="large",
+            mime="text/plain",
         )
     )
 

@@ -296,6 +296,22 @@ def _df_to_markdown(df: pd.DataFrame, max_rows: int = MAX_ROWS) -> str:
     truncated = total > max_rows
     if truncated:
         df = df.head(max_rows)
+    # Stringify Interval columns so they render as readable text
+    # (e.g. "(0, 30]") instead of "[object Object]" in the browser.
+    # pd.cut() produces CategoricalDtype with Interval categories, not IntervalDtype.
+    interval_cols = [
+        c
+        for c in df.columns
+        if isinstance(df[c].dtype, pd.IntervalDtype)
+        or (
+            isinstance(df[c].dtype, pd.CategoricalDtype)
+            and isinstance(df[c].dtype.categories.dtype, pd.IntervalDtype)
+        )
+    ]
+    if interval_cols:
+        df = df.copy()
+        for col in interval_cols:
+            df[col] = df[col].astype(str)
     table = df.to_markdown(index=False, floatfmt=".4f")
     if truncated:
         table += f"\n\n*... showing {max_rows} of {total} rows*"
