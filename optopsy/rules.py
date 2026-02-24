@@ -38,11 +38,11 @@ def _rule_non_overlapping_strike(
     if leg_count == 1:
         return data
 
-    query = " & ".join(
-        [f"strike_leg{leg + 1} > strike_leg{leg}" for leg in range(1, leg_count)]
-    )
+    mask = pd.Series(True, index=data.index)
+    for leg in range(1, leg_count):
+        mask = mask & (data[f"strike_leg{leg + 1}"] > data[f"strike_leg{leg}"])
 
-    return data.query(query)
+    return data[mask]
 
 
 def _rule_butterfly_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
@@ -63,10 +63,15 @@ def _rule_butterfly_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.Data
     if len(leg_def) != 3:
         return data
 
-    return data.query(
-        "strike_leg1 < strike_leg2 < strike_leg3 & "
-        "(strike_leg2 - strike_leg1) == (strike_leg3 - strike_leg2)"
+    mask = (
+        (data["strike_leg1"] < data["strike_leg2"])
+        & (data["strike_leg2"] < data["strike_leg3"])
+        & (
+            (data["strike_leg2"] - data["strike_leg1"])
+            == (data["strike_leg3"] - data["strike_leg2"])
+        )
     )
+    return data[mask]
 
 
 def _rule_iron_condor_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
@@ -86,7 +91,12 @@ def _rule_iron_condor_strikes(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.Da
     if len(leg_def) != 4:
         return data
 
-    return data.query("strike_leg1 < strike_leg2 < strike_leg3 < strike_leg4")
+    mask = (
+        (data["strike_leg1"] < data["strike_leg2"])
+        & (data["strike_leg2"] < data["strike_leg3"])
+        & (data["strike_leg3"] < data["strike_leg4"])
+    )
+    return data[mask]
 
 
 def _rule_iron_butterfly_strikes(
@@ -109,9 +119,12 @@ def _rule_iron_butterfly_strikes(
     if len(leg_def) != 4:
         return data
 
-    return data.query(
-        "strike_leg1 < strike_leg2 & strike_leg2 == strike_leg3 & strike_leg3 < strike_leg4"
+    mask = (
+        (data["strike_leg1"] < data["strike_leg2"])
+        & (data["strike_leg2"] == data["strike_leg3"])
+        & (data["strike_leg3"] < data["strike_leg4"])
     )
+    return data[mask]
 
 
 def _rule_expiration_ordering(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.DataFrame:
@@ -131,4 +144,4 @@ def _rule_expiration_ordering(data: pd.DataFrame, leg_def: List[Tuple]) -> pd.Da
     if len(leg_def) != 2:
         return data
 
-    return data.query("expiration_leg1 < expiration_leg2")
+    return data[data["expiration_leg1"] < data["expiration_leg2"]]
