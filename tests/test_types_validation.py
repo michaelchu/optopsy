@@ -123,6 +123,22 @@ class TestStrategyParamsValidation:
         with pytest.raises(ValidationError):
             StrategyParams.model_validate({"delta_min": "bad"})
 
+    def test_rejects_numeric_string_for_delta_min(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"delta_min": "0.3"})
+
+    def test_rejects_numeric_string_for_delta_max(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"delta_max": "0.5"})
+
+    def test_rejects_numeric_string_for_delta_interval(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"delta_interval": "0.1"})
+
+    def test_fill_ratio_rejects_numeric_string(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"fill_ratio": "0.5"})
+
 
 class TestStrategyParamsDatesValidation:
     """Test entry_dates/exit_dates DataFrame validation."""
