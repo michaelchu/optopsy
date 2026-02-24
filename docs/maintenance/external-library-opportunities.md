@@ -12,7 +12,6 @@ This document identifies areas of the codebase where hand-rolled implementations
 |---|---|---|---|---|
 | `checks.py` | 324 | Pydantic + Pandera | **Medium** | Eliminates boilerplate, gains serialization (adds core dep) |
 | `metrics.py` | 275 | empyrical-reloaded | **Low** | Battle-tested financial math, add omega/tail ratio (adds dependency) |
-| `evaluation.py` | 188 | `pd.merge_asof()` | **Low** | Cleaner exit matching, built into pandas (behavior risk) |
 
 ---
 
@@ -115,57 +114,12 @@ schema.validate(df)
 
 ---
 
-## 3. `evaluation.py` — Entry/Exit Matching (Low Priority)
-
-### Current State
-
-`_get_exits()` (~30 lines) implements tolerance-based nearest-match logic: for each entry, find the exit row with DTE closest to the target exit DTE. Uses `groupby` + absolute-difference + `idxmin` + `drop_duplicates`.
-
-### What To Replace
-
-`pd.merge_asof()` is purpose-built for "nearest key" merges on sorted data:
-
-```python
-# Before (_get_exits — ~30 lines)
-def _get_exits(data, dte):
-    data["_diff"] = (data["dte"] - dte).abs()
-    idx = data.groupby([...])["_diff"].idxmin()
-    return data.loc[idx].drop(columns="_diff").drop_duplicates(...)
-
-# After (~5 lines)
-exits = pd.merge_asof(
-    entries.sort_values("dte"),
-    data.sort_values("dte"),
-    on="dte",
-    by=["underlying_symbol", "option_type", "expiration", "strike"],
-    direction="nearest",
-    tolerance=tolerance,
-)
-```
-
-### Expected Reduction
-
-~25 lines removed, clearer intent. No temporary columns or manual index manipulation.
-
-### New Dependencies
-
-None — `pd.merge_asof()` is built into pandas.
-
-### Risks
-
-- `merge_asof` requires both DataFrames to be sorted by the `on` key. Must ensure sorting is applied before the call.
-- The `tolerance` parameter semantics differ slightly (absolute value vs. the current custom logic). Verify edge cases with existing tests.
-- Current implementation drops duplicates with `keep="first"`; `merge_asof` uses a different tie-breaking strategy. May need post-merge dedup.
-
----
-
 ## Implementation Order
 
 Status and recommended sequencing:
 
 1. **`checks.py`** — Evaluate whether Pydantic should become a core dep. Start with parameter validation only (skip Pandera initially).
-2. **`evaluation.py`** — Low risk but requires careful testing of edge cases vs current `_get_exits()` behaviour.
-3. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency. Also add omega ratio and tail ratio as new metrics.
+2. **`metrics.py`** — Add empyrical-reloaded, verify annualization conventions match options trade frequency. Also add omega ratio and tail ratio as new metrics.
 
 ---
 
