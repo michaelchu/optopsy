@@ -623,6 +623,7 @@ def simulate(
     # Validate arguments via Pydantic model
     from pydantic import ValidationError
 
+    from .checks import _format_validation_error
     from .types import SimulatorParams
 
     try:
@@ -633,7 +634,7 @@ def simulate(
             multiplier=multiplier,
         )
     except ValidationError as e:
-        raise ValueError(str(e)) from e
+        raise ValueError(_format_validation_error(e)) from e
 
     # Resolve selector
     if isinstance(selector, str):
