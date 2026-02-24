@@ -2,6 +2,8 @@
 
 These tests exercise Chainlit handlers by importing app.py (which registers
 Chainlit decorators) and calling the functions directly with mocked objects.
+Also covers new Chainlit features: conversation starters, chat settings,
+action buttons, rich elements (DataFrame + CSV export), and settings context.
 """
 
 import asyncio
@@ -686,3 +688,657 @@ class TestOnChatStart:
             assert stream_calls == ["Hello ", "world"]
 
         asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# Conversation starters tests
+# ---------------------------------------------------------------------------
+
+
+class TestSetStarters:
+    def test_returns_four_starters(self):
+        """set_starters returns a list of Starter objects."""
+
+        async def _run():
+            from optopsy.ui.app import set_starters
+
+            result = await set_starters()
+            assert len(result) == 4
+
+        asyncio.run(_run())
+
+    def test_starters_have_required_fields(self):
+        """Each starter has label and message fields."""
+
+        async def _run():
+            from optopsy.ui.app import set_starters
+
+            result = await set_starters()
+            for starter in result:
+                assert starter.label
+                assert starter.message
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# Chat settings tests
+# ---------------------------------------------------------------------------
+
+
+class TestOnSettingsUpdate:
+    def test_stores_settings_in_session(self):
+        """on_settings_update persists settings dict to user_session."""
+
+        async def _run():
+            from optopsy.ui.app import on_settings_update
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            import chainlit as cl
+
+            with patch.object(cl, "user_session", session):
+                await on_settings_update({"max_entry_dte": 60, "raw_mode": True})
+
+            assert store["chat_settings"] == {
+                "max_entry_dte": 60,
+                "raw_mode": True,
+            }
+
+        asyncio.run(_run())
+
+
+class TestBuildSettingsContext:
+    def test_empty_settings_returns_empty(self):
+        """Default settings produce no context string."""
+        from optopsy.ui.app import _build_settings_context
+
+        assert _build_settings_context({}) == ""
+
+    def test_default_values_produce_empty(self):
+        """Settings matching defaults produce no context string."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context(
+            {
+                "max_entry_dte": 90,
+                "max_otm_pct": 0.5,
+                "raw_mode": False,
+                "slippage": "mid",
+            }
+        )
+        assert result == ""
+
+    def test_non_default_dte(self):
+        """Changed DTE produces a settings context."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context({"max_entry_dte": 45})
+        assert "[User settings:" in result
+        assert "max_entry_dte=45" in result
+
+    def test_non_default_raw_mode(self):
+        """Toggled raw mode produces raw=true in context."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context({"raw_mode": True})
+        assert "raw=true" in result
+
+    def test_non_default_otm_pct(self):
+        """Changed OTM % is formatted with 2 decimal places."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context({"max_otm_pct": 0.2})
+        assert "max_otm_pct=0.20" in result
+
+    def test_non_default_slippage(self):
+        """Changed slippage model appears in context."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context({"slippage": "spread"})
+        assert "slippage=spread" in result
+
+    def test_multiple_non_defaults(self):
+        """Multiple changed settings all appear."""
+        from optopsy.ui.app import _build_settings_context
+
+        result = _build_settings_context({"max_entry_dte": 30, "raw_mode": True})
+        assert "max_entry_dte=30" in result
+        assert "raw=true" in result
+
+
+# ---------------------------------------------------------------------------
+# Action buttons tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildStrategyActions:
+    def test_empty_info_returns_no_actions(self):
+        """No strategy info means no actions."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        assert _build_strategy_actions({}) == []
+
+    def test_non_raw_strategy_produces_raw_toggle(self):
+        """Non-raw strategy produces 'Show Raw Trades' action."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        actions = _build_strategy_actions(
+            {
+                "strategy_name": "long_calls",
+                "arguments": {"strategy_name": "long_calls"},
+            }
+        )
+        labels = [a.label for a in actions]
+        assert "Show Raw Trades" in labels
+
+    def test_raw_strategy_produces_aggregated_toggle(self):
+        """Raw strategy produces 'Show Aggregated Stats' action."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        actions = _build_strategy_actions(
+            {
+                "strategy_name": "long_calls",
+                "arguments": {"strategy_name": "long_calls", "raw": True},
+            }
+        )
+        labels = [a.label for a in actions]
+        assert "Show Aggregated Stats" in labels
+
+    def test_wider_dte_action(self):
+        """Action to try wider DTE is created when DTE < 365."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        actions = _build_strategy_actions(
+            {
+                "strategy_name": "short_puts",
+                "arguments": {"strategy_name": "short_puts", "max_entry_dte": 60},
+            }
+        )
+        labels = [a.label for a in actions]
+        assert "Try DTE 90" in labels
+
+    def test_no_wider_dte_at_max(self):
+        """No wider DTE action when already at 365."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        actions = _build_strategy_actions(
+            {
+                "strategy_name": "long_calls",
+                "arguments": {"strategy_name": "long_calls", "max_entry_dte": 365},
+            }
+        )
+        labels = [a.label for a in actions]
+        assert not any("Try DTE" in lbl for lbl in labels)
+
+    def test_chart_action_always_present(self):
+        """Chart Results action is always present."""
+        from optopsy.ui.app import _build_strategy_actions
+
+        actions = _build_strategy_actions(
+            {
+                "strategy_name": "long_calls",
+                "arguments": {"strategy_name": "long_calls"},
+            }
+        )
+        labels = [a.label for a in actions]
+        assert "Chart Results" in labels
+
+
+# ---------------------------------------------------------------------------
+# Attach result elements tests
+# ---------------------------------------------------------------------------
+
+
+class TestAttachResultElements:
+    def test_attaches_dataframe_and_csv(self):
+        """Attaching results adds Dataframe and File elements."""
+        from optopsy.ui.app import _attach_result_elements
+
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        result = MagicMock()
+        result._result_df = df
+
+        elements: list = []
+
+        import chainlit as cl
+
+        mock_df_element = MagicMock()
+        mock_file_element = MagicMock()
+
+        with (
+            patch.object(cl, "Dataframe", return_value=mock_df_element) as mock_df_cls,
+            patch.object(cl, "File", return_value=mock_file_element) as mock_file_cls,
+        ):
+            _attach_result_elements(result, "run_strategy", elements)
+
+        assert len(elements) == 2
+        assert elements[0] is mock_df_element
+        assert elements[1] is mock_file_element
+        # Verify Dataframe was created with correct args
+        mock_df_cls.assert_called_once()
+        call_kwargs = mock_df_cls.call_args[1]
+        assert call_kwargs["name"] == "Run Strategy Results"
+        assert call_kwargs["display"] == "inline"
+        # Verify File was created with CSV content
+        mock_file_cls.assert_called_once()
+        file_kwargs = mock_file_cls.call_args[1]
+        assert file_kwargs["name"] == "run_strategy_results.csv"
+        assert file_kwargs["mime"] == "text/csv"
+
+    def test_empty_df_skips(self):
+        """Empty DataFrame produces no elements."""
+        from optopsy.ui.app import _attach_result_elements
+
+        result = MagicMock()
+        result._result_df = pd.DataFrame()
+
+        elements: list = []
+        _attach_result_elements(result, "run_strategy", elements)
+        assert len(elements) == 0
+
+    def test_none_df_skips(self):
+        """None DataFrame produces no elements."""
+        from optopsy.ui.app import _attach_result_elements
+
+        result = MagicMock()
+        result._result_df = None
+
+        elements: list = []
+        _attach_result_elements(result, "run_strategy", elements)
+        assert len(elements) == 0
+
+
+# ---------------------------------------------------------------------------
+# Action callback tests
+# ---------------------------------------------------------------------------
+
+
+class TestActionCallbacks:
+    def test_rerun_strategy_raw_toggle(self):
+        """rerun_strategy callback sends correct prompt for raw toggle."""
+
+        async def _run():
+            from optopsy.ui.app import on_rerun_strategy
+
+            mock_action = MagicMock()
+            mock_action.payload = {"strategy": "long_calls", "toggle": "raw"}
+
+            import chainlit as cl
+
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(return_value=("ok", []))
+
+            store = {"agent": agent, "messages": [], "chat_settings": None}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_rerun_strategy(mock_action)
+
+            assert any("raw=true" in c for c in sent_contents)
+
+        asyncio.run(_run())
+
+    def test_rerun_strategy_aggregated_toggle(self):
+        """rerun_strategy callback sends correct prompt for aggregated toggle."""
+
+        async def _run():
+            from optopsy.ui.app import on_rerun_strategy
+
+            mock_action = MagicMock()
+            mock_action.payload = {
+                "strategy": "long_puts",
+                "toggle": "aggregated",
+            }
+
+            import chainlit as cl
+
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(return_value=("ok", []))
+
+            store = {"agent": agent, "messages": [], "chat_settings": None}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_rerun_strategy(mock_action)
+
+            assert any("raw=false" in c for c in sent_contents)
+
+        asyncio.run(_run())
+
+    def test_rerun_strategy_wider_dte(self):
+        """rerun_strategy callback sends correct prompt for wider DTE."""
+
+        async def _run():
+            from optopsy.ui.app import on_rerun_strategy
+
+            mock_action = MagicMock()
+            mock_action.payload = {
+                "strategy": "iron_condor",
+                "adjust": "wider_dte",
+                "dte": 120,
+            }
+
+            import chainlit as cl
+
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(return_value=("ok", []))
+
+            store = {"agent": agent, "messages": [], "chat_settings": None}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_rerun_strategy(mock_action)
+
+            assert any("max_entry_dte=120" in c for c in sent_contents)
+
+        asyncio.run(_run())
+
+    def test_rerun_strategy_generic(self):
+        """rerun_strategy with no toggle or adjust produces generic prompt."""
+
+        async def _run():
+            from optopsy.ui.app import on_rerun_strategy
+
+            mock_action = MagicMock()
+            mock_action.payload = {"strategy": "short_puts"}
+
+            import chainlit as cl
+
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(return_value=("ok", []))
+
+            store = {"agent": agent, "messages": [], "chat_settings": None}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_rerun_strategy(mock_action)
+
+            assert any("Re-run short_puts" in c for c in sent_contents)
+
+        asyncio.run(_run())
+
+    def test_create_chart_action(self):
+        """create_chart_action callback sends chart prompt."""
+
+        async def _run():
+            from optopsy.ui.app import on_create_chart
+
+            mock_action = MagicMock()
+            mock_action.payload = {"strategy": "iron_butterfly"}
+
+            import chainlit as cl
+
+            sent_contents = []
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(return_value=("ok", []))
+
+            store = {"agent": agent, "messages": [], "chat_settings": None}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            def capture_message(**kwargs):
+                sent_contents.append(kwargs.get("content", ""))
+                return mock_cl_msg
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", side_effect=capture_message),
+            ):
+                await on_create_chart(mock_action)
+
+            assert any("iron_butterfly" in c for c in sent_contents)
+            assert any("chart" in c.lower() for c in sent_contents)
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# Settings context injection in on_message
+# ---------------------------------------------------------------------------
+
+
+class TestSettingsContextInjection:
+    def test_settings_injected_into_message(self):
+        """Non-default chat settings are appended to the user message."""
+
+        async def _run():
+            from optopsy.ui.app import on_message
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(
+                return_value=("ok", [{"role": "assistant", "content": "ok"}])
+            )
+
+            store = {
+                "agent": agent,
+                "messages": [],
+                "chat_settings": {"max_entry_dte": 30, "raw_mode": True},
+            }
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            mock_msg = MagicMock()
+            mock_msg.content = "run long_calls"
+            mock_msg.elements = []
+
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", return_value=mock_cl_msg),
+            ):
+                await on_message(mock_msg)
+
+            # Check that agent.chat was called with messages containing settings
+            call_args = agent.chat.call_args
+            messages_arg = call_args[0][0]
+            user_msg = next(m for m in messages_arg if m["role"] == "user")
+            assert "[User settings:" in user_msg["content"]
+            assert "max_entry_dte=30" in user_msg["content"]
+            assert "raw=true" in user_msg["content"]
+
+        asyncio.run(_run())
+
+    def test_default_settings_not_injected(self):
+        """Default settings produce no settings context injection."""
+
+        async def _run():
+            from optopsy.ui.app import on_message
+
+            agent = MagicMock()
+            agent.datasets = {}
+            agent.chat = AsyncMock(
+                return_value=("ok", [{"role": "assistant", "content": "ok"}])
+            )
+
+            store = {
+                "agent": agent,
+                "messages": [],
+                "chat_settings": {
+                    "max_entry_dte": 90,
+                    "max_otm_pct": 0.5,
+                    "raw_mode": False,
+                    "slippage": "mid",
+                },
+            }
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            mock_msg = MagicMock()
+            mock_msg.content = "hello"
+            mock_msg.elements = []
+
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+            mock_cl_msg.update = AsyncMock()
+            mock_cl_msg.stream_token = AsyncMock()
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", return_value=mock_cl_msg),
+            ):
+                await on_message(mock_msg)
+
+            call_args = agent.chat.call_args
+            messages_arg = call_args[0][0]
+            user_msg = next(m for m in messages_arg if m["role"] == "user")
+            assert "[User settings:" not in user_msg["content"]
+            assert user_msg["content"] == "hello"
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# on_chat_start initializes settings
+# ---------------------------------------------------------------------------
+
+
+class TestOnChatStartSettings:
+    def test_chat_settings_sent(self):
+        """on_chat_start creates and sends ChatSettings."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_start
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            mock_cl_msg = MagicMock()
+            mock_cl_msg.send = AsyncMock()
+
+            mock_settings = MagicMock()
+            mock_settings.send = AsyncMock()
+
+            import chainlit as cl
+
+            captured_settings_args = []
+
+            def capture_settings(inputs):
+                captured_settings_args.append(inputs)
+                return mock_settings
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch.object(cl, "Message", return_value=mock_cl_msg),
+                patch.object(cl, "ChatSettings", side_effect=capture_settings),
+                patch("optopsy.ui.app.get_provider_names", return_value=[]),
+            ):
+                await on_chat_start()
+
+            # ChatSettings was created with 4 input widgets
+            assert len(captured_settings_args) == 1
+            assert len(captured_settings_args[0]) == 4
+            # settings.send() was called
+            mock_settings.send.assert_called_once()
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# ToolResult._result_df tests
+# ---------------------------------------------------------------------------
+
+
+class TestToolResultResultDf:
+    def test_result_df_default_none(self):
+        """ToolResult._result_df defaults to None."""
+        from optopsy.ui.tools._helpers import ToolResult
+
+        tr = ToolResult("summary", None)
+        assert tr._result_df is None
+
+    def test_result_df_set_via_constructor(self):
+        """ToolResult._result_df can be set via constructor."""
+        from optopsy.ui.tools._helpers import ToolResult
+
+        df = pd.DataFrame({"x": [1, 2, 3]})
+        tr = ToolResult("summary", None, result_df=df)
+        assert tr._result_df is df
+        assert len(tr._result_df) == 3
