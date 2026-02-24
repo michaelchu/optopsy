@@ -122,7 +122,9 @@ class StrategyParams(BaseModel):
             )
         return v
 
-    @field_validator("delta_min", "delta_max", "delta_interval", "fill_ratio", mode="before")
+    @field_validator(
+        "delta_min", "delta_max", "delta_interval", "fill_ratio", mode="before"
+    )
     @classmethod
     def validate_strict_number(cls, v, info):
         if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
@@ -191,7 +193,7 @@ class CalendarStrategyParams(StrategyParams):
 class SimulatorParams(BaseModel):
     """Pydantic model for validating simulator parameters."""
 
-    capital: Union[int, float] = Field(gt=0, strict=True)
+    capital: Union[int, float] = Field(gt=0)
     quantity: int = Field(gt=0, strict=True)
     max_positions: int = Field(gt=0, strict=True)
     multiplier: int = Field(gt=0, strict=True)
@@ -201,5 +203,7 @@ class SimulatorParams(BaseModel):
     def validate_capital(cls, v):
         # Reject booleans and non-numeric types for capital
         if isinstance(v, bool) or not isinstance(v, (int, float)):
-            raise ValueError("Invalid setting for capital, must be a positive int or float")
+            raise ValueError(
+                "Invalid setting for capital, must be a positive int or float"
+            )
         return v
