@@ -79,13 +79,13 @@ class StrategyParams(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
 
-    # Timing parameters
-    max_entry_dte: Optional[int] = Field(None, gt=0)
-    exit_dte: Optional[int] = Field(None, ge=0)
-    exit_dte_tolerance: Optional[int] = Field(None, ge=0)
-    dte_interval: Optional[int] = Field(None, gt=0)
+    # Timing parameters (strict rejects float/bool coercion)
+    max_entry_dte: Optional[int] = Field(None, gt=0, strict=True)
+    exit_dte: Optional[int] = Field(None, ge=0, strict=True)
+    exit_dte_tolerance: Optional[int] = Field(None, ge=0, strict=True)
+    dte_interval: Optional[int] = Field(None, gt=0, strict=True)
 
-    # Filtering parameters — strict float (rejects int)
+    # Filtering parameters (strict float enforced by validate_strict_float below)
     max_otm_pct: Optional[float] = Field(None, gt=0)
     otm_pct_interval: Optional[float] = Field(None, gt=0)
     min_bid_ask: Optional[float] = Field(None, gt=0)
@@ -104,7 +104,7 @@ class StrategyParams(BaseModel):
     # Slippage settings
     slippage: Optional[Literal["mid", "spread", "liquidity"]] = None
     fill_ratio: Optional[Union[int, float]] = Field(None, ge=0, le=1)
-    reference_volume: Optional[int] = Field(None, gt=0)
+    reference_volume: Optional[int] = Field(None, gt=0, strict=True)
 
     # Side
     side: Optional[Literal["long", "short"]] = None
@@ -148,10 +148,10 @@ class CalendarStrategyParams(StrategyParams):
     """
 
     # Additional timing parameters for calendar/diagonal strategies
-    front_dte_min: Optional[int] = Field(None, gt=0)
-    front_dte_max: Optional[int] = Field(None, gt=0)
-    back_dte_min: Optional[int] = Field(None, gt=0)
-    back_dte_max: Optional[int] = Field(None, gt=0)
+    front_dte_min: Optional[int] = Field(None, gt=0, strict=True)
+    front_dte_max: Optional[int] = Field(None, gt=0, strict=True)
+    back_dte_min: Optional[int] = Field(None, gt=0, strict=True)
+    back_dte_max: Optional[int] = Field(None, gt=0, strict=True)
 
     @model_validator(mode="after")
     def check_dte_ranges(self):
@@ -183,6 +183,6 @@ class SimulatorParams(BaseModel):
     """Pydantic model for validating simulator parameters."""
 
     capital: Union[int, float] = Field(gt=0)
-    quantity: int = Field(gt=0)
-    max_positions: int = Field(gt=0)
-    multiplier: int = Field(gt=0)
+    quantity: int = Field(gt=0, strict=True)
+    max_positions: int = Field(gt=0, strict=True)
+    multiplier: int = Field(gt=0, strict=True)

@@ -2,9 +2,11 @@
 
 This module validates two things before a strategy runs:
 
-1. **Parameter checks** — Each user-supplied parameter (DTE intervals, OTM %,
-   slippage mode, etc.) is validated by a type-specific checker function.  The
-   ``param_checks`` dict at module level maps parameter names to their checkers.
+1. **Parameter checks** — User-supplied parameters (DTE intervals, OTM %,
+   slippage mode, etc.) are validated via Pydantic models defined in
+   ``types.py`` (``StrategyParams``, ``CalendarStrategyParams``).  Legacy
+   checker functions and the ``param_checks`` dict are retained for
+   backward compatibility and unit tests.
 
 2. **DataFrame schema checks** — The input DataFrame must contain the required
    columns (``expected_types``) with compatible dtypes.  Optional columns for
