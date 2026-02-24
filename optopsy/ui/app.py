@@ -720,10 +720,14 @@ async def on_message(message: cl.Message):
                         display="inline",
                     )
                 )
-            # Attach interactive DataFrame and downloadable CSV for strategy results
+            # Attach interactive DataFrame and downloadable CSV for strategy results.
+            # Clear previous elements so only the last strategy call's results
+            # are shown (prevents duplicate side-by-side tables when the LLM
+            # re-runs a strategy in the same turn).
             if tool_name in ("run_strategy", "scan_strategies") and hasattr(
                 result, "_result_df"
             ):
+                df_elements.clear()
                 _attach_result_elements(result, tool_name, df_elements)
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
