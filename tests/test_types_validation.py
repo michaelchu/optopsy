@@ -98,7 +98,7 @@ class TestStrategyParamsValidation:
 
     def test_ignores_unknown_params(self):
         model = StrategyParams.model_validate({"unknown_field": 42})
-        assert not hasattr(model, "unknown_field") or model.model_extra == {}
+        assert "unknown_field" not in model.model_dump()
 
     def test_all_none_values_accepted(self):
         params = {
