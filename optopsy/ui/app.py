@@ -15,9 +15,12 @@ This module is the Chainlit entry point.  It sets up:
 - **Rich elements** — Interactive DataFrames and CSV file exports.
 """
 
+import base64
 import json
 import logging
+import math
 import os
+import struct
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +47,65 @@ import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
 from optopsy.ui.providers import get_provider_names
 from optopsy.ui.storage import STORAGE_DIR, STORAGE_ROUTE_PREFIX, LocalStorageClient
+
+# ---------------------------------------------------------------------------
+# Plotly binary-array patch
+# ---------------------------------------------------------------------------
+# Plotly's ``pio.to_json`` encodes large numeric arrays as base-64 blobs
+# (``{dtype, bdata}``).  Plotly.js understands this when rendering live, but
+# Chainlit's element persistence stores the raw JSON and on thread resume the
+# frontend fails to decode the binary arrays, resulting in empty charts.
+# We monkey-patch ``cl.Plotly.__post_init__`` to replace bdata with plain
+# lists so the persisted JSON is universally readable.
+
+_BDATA_DTYPE_MAP = {
+    "f8": "d",
+    "f4": "f",
+    "i4": "i",
+    "i2": "h",
+    "i1": "b",
+    "u4": "I",
+    "u2": "H",
+    "u1": "B",
+}
+
+
+def _sanitize_float(val):
+    """Convert NaN/Infinity to None (JSON null) to produce valid JSON."""
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+        return None
+    return val
+
+
+def _decode_bdata(obj):
+    """Recursively replace ``{dtype, bdata}`` dicts with plain lists."""
+    if isinstance(obj, dict):
+        if "bdata" in obj and "dtype" in obj:
+            raw = base64.b64decode(obj["bdata"])
+            fmt = _BDATA_DTYPE_MAP.get(obj["dtype"], "d")
+            count = len(raw) // struct.calcsize(fmt)
+            return [_sanitize_float(v) for v in struct.unpack(f"<{count}{fmt}", raw)]
+        return {k: _decode_bdata(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_decode_bdata(item) for item in obj]
+    if isinstance(obj, float):
+        return _sanitize_float(obj)
+    return obj
+
+
+_original_plotly_post_init = cl.Plotly.__post_init__
+
+
+def _patched_plotly_post_init(self):
+    _original_plotly_post_init(self)
+    # Re-serialize with bdata decoded to plain arrays.
+    # Plotly's to_json uses NaN in binary data; standard JSON doesn't support
+    # NaN/Infinity literals, so _decode_bdata converts them to null.
+    decoded = _decode_bdata(json.loads(self.content))
+    self.content = json.dumps(decoded, separators=(",", ":"))
+
+
+cl.Plotly.__post_init__ = _patched_plotly_post_init
 
 DB_PATH = Path("~/.optopsy/chat.db").expanduser()
 
@@ -143,7 +205,6 @@ _init_db_sync()
 _storage_client = LocalStorageClient()
 
 
-@chainlit_app.get(f"{STORAGE_ROUTE_PREFIX}/{{file_path:path}}")
 async def _serve_storage_file(file_path: str):
     """Serve persisted element files (e.g. Plotly chart JSON) from local storage."""
     full_path = (STORAGE_DIR / file_path).resolve()
@@ -151,7 +212,48 @@ async def _serve_storage_file(file_path: str):
         raise HTTPException(status_code=400, detail="Invalid path")
     if not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(full_path)
+    # Determine media type.  Files stored without extensions (e.g. "chart_0")
+    # have no guessable type; Chainlit's frontend ``useFetch`` hook parses
+    # the response as JSON *only* when Content-Type includes "application/json",
+    # otherwise it falls back to ``.text()`` and Plotly receives a string
+    # instead of an object — rendering an empty chart.  We sniff the first
+    # byte to detect JSON content and set the type accordingly.
+    import mimetypes
+
+    media_type = mimetypes.guess_type(str(full_path))[0]
+    if not media_type:
+        # Sniff: if the file starts with '{' or '[' it's almost certainly JSON.
+        with open(full_path, "rb") as _f:
+            first_byte = _f.read(1).lstrip()
+        if first_byte in (b"{", b"["):
+            media_type = "application/json"
+        else:
+            media_type = "application/octet-stream"
+    return FileResponse(full_path, media_type=media_type)
+
+
+# Chainlit registers a catch-all ``/{full_path:path}`` route during import that
+# serves the SPA index.html.  Routes added via ``@app.get(...)`` after that
+# import land *after* the catch-all in FastAPI's route list, so the catch-all
+# matches first and returns HTML instead of the actual file.  We work around
+# this by inserting our storage route *before* the catch-all.
+from fastapi.routing import APIRoute
+
+_storage_route = APIRoute(
+    path=f"{STORAGE_ROUTE_PREFIX}/{{file_path:path}}",
+    endpoint=_serve_storage_file,
+    methods=["GET"],
+)
+# Find the catch-all and insert just before it.
+_insert_idx = next(
+    (
+        i
+        for i, r in enumerate(chainlit_app.routes)
+        if hasattr(r, "path") and r.path == "/{full_path:path}"
+    ),
+    len(chainlit_app.routes),
+)
+chainlit_app.routes.insert(_insert_idx, _storage_route)
 
 
 @cl.data_layer
