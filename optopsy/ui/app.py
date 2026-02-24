@@ -19,6 +19,7 @@ import base64
 import json
 import logging
 import math
+import mimetypes
 import os
 import struct
 from pathlib import Path
@@ -42,6 +43,7 @@ from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 from chainlit.server import app as chainlit_app
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
+from fastapi.routing import APIRoute
 
 import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
@@ -102,8 +104,14 @@ def _patched_plotly_post_init(self):
     # Indicator traces (RSI, MACD, Bollinger Bands, etc.) produce NaN for
     # the initial lookback window; standard JSON doesn't support NaN/Infinity
     # literals, so _decode_bdata converts them to null.
-    decoded = _decode_bdata(json.loads(self.content))
-    self.content = json.dumps(decoded, separators=(",", ":"))
+    try:
+        decoded = _decode_bdata(json.loads(self.content))
+        self.content = json.dumps(decoded, separators=(",", ":"))
+    except Exception:
+        # Fall back to the original content rather than breaking chart creation.
+        logging.getLogger(__name__).debug(
+            "bdata decode failed, using original", exc_info=True
+        )
 
 
 cl.Plotly.__post_init__ = _patched_plotly_post_init
@@ -219,8 +227,6 @@ async def _serve_storage_file(file_path: str):
     # otherwise it falls back to ``.text()`` and Plotly receives a string
     # instead of an object — rendering an empty chart.  We sniff the first
     # byte to detect JSON content and set the type accordingly.
-    import mimetypes
-
     media_type = mimetypes.guess_type(str(full_path))[0]
     if not media_type:
         # Sniff: if the file starts with '{' or '[' it's almost certainly JSON.
@@ -238,8 +244,6 @@ async def _serve_storage_file(file_path: str):
 # import land *after* the catch-all in FastAPI's route list, so the catch-all
 # matches first and returns HTML instead of the actual file.  We work around
 # this by inserting our storage route *before* the catch-all.
-from fastapi.routing import APIRoute
-
 _storage_route = APIRoute(
     path=f"{STORAGE_ROUTE_PREFIX}/{{file_path:path}}",
     endpoint=_serve_storage_file,
