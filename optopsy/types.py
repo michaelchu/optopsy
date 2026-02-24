@@ -122,6 +122,15 @@ class StrategyParams(BaseModel):
             )
         return v
 
+    @field_validator("delta_min", "delta_max", "delta_interval", "fill_ratio", mode="before")
+    @classmethod
+    def validate_strict_number(cls, v, info):
+        if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
+            raise ValueError(
+                f"Invalid setting for {info.field_name}, must be float type or None"
+            )
+        return v
+
     @field_validator("entry_dates", "exit_dates", mode="before")
     @classmethod
     def validate_dates_dataframe(cls, v, info):
