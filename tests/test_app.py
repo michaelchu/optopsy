@@ -1323,7 +1323,8 @@ class TestDecodeBdata:
     """Plotly bdata decoding must produce browser-safe JSON (no NaN literals)."""
 
     def test_bdata_with_nan_produces_valid_json(self):
-        """RSI-style traces contain NaN for the initial lookback window.
+        """Indicator traces (RSI, MACD, Bollinger Bands, etc.) produce NaN
+        for the initial lookback window before enough data points exist.
 
         Plotly encodes these as base-64 blobs.  After decoding, the JSON
         must use ``null`` (not bare ``NaN``) so ``JSON.parse`` succeeds

@@ -99,8 +99,9 @@ _original_plotly_post_init = cl.Plotly.__post_init__
 def _patched_plotly_post_init(self):
     _original_plotly_post_init(self)
     # Re-serialize with bdata decoded to plain arrays.
-    # Plotly's to_json uses NaN in binary data; standard JSON doesn't support
-    # NaN/Infinity literals, so _decode_bdata converts them to null.
+    # Indicator traces (RSI, MACD, Bollinger Bands, etc.) produce NaN for
+    # the initial lookback window; standard JSON doesn't support NaN/Infinity
+    # literals, so _decode_bdata converts them to null.
     decoded = _decode_bdata(json.loads(self.content))
     self.content = json.dumps(decoded, separators=(",", ":"))
 
