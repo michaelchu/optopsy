@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..providers.cache import ParquetCache
 from ._executor import _register
-from ._helpers import _df_to_markdown
+from ._helpers import _df_to_markdown, _select_results
 
 
 @_register("inspect_cache")
@@ -104,16 +104,10 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
             "Use run_strategy or scan_strategies first, then compare_results."
         )
 
-    result_keys = arguments.get("result_keys")
-    if result_keys:
-        missing = [k for k in result_keys if k not in results]
-        if missing:
-            return _result(
-                f"Result key(s) not found: {missing}. Available: {list(results.keys())}"
-            )
-        selected = {k: results[k] for k in result_keys}
-    else:
-        selected = dict(results)
+    selected, sel_err = _select_results(results, arguments.get("result_keys"))
+    if sel_err:
+        return _result(sel_err)
+    assert selected is not None
 
     if len(selected) < 2:
         return _result(

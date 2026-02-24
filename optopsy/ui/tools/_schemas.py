@@ -419,9 +419,11 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "create_chart": (
         "Create an interactive Plotly chart from strategy results, "
-        "simulation trade logs, datasets, or signals. Use this to "
-        "visualize equity curves, return distributions, strategy "
-        "comparisons, and heatmaps."
+        "simulation trade logs, datasets, or signals. Supports "
+        "multi-series charts via y_columns (multiple metrics) or "
+        "group_by (split by category). Use data_source='results' to "
+        "chart all session results as a comparison. Supports grouped "
+        "and stacked bar charts via bar_mode."
     ),
     "plot_vol_surface": (
         "Plot a volatility surface (heatmap of implied volatility by "

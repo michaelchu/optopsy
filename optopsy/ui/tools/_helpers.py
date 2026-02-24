@@ -429,6 +429,25 @@ def _run_one_strategy(
         return None, str(e)
 
 
+def _select_results(
+    results: dict[str, dict],
+    result_keys: list[str] | None,
+) -> tuple[dict[str, dict] | None, str | None]:
+    """Select and validate results by key.
+
+    Returns ``(selected, error_msg)``.  When ``error_msg`` is not None,
+    the caller should surface it to the user.
+    """
+    if result_keys:
+        missing = [k for k in result_keys if k not in results]
+        if missing:
+            return None, (
+                f"Result key(s) not found: {missing}. Available: {list(results.keys())}"
+            )
+        return {k: results[k] for k in result_keys}, None
+    return dict(results), None
+
+
 def _make_result_key(strategy_name: str, arguments: dict) -> str:
     """Stable, human-readable key for a strategy run (used as results dict key).
 

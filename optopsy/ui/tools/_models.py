@@ -61,9 +61,15 @@ class ChartType(str, Enum):
 class DataSource(str, Enum):
     dataset = "dataset"
     result = "result"
+    results = "results"
     simulation = "simulation"
     signal = "signal"
     stock = "stock"
+
+
+class BarMode(str, Enum):
+    group = "group"
+    stack = "stack"
 
 
 class IndicatorType(str, Enum):
@@ -500,7 +506,9 @@ class CreateChartArgs(BaseModel):
         ...,
         description=(
             "Where to pull data from: 'dataset' (active or named "
-            "dataset), 'result' (strategy run summary from results registry), "
+            "dataset), 'result' (single strategy run summary), "
+            "'results' (all session results as a multi-row DataFrame "
+            "for comparison charting — use with result_keys to filter), "
             "'simulation' (trade log from a simulation run), "
             "'signal' (signal slot dates), "
             "'stock' (cached OHLCV stock data from fetch_stock_data)."
@@ -508,6 +516,30 @@ class CreateChartArgs(BaseModel):
     )
     x: str | None = Field(None, description="Column name for the x-axis.")
     y: str | None = Field(None, description="Column name for the y-axis.")
+    y_columns: list[str] | None = Field(
+        None,
+        description=(
+            "Multiple y-axis columns to plot as separate traces. "
+            "Use instead of 'y' when comparing metrics side by side. "
+            "Cannot be combined with 'y'."
+        ),
+    )
+    group_by: str | None = Field(
+        None,
+        description=(
+            "Column to group data by. Creates one trace per unique value. "
+            "For example, group_by='strategy' with x='max_entry_dte' and "
+            "y='mean_return' creates one bar per strategy per bucket."
+        ),
+    )
+    bar_mode: BarMode | None = Field(
+        None,
+        description=(
+            "Bar chart layout mode: 'group' (side by side, default) "
+            "or 'stack' (stacked). Only applies to bar charts with "
+            "multiple traces."
+        ),
+    )
     heatmap_col: str | None = Field(
         None,
         description=(
@@ -533,6 +565,13 @@ class CreateChartArgs(BaseModel):
         description=(
             "Key of a simulation to chart. Only used when "
             "data_source='simulation'. Omit for most recent."
+        ),
+    )
+    result_keys: list[str] | None = Field(
+        None,
+        description=(
+            "List of result keys to include when data_source='results'. "
+            "Omit to include all results in the session."
         ),
     )
     signal_slot: str | None = Field(

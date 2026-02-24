@@ -735,3 +735,415 @@ class TestIndicatorCharts:
         assert result.chart_figure is not None
         assert len(result.chart_figure.data) == 1
         assert result.chart_figure.data[0].type == "candlestick"
+
+
+# ---------------------------------------------------------------------------
+# Multi-series chart tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def tabular_data():
+    """Tabular data suitable for multi-series charting."""
+    return pd.DataFrame(
+        {
+            "strategy": ["long_calls", "long_calls", "long_puts", "long_puts"],
+            "dte_bucket": ["30", "60", "30", "60"],
+            "mean_return": [0.05, 0.08, -0.03, 0.02],
+            "win_rate": [0.6, 0.7, 0.4, 0.55],
+            "count": [10, 15, 8, 12],
+        }
+    )
+
+
+@pytest.fixture
+def multi_results():
+    """Multiple strategy results for data_source='results' tests."""
+    return {
+        "long_calls:dte=30": {
+            "strategy": "long_calls",
+            "max_entry_dte": 30,
+            "exit_dte": 0,
+            "max_otm_pct": 0.5,
+            "count": 10,
+            "mean_return": 0.05,
+            "std": 0.02,
+            "win_rate": 0.6,
+            "profit_factor": 1.5,
+        },
+        "long_puts:dte=30": {
+            "strategy": "long_puts",
+            "max_entry_dte": 30,
+            "exit_dte": 0,
+            "max_otm_pct": 0.5,
+            "count": 8,
+            "mean_return": -0.03,
+            "std": 0.04,
+            "win_rate": 0.4,
+            "profit_factor": 0.8,
+        },
+        "short_puts:dte=45": {
+            "strategy": "short_puts",
+            "max_entry_dte": 45,
+            "exit_dte": 0,
+            "max_otm_pct": 0.3,
+            "count": 20,
+            "mean_return": 0.02,
+            "std": 0.01,
+            "win_rate": 0.75,
+            "profit_factor": 2.0,
+        },
+    }
+
+
+class TestMultiSeriesCharts:
+    """Tests for y_columns, group_by, and bar_mode parameters."""
+
+    def test_bar_y_columns(self, tabular_data):
+        """Two y columns produce 2 bar traces."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strategy",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[0].type == "bar"
+        assert result.chart_figure.data[1].type == "bar"
+        names = {t.name for t in result.chart_figure.data}
+        assert names == {"mean_return", "win_rate"}
+
+    def test_line_y_columns(self, tabular_data):
+        """Two y columns produce 2 line traces."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[0].mode == "lines"
+
+    def test_scatter_y_columns(self, tabular_data):
+        """Two y columns produce 2 scatter traces."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "scatter",
+                "data_source": "dataset",
+                "x": "count",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[0].mode == "markers"
+
+    def test_y_and_y_columns_error(self, tabular_data):
+        """Providing both y and y_columns returns error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strategy",
+                "y": "mean_return",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is None
+        assert "either" in result.llm_summary.lower()
+
+    def test_y_columns_missing_column(self, tabular_data):
+        """Invalid column in y_columns returns error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strategy",
+                "y_columns": ["mean_return", "nonexistent"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is None
+        assert "not found" in result.llm_summary.lower()
+
+    def test_y_columns_legend_enabled(self, tabular_data):
+        """showlegend is True when multiple traces."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strategy",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert result.chart_figure.layout.showlegend is True
+
+    def test_bar_group_by(self, tabular_data):
+        """Group by strategy creates one trace per group."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y": "mean_return",
+                "group_by": "strategy",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        # 2 unique strategies = 2 traces
+        assert len(result.chart_figure.data) == 2
+        names = {t.name for t in result.chart_figure.data}
+        assert "long_calls" in names
+        assert "long_puts" in names
+
+    def test_line_group_by(self, tabular_data):
+        """Group by with line chart."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y": "mean_return",
+                "group_by": "strategy",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.data[0].mode == "lines"
+
+    def test_group_by_invalid_column(self, tabular_data):
+        """Nonexistent group_by column returns error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y": "mean_return",
+                "group_by": "nonexistent",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is None
+        assert "nonexistent" in result.llm_summary.lower()
+
+    def test_group_by_with_y_columns(self, tabular_data):
+        """Combining group_by and y_columns multiplies traces."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y_columns": ["mean_return", "win_rate"],
+                "group_by": "strategy",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        # 2 strategies × 2 y_columns = 4 traces
+        assert len(result.chart_figure.data) == 4
+
+    def test_bar_mode_stack(self, tabular_data):
+        """bar_mode='stack' sets layout.barmode."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y_columns": ["mean_return", "win_rate"],
+                "bar_mode": "stack",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert result.chart_figure.layout.barmode == "stack"
+
+    def test_bar_mode_group(self, tabular_data):
+        """bar_mode='group' sets layout.barmode."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "dte_bucket",
+                "y_columns": ["mean_return", "win_rate"],
+                "bar_mode": "group",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert result.chart_figure.layout.barmode == "group"
+
+    def test_bar_mode_single_trace_ignored(self, tabular_data):
+        """barmode not set for single-trace bar chart."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            tabular_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 1
+        # barmode should not be set (defaults to None-ish)
+        assert result.chart_figure.layout.barmode in (None, "relative")
+
+    def test_single_y_backwards_compat(self, option_data):
+        """Existing single y/x still works with showlegend=False."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strike",
+                "y": "bid",
+            },
+            option_data,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 1
+        assert result.chart_figure.layout.showlegend is False
+
+
+class TestResultsDataSource:
+    """Tests for data_source='results'."""
+
+    def test_results_data_source(self, option_data, multi_results):
+        """Multiple results assembled into DataFrame, bar chart renders."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            option_data,
+            results=multi_results,
+        )
+        assert result.chart_figure is not None
+        assert result.chart_figure.data[0].type == "bar"
+
+    def test_results_with_keys_filter(self, option_data, multi_results):
+        """result_keys filters to subset."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "result_keys": ["long_calls:dte=30", "long_puts:dte=30"],
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            option_data,
+            results=multi_results,
+        )
+        assert result.chart_figure is not None
+        # Data should have 2 rows (filtered from 3)
+        assert "2 data points" in result.llm_summary
+
+    def test_results_missing_key(self, option_data, multi_results):
+        """Invalid key returns error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "result_keys": ["nonexistent"],
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            option_data,
+            results=multi_results,
+        )
+        assert result.chart_figure is None
+        assert "not found" in result.llm_summary.lower()
+
+    def test_results_empty(self, option_data):
+        """No results returns error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            option_data,
+            results={},
+        )
+        assert result.chart_figure is None
+        assert "no strategy results" in result.llm_summary.lower()
+
+    def test_results_with_y_columns(self, option_data, multi_results):
+        """Results data source with multiple y_columns."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "x": "result_key",
+                "y_columns": ["mean_return", "win_rate"],
+            },
+            option_data,
+            results=multi_results,
+        )
+        assert result.chart_figure is not None
+        assert len(result.chart_figure.data) == 2
+        assert result.chart_figure.layout.showlegend is True
+
+    def test_results_excludes_simulations(self, option_data):
+        """Simulation entries are excluded from results data source."""
+        results = {
+            "long_calls:dte=30": {
+                "strategy": "long_calls",
+                "count": 10,
+                "mean_return": 0.05,
+            },
+            "sim:long_calls": {
+                "type": "simulation",
+                "strategy": "long_calls",
+                "summary": {},
+            },
+        }
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "results",
+                "x": "strategy",
+                "y": "mean_return",
+            },
+            option_data,
+            results=results,
+        )
+        assert result.chart_figure is not None
+        # Only 1 row (simulation excluded)
+        assert "1 data points" in result.llm_summary
