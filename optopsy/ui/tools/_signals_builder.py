@@ -2,6 +2,7 @@
 
 import logging
 from datetime import date
+from typing import Any
 
 import pandas as pd
 
@@ -153,6 +154,177 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
             f"WARNING: No signal dates overlap the options data "
             f"({opt_min} to {opt_max}). {suggestion}"
         )
+    display = "\n".join(display_lines)
+    return _result(summary, user_display=display, sigs=updated_signals)
+
+
+# Restricted builtins for build_custom_signal sandbox.
+# Blocks import, open, exec, eval, compile, __import__, globals, locals, etc.
+_SAFE_BUILTINS: dict[str, Any] = {
+    "abs": abs,
+    "all": all,
+    "any": any,
+    "bool": bool,
+    "dict": dict,
+    "enumerate": enumerate,
+    "filter": filter,
+    "float": float,
+    "int": int,
+    "isinstance": isinstance,
+    "len": len,
+    "list": list,
+    "map": map,
+    "max": max,
+    "min": min,
+    "print": print,
+    "range": range,
+    "round": round,
+    "set": set,
+    "sorted": sorted,
+    "str": str,
+    "sum": sum,
+    "tuple": tuple,
+    "type": type,
+    "zip": zip,
+    "True": True,
+    "False": False,
+    "None": None,
+}
+
+
+@_register("build_custom_signal")
+def _handle_build_custom_signal(
+    arguments, dataset, signals, datasets, results, _result
+):
+    import numpy as np
+
+    slot = arguments.get("slot", "").strip()
+    if not slot:
+        return _result("Missing required 'slot' name for the signal.")
+    code = arguments.get("code", "").strip()
+    if not code:
+        return _result(
+            "Missing required 'code' — provide Python code that computes a boolean `signal` Series."
+        )
+
+    active_ds, _, err = _require_dataset(arguments, dataset, datasets, _result)
+    if err:
+        return err
+    assert active_ds is not None
+    dataset = active_ds
+
+    # Fetch OHLCV data for all symbols in the dataset
+    signal_data = _fetch_stock_data_for_signals(dataset)
+    if signal_data is None:
+        return _result(
+            "Custom signals require stock price data but yfinance is not "
+            "installed or the fetch failed. Install yfinance "
+            "(`pip install yfinance`) and try again.",
+        )
+
+    flagged_frames = []
+    symbols = signal_data["underlying_symbol"].unique()
+    errors = []
+
+    for sym in symbols:
+        sym_df = signal_data[signal_data["underlying_symbol"] == sym].copy()
+        sym_df = sym_df.sort_values("quote_date").reset_index(drop=True)
+
+        exec_globals = {
+            "__builtins__": _SAFE_BUILTINS,
+            "pd": pd,
+            "np": np,
+            "df": sym_df,
+        }
+        exec_locals: dict = {}
+
+        try:
+            exec(code, exec_globals, exec_locals)  # noqa: S102
+        except Exception as exc:
+            errors.append(f"{sym}: {type(exc).__name__}: {exc}")
+            continue
+
+        # Check exec_locals first (simple top-level assignments), then
+        # exec_globals (signal assigned inside a function that writes to
+        # the global scope).  Use `is None` — not `or` — because a
+        # pandas Series raises ValueError on truthiness tests.
+        sig = exec_locals.get("signal")
+        if sig is None:
+            sig = exec_globals.get("signal")
+        if sig is None:
+            errors.append(
+                f"{sym}: Code did not produce a variable named `signal`. "
+                "Your code must assign a boolean Series to `signal`."
+            )
+            continue
+
+        if not isinstance(sig, pd.Series):
+            errors.append(
+                f"{sym}: `signal` must be a pandas Series, got {type(sig).__name__}."
+            )
+            continue
+
+        if len(sig) != len(sym_df):
+            errors.append(
+                f"{sym}: `signal` length ({len(sig)}) does not match "
+                f"DataFrame length ({len(sym_df)}). Ensure `signal` is "
+                f"derived from `df` without changing its length."
+            )
+            continue
+
+        # Coerce to bool, filling NaN with False
+        sig = sig.fillna(False).astype(bool)
+
+        flagged = sym_df.loc[sig.values, ["underlying_symbol", "quote_date"]].copy()
+        if not flagged.empty:
+            flagged_frames.append(flagged)
+
+    # If ALL symbols failed, return error so the LLM can retry.
+    # If only some failed, proceed with partial results and warn.
+    if errors and not flagged_frames:
+        error_detail = "\n".join(errors)
+        return _result(
+            f"Custom signal code failed:\n{error_detail}\n\n"
+            "Fix the code and try again. The code must assign a boolean "
+            "Series named `signal` from DataFrame `df`."
+        )
+
+    if not flagged_frames:
+        combined = pd.DataFrame(columns=["underlying_symbol", "quote_date"])
+    else:
+        combined = pd.concat(flagged_frames, ignore_index=True)
+
+    # Intersect with options dates
+    valid_dates = _intersect_with_options_dates(combined, dataset)
+
+    # Store in signals dict
+    updated_signals = dict(signals)
+    updated_signals[slot] = valid_dates
+
+    desc = arguments.get("description") or "custom code"
+    n_dates, syms, date_min, date_max = _signal_slot_summary(valid_dates)
+    summary = f"Signal '{slot}' built: {desc} → {n_dates} valid dates for {syms}"
+    display_lines = [summary]
+    if errors:
+        display_lines.append(
+            f"WARNING: Code failed for {len(errors)} symbol(s): " + "; ".join(errors)
+        )
+    if n_dates > 0:
+        display_lines.append(f"Date range: {date_min} to {date_max}")
+    else:
+        opt_min = dataset["quote_date"].min().date()
+        opt_max = dataset["quote_date"].max().date()
+        if combined.empty:
+            display_lines.append(
+                "WARNING: The custom signal never triggered for any symbol. "
+                "Check your code logic or try different conditions."
+            )
+        else:
+            suggestion = _empty_signal_suggestion(combined, opt_min, opt_max)
+            display_lines.append(
+                f"WARNING: No signal dates overlap the options data "
+                f"({opt_min} to {opt_max}). {suggestion}"
+            )
     display = "\n".join(display_lines)
     return _result(summary, user_display=display, sigs=updated_signals)
 
