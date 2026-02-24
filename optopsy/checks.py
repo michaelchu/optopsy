@@ -2,9 +2,11 @@
 
 This module validates two things before a strategy runs:
 
-1. **Parameter checks** — Each user-supplied parameter (DTE intervals, OTM %,
-   slippage mode, etc.) is validated by a type-specific checker function.  The
-   ``param_checks`` dict at module level maps parameter names to their checkers.
+1. **Parameter checks** — User-supplied parameters (DTE intervals, OTM %,
+   slippage mode, etc.) are validated via Pydantic models defined in
+   ``types.py`` (``StrategyParams``, ``CalendarStrategyParams``).  Legacy
+   checker functions and the ``param_checks`` dict are retained for
+   backward compatibility and unit tests.
 
 2. **DataFrame schema checks** — The input DataFrame must contain the required
    columns (``expected_types``) with compatible dtypes.  Optional columns for
@@ -19,6 +21,22 @@ Entry points:
 from typing import Any, Callable, Dict, Tuple
 
 import pandas as pd
+from pydantic import ValidationError
+
+from .types import CalendarStrategyParams, StrategyParams
+
+
+def _format_validation_error(e: ValidationError) -> str:
+    """Format a Pydantic ValidationError into a concise, user-friendly message."""
+    errors = e.errors(include_input=False)
+    parts = []
+    for err in errors:
+        loc = err.get("loc") or ()
+        loc_str = ".".join(str(part) for part in loc) if loc else ""
+        msg = err.get("msg") or "Invalid value"
+        parts.append(f"{loc_str}: {msg}" if loc_str else msg)
+    return "; ".join(parts) if parts else "Invalid parameters"
+
 
 # Required columns and their accepted dtypes for option chain DataFrames.
 expected_types: Dict[str, Tuple[str, ...]] = {
@@ -59,9 +77,10 @@ def _run_common_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     Raises:
         ValueError: If any validation check fails
     """
-    for k, v in params.items():
-        if k in param_checks and v is not None:
-            param_checks[k](k, v)
+    try:
+        StrategyParams.model_validate(params)
+    except ValidationError as e:
+        raise ValueError(_format_validation_error(e)) from e
     _check_data_types(data)
 
     # Check for volume column if liquidity slippage is enabled
@@ -98,35 +117,15 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     Raises:
         ValueError: If any validation check fails
     """
-    _run_common_checks(params, data)
+    try:
+        CalendarStrategyParams.model_validate(params)
+    except ValidationError as e:
+        raise ValueError(_format_validation_error(e)) from e
+    _check_data_types(data)
 
-    # Validate DTE range ordering
-    front_dte_min = params.get("front_dte_min")
-    front_dte_max = params.get("front_dte_max")
-    back_dte_min = params.get("back_dte_min")
-    back_dte_max = params.get("back_dte_max")
-
-    if front_dte_min is not None and front_dte_max is not None:
-        if front_dte_min > front_dte_max:
-            raise ValueError(
-                f"front_dte_min ({front_dte_min}) must be <= "
-                f"front_dte_max ({front_dte_max})"
-            )
-
-    if back_dte_min is not None and back_dte_max is not None:
-        if back_dte_min > back_dte_max:
-            raise ValueError(
-                f"back_dte_min ({back_dte_min}) must be <= "
-                f"back_dte_max ({back_dte_max})"
-            )
-
-    # Validate no overlap between front and back DTE ranges
-    if front_dte_max is not None and back_dte_min is not None:
-        if front_dte_max >= back_dte_min:
-            raise ValueError(
-                f"front_dte_max ({front_dte_max}) must be < "
-                f"back_dte_min ({back_dte_min}) to avoid overlapping ranges"
-            )
+    # Check for volume column if liquidity slippage is enabled
+    if _requires_volume(params):
+        _check_volume_column(data)
 
 
 def _check_positive_integer(key: str, value: Any) -> None:

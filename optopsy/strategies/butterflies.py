@@ -5,12 +5,12 @@ from typing import Unpack
 import pandas as pd
 
 from ..evaluation import _calls, _puts
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 from ._helpers import Side, _butterfly
 
 
 def long_call_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long call butterfly strategy statistics.
@@ -42,7 +42,7 @@ def long_call_butterfly(
 
 
 def short_call_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short call butterfly strategy statistics.
@@ -74,7 +74,7 @@ def short_call_butterfly(
 
 
 def long_put_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long put butterfly strategy statistics.
@@ -106,7 +106,7 @@ def long_put_butterfly(
 
 
 def short_put_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short put butterfly strategy statistics.

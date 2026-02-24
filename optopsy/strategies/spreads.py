@@ -11,7 +11,7 @@ from ..definitions import (
 )
 from ..evaluation import _calls, _puts
 from ..rules import _rule_non_overlapping_strike
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 from ._helpers import (
     Side,
     _covered_call,
@@ -23,7 +23,7 @@ from ._helpers import (
 
 
 def long_straddles(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long straddle strategy statistics (long call + long put at same strike).
@@ -39,7 +39,7 @@ def long_straddles(
 
 
 def short_straddles(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short straddle strategy statistics (short call + short put at same strike).
@@ -55,7 +55,7 @@ def short_straddles(
 
 
 def long_strangles(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long strangle strategy statistics (long call + long put at different strikes).
@@ -71,7 +71,7 @@ def long_strangles(
 
 
 def short_strangles(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short strangle strategy statistics (short call + short put at different strikes).
@@ -87,7 +87,7 @@ def short_strangles(
 
 
 def long_call_spread(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long call spread (bull call spread) statistics.
@@ -103,7 +103,7 @@ def long_call_spread(
 
 
 def short_call_spread(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short call spread (bear call spread) statistics.
@@ -119,7 +119,7 @@ def short_call_spread(
 
 
 def long_put_spread(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long put spread (bear put spread) statistics.
@@ -135,7 +135,7 @@ def long_put_spread(
 
 
 def short_put_spread(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short put spread (bull put spread) statistics.
@@ -150,7 +150,9 @@ def short_put_spread(
     return _spread(data, [(Side.long, _puts), (Side.short, _puts)], **kwargs)
 
 
-def covered_call(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def covered_call(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+) -> pd.DataFrame:
     """
     Generate covered call strategy statistics.
 
@@ -184,7 +186,7 @@ def covered_call(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.Dat
 
 
 def protective_put(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate protective put (married put) strategy statistics.
