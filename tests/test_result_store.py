@@ -76,7 +76,7 @@ class TestResultStore:
         store.write("abc123", sample_df, {"type": "strategy"})
         store.write("def456", sample_df, {"type": "strategy"})
         count = store.clear()
-        assert count >= 2  # parquet files + _index.json
+        assert count == 2  # parquet files only (index is cleared, not deleted)
         assert not store.has("abc123")
         assert not store.has("def456")
 

@@ -176,13 +176,21 @@ class ResultStore:
             self._locked_index_update(_remove_key)
             return count
 
-        # Clear everything
+        # Clear everything under the index lock to avoid races with writers.
         count = 0
-        for fname in os.listdir(self._dir):
-            fpath = os.path.join(self._dir, fname)
-            if os.path.isfile(fpath):
-                os.remove(fpath)
-                count += 1
+
+        def _clear_all(index):
+            nonlocal count
+            for fname in os.listdir(self._dir):
+                if not fname.endswith(".parquet"):
+                    continue
+                fpath = os.path.join(self._dir, fname)
+                if os.path.isfile(fpath):
+                    os.remove(fpath)
+                    count += 1
+            index.clear()
+
+        self._locked_index_update(_clear_all)
         return count
 
     def total_size_bytes(self) -> int:

@@ -633,7 +633,7 @@ class TestAgentChat:
             # Should have 2 content blocks: prompt + results memo
             assert len(system_msg["content"]) == 2
             memo_text = system_msg["content"][1]["text"]
-            assert "1 strategy/simulation result(s)" in memo_text
+            assert "Session has 1 strategy/simulation result(s)" in memo_text
             assert "query_results" in memo_text
 
         asyncio.run(_run())

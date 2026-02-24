@@ -140,7 +140,9 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             strat,
             combo_args,
             ds_fp,
-            execute_fn=lambda s=strat, a=combo_args: _run_one_strategy(s, active_ds, a),
+            execute_fn=lambda s=strat, a=combo_args, ds=active_ds: _run_one_strategy(
+                s, ds, a
+            ),
             metadata={
                 "type": "strategy",
                 "strategy": strat,

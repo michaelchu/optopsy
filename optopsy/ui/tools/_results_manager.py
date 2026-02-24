@@ -477,6 +477,19 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
     filter_col = arguments.get("filter_column")
     filter_op = arguments.get("filter_op")
     filter_val = arguments.get("filter_value")
+    filter_parts = [filter_col, filter_op, filter_val is not None]
+    if any(filter_parts) and not all(filter_parts):
+        missing = []
+        if not filter_col:
+            missing.append("filter_column")
+        if not filter_op:
+            missing.append("filter_op")
+        if filter_val is None:
+            missing.append("filter_value")
+        return _result(
+            f"Incomplete filter: missing {', '.join(missing)}. "
+            "All three (filter_column, filter_op, filter_value) are required."
+        )
     if filter_col and filter_op and filter_val is not None:
         if filter_col not in df.columns:
             return _result(
