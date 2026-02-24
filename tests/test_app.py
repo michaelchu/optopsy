@@ -780,13 +780,6 @@ class TestBuildSettingsContext:
         assert "[User settings:" in result
         assert "max_entry_dte=45" in result
 
-    def test_non_default_raw_mode(self):
-        """Toggled raw mode produces raw=true in context."""
-        from optopsy.ui.app import _build_settings_context
-
-        result = _build_settings_context({"raw_mode": True})
-        assert "raw=true" in result
-
     def test_non_default_otm_pct(self):
         """Changed OTM % is formatted with 2 decimal places."""
         from optopsy.ui.app import _build_settings_context
@@ -805,9 +798,9 @@ class TestBuildSettingsContext:
         """Multiple changed settings all appear."""
         from optopsy.ui.app import _build_settings_context
 
-        result = _build_settings_context({"max_entry_dte": 30, "raw_mode": True})
+        result = _build_settings_context({"max_entry_dte": 30, "slippage": "spread"})
         assert "max_entry_dte=30" in result
-        assert "raw=true" in result
+        assert "slippage=spread" in result
 
 
 # ---------------------------------------------------------------------------
@@ -1188,7 +1181,7 @@ class TestSettingsContextInjection:
             store = {
                 "agent": agent,
                 "messages": [],
-                "chat_settings": {"max_entry_dte": 30, "raw_mode": True},
+                "chat_settings": {"max_entry_dte": 30, "slippage": "spread"},
             }
             session = MagicMock()
             session.get = lambda key: store.get(key)
@@ -1217,7 +1210,7 @@ class TestSettingsContextInjection:
             user_msg = next(m for m in messages_arg if m["role"] == "user")
             assert "[User settings:" in user_msg["content"]
             assert "max_entry_dte=30" in user_msg["content"]
-            assert "raw=true" in user_msg["content"]
+            assert "slippage=spread" in user_msg["content"]
 
         asyncio.run(_run())
 
@@ -1312,9 +1305,9 @@ class TestOnChatStartSettings:
             ):
                 await on_chat_start()
 
-            # ChatSettings was created with 4 input widgets
+            # ChatSettings was created with 3 input widgets
             assert len(captured_settings_args) == 1
-            assert len(captured_settings_args[0]) == 4
+            assert len(captured_settings_args[0]) == 3
             # settings.send() was called
             mock_settings.send.assert_called_once()
 

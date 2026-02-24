@@ -10,7 +10,7 @@ This module is the Chainlit entry point.  It sets up:
 - **Message handling** — ``on_message`` processes user input, handles CSV
   drag-and-drop uploads, and streams LLM responses with tool-call step UI.
 - **Conversation starters** — Clickable quick-start prompts for new chats.
-- **Chat settings** — Persistent parameter controls (DTE, OTM%, raw mode).
+- **Chat settings** — Persistent parameter controls (DTE, OTM%, slippage).
 - **Action buttons** — Quick follow-up actions on strategy results.
 - **Rich elements** — Interactive DataFrames and CSV file exports.
 """
@@ -231,12 +231,6 @@ async def on_chat_start():
                 step=0.01,
                 description="Maximum out-of-the-money percentage",
             ),
-            cl.input_widget.Switch(
-                id="raw_mode",
-                label="Raw Mode",
-                initial=False,
-                description="Return individual trades instead of aggregated stats",
-            ),
             cl.input_widget.Select(
                 id="slippage",
                 label="Slippage Model",
@@ -361,15 +355,12 @@ def _build_settings_context(settings: dict) -> str:
     defaults = {
         "max_entry_dte": 90,
         "max_otm_pct": 0.5,
-        "raw_mode": False,
         "slippage": "mid",
     }
     for key, default in defaults.items():
         val = settings.get(key)
         if val is not None and val != default:
-            if key == "raw_mode":
-                parts.append(f"raw={str(val).lower()}")
-            elif key == "max_otm_pct":
+            if key == "max_otm_pct":
                 parts.append(f"max_otm_pct={val:.2f}")
             else:
                 parts.append(f"{key}={val}")
@@ -393,7 +384,7 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
     # Stringify Interval columns (e.g. dte_range, otm_pct_range) so they
     # render as readable text instead of "[object Object]" in the browser.
     for col in df.columns:
-        if pd.api.types.is_interval_dtype(df[col]):
+        if isinstance(df[col].dtype, pd.IntervalDtype):
             df[col] = df[col].astype(str)
 
     label = tool_name.replace("_", " ").title()
