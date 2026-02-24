@@ -9,6 +9,10 @@ This module is the Chainlit entry point.  It sets up:
   ``on_chat_resume`` rebuilds message history from persisted steps.
 - **Message handling** — ``on_message`` processes user input, handles CSV
   drag-and-drop uploads, and streams LLM responses with tool-call step UI.
+- **Conversation starters** — Clickable quick-start prompts for new chats.
+- **Chat settings** — Persistent parameter controls (DTE, OTM%, raw mode).
+- **Action buttons** — Quick follow-up actions on strategy results.
+- **Rich elements** — Interactive DataFrames and CSV file exports.
 """
 
 import json
@@ -164,6 +168,29 @@ async def header_auth_callback(headers) -> cl.User:
     return cl.User(identifier="local", metadata={"role": "user"})
 
 
+@cl.set_starters
+async def set_starters():
+    """Clickable quick-start prompts shown at the beginning of each new chat."""
+    return [
+        cl.Starter(
+            label="Backtest iron condors on SPY",
+            message="Download SPY options data and run an iron condor backtest with 45 DTE entry",
+        ),
+        cl.Starter(
+            label="Compare call vs put spreads",
+            message="Load SPY data and compare long call spreads against long put spreads",
+        ),
+        cl.Starter(
+            label="RSI-filtered covered calls",
+            message="Run covered calls on SPY with an RSI below 30 entry signal",
+        ),
+        cl.Starter(
+            label="List available strategies",
+            message="List all available options strategies and briefly describe each one",
+        ),
+    ]
+
+
 @cl.on_chat_start
 async def on_chat_start():
     model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
@@ -183,6 +210,44 @@ async def on_chat_start():
             "Add API keys to your `.env` file to enable live data.\n"
         )
 
+    # Initialize chat settings for persistent parameter controls
+    settings = cl.ChatSettings(
+        [
+            cl.input_widget.Slider(
+                id="max_entry_dte",
+                label="Max Entry DTE",
+                initial=90,
+                min=7,
+                max=365,
+                step=7,
+                description="Maximum days to expiration at entry",
+            ),
+            cl.input_widget.Slider(
+                id="max_otm_pct",
+                label="Max OTM %",
+                initial=0.5,
+                min=0.01,
+                max=1.0,
+                step=0.01,
+                description="Maximum out-of-the-money percentage",
+            ),
+            cl.input_widget.Switch(
+                id="raw_mode",
+                label="Raw Mode",
+                initial=False,
+                description="Return individual trades instead of aggregated stats",
+            ),
+            cl.input_widget.Select(
+                id="slippage",
+                label="Slippage Model",
+                values=["mid", "spread", "liquidity"],
+                initial_value="mid",
+                description="Price fill model for backtesting",
+            ),
+        ]
+    )
+    await settings.send()
+
     await cl.Message(
         content=(
             "Welcome to **Optopsy Chat** — your options strategy backtesting assistant.\n\n"
@@ -190,10 +255,8 @@ async def on_chat_start():
             "1. Fetch options data or drop a CSV file into the chat\n"
             "2. Preview the data\n"
             "3. Run any of 28 options strategies — just describe what you want\n\n"
-            "**Example prompts:**\n"
-            '- *"Fetch AAPL options data from the last 6 months"*\n'
-            '- *"Run a long call spread with 60 DTE entry"*\n'
-            '- *"Compare iron condors vs iron butterflies"*\n\n'
+            "Use the **settings panel** (gear icon) to adjust default parameters, "
+            "or click a **starter prompt** above to jump right in.\n\n"
             "CSV format: `underlying_symbol, underlying_price, option_type, "
             "expiration, quote_date, strike, bid, ask`\n\n"
             f"{provider_line}"
@@ -277,6 +340,177 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
     cl.user_session.set("messages", messages)
 
 
+@cl.on_settings_update
+async def on_settings_update(settings: dict):
+    """Persist chat settings so they can be injected into strategy calls."""
+    cl.user_session.set("chat_settings", settings)
+
+
+# ---------------------------------------------------------------------------
+# Helper functions for rich UI elements
+# ---------------------------------------------------------------------------
+
+
+def _build_settings_context(settings: dict) -> str:
+    """Build a system-context note from chat settings for the LLM.
+
+    Only includes settings that differ from defaults so the LLM knows the
+    user has actively configured them.
+    """
+    parts = []
+    defaults = {
+        "max_entry_dte": 90,
+        "max_otm_pct": 0.5,
+        "raw_mode": False,
+        "slippage": "mid",
+    }
+    for key, default in defaults.items():
+        val = settings.get(key)
+        if val is not None and val != default:
+            if key == "raw_mode":
+                parts.append(f"raw={str(val).lower()}")
+            elif key == "max_otm_pct":
+                parts.append(f"max_otm_pct={val:.2f}")
+            else:
+                parts.append(f"{key}={val}")
+    if parts:
+        return f"[User settings: {', '.join(parts)}]"
+    return ""
+
+
+def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> None:
+    """Attach interactive DataFrame and downloadable CSV to the element list.
+
+    Called when a strategy tool produces a result DataFrame stored in
+    ``result._result_df``.
+    """
+    import pandas as pd
+
+    df: pd.DataFrame = result._result_df
+    if df is None or df.empty:
+        return
+
+    label = tool_name.replace("_", " ").title()
+
+    # Interactive paginated table
+    df_elements.append(
+        cl.Dataframe(
+            name=f"{label} Results",
+            data=df,
+            display="inline",
+            size="large",
+        )
+    )
+
+    # Downloadable CSV file
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    df_elements.append(
+        cl.File(
+            name=f"{tool_name}_results.csv",
+            content=csv_bytes,
+            display="inline",
+            mime="text/csv",
+        )
+    )
+
+
+def _build_strategy_actions(last_strategy_info: dict) -> list[cl.Action]:
+    """Build quick follow-up action buttons after a strategy run."""
+    if not last_strategy_info.get("strategy_name"):
+        return []
+
+    strategy = last_strategy_info["strategy_name"]
+    args = last_strategy_info.get("arguments", {})
+
+    actions = []
+
+    # "Show raw trades" or "Show aggregated" toggle
+    is_raw = args.get("raw", False)
+    if is_raw:
+        actions.append(
+            cl.Action(
+                name="rerun_strategy",
+                payload={"strategy": strategy, "toggle": "aggregated", **args},
+                label="Show Aggregated Stats",
+                tooltip="Re-run with raw=false for summary statistics",
+            )
+        )
+    else:
+        actions.append(
+            cl.Action(
+                name="rerun_strategy",
+                payload={"strategy": strategy, "toggle": "raw", **args},
+                label="Show Raw Trades",
+                tooltip="Re-run with raw=true to see individual trades",
+            )
+        )
+
+    # "Try wider DTE" button
+    current_dte = args.get("max_entry_dte", 90)
+    wider_dte = min(current_dte + 30, 365)
+    if wider_dte != current_dte:
+        actions.append(
+            cl.Action(
+                name="rerun_strategy",
+                payload={
+                    "strategy": strategy,
+                    "adjust": "wider_dte",
+                    "dte": wider_dte,
+                    **args,
+                },
+                label=f"Try DTE {wider_dte}",
+                tooltip=f"Re-run {strategy} with max_entry_dte={wider_dte}",
+            )
+        )
+
+    # "Create chart" button
+    actions.append(
+        cl.Action(
+            name="create_chart_action",
+            payload={"strategy": strategy},
+            label="Chart Results",
+            tooltip="Create a visualization of the strategy results",
+        )
+    )
+
+    return actions
+
+
+@cl.action_callback("rerun_strategy")
+async def on_rerun_strategy(action: cl.Action):
+    """Handle quick re-run action buttons on strategy results."""
+    payload = action.payload
+    strategy = payload.get("strategy", "")
+    toggle = payload.get("toggle")
+    adjust = payload.get("adjust")
+
+    if toggle == "raw":
+        prompt = f"Re-run {strategy} with raw=true to show individual trades"
+    elif toggle == "aggregated":
+        prompt = f"Re-run {strategy} with raw=false to show aggregated stats"
+    elif adjust == "wider_dte":
+        dte = payload.get("dte", 120)
+        prompt = f"Re-run {strategy} with max_entry_dte={dte}"
+    else:
+        prompt = f"Re-run {strategy}"
+
+    # Send as a user message to trigger the normal flow
+    await cl.Message(content=prompt, author="user").send()
+    # Process through the message handler
+    msg = cl.Message(content=prompt)
+    await on_message(msg)
+
+
+@cl.action_callback("create_chart_action")
+async def on_create_chart(action: cl.Action):
+    """Handle chart creation action button."""
+    strategy = action.payload.get("strategy", "")
+    prompt = f"Create a bar chart comparing the results of {strategy} by DTE range"
+    await cl.Message(content=prompt, author="user").send()
+    msg = cl.Message(content=prompt)
+    await on_message(msg)
+
+
 @cl.on_message
 async def on_message(message: cl.Message):
     agent: OptopsyAgent = cl.user_session.get("agent")
@@ -322,7 +556,14 @@ async def on_message(message: cl.Message):
         except Exception as e:
             await cl.Message(content=f"Failed to load **{el.name}**: {e}").send()
 
-    messages.append({"role": "user", "content": message.content})
+    # Inject chat settings defaults into user message context so the LLM
+    # is aware of the user's preferred parameters.
+    chat_settings = cl.user_session.get("chat_settings") or {}
+    settings_context = _build_settings_context(chat_settings)
+    user_content = message.content
+    if settings_context:
+        user_content = f"{message.content}\n\n{settings_context}"
+    messages.append({"role": "user", "content": user_content})
 
     # Show tool calls as expandable steps with a loading indicator.
     # tool_call_id is stored in step metadata so on_chat_resume can reconstruct
@@ -330,6 +571,10 @@ async def on_message(message: cl.Message):
     # Chart figures are collected and attached to the final response message
     # so they appear in the main chat area, not inside the tool accordion.
     chart_elements: list[cl.ElementBased] = []
+    # Collect DataFrame elements and downloadable CSV files from tool results.
+    df_elements: list[cl.ElementBased] = []
+    # Track the last strategy run for action buttons.
+    last_strategy_info: dict[str, Any] = {}
 
     async def on_tool_call(tool_name, arguments, result, tool_call_id=""):
         async with cl.Step(name=tool_name, type="tool") as step:
@@ -343,8 +588,17 @@ async def on_message(message: cl.Message):
                         display="inline",
                     )
                 )
+            # Attach interactive DataFrame and downloadable CSV for strategy results
+            if tool_name in ("run_strategy", "scan_strategies") and hasattr(
+                result, "_result_df"
+            ):
+                _attach_result_elements(result, tool_name, df_elements)
             if tool_call_id:
                 step.metadata = {"tool_call_id": tool_call_id}
+            # Track last strategy call for action buttons
+            if tool_name == "run_strategy":
+                last_strategy_info["strategy_name"] = arguments.get("strategy_name", "")
+                last_strategy_info["arguments"] = arguments
 
     # Delay creating the response message until after all tool steps finish,
     # so the final answer always appears below the tool step items.
@@ -357,9 +611,10 @@ async def on_message(message: cl.Message):
     async def on_token(token: str):
         nonlocal response_msg
         if response_msg is None:
-            # Attach chart elements up front — tool calls finish before
-            # streaming begins, so chart_elements is already populated.
-            response_msg = cl.Message(content="", elements=chart_elements)
+            # Attach chart + dataframe elements up front — tool calls finish
+            # before streaming begins, so elements are already populated.
+            all_elements = chart_elements + df_elements
+            response_msg = cl.Message(content="", elements=all_elements)
             await response_msg.send()
         await response_msg.stream_token(token)
 
@@ -378,14 +633,22 @@ async def on_message(message: cl.Message):
             on_thinking_token=on_thinking_token,
             on_assistant_tool_calls=on_assistant_tool_calls,
         )
+        # Build action buttons if a strategy was run
+        actions = _build_strategy_actions(last_strategy_info)
+
+        all_elements = chart_elements + df_elements
         # If on_token never fired (e.g. result came back all at once), send now.
         if response_msg is None:
-            response_msg = cl.Message(content=result_text, elements=chart_elements)
+            response_msg = cl.Message(
+                content=result_text, elements=all_elements, actions=actions
+            )
             await response_msg.send()
         else:
             response_msg.content = result_text
-            if chart_elements:
-                response_msg.elements = chart_elements
+            if all_elements:
+                response_msg.elements = all_elements
+            if actions:
+                response_msg.actions = actions
             await response_msg.update()
         cl.user_session.set("messages", updated_messages)
     except Exception as e:

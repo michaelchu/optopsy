@@ -328,6 +328,7 @@ class ToolResult:
         "active_dataset_name",
         "results",
         "chart_figure",
+        "_result_df",
     )
 
     def __init__(
@@ -340,6 +341,7 @@ class ToolResult:
         active_dataset_name: str | None = None,
         results: dict[str, dict] | None = None,
         chart_figure: Any = None,
+        result_df: pd.DataFrame | None = None,
     ):
         self.llm_summary = llm_summary
         self.user_display = user_display or llm_summary
@@ -349,6 +351,7 @@ class ToolResult:
         self.active_dataset_name = active_dataset_name
         self.results = results
         self.chart_figure = chart_figure
+        self._result_df = result_df
 
 
 def _df_summary(df: pd.DataFrame, label: str = "Dataset") -> str:

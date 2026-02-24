@@ -235,6 +235,7 @@ def execute_tool(
         active_name: str | None = None,
         res: dict[str, dict] | None = None,
         chart_figure: Any = None,
+        result_df: pd.DataFrame | None = None,
     ) -> ToolResult:
         return ToolResult(
             llm_summary,
@@ -245,6 +246,7 @@ def execute_tool(
             active_name,
             res if res is not None else results,
             chart_figure=chart_figure,
+            result_df=result_df,
         )
 
     # Check the handler registry first

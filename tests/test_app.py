@@ -538,6 +538,9 @@ class TestOnChatStart:
             mock_cl_msg = MagicMock()
             mock_cl_msg.send = AsyncMock()
 
+            mock_settings = MagicMock()
+            mock_settings.send = AsyncMock()
+
             import chainlit as cl
 
             def capture_message(**kwargs):
@@ -547,6 +550,7 @@ class TestOnChatStart:
             with (
                 patch.object(cl, "user_session", session),
                 patch.object(cl, "Message", side_effect=capture_message),
+                patch.object(cl, "ChatSettings", return_value=mock_settings),
                 patch("optopsy.ui.app.get_provider_names", return_value=["EODHD"]),
             ):
                 await on_chat_start()
@@ -569,6 +573,9 @@ class TestOnChatStart:
             mock_cl_msg = MagicMock()
             mock_cl_msg.send = AsyncMock()
 
+            mock_settings = MagicMock()
+            mock_settings.send = AsyncMock()
+
             import chainlit as cl
 
             def capture_message(**kwargs):
@@ -578,6 +585,7 @@ class TestOnChatStart:
             with (
                 patch.object(cl, "user_session", session),
                 patch.object(cl, "Message", side_effect=capture_message),
+                patch.object(cl, "ChatSettings", return_value=mock_settings),
                 patch("optopsy.ui.app.get_provider_names", return_value=[]),
             ):
                 await on_chat_start()
@@ -601,11 +609,15 @@ class TestOnChatStart:
             mock_cl_msg = MagicMock()
             mock_cl_msg.send = AsyncMock()
 
+            mock_settings = MagicMock()
+            mock_settings.send = AsyncMock()
+
             import chainlit as cl
 
             with (
                 patch.object(cl, "user_session", session),
                 patch.object(cl, "Message", return_value=mock_cl_msg),
+                patch.object(cl, "ChatSettings", return_value=mock_settings),
                 patch("optopsy.ui.app.get_provider_names", return_value=[]),
             ):
                 await on_chat_start()
