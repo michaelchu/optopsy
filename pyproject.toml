@@ -22,6 +22,7 @@ dependencies = [
     "pandas-ta>=0.4.67b0",
     "empyrical-reloaded>=0.5.7",
     "pytz",
+    "pydantic>=2.0,<3.0",
 ]
 
 [project.urls]
@@ -39,7 +40,6 @@ ui = [
     "aiosqlite>=0.17.0,<1.0.0",
     "greenlet>=3.0.0",
     "plotly>=5.0.0,<7.0.0",
-    "pydantic>=2.0,<3.0",
 ]
 
 [project.scripts]

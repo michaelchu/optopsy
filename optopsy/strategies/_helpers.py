@@ -33,7 +33,7 @@ from ..rules import (
     _rule_iron_condor_strikes,
     _rule_non_overlapping_strike,
 )
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 
 default_kwargs: Dict[str, Any] = {
     "dte_interval": 7,
@@ -80,7 +80,7 @@ class Side(Enum):
 
 
 def _singles(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process single-leg option strategies (calls or puts)."""
     params = {**default_kwargs, **kwargs}
@@ -94,7 +94,7 @@ def _singles(
 
 
 def _straddles(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process straddle strategies (call and put at same strike)."""
     params = {**default_kwargs, **kwargs}
@@ -118,7 +118,7 @@ def _straddles(
 
 
 def _strangles(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process strangle strategies (call and put at different strikes)."""
     params = {**default_kwargs, **kwargs}
@@ -134,7 +134,7 @@ def _strangles(
 
 
 def _spread(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process vertical spread strategies (call or put spreads at different strikes)."""
     params = {**default_kwargs, **kwargs}
@@ -150,7 +150,7 @@ def _spread(
 
 
 def _butterfly(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process butterfly strategies (3 legs at different strikes)."""
     params = {**default_kwargs, **kwargs}
@@ -166,7 +166,7 @@ def _butterfly(
 
 
 def _iron_condor(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process iron condor strategies (4 legs at different strikes)."""
     params = {**default_kwargs, **kwargs}
@@ -182,7 +182,7 @@ def _iron_condor(
 
 
 def _iron_butterfly(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process iron butterfly strategies (4 legs, middle legs share strike)."""
     params = {**default_kwargs, **kwargs}
@@ -198,7 +198,7 @@ def _iron_butterfly(
 
 
 def _covered_call(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Process covered call strategy.
@@ -223,7 +223,7 @@ def _calendar_spread(
     data: pd.DataFrame,
     leg_def: List[Tuple],
     same_strike: bool = True,
-    **kwargs: Unpack[StrategyParams],
+    **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:
     """
     Process calendar or diagonal spread strategies.

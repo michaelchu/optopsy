@@ -5,12 +5,12 @@ from typing import Unpack
 import pandas as pd
 
 from ..evaluation import _calls, _puts
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 from ._helpers import Side, _calendar_spread
 
 
 def long_call_calendar(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long call calendar spread strategy statistics.
@@ -42,7 +42,7 @@ def long_call_calendar(
 
 
 def short_call_calendar(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short call calendar spread strategy statistics.
@@ -68,7 +68,7 @@ def short_call_calendar(
 
 
 def long_put_calendar(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long put calendar spread strategy statistics.
@@ -94,7 +94,7 @@ def long_put_calendar(
 
 
 def short_put_calendar(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short put calendar spread strategy statistics.
@@ -120,7 +120,7 @@ def short_put_calendar(
 
 
 def long_call_diagonal(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long call diagonal spread strategy statistics.
@@ -146,7 +146,7 @@ def long_call_diagonal(
 
 
 def short_call_diagonal(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short call diagonal spread strategy statistics.
@@ -172,7 +172,7 @@ def short_call_diagonal(
 
 
 def long_put_diagonal(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate long put diagonal spread strategy statistics.
@@ -198,7 +198,7 @@ def long_put_diagonal(
 
 
 def short_put_diagonal(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate short put diagonal spread strategy statistics.

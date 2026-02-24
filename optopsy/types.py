@@ -1,12 +1,20 @@
 """Type definitions for Optopsy strategy parameters."""
 
-from typing import Literal, Optional, TypedDict
+from typing import Literal, Optional, TypedDict, Union
 
 import pandas as pd
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
 
-class StrategyParams(TypedDict, total=False):
-    """Common parameters for all option strategies.
+class StrategyParamsDict(TypedDict, total=False):
+    """Common parameters for all option strategies (TypedDict for Unpack[] annotations).
 
     All fields are optional to allow partial parameter specification.
     """
@@ -45,10 +53,10 @@ class StrategyParams(TypedDict, total=False):
     drop_nan: bool
 
 
-class CalendarStrategyParams(StrategyParams):
-    """Parameters for calendar and diagonal spread strategies.
+class CalendarStrategyParamsDict(StrategyParamsDict):
+    """Parameters for calendar and diagonal spread strategies (TypedDict for Unpack[]).
 
-    Extends StrategyParams with additional timing parameters for
+    Extends StrategyParamsDict with additional timing parameters for
     front and back month legs.
     """
 
@@ -57,3 +65,121 @@ class CalendarStrategyParams(StrategyParams):
     front_dte_max: int
     back_dte_min: int
     back_dte_max: int
+
+
+class StrategyParams(BaseModel):
+    """Pydantic model for validating common strategy parameters.
+
+    All fields are optional to allow partial parameter specification.
+    Mirrors the StrategyParamsDict TypedDict but with runtime validation.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
+
+    # Timing parameters
+    max_entry_dte: Optional[int] = Field(None, gt=0)
+    exit_dte: Optional[int] = Field(None, ge=0)
+    exit_dte_tolerance: Optional[int] = Field(None, ge=0)
+    dte_interval: Optional[int] = Field(None, gt=0)
+
+    # Filtering parameters — strict float (rejects int)
+    max_otm_pct: Optional[float] = Field(None, gt=0)
+    otm_pct_interval: Optional[float] = Field(None, gt=0)
+    min_bid_ask: Optional[float] = Field(None, gt=0)
+
+    # Greeks filtering (optional) — accepts int or float
+    delta_min: Optional[Union[int, float]] = None
+    delta_max: Optional[Union[int, float]] = None
+
+    # Greeks grouping (optional) — accepts int or float
+    delta_interval: Optional[Union[int, float]] = None
+
+    # Pre-computed signal dates (optional)
+    entry_dates: Optional[pd.DataFrame] = None
+    exit_dates: Optional[pd.DataFrame] = None
+
+    # Slippage settings
+    slippage: Optional[Literal["mid", "spread", "liquidity"]] = None
+    fill_ratio: Optional[Union[int, float]] = Field(None, ge=0, le=1)
+    reference_volume: Optional[int] = Field(None, gt=0)
+
+    # Side
+    side: Optional[Literal["long", "short"]] = None
+
+    # Output control — strict bool (rejects int)
+    raw: Optional[StrictBool] = None
+    drop_nan: Optional[StrictBool] = None
+
+    @field_validator("max_otm_pct", "otm_pct_interval", "min_bid_ask", mode="before")
+    @classmethod
+    def validate_strict_float(cls, v, info):
+        if v is not None and not isinstance(v, float):
+            raise ValueError(
+                f"Invalid setting for {info.field_name}, must be positive float type"
+            )
+        return v
+
+    @field_validator("entry_dates", "exit_dates", mode="before")
+    @classmethod
+    def validate_dates_dataframe(cls, v, info):
+        if v is None:
+            return v
+        if not isinstance(v, pd.DataFrame):
+            raise ValueError(
+                f"Invalid setting for {info.field_name}, must be a DataFrame or None"
+            )
+        required = {"underlying_symbol", "quote_date"}
+        missing = required - set(v.columns)
+        if missing:
+            raise ValueError(
+                f"{info.field_name} missing required columns: {missing}. "
+                f"Expected at least: underlying_symbol, quote_date."
+            )
+        return v
+
+
+class CalendarStrategyParams(StrategyParams):
+    """Pydantic model for calendar/diagonal spread parameter validation.
+
+    Extends StrategyParams with front/back DTE fields and cross-field validators.
+    """
+
+    # Additional timing parameters for calendar/diagonal strategies
+    front_dte_min: Optional[int] = Field(None, gt=0)
+    front_dte_max: Optional[int] = Field(None, gt=0)
+    back_dte_min: Optional[int] = Field(None, gt=0)
+    back_dte_max: Optional[int] = Field(None, gt=0)
+
+    @model_validator(mode="after")
+    def check_dte_ranges(self):
+        if self.front_dte_min is not None and self.front_dte_max is not None:
+            if self.front_dte_min > self.front_dte_max:
+                raise ValueError(
+                    f"front_dte_min ({self.front_dte_min}) must be <= "
+                    f"front_dte_max ({self.front_dte_max})"
+                )
+
+        if self.back_dte_min is not None and self.back_dte_max is not None:
+            if self.back_dte_min > self.back_dte_max:
+                raise ValueError(
+                    f"back_dte_min ({self.back_dte_min}) must be <= "
+                    f"back_dte_max ({self.back_dte_max})"
+                )
+
+        if self.front_dte_max is not None and self.back_dte_min is not None:
+            if self.front_dte_max >= self.back_dte_min:
+                raise ValueError(
+                    f"front_dte_max ({self.front_dte_max}) must be < "
+                    f"back_dte_min ({self.back_dte_min}) to avoid overlapping ranges"
+                )
+
+        return self
+
+
+class SimulatorParams(BaseModel):
+    """Pydantic model for validating simulator parameters."""
+
+    capital: Union[int, float] = Field(gt=0)
+    quantity: int = Field(gt=0)
+    max_positions: int = Field(gt=0)
+    multiplier: int = Field(gt=0)

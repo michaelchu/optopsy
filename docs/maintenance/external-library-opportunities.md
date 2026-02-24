@@ -10,7 +10,7 @@ This document identifies areas of the codebase where hand-rolled implementations
 
 | Module | Lines | Library Replacement | Priority | Status |
 |---|---|---|---|---|
-| `checks.py` | 324 | Pydantic + Pandera | **Medium** | Pending |
+| `checks.py` | 324 | Pydantic + Pandera | **Medium** | **Done** (parameter validation) |
 | ~~`metrics.py`~~ | ~~275~~ | ~~empyrical-reloaded~~ | ~~Low~~ | **Done** |
 
 ---

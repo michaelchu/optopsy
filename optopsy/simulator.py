@@ -620,16 +620,20 @@ def simulate(
     Returns:
         A :class:`SimulationResult` with trade log, equity curve, and summary.
     """
-    # Validate arguments via shared param_checks registry
-    from .checks import param_checks as _param_checks
+    # Validate arguments via Pydantic model
+    from pydantic import ValidationError
 
-    for _name, _val in [
-        ("capital", capital),
-        ("quantity", quantity),
-        ("max_positions", max_positions),
-        ("multiplier", multiplier),
-    ]:
-        _param_checks[_name](_name, _val)
+    from .types import SimulatorParams
+
+    try:
+        SimulatorParams(
+            capital=capital,
+            quantity=quantity,
+            max_positions=max_positions,
+            multiplier=multiplier,
+        )
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
     # Resolve selector
     if isinstance(selector, str):

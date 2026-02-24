@@ -5,11 +5,13 @@ from typing import Unpack
 import pandas as pd
 
 from ..evaluation import _calls, _puts
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 from ._helpers import Side, _iron_butterfly, _iron_condor
 
 
-def iron_condor(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def iron_condor(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+) -> pd.DataFrame:
     """
     Generate iron condor strategy statistics.
 
@@ -42,7 +44,7 @@ def iron_condor(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.Data
 
 
 def reverse_iron_condor(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate reverse iron condor strategy statistics.
@@ -76,7 +78,7 @@ def reverse_iron_condor(
 
 
 def iron_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate iron butterfly strategy statistics.
@@ -111,7 +113,7 @@ def iron_butterfly(
 
 
 def reverse_iron_butterfly(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParams]
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """
     Generate reverse iron butterfly strategy statistics.
