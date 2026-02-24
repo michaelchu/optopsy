@@ -93,6 +93,19 @@ first to get the data, then `create_chart` with `chart_type: "candlestick"`.
 - If the user says they "have" data for a symbol, check the cache with `inspect_cache` first — \
 the data may already be downloaded.
 
+### Comparing results visually
+- After `scan_strategies` or multiple `run_strategy` calls, use `create_chart` with \
+`data_source: "results"` to chart all session results as a comparison. The results are assembled \
+into a multi-row DataFrame with columns like `strategy`, `mean_return`, `win_rate`, `profit_factor`.
+- Use `y_columns` to plot multiple metrics side-by-side: \
+`y_columns: ["mean_return", "win_rate"]` creates one trace per metric.
+- Use `group_by` to split data by a category: \
+`group_by: "strategy"` with `y: "mean_return"` creates one bar/line per strategy.
+- Use `bar_mode: "group"` (side-by-side, default) or `bar_mode: "stack"` for stacked bars.
+- Use `result_keys` to filter which results to include (omit to include all).
+- These multi-series params (`y_columns`, `group_by`, `bar_mode`) also work with \
+`data_source: "dataset"` or any other data source — not just results.
+
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
 - exit_dte: DTE at exit (default 0, i.e. hold to expiration)
