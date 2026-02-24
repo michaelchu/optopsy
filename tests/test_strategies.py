@@ -909,13 +909,15 @@ def test_slippage_liquidity_requires_volume_column(data):
 
 def test_slippage_invalid_mode_raises(data):
     """Test that invalid slippage mode raises error."""
-    with pytest.raises(ValueError, match="must be 'mid', 'spread', or 'liquidity'"):
+    with pytest.raises(
+        ValueError, match=r"slippage.*Input should be 'mid', 'spread' or 'liquidity'"
+    ):
         long_calls(data, slippage="invalid")
 
 
 def test_slippage_fill_ratio_validation(data):
     """Test that fill_ratio must be between 0 and 1."""
-    with pytest.raises(ValueError, match="between 0 and 1"):
+    with pytest.raises(ValueError, match=r"fill_ratio.*less than or equal to 1"):
         long_calls(data, slippage="liquidity", fill_ratio=1.5)
 
 

@@ -98,7 +98,12 @@ from .strategies import (
     short_strangles,
 )
 from .timestamps import normalize_dates
-from .types import CalendarStrategyParams, StrategyParams
+from .types import (
+    CalendarStrategyParams,
+    CalendarStrategyParamsDict,
+    StrategyParams,
+    StrategyParamsDict,
+)
 
 __all__ = [
     "__version__",
@@ -140,7 +145,9 @@ __all__ = [
     "csv_data",
     # Type definitions
     "StrategyParams",
+    "StrategyParamsDict",
     "CalendarStrategyParams",
+    "CalendarStrategyParamsDict",
     # Signal functions
     "apply_signal",
     "rsi_below",

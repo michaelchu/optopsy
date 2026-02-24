@@ -5,11 +5,13 @@ from typing import Unpack
 import pandas as pd
 
 from ..evaluation import _calls, _puts
-from ..types import StrategyParams
+from ..types import StrategyParamsDict
 from ._helpers import Side, _singles
 
 
-def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def long_calls(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+) -> pd.DataFrame:
     """
     Generate long call strategy statistics.
 
@@ -23,7 +25,7 @@ def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataF
     return _singles(data, [(Side.long, _calls)], **kwargs)
 
 
-def long_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def long_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]) -> pd.DataFrame:
     """
     Generate long put strategy statistics.
 
@@ -37,7 +39,9 @@ def long_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFr
     return _singles(data, [(Side.long, _puts)], **kwargs)
 
 
-def short_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def short_calls(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+) -> pd.DataFrame:
     """
     Generate short call strategy statistics.
 
@@ -51,7 +55,9 @@ def short_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.Data
     return _singles(data, [(Side.short, _calls)], **kwargs)
 
 
-def short_puts(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def short_puts(
+    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+) -> pd.DataFrame:
     """
     Generate short put strategy statistics.
 
