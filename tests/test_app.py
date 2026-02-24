@@ -1319,6 +1319,47 @@ class TestOnChatStartSettings:
 # ---------------------------------------------------------------------------
 
 
+class TestDecodeBdata:
+    """Plotly bdata decoding must produce browser-safe JSON (no NaN literals)."""
+
+    def test_bdata_with_nan_produces_valid_json(self):
+        """Indicator traces (RSI, MACD, Bollinger Bands, etc.) produce NaN
+        for the initial lookback window before enough data points exist.
+
+        Plotly encodes these as base-64 blobs.  After decoding, the JSON
+        must use ``null`` (not bare ``NaN``) so ``JSON.parse`` succeeds
+        in the browser.
+        """
+        import base64
+        import struct
+
+        from optopsy.ui.app import _decode_bdata
+
+        values = [50.0, 55.2, float("nan"), float("inf"), float("-inf"), 48.3]
+        raw = struct.pack(f"<{len(values)}d", *values)
+        encoded = base64.b64encode(raw).decode()
+
+        fig_dict = {
+            "data": [{"y": {"dtype": "f8", "bdata": encoded}, "type": "scatter"}],
+            "layout": {},
+        }
+
+        decoded = _decode_bdata(fig_dict)
+        result_json = json.dumps(decoded)
+
+        assert "NaN" not in result_json
+        assert "Infinity" not in result_json
+
+        parsed = json.loads(result_json)
+        y = parsed["data"][0]["y"]
+        assert y[0] == 50.0
+        assert y[1] == 55.2
+        assert y[2] is None  # was NaN
+        assert y[3] is None  # was +Infinity
+        assert y[4] is None  # was -Infinity
+        assert y[5] == 48.3
+
+
 class TestToolResultResultDf:
     def test_result_df_default_none(self):
         """ToolResult._result_df defaults to None."""
