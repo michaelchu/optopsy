@@ -38,6 +38,8 @@ class LocalStorageClient(BaseStorageClient):
         content_disposition: str | None = None,
     ) -> Dict[str, Any]:
         file_path = self._safe_path(object_key)
+        if not overwrite and file_path.exists():
+            raise FileExistsError(f"File already exists: {object_key}")
         file_path.parent.mkdir(parents=True, exist_ok=True)
         mode = "wb" if isinstance(data, bytes) else "w"
         async with aiofiles.open(file_path, mode) as f:
@@ -55,6 +57,7 @@ class LocalStorageClient(BaseStorageClient):
         return False
 
     async def get_read_url(self, object_key: str) -> str:
+        self._safe_path(object_key)
         return f"{STORAGE_ROUTE_PREFIX}/{object_key}"
 
     async def close(self) -> None:
