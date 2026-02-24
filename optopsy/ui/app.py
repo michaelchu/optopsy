@@ -32,10 +32,14 @@ load_dotenv(_env_path, override=True)
 
 import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
+from chainlit.server import app as chainlit_app
+from fastapi import HTTPException
+from fastapi.responses import FileResponse
 
 import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
 from optopsy.ui.providers import get_provider_names
+from optopsy.ui.storage import STORAGE_DIR, STORAGE_ROUTE_PREFIX, LocalStorageClient
 
 DB_PATH = Path("~/.optopsy/chat.db").expanduser()
 
@@ -132,10 +136,26 @@ def _init_db_sync() -> None:
 
 _init_db_sync()
 
+_storage_client = LocalStorageClient()
+
+
+@chainlit_app.get(f"{STORAGE_ROUTE_PREFIX}/{{file_path:path}}")
+async def _serve_storage_file(file_path: str):
+    """Serve persisted element files (e.g. Plotly chart JSON) from local storage."""
+    full_path = (STORAGE_DIR / file_path).resolve()
+    if not str(full_path).startswith(str(STORAGE_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(full_path)
+
 
 @cl.data_layer
 def get_data_layer() -> SQLAlchemyDataLayer:
-    return SQLAlchemyDataLayer(conninfo=f"sqlite+aiosqlite:///{DB_PATH}")
+    return SQLAlchemyDataLayer(
+        conninfo=f"sqlite+aiosqlite:///{DB_PATH}",
+        storage_provider=_storage_client,
+    )
 
 
 @cl.header_auth_callback
@@ -318,7 +338,7 @@ async def on_message(message: cl.Message):
             if result.chart_figure is not None:
                 chart_elements.append(
                     cl.Plotly(
-                        name="chart",
+                        name=f"chart_{len(chart_elements)}",
                         figure=result.chart_figure,
                         display="inline",
                     )
