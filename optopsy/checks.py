@@ -25,6 +25,19 @@ from pydantic import ValidationError
 
 from .types import CalendarStrategyParams, StrategyParams
 
+
+def _format_validation_error(e: ValidationError) -> str:
+    """Format a Pydantic ValidationError into a concise, user-friendly message."""
+    errors = e.errors(include_input=False)
+    parts = []
+    for err in errors:
+        loc = err.get("loc") or ()
+        loc_str = ".".join(str(part) for part in loc) if loc else ""
+        msg = err.get("msg") or "Invalid value"
+        parts.append(f"{loc_str}: {msg}" if loc_str else msg)
+    return "; ".join(parts) if parts else "Invalid parameters"
+
+
 # Required columns and their accepted dtypes for option chain DataFrames.
 expected_types: Dict[str, Tuple[str, ...]] = {
     "underlying_symbol": ("object", "str"),
@@ -67,7 +80,7 @@ def _run_common_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     try:
         StrategyParams.model_validate(params)
     except ValidationError as e:
-        raise ValueError(str(e)) from e
+        raise ValueError(_format_validation_error(e)) from e
     _check_data_types(data)
 
     # Check for volume column if liquidity slippage is enabled
@@ -107,7 +120,7 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
     try:
         CalendarStrategyParams.model_validate(params)
     except ValidationError as e:
-        raise ValueError(str(e)) from e
+        raise ValueError(_format_validation_error(e)) from e
     _check_data_types(data)
 
     # Check for volume column if liquidity slippage is enabled
