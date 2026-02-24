@@ -2038,6 +2038,44 @@ class TestCustomSignal:
         # QQQ 2018-01-02 → False, QQQ 2018-01-03 → True
         assert result.tolist() == [True, False, False, True]
 
+    def test_nan_in_flag_col_treated_as_false(self):
+        """NaN values in flag column should be treated as False, not True."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "SPY"],
+                "quote_date": pd.to_datetime(
+                    ["2018-01-02", "2018-01-03", "2018-01-04"]
+                ),
+                "signal": [True, None, False],
+            }
+        )
+        sig = custom_signal(df)
+        result = sig(df)
+        assert result.tolist() == [True, False, False]
+
+    def test_missing_flag_col_raises(self):
+        """Missing flag column should raise ValueError with clear message."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "quote_date": pd.to_datetime(["2018-01-02"]),
+            }
+        )
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df)
+
+    def test_missing_required_columns_raises(self):
+        """Missing underlying_symbol or quote_date should raise ValueError."""
+        df = pd.DataFrame(
+            {"signal": [True], "quote_date": pd.to_datetime(["2018-01-02"])}
+        )
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df)
+
+        df2 = pd.DataFrame({"signal": [True], "underlying_symbol": ["SPY"]})
+        with pytest.raises(ValueError, match="missing required columns"):
+            custom_signal(df2)
+
     def test_exported_from_top_level(self):
         """custom_signal should be importable from the top-level optopsy package."""
         import optopsy as op

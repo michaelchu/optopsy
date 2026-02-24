@@ -850,20 +850,22 @@ def custom_signal(df: pd.DataFrame, flag_col: str = "signal") -> SignalFunc:
         >>> # Pass to a strategy
         >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
     """
-    valid = df[df[flag_col].astype(bool)][["underlying_symbol", "quote_date"]].copy()
+    required = {"underlying_symbol", "quote_date", flag_col}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"DataFrame is missing required columns: {sorted(missing)}")
+
+    flags = df[flag_col].fillna(False).astype(bool)
+    valid = df.loc[flags, ["underlying_symbol", "quote_date"]].copy()
     valid["quote_date"] = normalize_dates(valid["quote_date"])
-    valid_set: set[tuple] = set(zip(valid["underlying_symbol"], valid["quote_date"]))
+    valid_idx = pd.MultiIndex.from_arrays(
+        [valid["underlying_symbol"], valid["quote_date"]]
+    )
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         dates = normalize_dates(data["quote_date"])
-        return pd.Series(
-            [
-                (sym, dt) in valid_set
-                for sym, dt in zip(data["underlying_symbol"], dates)
-            ],
-            index=data.index,
-            dtype=bool,
-        )
+        lookup = pd.MultiIndex.from_arrays([data["underlying_symbol"], dates])
+        return pd.Series(lookup.isin(valid_idx), index=data.index, dtype=bool)
 
     return _signal
 
