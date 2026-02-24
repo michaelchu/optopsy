@@ -42,7 +42,7 @@ from .iron_strategies import (
     reverse_iron_condor,
 )
 from .singles import long_calls, long_puts, short_calls, short_puts
-from .two_leg import (
+from .spreads import (
     covered_call,
     long_call_spread,
     long_put_spread,
