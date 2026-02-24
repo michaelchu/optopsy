@@ -38,7 +38,7 @@ uv run ruff check optopsy/ tests/
 uv run ruff check --fix optopsy/ tests/
 
 # Type check
-uv run mypy optopsy/
+uv run ty check optopsy/
 
 # Run tests with coverage
 uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing

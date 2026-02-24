@@ -11,24 +11,22 @@ git clone https://github.com/michaelchu/optopsy.git
 cd optopsy
 ```
 
-### 2. Create Virtual Environment
+### 2. Install Dependencies
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv sync --extra ui
 ```
 
-### 3. Install Development Dependencies
+### 3. Install Pre-commit Hooks
 
 ```bash
-pip install -e ".[ui]"
-pip install pytest ruff mypy
+uv run pre-commit install --hook-type pre-push
 ```
 
 ### 4. Verify Installation
 
 ```bash
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ## Development Workflow
@@ -37,13 +35,13 @@ pytest tests/ -v
 
 ```bash
 # Run all tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run specific test file
-pytest tests/test_strategies.py -v
+uv run pytest tests/test_strategies.py -v
 
 # Run tests matching a pattern
-pytest tests/ -k "butterfly" -v
+uv run pytest tests/ -k "butterfly" -v
 ```
 
 ### Code Formatting and Linting
@@ -52,22 +50,22 @@ Optopsy uses [Ruff](https://github.com/astral-sh/ruff) for formatting and lintin
 
 ```bash
 # Check formatting
-ruff format --check optopsy/ tests/ setup.py
+uv run ruff format --check optopsy/ tests/
 
 # Auto-format code
-ruff format optopsy/ tests/ setup.py
+uv run ruff format optopsy/ tests/
 
 # Lint code
-ruff check optopsy/ tests/ setup.py
+uv run ruff check optopsy/ tests/
 
 # Lint and auto-fix
-ruff check --fix optopsy/ tests/ setup.py
+uv run ruff check --fix optopsy/ tests/
 
 # Type check
-mypy optopsy/
+uv run ty check optopsy/
 ```
 
-**Important:** All code must pass `ruff format`, `ruff check`, and `mypy` before submitting a PR.
+**Important:** All code must pass `ruff format`, `ruff check`, and `ty check` before submitting a PR.
 
 ## Adding a New Strategy
 
@@ -163,10 +161,10 @@ Add documentation to the appropriate strategy category file in `docs/strategies/
 
 ### Before Submitting
 
-- [ ] All tests pass (`pytest tests/ -v`)
-- [ ] Code is formatted with Ruff (`ruff format optopsy/ tests/ setup.py`)
-- [ ] Linting passes (`ruff check optopsy/ tests/ setup.py`)
-- [ ] Type checking passes (`mypy optopsy/`)
+- [ ] All tests pass (`uv run pytest tests/ -v`)
+- [ ] Code is formatted with Ruff (`uv run ruff format optopsy/ tests/`)
+- [ ] Linting passes (`uv run ruff check optopsy/ tests/`)
+- [ ] Type checking passes (`uv run ty check optopsy/`)
 - [ ] New features have tests
 - [ ] New strategies have documentation
 - [ ] Docstrings follow existing style (Google format)
@@ -287,8 +285,8 @@ Aim for high test coverage on public APIs. Not every internal function needs tes
 ### Building Docs Locally
 
 ```bash
-# Install MkDocs
-pip install mkdocs mkdocs-material mkdocstrings[python]
+# Install MkDocs and required plugins
+pip install mkdocs mkdocs-material "mkdocstrings[python]"
 
 # Serve docs locally
 mkdocs serve
