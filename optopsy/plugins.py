@@ -9,6 +9,8 @@ Discovers and loads extensions registered under these entry point groups:
 - ``optopsy.providers`` — each entry point loads a ``DataProvider`` subclass
 - ``optopsy.tools`` — each entry point loads a registrar returning
   ``{"schemas": [...], "handlers": {...}, "models": {...}, "descriptions": {...}}``
+- ``optopsy.auth`` — each entry point loads a registrar returning
+  ``{"type": "password"|"oauth"|"header", "callback": async_callable}``
 
 All discovery is lazy and cached.  The public optopsy package never
 references any plugin package by name.
@@ -118,3 +120,53 @@ def get_plugin_tools() -> list[dict[str, Any]]:
         except Exception:
             _log.warning("Plugin tool registrar failed", exc_info=True)
     return registrations
+
+
+_auth_cache: dict[str, Any | None] = {}
+
+_AUTH_CACHE_KEY = "optopsy.auth"
+
+
+def get_plugin_auth() -> Any | None:
+    """Discover an auth plugin.
+
+    The entry point must resolve to a callable returning a dict::
+
+        {
+            "type": "password" | "oauth" | "header",
+            "callback": async_callable,
+        }
+
+    - ``"password"`` → registered as ``@cl.password_auth_callback``
+      callback signature: ``(username: str, password: str) -> cl.User | None``
+    - ``"oauth"`` → registered as ``@cl.oauth_callback``
+      callback signature: ``(provider_id, token, raw_user_data, default_user, id_token) -> cl.User | None``
+    - ``"header"`` → registered as ``@cl.header_auth_callback``
+      callback signature: ``(headers) -> cl.User | None``
+
+    Only the first discovered auth plugin is used. Returns None if no plugin
+    found.  The result is cached after the first call.
+    """
+    if _AUTH_CACHE_KEY in _auth_cache:
+        return _auth_cache[_AUTH_CACHE_KEY]
+
+    plugins = _discover("optopsy.auth")
+    if not plugins:
+        _auth_cache[_AUTH_CACHE_KEY] = None
+        return None
+    registrar = plugins[0]
+    try:
+        result = registrar()
+        if not isinstance(result, dict):
+            _log.warning(
+                "Auth plugin registrar returned non-dict %r; skipping",
+                type(result),
+            )
+            _auth_cache[_AUTH_CACHE_KEY] = None
+            return None
+        _auth_cache[_AUTH_CACHE_KEY] = result
+        return result
+    except Exception:
+        _log.warning("Auth plugin registrar failed", exc_info=True)
+        _auth_cache[_AUTH_CACHE_KEY] = None
+        return None

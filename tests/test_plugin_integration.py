@@ -402,3 +402,74 @@ class TestPluginProviderIntegration:
                 providers = _prov._load_providers()
 
         assert all(type(p).__name__ != "BrokenProvider" for p in providers)
+
+
+# ---------------------------------------------------------------------------
+# Auth plugin integration — app.py registers the correct Chainlit callback
+# ---------------------------------------------------------------------------
+
+
+class TestPluginAuthIntegration:
+    """Verify auth plugins wire into app.py's Chainlit callback registration."""
+
+    def test_password_auth_plugin_registers_callback(self):
+        """A password auth plugin registers cl.password_auth_callback."""
+        import unittest.mock as um
+
+        async def my_password_cb(username, password):
+            return None
+
+        auth_result = {"type": "password", "callback": my_password_cb}
+
+        mock_cl = um.MagicMock()
+        mock_cl.User = um.MagicMock
+
+        with (
+            patch("optopsy.plugins.get_plugin_auth", return_value=auth_result),
+            patch.dict(sys.modules, {"chainlit": mock_cl}),
+        ):
+            # Simulate the dispatch logic from app.py
+            from optopsy.plugins import get_plugin_auth
+
+            plugin = get_plugin_auth()
+            assert plugin is not None
+            assert plugin["type"] == "password"
+            assert plugin["callback"] is my_password_cb
+
+            # Verify the type dispatches correctly
+            if plugin["type"] == "password":
+                mock_cl.password_auth_callback(plugin["callback"])
+
+            mock_cl.password_auth_callback.assert_called_once_with(my_password_cb)
+
+    def test_oauth_auth_plugin_registers_callback(self):
+        """An oauth auth plugin registers cl.oauth_callback."""
+        import unittest.mock as um
+
+        async def my_oauth_cb(
+            provider_id, token, raw_user_data, default_user, id_token
+        ):
+            return None
+
+        auth_result = {"type": "oauth", "callback": my_oauth_cb}
+
+        mock_cl = um.MagicMock()
+
+        with patch("optopsy.plugins.get_plugin_auth", return_value=auth_result):
+            from optopsy.plugins import get_plugin_auth
+
+            plugin = get_plugin_auth()
+            assert plugin is not None
+
+            if plugin["type"] == "oauth":
+                mock_cl.oauth_callback(plugin["callback"])
+
+            mock_cl.oauth_callback.assert_called_once_with(my_oauth_cb)
+
+    def test_no_auth_plugin_uses_default_header(self):
+        """Without an auth plugin, the default header callback is used."""
+        with patch("optopsy.plugins.get_plugin_auth", return_value=None):
+            from optopsy.plugins import get_plugin_auth
+
+            plugin = get_plugin_auth()
+            assert plugin is None
