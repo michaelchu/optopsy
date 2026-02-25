@@ -340,7 +340,7 @@ def test_single_short_calls_raw(data):
     assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "call" in list(results["option_type"].values)
-    assert round(results.iloc[0]["pct_change"], 2) == -0.17
+    assert round(results.iloc[0]["pct_change"], 2) == 0.17
 
 
 def test_single_short_puts_raw(data):
@@ -348,7 +348,8 @@ def test_single_short_puts_raw(data):
     assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "put" in list(results["option_type"].values)
-    assert round(results.iloc[0]["pct_change"], 2) == -1
+    # Short puts kept the entire premium (underlying moved away from strike)
+    assert round(results.iloc[0]["pct_change"], 2) == 1
 
 
 def test_singles_long_calls(data):
@@ -371,7 +372,7 @@ def test_singles_short_calls(data):
     results = short_calls(data)
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
-    assert round(results.iloc[0]["mean"], 2) == -0.17
+    assert round(results.iloc[0]["mean"], 2) == 0.17
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
@@ -379,7 +380,7 @@ def test_singles_short_puts(data):
     results = short_puts(data)
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
-    assert round(results.iloc[0]["mean"], 2) == -1.0
+    assert round(results.iloc[0]["mean"], 2) == 1.0
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
@@ -1604,3 +1605,165 @@ def test_calendar_exit_dates_filter_invalid(calendar_data):
         exit_dte=7,
     )
     assert len(results) == 0
+
+
+# =============================================================================
+# Short Single-Leg Pct_Change Sign Convention Tests
+# =============================================================================
+
+
+def test_short_calls_pct_change_opposite_of_long(data):
+    """Short calls and long calls should have opposite pct_change signs."""
+    long_results = long_calls(data, raw=True)
+    short_results = short_calls(data, raw=True)
+    assert len(long_results) == 1
+    assert len(short_results) == 1
+    long_pct = long_results.iloc[0]["pct_change"]
+    short_pct = short_results.iloc[0]["pct_change"]
+    # Opposite sign: long loses when call drops, short gains
+    assert round(long_pct, 2) == -round(short_pct, 2)
+
+
+def test_short_puts_pct_change_opposite_of_long(data):
+    """Short puts and long puts should have opposite pct_change signs."""
+    long_results = long_puts(data, raw=True)
+    short_results = short_puts(data, raw=True)
+    long_pct = long_results.iloc[0]["pct_change"]
+    short_pct = short_results.iloc[0]["pct_change"]
+    assert round(long_pct, 2) == -round(short_pct, 2)
+
+
+# =============================================================================
+# Missing Aggregated Output Tests for Reverse Iron Strategies
+# =============================================================================
+
+
+def test_reverse_iron_condor_aggregated(multi_strike_data):
+    """Reverse iron condor aggregated output has correct columns."""
+    results = reverse_iron_condor(multi_strike_data)
+    assert list(results.columns) == quadruple_strike_external_cols + describe_cols
+    assert len(results) > 0
+
+
+def test_reverse_iron_butterfly_aggregated(multi_strike_data):
+    """Reverse iron butterfly aggregated output has correct columns."""
+    results = reverse_iron_butterfly(multi_strike_data)
+    assert list(results.columns) == quadruple_strike_external_cols + describe_cols
+    assert len(results) > 0
+
+
+# =============================================================================
+# Missing Aggregated Output Tests for Short Calendar/Diagonal Variants
+# =============================================================================
+
+_CAL_KWARGS = dict(
+    front_dte_min=20,
+    front_dte_max=40,
+    back_dte_min=50,
+    back_dte_max=70,
+    exit_dte=7,
+)
+
+
+def test_short_put_calendar_aggregated(calendar_data):
+    """Short put calendar aggregated output has correct columns."""
+    results = short_put_calendar(calendar_data, **_CAL_KWARGS)
+    assert list(results.columns) == calendar_spread_external_cols + describe_cols
+    assert len(results) > 0
+
+
+def test_short_call_diagonal_aggregated(calendar_data):
+    """Short call diagonal aggregated output has correct columns."""
+    results = short_call_diagonal(calendar_data, **_CAL_KWARGS)
+    assert list(results.columns) == diagonal_spread_external_cols + describe_cols
+    assert len(results) > 0
+
+
+def test_short_put_diagonal_aggregated(calendar_data):
+    """Short put diagonal aggregated output has correct columns."""
+    results = short_put_diagonal(calendar_data, **_CAL_KWARGS)
+    assert list(results.columns) == diagonal_spread_external_cols + describe_cols
+    assert len(results) > 0
+
+
+# =============================================================================
+# Parameter Filter Tests — min_bid_ask and max_entry_dte
+# =============================================================================
+
+
+def test_min_bid_ask_filters_low_spread_options():
+    """Options with bid or ask at or below min_bid_ask should be excluded."""
+    import datetime
+
+    exp_date = datetime.datetime(2018, 1, 31)
+    entry_date = datetime.datetime(2018, 1, 1)
+    exit_date = datetime.datetime(2018, 1, 31)
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    d = [
+        # Entry — one call with bid just below default min_bid_ask=0.05
+        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 0.04, 0.06, 0.30],
+        # Exit
+        ["SPX", 220, "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
+    ]
+    df = pd.DataFrame(data=d, columns=cols)
+
+    # With default min_bid_ask=0.05, the 215.0 call (bid=0.04) is filtered → no result
+    results_default = long_calls(df, raw=True)
+    assert len(results_default) == 0, "215.0 call with bid=0.04 should be filtered by min_bid_ask=0.05"
+
+    # With min_bid_ask=0.03, the 215.0 call (bid=0.04 > 0.03) passes → 1 result
+    results_low = long_calls(df, raw=True, min_bid_ask=0.03)
+    assert len(results_low) == 1
+    assert results_low.iloc[0]["strike"] == 215.0
+
+
+def test_max_entry_dte_filters_far_expirations():
+    """Options with DTE above max_entry_dte should be excluded from entry."""
+    import datetime
+
+    exp_near = datetime.datetime(2018, 3, 31)  # 89 DTE from entry
+    exp_far = datetime.datetime(2018, 5, 31)   # 150 DTE from entry
+    entry_date = datetime.datetime(2018, 1, 1)
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    d = [
+        # Near expiration (89 DTE) — within default max_entry_dte=90
+        ["SPX", 213.93, "call", exp_near, entry_date, 212.5, 7.35, 7.45, 0.30],
+        # Far expiration (150 DTE) — beyond default max_entry_dte=90
+        ["SPX", 213.93, "call", exp_far, entry_date, 212.5, 9.00, 9.10, 0.30],
+        # Exits at expiration
+        ["SPX", 220, "call", exp_near, exp_near, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", 220, "call", exp_far, exp_far, 212.5, 7.45, 7.55, 0.95],
+    ]
+    df = pd.DataFrame(data=d, columns=cols)
+
+    near_dte = (exp_near - entry_date).days  # 89
+
+    # Default max_entry_dte=90: near (~89 DTE) passes, far (150 DTE) excluded
+    results_default = long_calls(df, raw=True)
+    assert len(results_default) == 1, f"Expected only near-expiry result, got {len(results_default)}"
+    assert results_default.iloc[0]["dte_entry"] == near_dte
+
+    # With max_entry_dte=160: both expirations should be included
+    results_wide = long_calls(df, raw=True, max_entry_dte=160)
+    assert len(results_wide) == 2
