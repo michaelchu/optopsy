@@ -269,15 +269,15 @@ def test_covered_call_raw(multi_strike_data):
     # Both legs should be calls
     assert results.iloc[0]["option_type_leg1"] == "call"
     assert results.iloc[0]["option_type_leg2"] == "call"
-    # Default ATM leg1 (212.5) + DEFAULT leg2 (215.0)
+    # Default deep ITM leg1 (207.5, delta=0.80) + DEFAULT leg2 (215.0, delta=0.35)
     row = results.iloc[0]
-    assert row["strike_leg1"] == 212.5
+    assert row["strike_leg1"] == 207.5
     assert row["strike_leg2"] == 215.0
-    # Entry: long 212.5 call (3.05) + short 215 call (-1.55) = 1.50
-    assert round(row["total_entry_cost"], 2) == 1.50
-    # Exit: long call worth 2.50 + short call expired worthless (-0.05) = 2.45
-    assert round(row["total_exit_proceeds"], 2) == 2.45
-    assert round(row["pct_change"], 2) == 0.63
+    # Entry: long 207.5 call (6.95) + short 215 call (-1.55) = 5.40
+    assert round(row["total_entry_cost"], 2) == 5.40
+    # Exit: long 207.5 call (7.50) + short 215 call (-0.05) = 7.45
+    assert round(row["total_exit_proceeds"], 2) == 7.45
+    assert round(row["pct_change"], 2) == 0.38
 
 
 def test_covered_call(multi_strike_data):

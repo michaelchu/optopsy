@@ -1191,24 +1191,27 @@ class TestSpotCheckCoveredProtective:
         """Covered call from ``data`` fixture (UP market, selector=first).
 
         Covered call: long call (lower strike) + short call (upper strike).
-        Strikes 212.5 / 215.0:
-          leg1 (long call 212.5):  entry mid = (7.35+7.45)/2 = 7.40
+        Default deep ITM leg1 (target delta 0.80) → 210.0 (delta 0.65, closest)
+        Default leg2 (target delta 0.30) → 215.0 (delta 0.30)
+
+        Strikes 210.0 / 215.0:
+          leg1 (long call 210.0):  entry mid = (8.50+8.60)/2 = 8.55
           leg2 (short call 215.0): entry mid = -(6.00+6.05)/2 = -6.025
-          total_entry_cost = 7.40 + (-6.025) = 1.375  (debit)
+          total_entry_cost = 8.55 + (-6.025) = 2.525  (debit)
 
         Exit (underlying 220):
-          leg1 (long call 212.5):  exit mid = (7.45+7.55)/2 = 7.50
+          leg1 (long call 210.0):  exit mid = (9.90+10.00)/2 = 9.95
           leg2 (short call 215.0): exit mid = -(4.96+5.05)/2 = -5.005
-          total_exit_proceeds = 7.50 + (-5.005) = 2.495
+          total_exit_proceeds = 9.95 + (-5.005) = 4.945
 
-        realized_pnl = (2.495 - 1.375) * 1 * 100 = 112.0
+        realized_pnl = (4.945 - 2.525) * 1 * 100 = 242.0
         """
         result = simulate(data, op.covered_call, selector="first")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(1.375)
-        assert trade["exit_proceeds"] == pytest.approx(2.495)
-        assert trade["realized_pnl"] == pytest.approx(112.0)
+        assert trade["entry_cost"] == pytest.approx(2.525)
+        assert trade["exit_proceeds"] == pytest.approx(4.945)
+        assert trade["realized_pnl"] == pytest.approx(242.0)
 
     def test_protective_put_pnl(self, data):
         """Protective put from ``data`` fixture (UP market, selector=first).

@@ -51,6 +51,9 @@ _DEFAULT_DELTA = {"target": 0.30, "min": 0.20, "max": 0.40}
 _DEFAULT_ATM_DELTA = {"target": 0.50, "min": 0.40, "max": 0.60}
 _DEFAULT_OTM_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
 _DEFAULT_WING_DELTA = {"target": 0.20, "min": 0.10, "max": 0.30}
+_DEFAULT_DEEP_ITM_DELTA = {"target": 0.80, "min": 0.60, "max": 0.95}
+_DEFAULT_ITM_WING_DELTA = {"target": 0.40, "min": 0.30, "max": 0.50}
+_DEFAULT_OTM_WING_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
 
 
 def _singles(
@@ -108,8 +111,8 @@ def _spread(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process vertical spread strategies (call or put spreads at different strikes)."""
-    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
-    kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
+    kwargs.setdefault("leg1_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_OTM_DELTA)
     return _process_strategy(
         data,
         internal_cols=double_strike_internal_cols,
@@ -124,9 +127,9 @@ def _butterfly(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process butterfly strategies (3 legs at different strikes)."""
-    kwargs.setdefault("leg1_delta", _DEFAULT_WING_DELTA)
+    kwargs.setdefault("leg1_delta", _DEFAULT_ITM_WING_DELTA)
     kwargs.setdefault("leg2_delta", _DEFAULT_ATM_DELTA)
-    kwargs.setdefault("leg3_delta", _DEFAULT_WING_DELTA)
+    kwargs.setdefault("leg3_delta", _DEFAULT_OTM_WING_DELTA)
     return _process_strategy(
         data,
         internal_cols=triple_strike_internal_cols,
@@ -183,7 +186,7 @@ def _covered_call(
     approximating the underlying position through the relationship between
     option premiums and underlying price changes.
     """
-    kwargs.setdefault("leg1_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg1_delta", _DEFAULT_DEEP_ITM_DELTA)
     kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
     return _process_strategy(
         data,
