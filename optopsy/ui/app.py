@@ -341,10 +341,40 @@ def get_data_layer() -> SQLAlchemyDataLayer:
     )
 
 
-@cl.header_auth_callback
-async def header_auth_callback(headers) -> cl.User:
-    # Single-user local app — auto-authenticate without a login form.
-    return cl.User(identifier="local", metadata={"role": "user"})
+# --- Auth -----------------------------------------------------------
+_log = logging.getLogger(__name__)
+
+_auth_plugin = None
+try:
+    from optopsy.plugins import get_plugin_auth
+
+    _auth_plugin = get_plugin_auth()
+except Exception:
+    _log.warning(
+        "Failed to load auth plugin; falling back to local auth", exc_info=True
+    )
+
+if _auth_plugin is not None:
+    _auth_type = _auth_plugin["type"]
+    _auth_cb = _auth_plugin["callback"]
+
+    if _auth_type == "password":
+        cl.password_auth_callback(_auth_cb)
+    elif _auth_type == "oauth":
+        cl.oauth_callback(_auth_cb)
+    elif _auth_type == "header":
+        cl.header_auth_callback(_auth_cb)
+    else:
+        _log.warning(
+            "Unknown auth plugin type %r; falling back to local auth", _auth_type
+        )
+        _auth_plugin = None  # trigger default below
+
+if _auth_plugin is None:
+    # Default: single-user local mode — no login screen.
+    @cl.header_auth_callback
+    async def header_auth_callback(headers) -> cl.User:
+        return cl.User(identifier="local", metadata={"role": "user"})
 
 
 @cl.set_starters

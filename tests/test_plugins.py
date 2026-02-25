@@ -8,6 +8,7 @@ import pytest
 
 import optopsy.plugins as plugins_mod
 from optopsy.plugins import (
+    get_plugin_auth,
     get_plugin_providers,
     get_plugin_signals,
     get_plugin_strategies,
@@ -19,8 +20,10 @@ from optopsy.plugins import (
 def _reset_plugin_cache():
     """Clear the plugin discovery cache between tests."""
     plugins_mod._cache.clear()
+    plugins_mod._auth_cache.clear()
     yield
     plugins_mod._cache.clear()
+    plugins_mod._auth_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -282,3 +285,123 @@ def test_multiple_strategy_plugins():
     assert "strat_b" in result
     assert result["strat_b"][2] is True  # is_calendar
     assert result["strat_b"][3] == "put"  # option_type
+
+
+# ---------------------------------------------------------------------------
+# Auth plugin discovery
+# ---------------------------------------------------------------------------
+
+
+async def _fake_password_cb(username, password):
+    return None
+
+
+async def _fake_oauth_cb(provider_id, token, raw_user_data, default_user, id_token):
+    return None
+
+
+async def _fake_header_cb(headers):
+    return None
+
+
+def test_no_plugins_auth():
+    with patch("importlib.metadata.entry_points", return_value=[]):
+        assert get_plugin_auth() is None
+
+
+def test_password_auth_plugin():
+    registrar = lambda: {"type": "password", "callback": _fake_password_cb}  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep]):
+        result = get_plugin_auth()
+
+    assert result is not None
+    assert result["type"] == "password"
+    assert result["callback"] is _fake_password_cb
+
+
+def test_oauth_auth_plugin():
+    registrar = lambda: {"type": "oauth", "callback": _fake_oauth_cb}  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep]):
+        result = get_plugin_auth()
+
+    assert result is not None
+    assert result["type"] == "oauth"
+    assert result["callback"] is _fake_oauth_cb
+
+
+def test_header_auth_plugin():
+    registrar = lambda: {"type": "header", "callback": _fake_header_cb}  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep]):
+        result = get_plugin_auth()
+
+    assert result is not None
+    assert result["type"] == "header"
+    assert result["callback"] is _fake_header_cb
+
+
+def test_auth_plugin_failure(caplog):
+    """A broken auth registrar is logged and skipped, falls back to None."""
+
+    def bad_registrar():
+        raise RuntimeError("auth boom")
+
+    ep = _make_ep("bad", bad_registrar)
+
+    with (
+        patch("importlib.metadata.entry_points", return_value=[ep]),
+        caplog.at_level(logging.WARNING, logger="optopsy.plugins"),
+    ):
+        result = get_plugin_auth()
+
+    assert result is None
+    assert "Auth plugin registrar failed" in caplog.text
+
+
+def test_auth_plugin_non_dict_return(caplog):
+    """An auth registrar returning a non-dict is warned and returns None."""
+    registrar = lambda: ["not", "a", "dict"]  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with (
+        patch("importlib.metadata.entry_points", return_value=[ep]),
+        caplog.at_level(logging.WARNING, logger="optopsy.plugins"),
+    ):
+        result = get_plugin_auth()
+
+    assert result is None
+    assert "non-dict" in caplog.text
+
+
+def test_auth_discovery_is_cached():
+    """Calling get_plugin_auth() twice returns the cached result."""
+    registrar = lambda: {"type": "password", "callback": _fake_password_cb}  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep]) as mock_eps:
+        first = get_plugin_auth()
+        second = get_plugin_auth()
+
+    assert first is second
+    assert first["type"] == "password"
+    # entry_points called once, cached thereafter
+    assert mock_eps.call_count == 1
+
+
+def test_only_first_auth_plugin_used():
+    """When multiple auth plugins exist, only the first is used."""
+    reg1 = lambda: {"type": "password", "callback": _fake_password_cb}  # noqa: E731
+    reg2 = lambda: {"type": "oauth", "callback": _fake_oauth_cb}  # noqa: E731
+    ep1 = _make_ep("plugin1", reg1)
+    ep2 = _make_ep("plugin2", reg2)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep1, ep2]):
+        result = get_plugin_auth()
+
+    assert result["type"] == "password"
+    assert result["callback"] is _fake_password_cb
