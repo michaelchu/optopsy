@@ -214,6 +214,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
     config.ui.custom_js = "/public/redirect_after_delete.js"
     config.ui.custom_css = "/public/hide_avatar.css"
     config.ui.default_avatar_file_url = "/public/logo-small.png"
+    config.ui.name = "Optopsy AI"
 
     from chainlit.cli import run_chainlit
 

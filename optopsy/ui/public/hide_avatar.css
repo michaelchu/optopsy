@@ -1,3 +1,8 @@
 #user-nav-button {
   display: none !important;
 }
+
+.dark img[src*="logo-small"],
+.dark img[src*="avatar"] {
+  filter: brightness(0) invert(1);
+}

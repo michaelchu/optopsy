@@ -16,3 +16,25 @@
     return promise;
   };
 })();
+
+// Swap favicon instantly when browser color scheme changes.
+(function () {
+  var dark = "/public/favicon-light.png";
+  var light = "/public/favicon.png";
+
+  function setFavicon(isDark) {
+    var old = document.querySelector('link[rel="icon"]');
+    if (old) old.remove();
+    var link = document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/png";
+    link.href = (isDark ? dark : light) + "?v=" + Date.now();
+    document.head.appendChild(link);
+  }
+
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  setFavicon(mq.matches);
+  mq.addEventListener("change", function (e) {
+    setFavicon(e.matches);
+  });
+})();
