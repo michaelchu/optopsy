@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "optopsy"
-version = "2.3.0b2"
+version = "2.3.0b3"
 description = "A nimble backtesting and statistics library for options strategies"
 readme = "README.md"
 license = "AGPL-3.0-or-later"

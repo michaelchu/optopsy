@@ -2110,7 +2110,7 @@ wheels = [
 
 [[package]]
 name = "optopsy"
-version = "2.3.0b2"
+version = "2.3.0b3"
 source = { editable = "." }
 dependencies = [
     { name = "empyrical-reloaded" },
