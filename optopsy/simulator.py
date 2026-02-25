@@ -679,10 +679,7 @@ def simulate(
         group_cols = [group_col]
 
     selected_raw = pd.DataFrame(
-        [
-            select_fn(group)
-            for _, group in raw.groupby(group_cols, sort=False)
-        ]
+        [select_fn(group) for _, group in raw.groupby(group_cols, sort=False)]
     )
 
     # Detect short single-leg strategies so normalisation can negate prices
