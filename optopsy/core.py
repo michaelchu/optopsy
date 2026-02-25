@@ -138,7 +138,7 @@ def _strategy_engine(
 
         data["pct_change"] = np.where(
             data["entry"].abs() > 0,
-            (data["exit"] - data["entry"]) / data["entry"].abs(),
+            side.value * (data["exit"] - data["entry"]) / data["entry"].abs(),
             np.nan,
         )
         return leg_def[0][1](data)
