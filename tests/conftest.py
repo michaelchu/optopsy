@@ -94,12 +94,18 @@ def data():
         "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.40],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.45],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.60],
+        # Entry day - 3 strikes with deltas spanning DEFAULT [0.20,0.40] and ATM [0.40,0.60]
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 210.0, 8.00, 8.10, 0.65],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.50],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 210.0, 4.50, 4.60, -0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.50],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.65],
+        # Exit day
+        ["SPX", 220, "call", exp_date, quote_dates[1], 210.0, 9.95, 10.05, 0.99],
         ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95],
         ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.0, -0.01],
         ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
         ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.15],
     ]

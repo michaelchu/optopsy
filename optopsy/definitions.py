@@ -44,6 +44,7 @@ single_strike_internal_cols: List[str] = [
     "entry",
     "exit",
     "pct_change",
+    "delta_entry",
 ]
 
 
@@ -58,6 +59,8 @@ straddle_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
 ]
 
 
@@ -73,6 +76,8 @@ double_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
 ]
 
 triple_strike_internal_cols: List[str] = [
@@ -90,6 +95,9 @@ triple_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
+    "delta_entry_leg3",
 ]
 
 quadruple_strike_internal_cols: List[str] = [
@@ -109,6 +117,10 @@ quadruple_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
+    "delta_entry_leg3",
+    "delta_entry_leg4",
 ]
 
 # base columns of dataframe after aggregation(minus the calculated columns)

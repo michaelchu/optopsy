@@ -49,6 +49,7 @@ from optopsy.strategies import (
     short_straddles,
     short_strangles,
 )
+from optopsy.types import TargetRange
 
 describe_cols = [
     "count",
@@ -69,9 +70,21 @@ describe_cols = [
 # =============================================================================
 
 
+_BF_CALL_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+)
+_BF_PUT_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg3_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+)
+
+
 def test_long_call_butterfly_raw(multi_strike_data):
     """Test long call butterfly returns correct structure and calculated values."""
-    results = long_call_butterfly(multi_strike_data, raw=True)
+    results = long_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
     assert list(results.columns) == triple_strike_internal_cols
     # All legs should be calls
     assert results.iloc[0]["option_type_leg1"] == "call"
@@ -95,13 +108,13 @@ def test_long_call_butterfly_raw(multi_strike_data):
 
 def test_long_call_butterfly(multi_strike_data):
     """Test long call butterfly aggregated output."""
-    results = long_call_butterfly(multi_strike_data)
+    results = long_call_butterfly(multi_strike_data, **_BF_CALL_DELTAS)
     assert list(results.columns) == triple_strike_external_cols + describe_cols
 
 
 def test_short_call_butterfly_raw(multi_strike_data):
     """Test short call butterfly returns correct structure."""
-    results = short_call_butterfly(multi_strike_data, raw=True)
+    results = short_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
     assert list(results.columns) == triple_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "call"
     assert results.iloc[0]["option_type_leg2"] == "call"
@@ -110,7 +123,7 @@ def test_short_call_butterfly_raw(multi_strike_data):
 
 def test_long_put_butterfly_raw(multi_strike_data):
     """Test long put butterfly returns correct structure and calculated values."""
-    results = long_put_butterfly(multi_strike_data, raw=True)
+    results = long_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
     assert list(results.columns) == triple_strike_internal_cols
     # All legs should be puts
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -132,13 +145,13 @@ def test_long_put_butterfly_raw(multi_strike_data):
 
 def test_long_put_butterfly(multi_strike_data):
     """Test long put butterfly aggregated output."""
-    results = long_put_butterfly(multi_strike_data)
+    results = long_put_butterfly(multi_strike_data, **_BF_PUT_DELTAS)
     assert list(results.columns) == triple_strike_external_cols + describe_cols
 
 
 def test_short_put_butterfly_raw(multi_strike_data):
     """Test short put butterfly returns correct structure."""
-    results = short_put_butterfly(multi_strike_data, raw=True)
+    results = short_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
     assert list(results.columns) == triple_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "put"
@@ -252,14 +265,14 @@ def test_covered_call_raw(multi_strike_data):
     """Test covered call returns correct structure and calculated values."""
     results = covered_call(multi_strike_data, raw=True)
     assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
     # Both legs should be calls
     assert results.iloc[0]["option_type_leg1"] == "call"
     assert results.iloc[0]["option_type_leg2"] == "call"
-    # Check calculated values for covered call at strikes 212.5, 215
-    # Long deep ITM call (synthetic stock) + short OTM call
-    row = results[
-        (results["strike_leg1"] == 212.5) & (results["strike_leg2"] == 215.0)
-    ].iloc[0]
+    # Default ATM leg1 (212.5) + DEFAULT leg2 (215.0)
+    row = results.iloc[0]
+    assert row["strike_leg1"] == 212.5
+    assert row["strike_leg2"] == 215.0
     # Entry: long 212.5 call (3.05) + short 215 call (-1.55) = 1.50
     assert round(row["total_entry_cost"], 2) == 1.50
     # Exit: long call worth 2.50 + short call expired worthless (-0.05) = 2.45
@@ -273,81 +286,83 @@ def test_covered_call(multi_strike_data):
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
+_PROT_PUT_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.80, min=0.70, max=0.90),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+)
+
+
 def test_protective_put_raw(multi_strike_data):
     """Test protective put returns correct structure and calculated values."""
-    results = protective_put(multi_strike_data, raw=True)
+    results = protective_put(multi_strike_data, raw=True, **_PROT_PUT_DELTAS)
     assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
     # Leg 1 should be call (synthetic stock), leg 2 should be put
     assert results.iloc[0]["option_type_leg1"] == "call"
     assert results.iloc[0]["option_type_leg2"] == "put"
-    # Check calculated values for protective put at strikes 207.5, 210
-    # Long call (synthetic stock) + long put for protection
-    # Note: strike_leg1 < strike_leg2 due to non-overlapping rule
-    row = results[
-        (results["strike_leg1"] == 207.5) & (results["strike_leg2"] == 210.0)
-    ].iloc[0]
-    # Entry: long 207.5 call (6.95) + long 210 put (1.45) = 8.40
-    assert round(row["total_entry_cost"], 2) == 8.40
-    # Exit: call worth 7.50 + put expired worthless (0.025) = 7.525
+    # leg1 deep ITM call at 207.5, leg2 ATM put at 212.5
+    row = results.iloc[0]
+    assert row["strike_leg1"] == 207.5
+    assert row["strike_leg2"] == 212.5
+    # Entry: long 207.5 call (6.95) + long 212.5 put (3.05) = 10.00
+    assert round(row["total_entry_cost"], 2) == 10.00
+    # Exit: call worth 7.50 + put expired (0.025) = 7.525
     assert round(row["total_exit_proceeds"], 3) == 7.525
-    # Small loss due to time decay
-    assert round(row["pct_change"], 2) == -0.10
+    assert round(row["pct_change"], 4) == -0.2475
 
 
 def test_protective_put(multi_strike_data):
     """Test protective put aggregated output."""
-    results = protective_put(multi_strike_data)
+    results = protective_put(multi_strike_data, **_PROT_PUT_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_single_long_calls_raw(data):
     results = long_calls(data, raw=True)
-    assert len(results) == 2
+    assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "call" in list(results["option_type"].values)
-    assert round(results.iloc[0]["pct_change"], 2) == 0.01
-    assert round(results.iloc[1]["pct_change"], 2) == -0.17
+    # Delta targeting selects 215.0 (delta 0.30, closest to DEFAULT target)
+    assert round(results.iloc[0]["pct_change"], 2) == -0.17
 
 
 def test_single_long_puts_raw(data):
     results = long_puts(data, raw=True)
-    assert len(results) == 2
+    assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "put" in list(results["option_type"].values)
+    # Delta targeting selects 210.0 put (abs delta 0.30)
     assert round(results.iloc[0]["pct_change"], 2) == -1
-    assert round(results.iloc[1]["pct_change"], 2) == -1
 
 
 def test_single_short_calls_raw(data):
     results = short_calls(data, raw=True)
-    assert len(results) == 2
+    assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "call" in list(results["option_type"].values)
-    assert round(results.iloc[0]["pct_change"], 2) == 0.01
-    assert round(results.iloc[1]["pct_change"], 2) == -0.17
+    assert round(results.iloc[0]["pct_change"], 2) == -0.17
 
 
 def test_single_short_puts_raw(data):
     results = short_puts(data, raw=True)
-    assert len(results) == 2
+    assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "put" in list(results["option_type"].values)
     assert round(results.iloc[0]["pct_change"], 2) == -1
-    assert round(results.iloc[1]["pct_change"], 2) == -1
 
 
 def test_singles_long_calls(data):
     results = long_calls(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
-    assert round(results.iloc[0]["mean"], 2) == -0.08
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == -0.17
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_singles_long_puts(data):
     results = long_puts(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
+    assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == -1.0
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
@@ -355,15 +370,15 @@ def test_singles_long_puts(data):
 def test_singles_short_calls(data):
     results = short_calls(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
-    assert round(results.iloc[0]["mean"], 2) == -0.08
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == -0.17
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 def test_singles_short_puts(data):
     results = short_puts(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
+    assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == -1.0
     assert list(results.columns) == single_strike_external_cols + describe_cols
 
@@ -371,35 +386,37 @@ def test_singles_short_puts(data):
 def test_straddles_long_raw(data):
     results = long_straddles(data, raw=True)
     assert list(results.columns) == straddle_internal_cols
+    assert len(results) == 1
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
+    # ATM at 212.5: put entry 5.75 + call entry 7.40 = 13.15
+    # Exit: put 0.0 + call 7.50 = 7.50. pct_change = (7.50 - 13.15)/13.15
     assert round(results.iloc[0]["pct_change"], 2) == -0.43
-    assert round(results.iloc[1]["pct_change"], 2) == -0.62
 
 
 def test_straddles_short_raw(data):
     results = short_straddles(data, raw=True)
     assert list(results.columns) == straddle_internal_cols
+    assert len(results) == 1
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
     assert round(results.iloc[0]["pct_change"], 2) == 0.43
-    assert round(results.iloc[1]["pct_change"], 2) == 0.62
 
 
 def test_long_straddles(data):
     results = long_straddles(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
-    assert round(results.iloc[0]["mean"], 2) == -0.52
-    assert list(results.columns) == single_strike_external_cols + describe_cols
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == -0.43
+    assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_short_straddles(data):
     results = short_straddles(data)
     assert len(results) == 1
-    assert results.iloc[0]["count"] == 2.0
-    assert round(results.iloc[0]["mean"], 2) == 0.52
-    assert list(results.columns) == single_strike_external_cols + describe_cols
+    assert results.iloc[0]["count"] == 1.0
+    assert round(results.iloc[0]["mean"], 2) == 0.43
+    assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_strangles_long_raw(data):
@@ -408,7 +425,9 @@ def test_strangles_long_raw(data):
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
-    assert round(results.iloc[0]["pct_change"], 2) == -0.57
+    # Put at 210.0 (4.55) + call at 215.0 (6.025) = 10.575
+    # Exit: put 0.0 + call 5.005 = 5.005. pct_change = (5.005 - 10.575)/10.575
+    assert round(results.iloc[0]["pct_change"], 2) == -0.53
 
 
 def test_strangles_short_raw(data):
@@ -417,14 +436,14 @@ def test_strangles_short_raw(data):
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
     assert results.iloc[0]["option_type_leg2"] == "call"
-    assert round(results.iloc[0]["pct_change"], 2) == 0.57
+    assert round(results.iloc[0]["pct_change"], 2) == 0.53
 
 
 def test_long_strangles(data):
     results = long_strangles(data)
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
-    assert round(results.iloc[0]["mean"], 2) == -0.57
+    assert round(results.iloc[0]["mean"], 2) == -0.53
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
@@ -432,21 +451,32 @@ def test_short_strangles(data):
     results = short_strangles(data)
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
-    assert round(results.iloc[0]["mean"], 2) == 0.57
+    assert round(results.iloc[0]["mean"], 2) == 0.53
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
+_CALL_SPREAD_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg2_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+)
+_PUT_SPREAD_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+)
+
+
 def test_long_call_spread_raw(data):
-    results = long_call_spread(data, raw=True)
+    results = long_call_spread(data, raw=True, **_CALL_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "call"
     assert results.iloc[0]["option_type_leg2"] == "call"
+    # leg1 at 212.5 (delta 0.50), leg2 at 215.0 (delta 0.30)
     assert round(results.iloc[0]["pct_change"], 2) == 0.81
 
 
 def test_long_put_spread_raw(data):
-    results = long_put_spread(data, raw=True)
+    results = long_put_spread(data, raw=True, **_PUT_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -455,7 +485,7 @@ def test_long_put_spread_raw(data):
 
 
 def test_short_call_spread_raw(data):
-    results = short_call_spread(data, raw=True)
+    results = short_call_spread(data, raw=True, **_CALL_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "call"
@@ -464,7 +494,7 @@ def test_short_call_spread_raw(data):
 
 
 def test_short_put_spread_raw(data):
-    results = short_put_spread(data, raw=True)
+    results = short_put_spread(data, raw=True, **_PUT_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -489,6 +519,7 @@ def test_long_call_calendar_raw(calendar_data):
         exit_dte=7,
     )
     assert list(results.columns) == calendar_spread_internal_cols
+    assert len(results) == 1
     # All legs should be calls
     assert results.iloc[0]["option_type"] == "call"
     # Same strike for both legs (calendar spread)
@@ -496,13 +527,14 @@ def test_long_call_calendar_raw(calendar_data):
     # Front expiration should be before back expiration
     assert results.iloc[0]["expiration_leg1"] < results.iloc[0]["expiration_leg2"]
 
-    # Check calculated values for calendar at strike 212.5
-    # Entry: short front call (-2.95) + long back call (4.95) = 2.00 (net debit)
-    # Exit: close short front (-3.05) + close long back (5.05) = 2.00
-    row = results[results["strike"] == 212.5].iloc[0]
-    assert round(row["total_entry_cost"], 2) == 2.00
-    assert round(row["total_exit_proceeds"], 2) == 2.00
-    assert round(row["pct_change"], 2) == 0.0
+    # Delta targeting selects strike 215.0 (delta 0.35, closest to DEFAULT 0.30)
+    row = results.iloc[0]
+    assert row["strike"] == 215.0
+    # Entry: short front 215 call (-1.75) + long back 215 call (3.65) = 1.90
+    # Exit: close short front (-0.85) + close long back (3.35) = 2.50
+    assert round(row["total_entry_cost"], 2) == 1.90
+    assert round(row["total_exit_proceeds"], 2) == 2.50
+    assert round(row["pct_change"], 2) == 0.32
 
 
 def test_long_call_calendar(calendar_data):
@@ -530,15 +562,15 @@ def test_short_call_calendar_raw(calendar_data):
         exit_dte=7,
     )
     assert list(results.columns) == calendar_spread_internal_cols
+    assert len(results) == 1
     assert results.iloc[0]["option_type"] == "call"
 
-    # For short calendar, entry/exit signs are opposite
-    # Entry: long front call (2.95) + short back call (-4.95) = -2.00 (net credit)
-    # Exit: close long front (3.05) + close short back (-5.05) = -2.00
-    row = results[results["strike"] == 212.5].iloc[0]
-    assert round(row["total_entry_cost"], 2) == -2.00
-    assert round(row["total_exit_proceeds"], 2) == -2.00
-    assert round(row["pct_change"], 2) == 0.0
+    # Short calendar is opposite of long: signs reversed
+    row = results.iloc[0]
+    assert row["strike"] == 215.0
+    assert round(row["total_entry_cost"], 2) == -1.90
+    assert round(row["total_exit_proceeds"], 2) == -2.50
+    assert round(row["pct_change"], 2) == -0.32
 
 
 def test_long_put_calendar_raw(calendar_data):
@@ -553,16 +585,18 @@ def test_long_put_calendar_raw(calendar_data):
         exit_dte=7,
     )
     assert list(results.columns) == calendar_spread_internal_cols
+    assert len(results) == 1
     assert results.iloc[0]["option_type"] == "put"
     assert results.iloc[0]["expiration_leg1"] < results.iloc[0]["expiration_leg2"]
 
-    # Check calculated values for put calendar at strike 212.5
-    # Entry: short front put (-2.95) + long back put (4.95) = 2.00 (net debit)
-    # Exit: close short front (-0.35) + close long back (2.55) = 2.20
-    row = results[results["strike"] == 212.5].iloc[0]
-    assert round(row["total_entry_cost"], 2) == 2.00
-    assert round(row["total_exit_proceeds"], 2) == 2.20
-    assert round(row["pct_change"], 2) == 0.10
+    # Delta targeting selects strike 210.0 (abs delta 0.35, closest to DEFAULT 0.30)
+    row = results.iloc[0]
+    assert row["strike"] == 210.0
+    # Entry: short front 210 put (-1.95) + long back 210 put (3.45) = 1.50
+    # Exit: close short front (-0.15) + close long back (1.45) = 1.30
+    assert round(row["total_entry_cost"], 2) == 1.50
+    assert round(row["total_exit_proceeds"], 2) == 1.30
+    assert round(row["pct_change"], 2) == -0.13
 
 
 def test_long_put_calendar(calendar_data):
@@ -798,64 +832,52 @@ def test_calendar_adjacent_dte_ranges_rejected(calendar_data):
 def test_slippage_mid_is_default(data):
     """Test that default slippage mode is 'mid' (backward compatible)."""
     results = long_calls(data, raw=True)
-    # With mid slippage, entry should be (bid + ask) / 2
-    # For 212.5 strike call: bid=7.35, ask=7.45, mid=7.40
-    row = results[results["strike"] == 212.5].iloc[0]
-    assert round(row["entry"], 2) == 7.40
+    # Delta targeting selects 215.0 (delta 0.30). mid = (6.00 + 6.05) / 2 = 6.025
+    row = results[results["strike"] == 215.0].iloc[0]
+    assert round(row["entry"], 3) == 6.025
 
 
 def test_slippage_spread_mode(data):
     """Test that spread slippage mode uses ask for long entries."""
-    # Default (mid) - entry should be (7.35 + 7.45) / 2 = 7.40
     results_mid = long_calls(data, raw=True, slippage="mid")
-
-    # Spread - for long calls, entry should be at ask price (7.45)
     results_spread = long_calls(data, raw=True, slippage="spread")
 
-    row_mid = results_mid[results_mid["strike"] == 212.5].iloc[0]
-    row_spread = results_spread[results_spread["strike"] == 212.5].iloc[0]
+    row_mid = results_mid.iloc[0]
+    row_spread = results_spread.iloc[0]
 
     # Spread entry should be higher than mid for long positions
     assert row_spread["entry"] > row_mid["entry"]
-    assert round(row_spread["entry"], 2) == 7.45  # ask price
+    # For 215.0 call: ask=6.05
+    assert round(row_spread["entry"], 2) == 6.05
 
 
 def test_slippage_spread_short_positions(data):
     """Test that spread slippage uses bid for short entries."""
     results_spread = short_calls(data, raw=True, slippage="spread")
 
-    # For short calls, entry fill is at bid price (7.35)
-    # The fill price is positive; the Side multiplier makes P&L negative
-    row = results_spread[results_spread["strike"] == 212.5].iloc[0]
-    assert round(row["entry"], 2) == 7.35
+    # For short calls, entry fill is at bid price (6.00 for 215.0 strike)
+    row = results_spread.iloc[0]
+    assert round(row["entry"], 2) == 6.00
 
 
 def test_slippage_liquidity_mode(data_with_volume):
     """Test liquidity-based slippage adjusts based on volume."""
-    # With reference_volume=1000, high volume options get better fills
+    # Delta targeting selects 1 strike per group; use explicit delta to target high-vol option
     results = long_calls(
         data_with_volume,
         raw=True,
         slippage="liquidity",
         fill_ratio=0.5,
         reference_volume=1000,
+        leg1_delta=TargetRange(target=0.55, min=0.45, max=0.65),
     )
+    assert len(results) == 1
 
-    # High volume option (2000 vol) should get fill closer to mid
-    high_vol_row = results[results["strike"] == 212.5].iloc[0]
-    # Low volume option (100 vol) should get fill closer to ask
-    low_vol_row = results[results["strike"] == 215.0].iloc[0]
-
-    # Calculate expected fills
     # High vol: vol=2000, reference=1000 -> liquidity_score=1.0 -> ratio=0.5
     # bid=7.35, ask=7.45, mid=7.40, half_spread=0.05
     # entry = 7.40 + 0.05 * 0.5 = 7.425
+    high_vol_row = results[results["strike"] == 212.5].iloc[0]
     assert round(high_vol_row["entry"], 3) == 7.425
-
-    # Low vol: vol=100, reference=1000 -> liquidity_score=0.1 -> ratio=0.5+(1-0.5)*(1-0.1)=0.95
-    # bid=6.00, ask=6.10, mid=6.05, half_spread=0.05
-    # entry = 6.05 + 0.05 * 0.95 = 6.0975
-    assert round(low_vol_row["entry"], 4) == 6.0975
 
 
 def test_slippage_liquidity_requires_volume_column(data):
@@ -880,51 +902,48 @@ def test_slippage_fill_ratio_validation(data):
 
 def test_slippage_multi_leg_spread_mode(multi_strike_data):
     """Test slippage on multi-leg strategies (vertical spreads)."""
-    # Long call spread: long lower strike, short higher strike
-    results_mid = long_call_spread(multi_strike_data, raw=True, slippage="mid")
-    results_spread = long_call_spread(multi_strike_data, raw=True, slippage="spread")
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_mid = long_call_spread(
+        multi_strike_data, raw=True, slippage="mid", **spread_deltas
+    )
+    results_spread = long_call_spread(
+        multi_strike_data, raw=True, slippage="spread", **spread_deltas
+    )
 
-    # With spread slippage:
-    # - Long leg entry at ask (higher cost)
-    # - Short leg entry at bid (lower credit)
-    # Net result: worse entry for the spread
-    row_mid = results_mid.iloc[0]
-    row_spread = results_spread.iloc[0]
+    assert not results_mid.empty
+    assert not results_spread.empty
 
     # Spread mode should have higher (worse) total entry cost for debit spread
-    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+    assert (
+        results_spread.iloc[0]["total_entry_cost"]
+        > results_mid.iloc[0]["total_entry_cost"]
+    )
 
 
 def test_slippage_calendar_spread_mode(calendar_data):
     """Test slippage on calendar spreads."""
-    results_mid = long_call_calendar(
-        calendar_data,
+    cal_kwargs = dict(
         raw=True,
-        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
         back_dte_max=70,
         exit_dte=7,
     )
-    results_spread = long_call_calendar(
-        calendar_data,
-        raw=True,
-        slippage="spread",
-        front_dte_min=20,
-        front_dte_max=40,
-        back_dte_min=50,
-        back_dte_max=70,
-        exit_dte=7,
-    )
+    results_mid = long_call_calendar(calendar_data, slippage="mid", **cal_kwargs)
+    results_spread = long_call_calendar(calendar_data, slippage="spread", **cal_kwargs)
 
-    # With spread slippage, calendar spread entry cost should be higher
-    # (worse fills for both legs)
-    row_mid = results_mid[results_mid["strike"] == 212.5].iloc[0]
-    row_spread = results_spread[results_spread["strike"] == 212.5].iloc[0]
+    assert not results_mid.empty
+    assert not results_spread.empty
 
     # Calendar spread is a debit spread, so higher entry cost is worse
-    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+    assert (
+        results_spread.iloc[0]["total_entry_cost"]
+        > results_mid.iloc[0]["total_entry_cost"]
+    )
 
 
 # =============================================================================
@@ -944,12 +963,14 @@ def empty_option_data():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     df = pd.DataFrame(columns=cols)
     df["underlying_price"] = df["underlying_price"].astype("float64")
     df["strike"] = df["strike"].astype("float64")
     df["bid"] = df["bid"].astype("float64")
     df["ask"] = df["ask"].astype("float64")
+    df["delta"] = df["delta"].astype("float64")
     df["expiration"] = pd.Series(dtype="datetime64[ns]")
     df["quote_date"] = pd.Series(dtype="datetime64[ns]")
     return df
@@ -997,10 +1018,8 @@ def test_nan_in_bid_ask_filtered(data):
 
 def test_drop_nan_false(multi_strike_data):
     """drop_nan=False should retain groups where all non-count stats are NaN."""
-    # Use narrow DTE/OTM intervals to create bins with no data (NaN stats)
-    common = dict(
-        dte_interval=5, max_entry_dte=90, otm_pct_interval=0.01, max_otm_pct=0.5
-    )
+    # Use narrow DTE/delta intervals to create bins with no data (NaN stats)
+    common = dict(dte_interval=5, max_entry_dte=90, delta_interval=0.01)
     results_drop = long_calls(multi_strike_data, drop_nan=True, **common)
     results_keep = long_calls(multi_strike_data, drop_nan=False, **common)
     # drop_nan=False should keep more (or equal) rows than drop_nan=True
@@ -1015,26 +1034,26 @@ def test_drop_nan_false(multi_strike_data):
 
 def test_long_call_spread_aggregated(multi_strike_data):
     """Test long call spread aggregated output has correct columns."""
-    results = long_call_spread(multi_strike_data)
+    results = long_call_spread(multi_strike_data, **_CALL_SPREAD_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
     assert len(results) > 0
 
 
 def test_short_call_spread_aggregated(multi_strike_data):
     """Test short call spread aggregated output has correct columns."""
-    results = short_call_spread(multi_strike_data)
+    results = short_call_spread(multi_strike_data, **_CALL_SPREAD_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_long_put_spread_aggregated(multi_strike_data):
     """Test long put spread aggregated output has correct columns."""
-    results = long_put_spread(multi_strike_data)
+    results = long_put_spread(multi_strike_data, **_PUT_SPREAD_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
 def test_short_put_spread_aggregated(multi_strike_data):
     """Test short put spread aggregated output has correct columns."""
-    results = short_put_spread(multi_strike_data)
+    results = short_put_spread(multi_strike_data, **_PUT_SPREAD_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
@@ -1044,13 +1063,7 @@ def test_short_put_spread_aggregated(multi_strike_data):
 
 
 def test_long_call_diagonal_pnl_values(calendar_data):
-    """Test long call diagonal spread calculates P&L correctly.
-
-    Using front 210 call / back 212.5 call diagonal:
-    Entry: short front 210 call (-4.45) + long back 212.5 call (4.95) = 0.50 debit
-    Exit: close short front (-5.45) + close long back (5.05) = -0.40
-    pct_change = (-0.40 - 0.50) / |0.50| = -1.80
-    """
+    """Test long call diagonal spread calculates P&L correctly."""
     results = long_call_diagonal(
         calendar_data,
         raw=True,
@@ -1059,12 +1072,17 @@ def test_long_call_diagonal_pnl_values(calendar_data):
         back_dte_min=50,
         back_dte_max=70,
         exit_dte=7,
+        leg1_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+        leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
     )
-    assert len(results) == 9
-    row = results[
-        (results["strike_leg1"] == 210.0) & (results["strike_leg2"] == 212.5)
-    ].iloc[0]
+    assert len(results) == 1
+    row = results.iloc[0]
+    # Front 210 call / back 212.5 call
+    assert row["strike_leg1"] == 210.0
+    assert row["strike_leg2"] == 212.5
+    # Entry: short front 210 call (-4.45) + long back 212.5 call (4.95) = 0.50 debit
     assert round(row["total_entry_cost"], 2) == 0.50
+    # Exit: close short front (-5.45) + close long back (5.05) = -0.40
     assert round(row["total_exit_proceeds"], 2) == -0.40
     assert round(row["pct_change"], 2) == -1.80
 
@@ -1098,13 +1116,7 @@ def test_short_call_diagonal_pnl_values(calendar_data):
 
 
 def test_long_put_diagonal_pnl_values(calendar_data):
-    """Test long put diagonal spread P&L values.
-
-    Using front 212.5 put / back 210 put diagonal:
-    Entry: short front 212.5 put (-2.95) + long back 210 put (3.45) = 0.50 debit
-    Exit: close short front (-0.35) + close long back (1.45) = 1.10
-    pct_change = (1.10 - 0.50) / |0.50| = 1.20
-    """
+    """Test long put diagonal spread P&L values."""
     results = long_put_diagonal(
         calendar_data,
         raw=True,
@@ -1113,12 +1125,17 @@ def test_long_put_diagonal_pnl_values(calendar_data):
         back_dte_min=50,
         back_dte_max=70,
         exit_dte=7,
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
     )
-    assert len(results) == 9
-    row = results[
-        (results["strike_leg1"] == 212.5) & (results["strike_leg2"] == 210.0)
-    ].iloc[0]
+    assert len(results) == 1
+    row = results.iloc[0]
+    # Front 212.5 put / back 210 put
+    assert row["strike_leg1"] == 212.5
+    assert row["strike_leg2"] == 210.0
+    # Entry: short front 212.5 put (-2.95) + long back 210 put (3.45) = 0.50 debit
     assert round(row["total_entry_cost"], 2) == 0.50
+    # Exit: close short front (-0.35) + close long back (1.45) = 1.10
     assert round(row["total_exit_proceeds"], 2) == 1.10
     assert round(row["pct_change"], 2) == 1.20
 
@@ -1130,20 +1147,14 @@ def test_long_put_diagonal_pnl_values(calendar_data):
 
 def test_short_call_butterfly_pnl_values(multi_strike_data):
     """Short call butterfly P&L should be opposite of long call butterfly."""
-    long_results = long_call_butterfly(multi_strike_data, raw=True)
-    short_results = short_call_butterfly(multi_strike_data, raw=True)
+    long_results = long_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
+    short_results = short_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
 
-    # Find matching strike combination
-    long_row = long_results[
-        (long_results["strike_leg1"] == 210.0)
-        & (long_results["strike_leg2"] == 212.5)
-        & (long_results["strike_leg3"] == 215.0)
-    ].iloc[0]
-    short_row = short_results[
-        (short_results["strike_leg1"] == 210.0)
-        & (short_results["strike_leg2"] == 212.5)
-        & (short_results["strike_leg3"] == 215.0)
-    ].iloc[0]
+    assert not long_results.empty
+    assert not short_results.empty
+
+    long_row = long_results.iloc[0]
+    short_row = short_results.iloc[0]
 
     # Entry costs should be opposite sign (debit vs credit)
     assert round(long_row["total_entry_cost"], 2) == -round(
@@ -1157,19 +1168,14 @@ def test_short_call_butterfly_pnl_values(multi_strike_data):
 
 def test_short_put_butterfly_pnl_values(multi_strike_data):
     """Short put butterfly P&L should be opposite of long put butterfly."""
-    long_results = long_put_butterfly(multi_strike_data, raw=True)
-    short_results = short_put_butterfly(multi_strike_data, raw=True)
+    long_results = long_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
+    short_results = short_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
 
-    long_row = long_results[
-        (long_results["strike_leg1"] == 210.0)
-        & (long_results["strike_leg2"] == 212.5)
-        & (long_results["strike_leg3"] == 215.0)
-    ].iloc[0]
-    short_row = short_results[
-        (short_results["strike_leg1"] == 210.0)
-        & (short_results["strike_leg2"] == 212.5)
-        & (short_results["strike_leg3"] == 215.0)
-    ].iloc[0]
+    assert not long_results.empty
+    assert not short_results.empty
+
+    long_row = long_results.iloc[0]
+    short_row = short_results.iloc[0]
 
     assert round(long_row["total_entry_cost"], 2) == -round(
         short_row["total_entry_cost"], 2
@@ -1283,7 +1289,7 @@ class TestDeltaInterval:
         """delta_interval should add delta_range grouping column to aggregated output."""
         results = long_calls(data_with_delta, delta_interval=0.5, raw=False)
         assert "delta_range" in results.columns
-        assert list(results.columns)[0] == "delta_range"
+        assert list(results.columns) == single_strike_external_cols + describe_cols
 
 
 # =============================================================================
@@ -1291,12 +1297,16 @@ class TestDeltaInterval:
 # =============================================================================
 
 
-def test_delta_max_only_filter(data_with_delta):
-    """delta_max without delta_min exercises the _rtrim branch in _filter_by_delta."""
-    results = long_calls(data_with_delta, raw=True, delta_max=0.50)
-    # Only calls with delta <= 0.50 should be included (0.45 and 0.30)
-    assert len(results) == 2
-    assert all(r["option_type"] == "call" for _, r in results.iterrows())
+def test_delta_targeting_selects_closest(data_with_delta):
+    """Per-leg delta targeting selects the strike closest to target delta."""
+    results = long_calls(
+        data_with_delta,
+        raw=True,
+        leg1_delta=TargetRange(target=0.45, min=0.30, max=0.50),
+    )
+    # Should select call at 215.0 (delta 0.45, closest to target)
+    assert len(results) == 1
+    assert results.iloc[0]["option_type"] == "call"
 
 
 # =============================================================================
@@ -1366,7 +1376,7 @@ def test_exit_dates_filter_invalid(data):
 
 @pytest.fixture(scope="module")
 def data_with_iv():
-    """Data with implied_volatility column."""
+    """Data with implied_volatility and delta columns."""
     from datetime import datetime
 
     exp_date = datetime(2018, 1, 31)
@@ -1380,13 +1390,36 @@ def data_with_iv():
         "strike",
         "bid",
         "ask",
+        "delta",
         "implied_volatility",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.20],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.22],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.18],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.19],
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            212.5,
+            7.35,
+            7.45,
+            0.55,
+            0.20,
+        ],
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            215.0,
+            6.00,
+            6.05,
+            0.30,
+            0.22,
+        ],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95, 0.18],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85, 0.19],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -1395,9 +1428,9 @@ def test_implied_volatility_passthrough(data_with_iv):
     """IV column in input should appear as implied_volatility_entry with correct values."""
     results = long_calls(data_with_iv, raw=True)
     assert "implied_volatility_entry" in results.columns
-    # Verify entry IV values match the input data (0.20 for 212.5 strike, 0.22 for 215.0)
-    iv_values = sorted(results["implied_volatility_entry"].tolist())
-    assert iv_values == [0.20, 0.22]
+    # Delta targeting selects 215.0 (delta 0.30), which has IV=0.22
+    assert len(results) == 1
+    assert results.iloc[0]["implied_volatility_entry"] == 0.22
 
 
 # =============================================================================
@@ -1424,12 +1457,13 @@ def data_with_near_exit():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 6.00, 6.05],
-        ["SPX", 220, "call", exp_date, exit_date, 212.5, 7.45, 7.55],
-        ["SPX", 220, "call", exp_date, exit_date, 215.0, 4.96, 5.05],
+        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.55],
+        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", 220, "call", exp_date, exit_date, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", 220, "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
     ]
     return pd.DataFrame(data=d, columns=cols)
 

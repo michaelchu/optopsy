@@ -20,7 +20,7 @@ class TestRuleNonOverlappingStrike:
         """Single-leg definition should return data unchanged."""
         leg_def = [(Side.long, _calls)]
         result = _rule_non_overlapping_strike(_calls(data), leg_def)
-        assert len(result) == 4
+        assert len(result) == 6
         assert "call" in list(result["option_type"].values)
 
     def test_spread_filters_overlapping(self):
