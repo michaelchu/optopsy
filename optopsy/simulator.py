@@ -515,26 +515,29 @@ def _filter_trades(
                 keep[i] = True
                 prev_exit = exit_dates[i]
     else:
-        # Track open positions as (exit_date, expiration) pairs
-        open_exits: list[Any] = []
-        open_exps: list[Any] = []
+        # Track open positions using pre-allocated numpy arrays to avoid
+        # repeated Python list creation.  In-place compaction keeps only
+        # positions whose exit_date is still in the future.
+        _open_exits = np.empty(max_positions, dtype=exit_dates.dtype)
+        _open_exps = np.empty(max_positions, dtype=expirations.dtype)
+        n_open = 0
         for i in range(n):
-            # Close positions where exit_date <= current entry_date
-            still_open_exits = []
-            still_open_exps = []
-            for j in range(len(open_exits)):
-                if open_exits[j] > entry_dates[i]:
-                    still_open_exits.append(open_exits[j])
-                    still_open_exps.append(open_exps[j])
-            open_exits = still_open_exits
-            open_exps = still_open_exps
+            # Compact: remove expired positions in-place
+            write = 0
+            for j in range(n_open):
+                if _open_exits[j] > entry_dates[i]:
+                    _open_exits[write] = _open_exits[j]
+                    _open_exps[write] = _open_exps[j]
+                    write += 1
+            n_open = write
 
-            if len(open_exits) < max_positions:
+            if n_open < max_positions:
                 # Check no duplicate expiration
-                if expirations[i] not in open_exps:
+                if expirations[i] not in _open_exps[:n_open]:
                     keep[i] = True
-                    open_exits.append(exit_dates[i])
-                    open_exps.append(expirations[i])
+                    _open_exits[n_open] = exit_dates[i]
+                    _open_exps[n_open] = expirations[i]
+                    n_open += 1
 
     return trades.loc[keep].reset_index(drop=True)
 
@@ -675,12 +678,9 @@ def simulate(
     else:
         group_cols = [group_col]
 
-    selected_rows = []
-    for _, group in raw.groupby(group_cols):
-        row = select_fn(group)
-        selected_rows.append(row)
-
-    selected_raw = pd.DataFrame(selected_rows)
+    selected_raw = pd.DataFrame(
+        [select_fn(group) for _, group in raw.groupby(group_cols)]
+    )
 
     # Detect short single-leg strategies so normalisation can negate prices
     strategy_name = getattr(strategy, "__name__", "")

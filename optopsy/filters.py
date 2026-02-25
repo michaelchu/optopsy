@@ -115,17 +115,14 @@ def _cut_options_by_otm(
     data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float
 ) -> pd.DataFrame:
     """Categorize options into out-of-the-money percentage intervals."""
-    # consider using np.linspace in future
-    otm_pct_intervals = [
-        round(i, 2)
-        for i in list(
-            np.arange(
-                max_otm_pct_interval * -1,
-                max_otm_pct_interval,
-                otm_pct_interval,
-            )
-        )
-    ]
+    otm_pct_intervals = np.round(
+        np.arange(
+            max_otm_pct_interval * -1,
+            max_otm_pct_interval,
+            otm_pct_interval,
+        ),
+        2,
+    ).tolist()
     data["otm_pct_range"] = pd.cut(data["otm_pct_entry"], otm_pct_intervals)
     return data
 
@@ -147,8 +144,8 @@ def _cut_options_by_delta(
         return data
 
     # Delta ranges from -1 to 1 for puts and calls
-    delta_intervals = [
-        round(i, 2) for i in list(np.arange(-1.0, 1.0 + delta_interval, delta_interval))
-    ]
+    delta_intervals = np.round(
+        np.arange(-1.0, 1.0 + delta_interval, delta_interval), 2
+    ).tolist()
     data["delta_range"] = pd.cut(data["delta_entry"], delta_intervals)
     return data

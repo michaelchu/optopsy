@@ -201,22 +201,40 @@ def _find_calendar_exit_prices(
         exit_data = data[data["quote_date"].isin(all_exit_dates)]
     else:
         # Tolerance-based matching: snap each target exit_date to the
-        # closest available quote_date within tolerance.
-        tolerance_td = pd.Timedelta(days=exit_dte_tolerance)
+        # closest available quote_date within tolerance using vectorized
+        # searchsorted instead of a Python loop.
+        tolerance_td = np.timedelta64(exit_dte_tolerance, "D")
         available_dates = np.sort(data["quote_date"].unique())
 
-        date_map = {}
-        for target_date in all_exit_dates:
-            target_np = np.datetime64(target_date)
-            diffs = np.abs(available_dates - target_np)
-            min_idx = diffs.argmin()
-            if diffs[min_idx] <= tolerance_td:
-                date_map[target_date] = available_dates[min_idx]
+        if len(available_dates) == 0:
+            return merged.iloc[:0]
+
+        targets = np.asarray(all_exit_dates, dtype=available_dates.dtype)
+
+        # searchsorted finds the insertion point; check both neighbors
+        # to find the closest available date for each target.
+        idx = np.searchsorted(available_dates, targets, side="left")
+        idx = np.clip(idx, 0, len(available_dates) - 1)
+
+        # Compare left and right neighbors to find the nearest
+        left = np.clip(idx - 1, 0, len(available_dates) - 1)
+        right = np.clip(idx, 0, len(available_dates) - 1)
+        diff_left = np.abs(available_dates[left] - targets)
+        diff_right = np.abs(available_dates[right] - targets)
+        nearest_idx = np.where(diff_left <= diff_right, left, right)
+        nearest_dates = available_dates[nearest_idx]
+        nearest_diffs = np.abs(nearest_dates - targets)
+
+        # Build mapping only for targets within tolerance
+        within = nearest_diffs <= tolerance_td
+        date_map = dict(zip(targets[within], nearest_dates[within]))
 
         if not date_map:
             return merged.iloc[:0]
 
-        merged["exit_date"] = merged["exit_date"].map(lambda d: date_map.get(d, d))
+        merged["exit_date"] = (
+            merged["exit_date"].map(date_map).fillna(merged["exit_date"])
+        )
         exit_data = data[data["quote_date"].isin(date_map.values())]
 
     if exit_data.empty:
