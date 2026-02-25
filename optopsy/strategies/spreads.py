@@ -1,6 +1,6 @@
 """Two-leg option strategies: straddles, strangles, spreads, covered, protective."""
 
-from typing import Unpack
+from typing import Optional, Unpack
 
 import pandas as pd
 
@@ -144,25 +144,26 @@ def short_put_spread(
 
 
 def covered_call(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+    data: pd.DataFrame,
+    stock_data: Optional[pd.DataFrame] = None,
+    **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:
     """
     Generate covered call strategy statistics.
 
     A covered call consists of:
-    - Long deep ITM call (simulates underlying position, default delta ~0.80)
-    - Short 1 OTM call at higher strike (default delta ~0.30)
+    - Long underlying position + short 1 OTM call at higher strike
 
-    This is an income strategy that profits from time decay on the short call
-    while maintaining upside exposure up to the short strike. The long deep
-    ITM call acts as a synthetic long stock position.
-
-    Note: This implementation uses a synthetic approach with options only.
-    For true covered call analysis with actual stock positions, additional
-    data integration would be required.
+    When *stock_data* is provided the underlying leg uses actual stock
+    close prices.  Otherwise a long deep ITM call (default delta ~0.80)
+    is used as a synthetic stock position.
 
     Args:
         data: DataFrame containing option chain data
+        stock_data: Optional DataFrame with columns
+            ``[underlying_symbol, quote_date, close]`` for actual stock
+            prices.  When provided, the strategy uses real stock data
+            instead of a synthetic deep ITM call.
         **kwargs: Optional strategy parameters
 
     Returns:
@@ -174,27 +175,32 @@ def covered_call(
             (Side.long, _calls),
             (Side.short, _calls),
         ],
+        stock_data=stock_data,
         **kwargs,
     )
 
 
 def protective_put(
-    data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]
+    data: pd.DataFrame,
+    stock_data: Optional[pd.DataFrame] = None,
+    **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:
     """
     Generate protective put (married put) strategy statistics.
 
     A protective put consists of:
-    - Long deep ITM call (simulates underlying position, default delta ~0.80)
-    - Long 1 OTM put at lower strike for protection (default delta ~0.30)
+    - Long underlying position + long 1 OTM put at lower strike for protection
 
-    This strategy provides downside protection while maintaining upside
-    potential. The long deep ITM call acts as a synthetic long stock position.
-
-    Note: This implementation uses a synthetic approach with options only.
+    When *stock_data* is provided the underlying leg uses actual stock
+    close prices.  Otherwise a long deep ITM call (default delta ~0.80)
+    is used as a synthetic stock position.
 
     Args:
         data: DataFrame containing option chain data
+        stock_data: Optional DataFrame with columns
+            ``[underlying_symbol, quote_date, close]`` for actual stock
+            prices.  When provided, the strategy uses real stock data
+            instead of a synthetic deep ITM call.
         **kwargs: Optional strategy parameters
 
     Returns:
@@ -206,5 +212,6 @@ def protective_put(
             (Side.long, _calls),
             (Side.long, _puts),
         ],
+        stock_data=stock_data,
         **kwargs,
     )

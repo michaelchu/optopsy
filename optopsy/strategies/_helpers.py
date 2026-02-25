@@ -11,8 +11,9 @@ pass raw user ``kwargs`` through to ``_process_strategy()`` /
 """
 
 from enum import Enum
-from typing import List, Tuple, Unpack
+from typing import List, Optional, Tuple, Unpack
 
+import numpy as np
 import pandas as pd
 
 from ..core import _process_calendar_strategy, _process_strategy
@@ -177,15 +178,29 @@ def _iron_butterfly(
 
 
 def _covered_call(
-    data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
+    data: pd.DataFrame,
+    leg_def: List[Tuple],
+    stock_data: Optional[pd.DataFrame] = None,
+    **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:
     """
     Process covered call strategy.
 
-    Note: This implementation simulates a covered call using options data only,
-    approximating the underlying position through the relationship between
-    option premiums and underlying price changes.
+    When *stock_data* is ``None`` (default), the underlying position is
+    approximated via a deep ITM call.  When a DataFrame of stock prices
+    is provided, actual stock close prices are used for the underlying
+    leg instead.
+
+    Args:
+        data: DataFrame containing option chain data.
+        leg_def: Leg definitions – ``[(Side, filter), ...]``.
+        stock_data: Optional DataFrame with columns
+            ``[underlying_symbol, quote_date, close]``.
+        **kwargs: Strategy parameters forwarded to the processing pipeline.
     """
+    if stock_data is not None:
+        return _covered_with_stock(data, leg_def, stock_data, **kwargs)
+
     kwargs.setdefault("leg1_delta", _DEFAULT_DEEP_ITM_DELTA)
     kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
     return _process_strategy(
@@ -196,6 +211,139 @@ def _covered_call(
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
         params=kwargs,
     )
+
+
+def _covered_with_stock(
+    data: pd.DataFrame,
+    leg_def: List[Tuple],
+    stock_data: pd.DataFrame,
+    **kwargs: Unpack[StrategyParamsDict],
+) -> pd.DataFrame:
+    """Process a covered strategy using actual stock data for the underlying.
+
+    The option leg (``leg_def[1]``) is evaluated through the normal
+    single-leg pipeline.  Stock close prices are then matched by date to
+    compute a combined entry cost, exit proceeds, and percentage change.
+    """
+    from ..checks import _run_checks
+    from ..evaluation import _evaluate_all_options
+    from ..output import _format_output
+    from ..timestamps import normalize_dates
+
+    # The option is always the second leg definition
+    option_leg = leg_def[1]
+    option_side = option_leg[0]
+    option_filter = option_leg[1]
+
+    # Only one delta target needed (for the option leg)
+    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
+    params = _run_checks(dict(kwargs), data)
+
+    # --- evaluate the option leg ---
+    data = data.copy()
+    data["quote_date"] = normalize_dates(data["quote_date"])
+    data["expiration"] = normalize_dates(data["expiration"])
+    data["option_type"] = data["option_type"].str.lower()
+
+    delta_target = params["leg1_delta"]
+    leg_data = option_filter(data)
+
+    evaluated = _evaluate_all_options(
+        leg_data,
+        dte_interval=params["dte_interval"],
+        max_entry_dte=params["max_entry_dte"],
+        exit_dte=params["exit_dte"],
+        exit_dte_tolerance=params["exit_dte_tolerance"],
+        min_bid_ask=params["min_bid_ask"],
+        delta_target=delta_target["target"],
+        delta_range_min=delta_target["min"],
+        delta_range_max=delta_target["max"],
+        delta_interval=params["delta_interval"],
+        entry_dates=params["entry_dates"],
+        exit_dates=params["exit_dates"],
+    )
+
+    external_cols = ["dte_range", "delta_range_leg2"]
+
+    if evaluated.empty:
+        return _format_output(
+            pd.DataFrame(columns=double_strike_internal_cols),
+            params,
+            double_strike_internal_cols,
+            external_cols,
+        )
+
+    # --- match stock prices ---
+    stock = stock_data.copy()
+    stock["quote_date"] = normalize_dates(stock["quote_date"])
+    stock_prices = stock[["underlying_symbol", "quote_date", "close"]]
+
+    # Entry price
+    entry_map = stock_prices.rename(
+        columns={"quote_date": "quote_date_entry", "close": "_stock_entry"}
+    )
+    result = evaluated.merge(
+        entry_map, on=["underlying_symbol", "quote_date_entry"], how="inner"
+    )
+
+    # Exit price – exit date = expiration − exit_dte calendar days
+    exit_dte = params["exit_dte"]
+    result["_exit_date"] = result["expiration"] - pd.Timedelta(days=exit_dte)
+    exit_map = stock_prices.rename(
+        columns={"quote_date": "_exit_date", "close": "_stock_exit"}
+    )
+    result = result.merge(exit_map, on=["underlying_symbol", "_exit_date"], how="inner")
+
+    if result.empty:
+        return _format_output(
+            pd.DataFrame(columns=double_strike_internal_cols),
+            params,
+            double_strike_internal_cols,
+            external_cols,
+        )
+
+    # --- compute combined P&L ---
+    stock_entry = result["_stock_entry"]
+    stock_exit = result["_stock_exit"]
+    option_entry = result["entry"] * option_side.value
+    option_exit = result["exit"] * option_side.value
+
+    total_entry = stock_entry + option_entry
+    total_exit = stock_exit + option_exit
+
+    output = pd.DataFrame(
+        {
+            "underlying_symbol": result["underlying_symbol"].values,
+            "underlying_price_entry_leg1": result["_stock_entry"].values,
+            "expiration": result["expiration"].values,
+            "dte_entry": result["dte_entry"].values,
+            "option_type_leg1": "stock",
+            "strike_leg1": result["_stock_entry"].values,
+            "option_type_leg2": result["option_type"].values,
+            "strike_leg2": result["strike"].values,
+            "total_entry_cost": total_entry.values,
+            "total_exit_proceeds": total_exit.values,
+            "pct_change": np.where(
+                total_entry.abs() > 0,
+                (total_exit - total_entry) / total_entry.abs(),
+                np.nan,
+            ),
+            "delta_entry_leg1": 1.0,
+            "delta_entry_leg2": (
+                result["delta_entry"].values
+                if "delta_entry" in result.columns
+                else np.nan
+            ),
+        }
+    )
+
+    # Carry over grouping columns produced by the evaluation pipeline
+    if "dte_range" in result.columns:
+        output["dte_range"] = result["dte_range"].values
+    if "delta_range" in result.columns:
+        output["delta_range_leg2"] = result["delta_range"].values
+
+    return _format_output(output, params, double_strike_internal_cols, external_cols)
 
 
 def _calendar_spread(

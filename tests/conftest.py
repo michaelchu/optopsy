@@ -376,6 +376,21 @@ def stock_data_spx():
 
 
 @pytest.fixture(scope="module")
+def stock_data_multi_strike():
+    """Stock data matching the multi_strike_data fixture dates and prices."""
+    return pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX", "SPX"],
+            "quote_date": [
+                datetime.datetime(2018, 1, 1),
+                datetime.datetime(2018, 1, 31),
+            ],
+            "close": [212.5, 215.0],
+        }
+    )
+
+
+@pytest.fixture(scope="module")
 def calendar_data():
     """
     Test data with multiple expirations for testing calendar and diagonal spreads.

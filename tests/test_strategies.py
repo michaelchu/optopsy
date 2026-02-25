@@ -317,6 +317,84 @@ def test_protective_put(multi_strike_data):
     assert list(results.columns) == double_strike_external_cols + describe_cols
 
 
+# --- Stock-backed covered strategy tests ---
+
+
+def test_covered_call_with_stock_raw(multi_strike_data, stock_data_multi_strike):
+    """Covered call using actual stock data returns correct structure and values."""
+    results = covered_call(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+    )
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    row = results.iloc[0]
+    # Leg 1 is stock, leg 2 is short call
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "call"
+    # Stock entry price is the close at entry date
+    assert row["strike_leg1"] == 212.5
+    # Short call selected at 215.0 (delta 0.35, closest to DEFAULT 0.30)
+    assert row["strike_leg2"] == 215.0
+    assert row["delta_entry_leg1"] == 1.0
+    # Entry: buy stock 212.5 + short call -mid(1.50,1.60) = 212.5 - 1.55 = 210.95
+    assert round(row["total_entry_cost"], 2) == 210.95
+    # Exit: sell stock 215.0 + close short call -mid(0.0,0.10) = 215.0 - 0.05 = 214.95
+    assert round(row["total_exit_proceeds"], 2) == 214.95
+    assert round(row["pct_change"], 4) == round(4.00 / 210.95, 4)
+
+
+def test_covered_call_with_stock_aggregated(multi_strike_data, stock_data_multi_strike):
+    """Covered call with stock data returns valid aggregated output."""
+    results = covered_call(multi_strike_data, stock_data=stock_data_multi_strike)
+    assert not results.empty
+    assert "dte_range" in results.columns
+    assert "delta_range_leg2" in results.columns
+
+
+def test_protective_put_with_stock_raw(multi_strike_data, stock_data_multi_strike):
+    """Protective put using actual stock data returns correct structure and values."""
+    results = protective_put(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+    )
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    row = results.iloc[0]
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "put"
+    assert row["strike_leg1"] == 212.5
+    # Long put selected at 210.0 (|delta|=0.35, closest to DEFAULT 0.30)
+    assert row["strike_leg2"] == 210.0
+    assert row["delta_entry_leg1"] == 1.0
+    # Entry: buy stock 212.5 + long put mid(1.40,1.50) = 212.5 + 1.45 = 213.95
+    assert round(row["total_entry_cost"], 2) == 213.95
+    # Exit: sell stock 215.0 + put mid(0.0,0.05) = 215.0 + 0.025 = 215.025
+    assert round(row["total_exit_proceeds"], 3) == 215.025
+    assert round(row["pct_change"], 4) == round(1.075 / 213.95, 4)
+
+
+def test_covered_call_with_stock_no_match(multi_strike_data):
+    """When stock data has no matching dates, result is empty."""
+    import datetime
+
+    empty_stock = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": [datetime.datetime(2020, 1, 1)],
+            "close": [300.0],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=empty_stock, raw=True)
+    assert results.empty
+    assert list(results.columns) == double_strike_internal_cols
+
+
+def test_covered_without_stock_unchanged(multi_strike_data):
+    """Without stock_data the existing synthetic approach is used."""
+    results = covered_call(multi_strike_data, raw=True)
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["strike_leg1"] == 207.5
+
+
 def test_single_long_calls_raw(data):
     results = long_calls(data, raw=True)
     assert len(results) == 1
