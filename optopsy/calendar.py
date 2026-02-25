@@ -205,6 +205,10 @@ def _find_calendar_exit_prices(
         # searchsorted instead of a Python loop.
         tolerance_td = np.timedelta64(exit_dte_tolerance, "D")
         available_dates = np.sort(data["quote_date"].unique())
+
+        if len(available_dates) == 0:
+            return merged.iloc[:0]
+
         targets = np.asarray(all_exit_dates, dtype="datetime64[ns]")
 
         # searchsorted finds the insertion point; check both neighbors
@@ -228,7 +232,9 @@ def _find_calendar_exit_prices(
         if not date_map:
             return merged.iloc[:0]
 
-        merged["exit_date"] = merged["exit_date"].map(date_map).fillna(merged["exit_date"])
+        merged["exit_date"] = (
+            merged["exit_date"].map(date_map).fillna(merged["exit_date"])
+        )
         exit_data = data[data["quote_date"].isin(date_map.values())]
 
     if exit_data.empty:

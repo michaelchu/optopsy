@@ -122,7 +122,7 @@ def _cut_options_by_otm(
             otm_pct_interval,
         ),
         2,
-    )
+    ).tolist()
     data["otm_pct_range"] = pd.cut(data["otm_pct_entry"], otm_pct_intervals)
     return data
 
@@ -144,6 +144,8 @@ def _cut_options_by_delta(
         return data
 
     # Delta ranges from -1 to 1 for puts and calls
-    delta_intervals = np.round(np.arange(-1.0, 1.0 + delta_interval, delta_interval), 2)
+    delta_intervals = np.round(
+        np.arange(-1.0, 1.0 + delta_interval, delta_interval), 2
+    ).tolist()
     data["delta_range"] = pd.cut(data["delta_entry"], delta_intervals)
     return data
