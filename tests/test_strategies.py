@@ -1,3 +1,5 @@
+import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -315,6 +317,187 @@ def test_protective_put(multi_strike_data):
     """Test protective put aggregated output."""
     results = protective_put(multi_strike_data, **_PROT_PUT_DELTAS)
     assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+# --- Stock-backed covered strategy tests ---
+
+
+def test_covered_call_with_stock_raw(multi_strike_data, stock_data_multi_strike):
+    """Covered call using actual stock data returns correct structure and values."""
+    results = covered_call(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+    )
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    row = results.iloc[0]
+    # Leg 1 is stock, leg 2 is short call
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "call"
+    # Stock entry price is the close at entry date
+    assert row["strike_leg1"] == 212.5
+    # Short call selected at 215.0 (delta 0.35, closest to DEFAULT 0.30)
+    assert row["strike_leg2"] == 215.0
+    assert row["delta_entry_leg1"] == 1.0
+    # Entry: buy stock 212.5 + short call -mid(1.50,1.60) = 212.5 - 1.55 = 210.95
+    assert round(row["total_entry_cost"], 2) == 210.95
+    # Exit: sell stock 215.0 + close short call -mid(0.0,0.10) = 215.0 - 0.05 = 214.95
+    assert round(row["total_exit_proceeds"], 2) == 214.95
+    assert round(row["pct_change"], 4) == round(4.00 / 210.95, 4)
+
+
+def test_covered_call_with_stock_aggregated(multi_strike_data, stock_data_multi_strike):
+    """Covered call with stock data returns valid aggregated output."""
+    results = covered_call(multi_strike_data, stock_data=stock_data_multi_strike)
+    assert not results.empty
+    assert "dte_range" in results.columns
+    assert "delta_range_leg2" in results.columns
+    assert "delta_range_leg1" not in results.columns
+
+
+def test_protective_put_with_stock_raw(multi_strike_data, stock_data_multi_strike):
+    """Protective put using actual stock data returns correct structure and values."""
+    results = protective_put(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+    )
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    row = results.iloc[0]
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "put"
+    assert row["strike_leg1"] == 212.5
+    # Long put selected at 210.0 (|delta|=0.35, closest to DEFAULT 0.30)
+    assert row["strike_leg2"] == 210.0
+    assert row["delta_entry_leg1"] == 1.0
+    # Entry: buy stock 212.5 + long put mid(1.40,1.50) = 212.5 + 1.45 = 213.95
+    assert round(row["total_entry_cost"], 2) == 213.95
+    # Exit: sell stock 215.0 + put mid(0.0,0.05) = 215.0 + 0.025 = 215.025
+    assert round(row["total_exit_proceeds"], 3) == 215.025
+    assert round(row["pct_change"], 4) == round(1.075 / 213.95, 4)
+
+
+def test_covered_call_with_stock_no_match(multi_strike_data):
+    """When stock data has no matching dates, result is empty."""
+    empty_stock = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": [datetime.datetime(2020, 1, 1)],
+            "close": [300.0],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=empty_stock, raw=True)
+    assert results.empty
+    assert list(results.columns) == double_strike_internal_cols
+
+    # Aggregated mode should also return empty without groupby errors
+    results_agg = covered_call(multi_strike_data, stock_data=empty_stock)
+    assert results_agg.empty
+
+
+def test_covered_call_with_stock_partial_match(multi_strike_data):
+    """When stock data matches entry but not exit date, result is empty."""
+    # Only entry date (2018-01-01) present, exit date (2018-01-31) missing
+    partial_stock = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": [datetime.datetime(2018, 1, 1)],
+            "close": [212.5],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=partial_stock, raw=True)
+    assert results.empty
+    assert list(results.columns) == double_strike_internal_cols
+
+
+def test_protective_put_with_stock_aggregated(
+    multi_strike_data, stock_data_multi_strike
+):
+    """Protective put with stock data returns valid aggregated output."""
+    results = protective_put(multi_strike_data, stock_data=stock_data_multi_strike)
+    assert not results.empty
+    assert "dte_range" in results.columns
+    assert "delta_range_leg2" in results.columns
+    assert "delta_range_leg1" not in results.columns
+
+
+def test_covered_without_stock_unchanged(multi_strike_data):
+    """Without stock_data the existing synthetic approach is used."""
+    results = covered_call(multi_strike_data, raw=True)
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["strike_leg1"] == 207.5
+
+
+# --- yfinance-format stock data tests ---
+
+
+def test_covered_call_with_yfinance_format(multi_strike_data):
+    """Covered call accepts yfinance-style DataFrame (DatetimeIndex, capitalized cols)."""
+    yf_stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    results = covered_call(multi_strike_data, stock_data=yf_stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+    assert results.iloc[0]["strike_leg1"] == 212.5
+
+
+def test_protective_put_with_yfinance_format(multi_strike_data):
+    """Protective put accepts yfinance-style DataFrame."""
+    yf_stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    results = protective_put(multi_strike_data, stock_data=yf_stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+
+
+def test_covered_call_with_date_column(multi_strike_data):
+    """stock_data with 'date' column (no DatetimeIndex) is normalized."""
+    stock = pd.DataFrame(
+        {
+            "date": [
+                datetime.datetime(2018, 1, 1),
+                datetime.datetime(2018, 1, 31),
+            ],
+            "close": [212.5, 215.0],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+
+
+def test_covered_call_stock_data_multi_symbol_error(multi_strike_data):
+    """Raise when stock_data has no symbol and options data has multiple symbols."""
+    # Create options data with two symbols
+    multi_sym = multi_strike_data.copy()
+    extra = multi_strike_data.copy()
+    extra["underlying_symbol"] = "AAPL"
+    multi_sym = pd.concat([multi_sym, extra], ignore_index=True)
+
+    stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    with pytest.raises(KeyError, match="multiple symbols"):
+        covered_call(multi_sym, stock_data=stock, raw=True)
 
 
 def test_single_long_calls_raw(data):

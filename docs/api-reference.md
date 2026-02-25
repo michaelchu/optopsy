@@ -133,7 +133,7 @@ Load options data from CSV file.
 ## Covered Strategies
 
 !!! note
-    All covered strategies accept the same parameters. See [Common Parameters](#common-parameters) for full documentation.
+    Covered strategies accept all [Common Parameters](#common-parameters) plus an optional `stock_data` parameter for actual stock prices. We recommend [yfinance](https://github.com/ranaroussi/yfinance) (`pip install yfinance`) — pass `yf.download()` output directly as `stock_data`. When omitted, a synthetic deep ITM call is used.
 
 #### covered_call
 
