@@ -336,20 +336,20 @@ def option_data_entry_exit():
 
     d = [
         # Wednesday entry
-        ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45, 0.55],
-        ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05, 0.40],
-        ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80, -0.45],
-        ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20, -0.60],
+        ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80, -0.30],
+        ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20, -0.50],
         # Thursday entry
-        ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65, 0.58],
-        ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20, 0.42],
-        ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60, -0.42],
-        ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00, -0.58],
+        ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65, 0.50],
+        ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20, 0.30],
+        ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60, -0.30],
+        ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00, -0.50],
         # Exit (expiration)
-        ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05, 0.85],
-        ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05, -0.05],
-        ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05, -0.15],
+        ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55, 0.50],
+        ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05, 0.30],
+        ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05, -0.30],
+        ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05, -0.50],
     ]
     return pd.DataFrame(data=d, columns=cols)
 

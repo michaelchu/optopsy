@@ -368,23 +368,68 @@ def strategy_data_with_iv():
         "bid",
         "ask",
         "implied_volatility",
+        "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.22],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.24],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, 0.21],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, 0.23],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.18],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.20],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, 0.19],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, 0.17],
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            212.5,
+            7.35,
+            7.45,
+            0.22,
+            0.55,
+        ],
+        [
+            "SPX",
+            213.93,
+            "call",
+            exp_date,
+            quote_dates[0],
+            215.0,
+            6.00,
+            6.05,
+            0.24,
+            0.30,
+        ],
+        [
+            "SPX",
+            213.93,
+            "put",
+            exp_date,
+            quote_dates[0],
+            212.5,
+            5.70,
+            5.80,
+            0.21,
+            -0.30,
+        ],
+        [
+            "SPX",
+            213.93,
+            "put",
+            exp_date,
+            quote_dates[0],
+            215.0,
+            7.10,
+            7.20,
+            0.23,
+            -0.55,
+        ],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.18, 0.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.20, 0.30],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, 0.19, -0.30],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, 0.17, -0.55],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
 
 @pytest.fixture
 def strategy_data_no_iv():
-    """Same structure without implied_volatility — raw output should not contain IV."""
+    """Same structure without implied_volatility but with delta — raw output should not contain IV."""
     exp_date = datetime.datetime(2018, 1, 31)
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
@@ -396,16 +441,17 @@ def strategy_data_no_iv():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.30],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.30],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.55],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
