@@ -378,6 +378,21 @@ def test_auth_plugin_non_dict_return(caplog):
     assert "non-dict" in caplog.text
 
 
+def test_auth_discovery_is_cached():
+    """Calling get_plugin_auth() twice returns the cached result."""
+    registrar = lambda: {"type": "password", "callback": _fake_password_cb}  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with patch("importlib.metadata.entry_points", return_value=[ep]) as mock_eps:
+        first = get_plugin_auth()
+        second = get_plugin_auth()
+
+    assert first is second
+    assert first["type"] == "password"
+    # entry_points called once, cached thereafter
+    assert mock_eps.call_count == 1
+
+
 def test_only_first_auth_plugin_used():
     """When multiple auth plugins exist, only the first is used."""
     reg1 = lambda: {"type": "password", "callback": _fake_password_cb}  # noqa: E731
