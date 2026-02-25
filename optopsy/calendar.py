@@ -209,7 +209,7 @@ def _find_calendar_exit_prices(
         if len(available_dates) == 0:
             return merged.iloc[:0]
 
-        targets = np.asarray(all_exit_dates, dtype="datetime64[ns]")
+        targets = np.asarray(all_exit_dates, dtype=available_dates.dtype)
 
         # searchsorted finds the insertion point; check both neighbors
         # to find the closest available date for each target.

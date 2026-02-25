@@ -182,9 +182,9 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 def _calls(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for call options only."""
-    return data[data["option_type"].str[0] == "c"]
+    return data[data["option_type"].str.startswith("c", na=False)]
 
 
 def _puts(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for put options only."""
-    return data[data["option_type"].str[0] == "p"]
+    return data[data["option_type"].str.startswith("p", na=False)]
