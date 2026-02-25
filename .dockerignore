@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.mypy_cache
+.ruff_cache
+
+# Testing / dev
+tests/
+.pytest_cache
+.coverage
+htmlcov/
+
+# CI / tooling
+.github/
+.pre-commit-config.yaml
+CLAUDE.md
+README.md
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
