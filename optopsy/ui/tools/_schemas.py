@@ -13,6 +13,7 @@ from typing import Any
 
 import optopsy as op
 import optopsy.signals as _signals
+from optopsy.plugins import get_plugin_signals, get_plugin_strategies, get_plugin_tools
 
 from ..providers import get_all_provider_tool_schemas
 
@@ -162,10 +163,6 @@ STRATEGIES = {
     ),
 }
 
-CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is_cal}
-
-STRATEGY_NAMES = sorted(STRATEGIES.keys())
-
 # ---------------------------------------------------------------------------
 # Signal registry
 # ---------------------------------------------------------------------------
@@ -262,6 +259,12 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     ),
 }
 
+# --- Plugin signals ---
+for _sig_name, _factory in get_plugin_signals().items():
+    if _sig_name in SIGNAL_REGISTRY:
+        _log.warning("Plugin overrides built-in signal: %s", _sig_name)
+    SIGNAL_REGISTRY[_sig_name] = _factory
+
 SIGNAL_NAMES = sorted(SIGNAL_REGISTRY.keys())
 
 # Signals that only need quote_date (no OHLCV data / yfinance fetch).
@@ -305,6 +308,18 @@ STRATEGY_OPTION_TYPE: dict[str, str | None] = {
     "reverse_iron_butterfly": None,
     "protective_put": None,
 }
+
+# --- Plugin strategies ---
+for _name, _entry in get_plugin_strategies().items():
+    if _name in STRATEGIES:
+        _log.warning("Plugin overrides built-in strategy: %s", _name)
+    _func, _desc, _is_cal, _opt_type = _entry
+    STRATEGIES[_name] = (_func, _desc, _is_cal)
+    STRATEGY_OPTION_TYPE[_name] = _opt_type
+
+# Rebuild derived sets to include plugin strategies
+CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is_cal}
+STRATEGY_NAMES = sorted(STRATEGIES.keys())
 
 
 def get_required_option_type(strategy_name: str) -> str | None:
@@ -491,5 +506,27 @@ def get_tool_schemas() -> list[dict]:
 
     # Data provider tools (only added when API keys are configured)
     tools.extend(get_all_provider_tool_schemas())
+
+    # Plugin tools
+    for reg in get_plugin_tools():
+        try:
+            schemas = reg.get("schemas", [])
+            descriptions = reg.get("descriptions", {}) or {}
+            if descriptions:
+                for schema in schemas:
+                    function_def = schema.get("function")
+                    if not isinstance(function_def, dict):
+                        continue
+                    name = function_def.get("name")
+                    if (
+                        name
+                        and not function_def.get("description")
+                        and name in descriptions
+                    ):
+                        function_def["description"] = descriptions[name]
+            tools.extend(schemas)
+            _TOOL_DESCRIPTIONS.update(descriptions)
+        except Exception:
+            _log.warning("Failed to process plugin tool registration", exc_info=True)
 
     return tools

@@ -38,6 +38,36 @@ _log = logging.getLogger(__name__)
 
 _TOOL_HANDLERS: dict[str, Callable[..., ToolResult]] = {}
 
+_PLUGINS_LOADED = False
+
+
+def _ensure_plugins_loaded() -> None:
+    """Load plugin tool handlers and arg models (runs once)."""
+    global _PLUGINS_LOADED
+    if _PLUGINS_LOADED:
+        return
+
+    try:
+        from optopsy.plugins import get_plugin_tools
+
+        from ._models import TOOL_ARG_MODELS
+    except Exception:
+        _log.warning("Plugin tool imports failed", exc_info=True)
+        _PLUGINS_LOADED = True
+        return
+
+    for reg in get_plugin_tools():
+        try:
+            for name, handler in reg.get("handlers", {}).items():
+                if name in _TOOL_HANDLERS:
+                    _log.warning("Plugin overrides built-in tool handler: %s", name)
+                _TOOL_HANDLERS[name] = handler
+            TOOL_ARG_MODELS.update(reg.get("models", {}))
+        except Exception:
+            _log.warning("Failed to load plugin tool registry", exc_info=True)
+
+    _PLUGINS_LOADED = True
+
 
 def _register(name: str):
     """Decorator to register a tool handler function."""
@@ -192,6 +222,8 @@ def execute_tool(
     allows multiple datasets to be active simultaneously.  The ``results`` dict
     is the session-scoped strategy run registry.
     """
+    _ensure_plugins_loaded()
+
     if signals is None:
         signals = {}
     if datasets is None:
