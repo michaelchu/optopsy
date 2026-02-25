@@ -107,11 +107,8 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     slippage = arguments.get("slippage", "mid")
     dte_values = arguments.get("max_entry_dte_values") or [90]
     exit_values = arguments.get("exit_dte_values") or [0]
-    otm_values = arguments.get("max_otm_pct_values") or [0.5]
 
-    all_combos = list(
-        _itertools.product(strategy_names, dte_values, exit_values, otm_values)
-    )
+    all_combos = list(_itertools.product(strategy_names, dte_values, exit_values))
     truncated = len(all_combos) > max_combos
     combos_to_run = all_combos[:max_combos]
 
@@ -120,7 +117,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     errors = []
     scan_results = dict(results)
 
-    for strat, max_dte, exit_dte, max_otm in combos_to_run:
+    for strat, max_dte, exit_dte in combos_to_run:
         if strat in CALENDAR_STRATEGIES:
             errors.append(
                 f"{strat}: skipped (calendar strategy — no front/back DTE sweep; "
@@ -131,7 +128,6 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
         combo_args = {
             "max_entry_dte": max_dte,
             "exit_dte": exit_dte,
-            "max_otm_pct": max_otm,
             "slippage": slippage,
         }
 
@@ -152,9 +148,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
         )
 
         if combo_err:
-            errors.append(
-                f"{strat}(dte={max_dte},exit={exit_dte},otm={max_otm:.2f}): {combo_err}"
-            )
+            errors.append(f"{strat}(dte={max_dte},exit={exit_dte}): {combo_err}")
             continue
 
         if result_df is None or result_df.empty:
@@ -163,7 +157,6 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                     "strategy": strat,
                     "max_entry_dte": max_dte,
                     "exit_dte": exit_dte,
-                    "max_otm_pct": max_otm,
                     "count": 0,
                     "mean_return": float("nan"),
                     "std": float("nan"),
@@ -179,7 +172,6 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                 "strategy": strat,
                 "max_entry_dte": max_dte,
                 "exit_dte": exit_dte,
-                "max_otm_pct": max_otm,
                 "count": summary["count"],
                 "mean_return": summary["mean_return"],
                 "std": summary["std"],
@@ -220,8 +212,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
         best = best_rows.iloc[0]
         header_parts.append(
             f"Best: {best['strategy']} "
-            f"(dte={best['max_entry_dte']}, exit={best['exit_dte']}, "
-            f"otm={best['max_otm_pct']:.2f}) — "
+            f"(dte={best['max_entry_dte']}, exit={best['exit_dte']}) — "
             f"mean={best['mean_return']:.4f}, win_rate={best['win_rate']:.2%}"
         )
 

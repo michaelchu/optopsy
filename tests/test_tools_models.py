@@ -296,12 +296,6 @@ class TestTypeCoercion:
         assert m.rows == 5
         assert isinstance(m.rows, int)
 
-    def test_string_to_float_otm(self):
-        m = RunStrategyArgs.model_validate(
-            {"strategy_name": "long_calls", "max_otm_pct": "0.3"}
-        )
-        assert m.max_otm_pct == 0.3
-
     def test_int_to_float_capital(self):
         m = SimulateArgs.model_validate(
             {"strategy_name": "long_calls", "capital": 100000}

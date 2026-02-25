@@ -113,13 +113,6 @@ class StrategyParamsMixin(BaseModel):
     dte_interval: int | None = Field(
         None, description="Interval size for DTE grouping in stats (default: 7)"
     )
-    max_otm_pct: float | None = Field(
-        None, description="Maximum out-of-the-money percentage (default: 0.5)"
-    )
-    otm_pct_interval: float | None = Field(
-        None,
-        description="Interval size for OTM grouping in stats (default: 0.05)",
-    )
     min_bid_ask: float | None = Field(
         None, description="Minimum bid/ask price threshold (default: 0.05)"
     )
@@ -294,7 +287,7 @@ class SuggestStrategyParamsArgs(BaseModel):
         json_schema_extra={"enum": STRATEGY_NAMES},
         description=(
             "Optional: tailor suggestions for a specific strategy. "
-            "Iron condors and multi-leg strategies get tighter DTE/OTM% "
+            "Iron condors and multi-leg strategies get tighter DTE "
             "defaults. Calendar strategies receive front/back DTE "
             "recommendations instead of max_entry_dte."
         ),
@@ -355,13 +348,6 @@ class ScanStrategiesArgs(BaseModel):
         description=(
             "List of exit_dte values to sweep (e.g. [0, 7, 14]). "
             "Omit to use the default (0)."
-        ),
-    )
-    max_otm_pct_values: list[float] | None = Field(
-        None,
-        description=(
-            "List of max_otm_pct values to sweep (e.g. [0.1, 0.2, 0.3]). "
-            "Omit to use the default (0.5)."
         ),
     )
     slippage: SlippageModel | None = Field(
@@ -858,7 +844,6 @@ class StrategyResultSummary(BaseModel):
     strategy: str
     max_entry_dte: int = 90
     exit_dte: int = 0
-    max_otm_pct: float = 0.5
     slippage: str = "mid"
     dataset: str = "default"
     count: int = 0

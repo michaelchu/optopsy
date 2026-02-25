@@ -290,7 +290,7 @@ class ToolResult:
     ``active_dataset_name`` is the label of the dataset that was just loaded
     or selected; None means no change to the active selection.
     ``results`` is the session-scoped registry of strategy runs (keyed by a
-    string like ``"short_puts:dte=45,exit=0,otm=0.20,slip=mid"``), carrying
+    string like ``"short_puts:dte=45,exit=0,slip=mid"``), carrying
     lightweight scalar summaries across tool calls so the agent can recall
     what it has already run without re-executing.
     """
@@ -540,9 +540,8 @@ def _make_result_key(strategy_name: str, arguments: dict) -> str:
     """
     dte = arguments.get("max_entry_dte", 90)
     exit_dte = arguments.get("exit_dte", 0)
-    otm = arguments.get("max_otm_pct", 0.5)
     slippage = arguments.get("slippage", "mid")
-    return f"{strategy_name}:dte={dte},exit={exit_dte},otm={otm:.2f},slip={slippage}"
+    return f"{strategy_name}:dte={dte},exit={exit_dte},slip={slippage}"
 
 
 def _make_result_summary(
@@ -562,7 +561,6 @@ def _make_result_summary(
         "strategy": strategy_name,
         "max_entry_dte": arguments.get("max_entry_dte", 90),
         "exit_dte": arguments.get("exit_dte", 0),
-        "max_otm_pct": arguments.get("max_otm_pct", 0.5),
         "slippage": arguments.get("slippage", "mid"),
         "dataset": arguments.get("dataset_name", "default"),
     }
