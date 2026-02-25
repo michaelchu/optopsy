@@ -56,7 +56,7 @@ class TargetRange(BaseModel):
 | `optopsy/checks.py` | Update `_requires_delta()` to also check for `leg*_delta` params |
 | `optopsy/filters.py` | New `_select_closest_delta(data, delta_target)` -- filters by `[min, max]` range, then groups by `(underlying_symbol, quote_date, expiration, option_type)` and picks row with `abs(delta)` closest to `target` |
 | `optopsy/evaluation.py` | New `_evaluate_options_by_delta()` and `_evaluate_all_options_by_delta()` -- entry/exit matching pipeline that skips OTM% filtering and uses delta selection instead |
-| `optopsy/core.py` | New `_process_strategy_delta_targeted()` -- evaluates each leg independently with its own `TargetRange`, joins via `_strategy_engine()`. `_process_strategy()` branches here when any `leg*_delta` is present |
+| `optopsy/core.py` | New `_process_strategy_delta_targeted()` -- evaluates each leg independently with its own `TargetRange`, merges legs and calculates P&L inline (single-leg delegates to `_strategy_engine()`). `_process_strategy()` branches here when any `leg*_delta` is present |
 | `optopsy/output.py` | Include `delta_entry_legN` columns in raw output when present |
 | `optopsy/__init__.py` | Export `TargetRange` |
 
@@ -80,7 +80,9 @@ class TargetRange(BaseModel):
 2. Join legs on shared columns (symbol, expiration, DTE range, etc.)
    - `otm_pct_range` is stripped from `join_on` since legs use different OTM levels
    - `delta_range_legN` replaces `otm_pct_range_legN` in grouping columns
-3. Apply rules and calculate P&L via existing `_strategy_engine()` (reused, not duplicated)
+3. Apply rules and calculate P&L:
+   - Single-leg: delegates to `_strategy_engine()` (reused)
+   - Multi-leg: merges legs inline via `pd.merge`, applies rules, then `_assign_profit()`. Cannot reuse `_strategy_engine()` because it expects a single DataFrame and applies option type filters internally, but delta-targeted legs are already evaluated independently.
 
 ### Key Design Decisions
 
@@ -92,9 +94,8 @@ class TargetRange(BaseModel):
 
 ## Tests
 
-- `tests/test_delta_targeting.py` -- single-leg, vertical spread, iron condor, straddle, validation errors, raw/aggregated output
-- `tests/test_types_validation.py` -- TargetRange and leg*_delta validation edge cases
-- `tests/conftest.py` -- `multi_strike_data_with_delta` fixture with realistic delta values
+- `tests/test_delta_targeting.py` -- TargetRange validation, leg*_delta mutual exclusivity, single-leg, vertical spread, iron condor, straddle, validation errors, raw/aggregated output
+- `tests/conftest.py` -- `multi_strike_data_with_delta` fixture with realistic delta values across 5 strikes
 
 ## Out of Scope
 
