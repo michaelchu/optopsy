@@ -139,12 +139,9 @@ def _apply_ratios(
             data[entry_col] = entry_fill * multiplier
             data[exit_col] = exit_fill * multiplier
         else:
-            # Original behavior: just apply multiplier to mid price
-            entry_kwargs = {
-                entry_col: lambda r, col=entry_col, m=multiplier: r[col] * m
-            }
-            exit_kwargs = {exit_col: lambda r, col=exit_col, m=multiplier: r[col] * m}
-            data = data.assign(**entry_kwargs).assign(**exit_kwargs)
+            # Apply multiplier directly via vectorized column multiplication
+            data[entry_col] = data[entry_col] * multiplier
+            data[exit_col] = data[exit_col] * multiplier
 
     return data
 

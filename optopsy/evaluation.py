@@ -124,8 +124,10 @@ def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
             suffixes=("_entry", "_exit"),
         )
         # by default we use the midpoint spread price to calculate entry and exit costs
-        .assign(entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2)
-        .assign(exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2)
+        .assign(
+            entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2,
+            exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2,
+        )
         .pipe(_remove_invalid_evaluated_options)
     )
 
@@ -180,9 +182,9 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 def _calls(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for call options only."""
-    return data[data["option_type"].str.startswith("c")]
+    return data[data["option_type"].str[0] == "c"]
 
 
 def _puts(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for put options only."""
-    return data[data["option_type"].str.startswith("p")]
+    return data[data["option_type"].str[0] == "p"]

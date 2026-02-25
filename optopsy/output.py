@@ -147,10 +147,9 @@ def _format_calendar_output(
     # Create OTM ranges
     otm_pct_interval = params["otm_pct_interval"]
     max_otm_pct = params["max_otm_pct"]
-    otm_pct_intervals = [
-        round(i, 2)
-        for i in list(np.arange(max_otm_pct * -1, max_otm_pct, otm_pct_interval))
-    ]
+    otm_pct_intervals = np.round(
+        np.arange(max_otm_pct * -1, max_otm_pct, otm_pct_interval), 2
+    )
 
     if same_strike:
         data["otm_pct_range"] = pd.cut(data["otm_pct_leg1"], otm_pct_intervals)
