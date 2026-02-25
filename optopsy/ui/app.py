@@ -204,15 +204,18 @@ def _get_async_conninfo() -> str:
 
 
 def _get_sync_conninfo() -> str:
-    """Return the synchronous SQLAlchemy connection string for schema init."""
+    """Return the synchronous SQLAlchemy connection string for schema init.
+
+    For PostgreSQL, uses the ``psycopg2`` driver (``postgresql+psycopg2://``).
+    """
     db_url = os.environ.get("DATABASE_URL", "")
     if db_url:
         if db_url.startswith("postgres://"):
             db_url = "postgresql://" + db_url[len("postgres://") :]
         if db_url.startswith("postgresql+asyncpg://"):
-            return "postgresql://" + db_url[len("postgresql+asyncpg://") :]
+            db_url = "postgresql://" + db_url[len("postgresql+asyncpg://") :]
         if db_url.startswith("postgresql://"):
-            return db_url
+            return "postgresql+psycopg2://" + db_url[len("postgresql://") :]
         return db_url
     return f"sqlite:///{DB_PATH}"
 
@@ -221,8 +224,10 @@ def _init_db_sync() -> None:
     """Create tables synchronously at module import time.
 
     Uses SQLAlchemy so the same DDL works for both SQLite and PostgreSQL.
+    The sync Postgres path requires ``psycopg2`` (included in the ``ui`` extra).
     """
     from sqlalchemy import create_engine, text
+    from sqlalchemy.exc import OperationalError, ProgrammingError
 
     sync_url = _get_sync_conninfo()
 
@@ -231,19 +236,23 @@ def _init_db_sync() -> None:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     engine = create_engine(sync_url)
-    with engine.begin() as conn:
-        for stmt in _DB_SCHEMA_STATEMENTS:
-            conn.execute(text(stmt))
-        # Add columns introduced in newer Chainlit versions.
-        for col, definition in [
-            ("defaultOpen", "INTEGER DEFAULT 0"),
-            ("waitForAnswer", "INTEGER"),
-        ]:
-            try:
-                conn.execute(text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}'))
-            except Exception:
-                pass  # column already exists
-    engine.dispose()
+    try:
+        with engine.begin() as conn:
+            for stmt in _DB_SCHEMA_STATEMENTS:
+                conn.execute(text(stmt))
+            # Add columns introduced in newer Chainlit versions.
+            for col, definition in [
+                ("defaultOpen", "INTEGER DEFAULT 0"),
+                ("waitForAnswer", "INTEGER"),
+            ]:
+                try:
+                    conn.execute(
+                        text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
+                    )
+                except (OperationalError, ProgrammingError):
+                    pass  # column already exists
+    finally:
+        engine.dispose()
 
 
 _init_db_sync()
@@ -256,8 +265,8 @@ async def _lookup_element_mime(object_key: str) -> str | None:
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
+    engine = create_async_engine(_get_async_conninfo())
     try:
-        engine = create_async_engine(_get_async_conninfo())
         async with engine.begin() as conn:
             result = await conn.execute(
                 text('SELECT mime FROM elements WHERE "objectKey" = :key LIMIT 1'),
@@ -266,9 +275,10 @@ async def _lookup_element_mime(object_key: str) -> str | None:
             row = result.fetchone()
             if row and row[0] and row[0] != "application/octet-stream":
                 return row[0]
-        await engine.dispose()
     except Exception:
         pass
+    finally:
+        await engine.dispose()
     return None
 
 

@@ -16,7 +16,7 @@ def _resolve_data_dir() -> Path:
     """Return the base data directory, respecting ``OPTOPSY_DATA_DIR``."""
     env = os.environ.get("OPTOPSY_DATA_DIR")
     if env:
-        return Path(env)
+        return Path(env).expanduser()
     return Path("~/.optopsy").expanduser()
 
 

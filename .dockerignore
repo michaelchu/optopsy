@@ -19,7 +19,6 @@ htmlcov/
 .github/
 .pre-commit-config.yaml
 CLAUDE.md
-README.md
 
 # Environment
 .env
