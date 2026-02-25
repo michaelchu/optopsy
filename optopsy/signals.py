@@ -102,6 +102,8 @@ def _per_symbol_signal(
             _compute_group(group)
             for _, group in data.groupby("underlying_symbol", sort=False)
         ]
+        if not parts:
+            return pd.Series(False, index=data.index, dtype=bool)
         return pd.concat(parts).reindex(data.index, fill_value=False)
 
     return signal
@@ -144,6 +146,8 @@ def _crossover_signal(
             _compute_group(group)
             for _, group in data.groupby("underlying_symbol", sort=False)
         ]
+        if not parts:
+            return pd.Series(False, index=data.index, dtype=bool)
         return pd.concat(parts).reindex(data.index, fill_value=False)
 
     return _signal
@@ -331,6 +335,8 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
             _compute_group(group)
             for _, group in data.groupby("underlying_symbol", sort=False)
         ]
+        if not parts:
+            return pd.Series(False, index=data.index, dtype=bool)
         return pd.concat(parts).reindex(data.index, fill_value=False)
 
     return _signal
@@ -491,6 +497,8 @@ def _atr_signal(period: int, multiplier: float, above: bool) -> SignalFunc:
             _compute_group(group)
             for _, group in data.groupby("underlying_symbol", sort=False)
         ]
+        if not parts:
+            return pd.Series(False, index=data.index, dtype=bool)
         return pd.concat(parts).reindex(data.index, fill_value=False)
 
     return _signal
@@ -833,6 +841,8 @@ def sustained(signal_func: SignalFunc, days: int = 5) -> SignalFunc:
             _compute_group(group)
             for _, group in data.groupby("underlying_symbol", sort=False)
         ]
+        if not parts:
+            return pd.Series(False, index=data.index, dtype=bool)
         return pd.concat(parts).reindex(data.index, fill_value=False)
 
     return _signal
