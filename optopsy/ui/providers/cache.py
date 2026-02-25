@@ -16,9 +16,11 @@ from datetime import date, timedelta
 
 import pandas as pd
 
+from optopsy.ui.paths import CACHE_DIR
+
 _log = logging.getLogger(__name__)
 
-_CACHE_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "cache")
+_CACHE_DIR = str(CACHE_DIR)
 
 # Gaps smaller than this many calendar days are treated as market holidays /
 # weekends and are NOT re-fetched.  Gaps larger than this indicate missing data.

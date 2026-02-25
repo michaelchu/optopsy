@@ -47,8 +47,9 @@ from fastapi.routing import APIRoute
 
 import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
+from optopsy.ui.paths import DB_PATH, STORAGE_DIR
 from optopsy.ui.providers import get_provider_names
-from optopsy.ui.storage import STORAGE_DIR, STORAGE_ROUTE_PREFIX, LocalStorageClient
+from optopsy.ui.storage import STORAGE_ROUTE_PREFIX, LocalStorageClient
 
 # ---------------------------------------------------------------------------
 # Plotly binary-array patch
@@ -115,8 +116,6 @@ def _patched_plotly_post_init(self):
 
 
 cl.Plotly.__post_init__ = _patched_plotly_post_init
-
-DB_PATH = Path("~/.optopsy/chat.db").expanduser()
 
 _DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (

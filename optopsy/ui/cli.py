@@ -184,9 +184,10 @@ def _cmd_run(args: argparse.Namespace) -> None:
     # Generate one on first run and persist it so sessions survive restarts.
     if not os.environ.get("CHAINLIT_AUTH_SECRET"):
         import secrets
-        from pathlib import Path
 
-        secret_file = Path("~/.optopsy/auth_secret").expanduser()
+        from optopsy.ui.paths import AUTH_SECRET_PATH
+
+        secret_file = AUTH_SECRET_PATH
         secret_file.parent.mkdir(parents=True, exist_ok=True)
         if secret_file.exists():
             secret = secret_file.read_text().strip()
