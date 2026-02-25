@@ -1,3 +1,5 @@
+import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -349,6 +351,7 @@ def test_covered_call_with_stock_aggregated(multi_strike_data, stock_data_multi_
     assert not results.empty
     assert "dte_range" in results.columns
     assert "delta_range_leg2" in results.columns
+    assert "delta_range_leg1" not in results.columns
 
 
 def test_protective_put_with_stock_raw(multi_strike_data, stock_data_multi_strike):
@@ -374,8 +377,6 @@ def test_protective_put_with_stock_raw(multi_strike_data, stock_data_multi_strik
 
 def test_covered_call_with_stock_no_match(multi_strike_data):
     """When stock data has no matching dates, result is empty."""
-    import datetime
-
     empty_stock = pd.DataFrame(
         {
             "underlying_symbol": ["SPX"],
@@ -386,6 +387,32 @@ def test_covered_call_with_stock_no_match(multi_strike_data):
     results = covered_call(multi_strike_data, stock_data=empty_stock, raw=True)
     assert results.empty
     assert list(results.columns) == double_strike_internal_cols
+
+
+def test_covered_call_with_stock_partial_match(multi_strike_data):
+    """When stock data matches entry but not exit date, result is empty."""
+    # Only entry date (2018-01-01) present, exit date (2018-01-31) missing
+    partial_stock = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX"],
+            "quote_date": [datetime.datetime(2018, 1, 1)],
+            "close": [212.5],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=partial_stock, raw=True)
+    assert results.empty
+    assert list(results.columns) == double_strike_internal_cols
+
+
+def test_protective_put_with_stock_aggregated(
+    multi_strike_data, stock_data_multi_strike
+):
+    """Protective put with stock data returns valid aggregated output."""
+    results = protective_put(multi_strike_data, stock_data=stock_data_multi_strike)
+    assert not results.empty
+    assert "dte_range" in results.columns
+    assert "delta_range_leg2" in results.columns
+    assert "delta_range_leg1" not in results.columns
 
 
 def test_covered_without_stock_unchanged(multi_strike_data):

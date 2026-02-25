@@ -278,6 +278,14 @@ def _covered_with_stock(
         )
 
     # --- match stock prices ---
+    required_stock_cols = {"underlying_symbol", "quote_date", "close"}
+    missing_stock_cols = required_stock_cols - set(stock_data.columns)
+    if missing_stock_cols:
+        missing_str = ", ".join(sorted(missing_stock_cols))
+        raise KeyError(
+            f"stock_data is missing required columns: {missing_str}. "
+            "Required columns are: underlying_symbol, quote_date, close."
+        )
     stock = stock_data.copy()
     stock["quote_date"] = normalize_dates(stock["quote_date"])
     stock_prices = stock[["underlying_symbol", "quote_date", "close"]]
