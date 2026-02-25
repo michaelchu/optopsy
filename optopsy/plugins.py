@@ -107,7 +107,14 @@ def get_plugin_tools() -> list[dict[str, Any]]:
     registrations: list[dict[str, Any]] = []
     for registrar in _discover("optopsy.tools"):
         try:
-            registrations.append(registrar())
+            result = registrar()
+            if not isinstance(result, dict):
+                _log.warning(
+                    "Plugin tool registrar returned non-dict %r; skipping",
+                    type(result),
+                )
+                continue
+            registrations.append(result)
         except Exception:
             _log.warning("Plugin tool registrar failed", exc_info=True)
     return registrations

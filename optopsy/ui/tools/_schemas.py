@@ -509,21 +509,24 @@ def get_tool_schemas() -> list[dict]:
 
     # Plugin tools
     for reg in get_plugin_tools():
-        schemas = reg.get("schemas", [])
-        descriptions = reg.get("descriptions", {}) or {}
-        if descriptions:
-            for schema in schemas:
-                function_def = schema.get("function")
-                if not isinstance(function_def, dict):
-                    continue
-                name = function_def.get("name")
-                if (
-                    name
-                    and not function_def.get("description")
-                    and name in descriptions
-                ):
-                    function_def["description"] = descriptions[name]
-        tools.extend(schemas)
-        _TOOL_DESCRIPTIONS.update(descriptions)
+        try:
+            schemas = reg.get("schemas", [])
+            descriptions = reg.get("descriptions", {}) or {}
+            if descriptions:
+                for schema in schemas:
+                    function_def = schema.get("function")
+                    if not isinstance(function_def, dict):
+                        continue
+                    name = function_def.get("name")
+                    if (
+                        name
+                        and not function_def.get("description")
+                        and name in descriptions
+                    ):
+                        function_def["description"] = descriptions[name]
+            tools.extend(schemas)
+            _TOOL_DESCRIPTIONS.update(descriptions)
+        except Exception:
+            _log.warning("Failed to process plugin tool registration", exc_info=True)
 
     return tools
