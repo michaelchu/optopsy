@@ -39,6 +39,12 @@ def _load_providers() -> list[DataProvider]:
             from optopsy.plugins import get_plugin_providers
 
             for cls in get_plugin_providers():
+                if not isinstance(cls, type) or not issubclass(cls, DataProvider):
+                    _log.warning(
+                        "Skipping plugin provider %s: not a DataProvider subclass",
+                        cls,
+                    )
+                    continue
                 try:
                     providers.append(cls())
                 except Exception:

@@ -315,8 +315,7 @@ for _name, _entry in get_plugin_strategies().items():
         _log.warning("Plugin overrides built-in strategy: %s", _name)
     _func, _desc, _is_cal, _opt_type = _entry
     STRATEGIES[_name] = (_func, _desc, _is_cal)
-    if _opt_type is not None:
-        STRATEGY_OPTION_TYPE[_name] = _opt_type
+    STRATEGY_OPTION_TYPE[_name] = _opt_type
 
 # Rebuild derived sets to include plugin strategies
 CALENDAR_STRATEGIES = {name for name, (_, _, is_cal) in STRATEGIES.items() if is_cal}
@@ -510,7 +509,21 @@ def get_tool_schemas() -> list[dict]:
 
     # Plugin tools
     for reg in get_plugin_tools():
-        tools.extend(reg.get("schemas", []))
-        _TOOL_DESCRIPTIONS.update(reg.get("descriptions", {}))
+        schemas = reg.get("schemas", [])
+        descriptions = reg.get("descriptions", {}) or {}
+        if descriptions:
+            for schema in schemas:
+                function_def = schema.get("function")
+                if not isinstance(function_def, dict):
+                    continue
+                name = function_def.get("name")
+                if (
+                    name
+                    and not function_def.get("description")
+                    and name in descriptions
+                ):
+                    function_def["description"] = descriptions[name]
+        tools.extend(schemas)
+        _TOOL_DESCRIPTIONS.update(descriptions)
 
     return tools

@@ -46,7 +46,6 @@ def _ensure_plugins_loaded() -> None:
     global _PLUGINS_LOADED
     if _PLUGINS_LOADED:
         return
-    _PLUGINS_LOADED = True
 
     try:
         from optopsy.plugins import get_plugin_tools
@@ -55,10 +54,15 @@ def _ensure_plugins_loaded() -> None:
 
         for reg in get_plugin_tools():
             for name, handler in reg.get("handlers", {}).items():
+                if name in _TOOL_HANDLERS:
+                    _log.warning("Plugin overrides built-in tool handler: %s", name)
                 _TOOL_HANDLERS[name] = handler
             TOOL_ARG_MODELS.update(reg.get("models", {}))
     except Exception:
         _log.warning("Plugin tool loading failed", exc_info=True)
+        return
+
+    _PLUGINS_LOADED = True
 
 
 def _register(name: str):
