@@ -68,133 +68,15 @@ def _get_exits(
     return exits
 
 
-def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+def _match_entries_exits(
+    entries: pd.DataFrame, data: pd.DataFrame, **kwargs: Any
+) -> pd.DataFrame:
+    """Match filtered entries with exit rows, compute midpoint prices, and select output columns.
+
+    Shared by both OTM% and delta-targeted evaluation paths.
     """
-    Evaluate options by filtering, merging entry and exit data, and calculating costs.
-
-    Args:
-        data: DataFrame containing option chain data
-        **kwargs: Configuration parameters including max_otm_pct, min_bid_ask, exit_dte,
-                  delta_min, delta_max
-
-    Returns:
-        DataFrame with evaluated options including entry and exit prices
-    """
-    # trim option chains with strikes too far out from current price
-    data = data.pipe(_calculate_otm_pct).pipe(
-        _trim,
-        "otm_pct",
-        lower=kwargs["max_otm_pct"] * -1,
-        upper=kwargs["max_otm_pct"],
-    )
-
-    has_delta = "delta" in data.columns
-    delta_min = kwargs.get("delta_min")
-    delta_max = kwargs.get("delta_max")
-
-    # Pre-computed signal date DataFrames (from apply_signal)
     entry_dates = kwargs.get("entry_dates")
     exit_dates = kwargs.get("exit_dates")
-
-    # remove option chains that are worthless, it's unrealistic to enter
-    # trades with worthless options
-    entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
-
-    # Apply delta filtering only to entries (not exits) - delta changes over time
-    if has_delta and (delta_min is not None or delta_max is not None):
-        entries = _filter_by_delta(entries, delta_min, delta_max)
-
-    # Apply entry date filtering (only to entries, exits are unaffected)
-    if entry_dates is not None:
-        entries = _apply_signal_filter(entries, entry_dates)
-
-    # to reduce unnecessary computation, filter for options with the desired exit DTE
-    exits = _get_exits(data, kwargs["exit_dte"], kwargs.get("exit_dte_tolerance", 0))
-
-    # Apply exit date filtering (only to exits, entries are unaffected)
-    if exit_dates is not None:
-        exits = _apply_signal_filter(exits, exit_dates)
-
-    # Determine merge columns
-    merge_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
-
-    result = (
-        entries.merge(
-            right=exits,
-            on=merge_cols,
-            suffixes=("_entry", "_exit"),
-        )
-        # by default we use the midpoint spread price to calculate entry and exit costs
-        .assign(
-            entry=lambda r: (r["bid_entry"] + r["ask_entry"]) / 2,
-            exit=lambda r: (r["bid_exit"] + r["ask_exit"]) / 2,
-        )
-        .pipe(_remove_invalid_evaluated_options)
-    )
-
-    # Determine output columns based on whether delta is present
-    output_cols = evaluated_cols.copy()
-    if has_delta and "delta_entry" in result.columns:
-        output_cols = output_cols + ["delta_entry"]
-
-    # Include implied volatility if present (for IV-aware analysis)
-    if "implied_volatility_entry" in result.columns:
-        output_cols = output_cols + ["implied_volatility_entry"]
-
-    # Include volume if present (for liquidity-based slippage)
-    if "volume_entry" in result.columns:
-        output_cols = output_cols + ["volume_entry"]
-    if "volume_exit" in result.columns:
-        output_cols = output_cols + ["volume_exit"]
-
-    return result[output_cols]
-
-
-def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
-    """
-    Complete pipeline to evaluate all options with DTE and OTM percentage categorization.
-
-    Args:
-        data: DataFrame containing option chain data
-        **kwargs: Configuration parameters for evaluation and categorization
-
-    Returns:
-        DataFrame with evaluated and categorized options
-    """
-    result = (
-        data.pipe(_assign_dte)
-        .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
-        .pipe(_evaluate_options, **kwargs)
-        .pipe(_cut_options_by_dte, kwargs["dte_interval"], kwargs["max_entry_dte"])
-        .pipe(
-            _cut_options_by_otm,
-            kwargs["otm_pct_interval"],
-            kwargs["max_otm_pct"],
-        )
-    )
-
-    # Apply delta grouping if delta_interval is specified
-    delta_interval = kwargs.get("delta_interval")
-    if delta_interval is not None:
-        result = result.pipe(_cut_options_by_delta, delta_interval)
-
-    return result
-
-
-def _evaluate_options_by_delta(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
-    """Evaluate options using per-leg delta targeting instead of OTM% filtering.
-
-    Selects the closest-delta option per group, then matches entry/exit rows.
-    """
-    target = kwargs["delta_target"]
-    delta_min = kwargs["delta_range_min"]
-    delta_max = kwargs["delta_range_max"]
-
-    entry_dates = kwargs.get("entry_dates")
-    exit_dates = kwargs.get("exit_dates")
-
-    entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
-    entries = _select_closest_delta(entries, target, delta_min, delta_max)
 
     if entry_dates is not None:
         entries = _apply_signal_filter(entries, entry_dates)
@@ -215,34 +97,92 @@ def _evaluate_options_by_delta(data: pd.DataFrame, **kwargs: Any) -> pd.DataFram
         .pipe(_remove_invalid_evaluated_options)
     )
 
-    # Build output columns — skip otm_pct_entry since delta path doesn't compute it
+    # Build output columns, including only those present in the result
     output_cols = [c for c in evaluated_cols if c in result.columns]
-    if "delta_entry" in result.columns and "delta_entry" not in output_cols:
-        output_cols.append("delta_entry")
-    if "implied_volatility_entry" in result.columns:
-        output_cols.append("implied_volatility_entry")
-    if "volume_entry" in result.columns:
-        output_cols.append("volume_entry")
-    if "volume_exit" in result.columns:
-        output_cols.append("volume_exit")
+    for opt_col in (
+        "delta_entry",
+        "implied_volatility_entry",
+        "volume_entry",
+        "volume_exit",
+    ):
+        if opt_col in result.columns and opt_col not in output_cols:
+            output_cols.append(opt_col)
 
     return result[output_cols]
 
 
-def _evaluate_all_options_by_delta(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
-    """Complete pipeline to evaluate options with delta targeting.
-
-    Pipeline: assign DTE -> trim DTE -> evaluate by delta -> cut by DTE -> cut by delta.
+def _evaluate_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
     """
-    delta_interval = kwargs.get("delta_interval") or 0.05
+    Evaluate options by filtering, merging entry and exit data, and calculating costs.
+
+    Supports two entry-selection modes:
+    - OTM% path (default): filters by OTM percentage range, optionally by delta range
+    - Delta targeting: selects closest-delta option per group within [min, max] range
+
+    The mode is determined by the presence of ``delta_target`` in kwargs.
+    """
+    # Delta-targeted entry selection
+    if "delta_target" in kwargs:
+        entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
+        entries = _select_closest_delta(
+            entries,
+            kwargs["delta_target"],
+            kwargs["delta_range_min"],
+            kwargs["delta_range_max"],
+        )
+        return _match_entries_exits(entries, data, **kwargs)
+
+    # OTM% entry selection (original path)
+    data = data.pipe(_calculate_otm_pct).pipe(
+        _trim,
+        "otm_pct",
+        lower=kwargs["max_otm_pct"] * -1,
+        upper=kwargs["max_otm_pct"],
+    )
+
+    has_delta = "delta" in data.columns
+    delta_min = kwargs.get("delta_min")
+    delta_max = kwargs.get("delta_max")
+
+    entries = _remove_min_bid_ask(data, kwargs["min_bid_ask"])
+
+    if has_delta and (delta_min is not None or delta_max is not None):
+        entries = _filter_by_delta(entries, delta_min, delta_max)
+
+    return _match_entries_exits(entries, data, **kwargs)
+
+
+def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
+    """
+    Complete pipeline to evaluate all options with DTE categorization.
+
+    Supports two modes:
+    - OTM% path (default): groups by OTM percentage intervals, optionally by delta
+    - Delta targeting: always groups by delta intervals (skips OTM% grouping)
+
+    The mode is determined by the presence of ``delta_target`` in kwargs.
+    """
+    is_delta_targeted = "delta_target" in kwargs
 
     result = (
         data.pipe(_assign_dte)
         .pipe(_trim, "dte", kwargs["exit_dte"], kwargs["max_entry_dte"])
-        .pipe(_evaluate_options_by_delta, **kwargs)
+        .pipe(_evaluate_options, **kwargs)
         .pipe(_cut_options_by_dte, kwargs["dte_interval"], kwargs["max_entry_dte"])
-        .pipe(_cut_options_by_delta, delta_interval)
     )
+
+    if is_delta_targeted:
+        delta_interval = kwargs.get("delta_interval") or 0.05
+        result = result.pipe(_cut_options_by_delta, delta_interval)
+    else:
+        result = result.pipe(
+            _cut_options_by_otm,
+            kwargs["otm_pct_interval"],
+            kwargs["max_otm_pct"],
+        )
+        delta_interval = kwargs.get("delta_interval")
+        if delta_interval is not None:
+            result = result.pipe(_cut_options_by_delta, delta_interval)
 
     return result
 

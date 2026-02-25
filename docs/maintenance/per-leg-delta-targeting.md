@@ -55,8 +55,8 @@ class TargetRange(BaseModel):
 | `optopsy/types.py` | Add `TargetRange` model. Add `leg1_delta` through `leg4_delta` fields to `StrategyParamsDict` and `StrategyParams`. Model validator: mutually exclusive with `delta_min`/`delta_max`. |
 | `optopsy/checks.py` | Update `_requires_delta()` to also check for `leg*_delta` params |
 | `optopsy/filters.py` | New `_select_closest_delta(data, delta_target)` -- filters by `[min, max]` range, then groups by `(underlying_symbol, quote_date, expiration, option_type)` and picks row with `abs(delta)` closest to `target` |
-| `optopsy/evaluation.py` | New `_evaluate_options_by_delta()` and `_evaluate_all_options_by_delta()` -- entry/exit matching pipeline that skips OTM% filtering and uses delta selection instead |
-| `optopsy/core.py` | New `_process_strategy_delta_targeted()` -- evaluates each leg independently with its own `TargetRange`, merges legs and calculates P&L inline (single-leg delegates to `_strategy_engine()`). `_process_strategy()` branches here when any `leg*_delta` is present |
+| `optopsy/evaluation.py` | Unified `_evaluate_options()` and `_evaluate_all_options()` branch on `"delta_target" in kwargs`. Shared `_match_entries_exits()` helper for entry/exit matching. |
+| `optopsy/core.py` | New `_merge_legs()` shared helper for multi-leg merge/rules/P&L (used by both `_strategy_engine()` and `_process_strategy_delta_targeted()`). New `_process_strategy_delta_targeted()` evaluates each leg independently with its own `TargetRange`. `_process_strategy()` branches here when any `leg*_delta` is present. |
 | `optopsy/output.py` | Include `delta_entry_legN` columns in raw output when present |
 | `optopsy/__init__.py` | Export `TargetRange` |
 
@@ -82,7 +82,7 @@ class TargetRange(BaseModel):
    - `delta_range_legN` replaces `otm_pct_range_legN` in grouping columns
 3. Apply rules and calculate P&L:
    - Single-leg: delegates to `_strategy_engine()` (reused)
-   - Multi-leg: merges legs inline via `pd.merge`, applies rules, then `_assign_profit()`. Cannot reuse `_strategy_engine()` because it expects a single DataFrame and applies option type filters internally, but delta-targeted legs are already evaluated independently.
+   - Multi-leg: delegates to `_merge_legs()` shared helper (merge, rules, P&L), which is also used by `_strategy_engine()` for the OTM% path.
 
 ### Key Design Decisions
 

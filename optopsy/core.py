@@ -37,7 +37,7 @@ from .calendar import (
     _prepare_calendar_leg,
 )
 from .checks import _run_calendar_checks, _run_checks
-from .evaluation import _evaluate_all_options, _evaluate_all_options_by_delta
+from .evaluation import _evaluate_all_options
 from .filters import _apply_signal_filter, _assign_dte
 from .output import _format_calendar_output, _format_output
 from .pricing import _assign_profit, _calculate_fill_price
@@ -52,6 +52,34 @@ def _rename_leg_columns(
         col: f"{col}_leg{leg_idx}" for col in data.columns if col not in join_on
     }
     return data.rename(columns=rename_map)
+
+
+def _merge_legs(
+    partials: List[pd.DataFrame],
+    leg_def: List[Tuple],
+    join_on: List[str],
+    rules: Optional[Callable] = None,
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
+) -> pd.DataFrame:
+    """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L.
+
+    Shared by ``_strategy_engine()`` (OTM% path) and
+    ``_process_strategy_delta_targeted()`` (per-leg delta path).
+    """
+    suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
+
+    result = partials[0]
+    for partial in partials[1:]:
+        result = pd.merge(result, partial, on=join_on, how="inner")
+
+    if rules is not None:
+        result = rules(result, leg_def)
+
+    return _assign_profit(
+        result, leg_def, suffixes, slippage, fill_ratio, reference_volume
+    )
 
 
 def _strategy_engine(
@@ -119,32 +147,14 @@ def _strategy_engine(
         )
         return leg_def[0][1](data)
 
-    def _rule_func(
-        d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]
-    ) -> pd.DataFrame:
-        return d if r is None else r(d, ld)
-
-    # Multi-leg construction:
-    # 1. Filter data for each leg's option type (calls/puts) and pre-rename
-    #    columns with _legN suffixes to avoid ambiguity during merges.
-    # 2. Sequentially inner-join all legs on shared columns (symbol,
-    #    expiration, DTE, etc.) to produce every valid leg combination.
-    # 3. Apply strategy-specific rules (e.g. ascending strikes, equal wings).
-    # 4. Calculate P&L across all legs with slippage adjustments.
+    # Filter data for each leg's option type (calls/puts) and pre-rename
     partials = [
         _rename_leg_columns(leg[1](data), idx, join_on or [])
         for idx, leg in enumerate(leg_def, start=1)
     ]
-    suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    # Merge all legs sequentially on shared columns (inner join ensures
-    # only rows present in ALL legs are kept)
-    result = partials[0]
-    for partial in partials[1:]:
-        result = pd.merge(result, partial, on=join_on, how="inner")
-
-    return result.pipe(_rule_func, rules, leg_def).pipe(
-        _assign_profit, leg_def, suffixes, slippage, fill_ratio, reference_volume
+    return _merge_legs(
+        partials, leg_def, join_on or [], rules, slippage, fill_ratio, reference_volume
     )
 
 
@@ -184,13 +194,11 @@ def _process_strategy_delta_targeted(
 
     # Evaluate each leg independently
     leg_results = []
-    for idx, (leg, delta_target) in enumerate(
-        zip(leg_def, leg_deltas[: len(leg_def)]), start=1
-    ):
+    for leg, delta_target in zip(leg_def, leg_deltas[: len(leg_def)]):
         option_filter = leg[1]  # _calls or _puts
         leg_data = option_filter(data)
 
-        evaluated = _evaluate_all_options_by_delta(
+        evaluated = _evaluate_all_options(
             leg_data,
             dte_interval=params["dte_interval"],
             max_entry_dte=params["max_entry_dte"],
@@ -226,30 +234,19 @@ def _process_strategy_delta_targeted(
             reference_volume=params["reference_volume"],
         )
     else:
-        # Rename columns per leg and merge
         if not join_on:
             join_on = ["underlying_symbol", "expiration", "dte_entry", "dte_range"]
 
-        partials = []
-        for idx, lr in enumerate(leg_results, start=1):
-            renamed = _rename_leg_columns(lr, idx, join_on)
-            partials.append(renamed)
+        partials = [
+            _rename_leg_columns(lr, idx, join_on)
+            for idx, lr in enumerate(leg_results, start=1)
+        ]
 
-        result = partials[0]
-        for partial in partials[1:]:
-            result = pd.merge(result, partial, on=join_on, how="inner")
-
-        # Apply rules
-        rules = context.get("rules")
-        if rules is not None:
-            result = rules(result, leg_def)
-
-        # Calculate P&L
-        suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
-        result = _assign_profit(
-            result,
+        result = _merge_legs(
+            partials,
             leg_def,
-            suffixes,
+            join_on,
+            context.get("rules"),
             params["slippage"],
             params["fill_ratio"],
             params["reference_volume"],
