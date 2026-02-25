@@ -20,6 +20,8 @@ import tempfile
 
 import pandas as pd
 
+from optopsy.ui._dataframe_utils import stringify_interval_cols
+
 _log = logging.getLogger(__name__)
 
 _RESULTS_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "results")
@@ -121,6 +123,7 @@ class ResultStore:
         fd, tmp_parquet = tempfile.mkstemp(dir=self._dir, suffix=".parquet.tmp")
         os.close(fd)
         try:
+            df = stringify_interval_cols(df)
             df.to_parquet(tmp_parquet, index=False, engine="pyarrow")
             self._locked_index_update(lambda idx: idx.__setitem__(key, metadata))
             os.replace(tmp_parquet, self._parquet_path(key))

@@ -22,6 +22,7 @@ from optopsy.metrics import profit_factor as _profit_factor
 from optopsy.metrics import win_rate as _win_rate
 from optopsy.signals import apply_signal
 
+from .._dataframe_utils import stringify_interval_cols
 from ..providers.cache import ParquetCache
 from ..providers.result_store import ResultStore
 from ._models import StrategyResultSummary
@@ -270,22 +271,7 @@ def _df_to_markdown(df: pd.DataFrame, max_rows: int = MAX_ROWS) -> str:
     truncated = total > max_rows
     if truncated:
         df = df.head(max_rows)
-    # Stringify Interval columns so they render as readable text
-    # (e.g. "(0, 30]") instead of "[object Object]" in the browser.
-    # pd.cut() produces CategoricalDtype with Interval categories, not IntervalDtype.
-    interval_cols = [
-        c
-        for c in df.columns
-        if isinstance(df[c].dtype, pd.IntervalDtype)
-        or (
-            isinstance(df[c].dtype, pd.CategoricalDtype)
-            and isinstance(df[c].dtype.categories.dtype, pd.IntervalDtype)
-        )
-    ]
-    if interval_cols:
-        df = df.copy()
-        for col in interval_cols:
-            df[col] = df[col].astype(str)
+    df = stringify_interval_cols(df)
     table = df.to_markdown(index=False, floatfmt=".4f")
     if truncated:
         table += f"\n\n*... showing {max_rows} of {total} rows*"
@@ -455,8 +441,8 @@ def _cached_run(
     if cache_key and df is not None and not df.empty:
         try:
             store.write(cache_key, df, metadata)
-        except OSError:
-            pass  # Non-fatal — result is still returned, just not cached
+        except Exception:
+            _log.debug("_cached_run(%s): cache write failed", name, exc_info=True)
 
     return df, cache_key, ""
 

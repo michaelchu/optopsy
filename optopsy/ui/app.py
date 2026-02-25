@@ -511,16 +511,9 @@ def _attach_result_elements(result: Any, tool_name: str, df_elements: list) -> N
     if df is None or df.empty:
         return
 
-    # Stringify Interval columns (e.g. dte_range, otm_pct_range) so they
-    # render as readable text instead of "[object Object]" in the browser.
-    # pd.cut() produces CategoricalDtype with Interval categories, not IntervalDtype.
-    for col in df.columns:
-        dtype = df[col].dtype
-        if isinstance(dtype, pd.IntervalDtype) or (
-            isinstance(dtype, pd.CategoricalDtype)
-            and isinstance(dtype.categories.dtype, pd.IntervalDtype)
-        ):
-            df[col] = df[col].astype(str)
+    from optopsy.ui._dataframe_utils import stringify_interval_cols
+
+    df = stringify_interval_cols(df, copy=False)
 
     label = tool_name.replace("_", " ").title()
 
