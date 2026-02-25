@@ -1719,7 +1719,9 @@ def test_min_bid_ask_filters_low_spread_options():
 
     # With default min_bid_ask=0.05, the 215.0 call (bid=0.04) is filtered → no result
     results_default = long_calls(df, raw=True)
-    assert len(results_default) == 0, "215.0 call with bid=0.04 should be filtered by min_bid_ask=0.05"
+    assert len(results_default) == 0, (
+        "215.0 call with bid=0.04 should be filtered by min_bid_ask=0.05"
+    )
 
     # With min_bid_ask=0.03, the 215.0 call (bid=0.04 > 0.03) passes → 1 result
     results_low = long_calls(df, raw=True, min_bid_ask=0.03)
@@ -1732,7 +1734,7 @@ def test_max_entry_dte_filters_far_expirations():
     import datetime
 
     exp_near = datetime.datetime(2018, 3, 31)  # 89 DTE from entry
-    exp_far = datetime.datetime(2018, 5, 31)   # 150 DTE from entry
+    exp_far = datetime.datetime(2018, 5, 31)  # 150 DTE from entry
     entry_date = datetime.datetime(2018, 1, 1)
 
     cols = [
@@ -1761,7 +1763,9 @@ def test_max_entry_dte_filters_far_expirations():
 
     # Default max_entry_dte=90: near (~89 DTE) passes, far (150 DTE) excluded
     results_default = long_calls(df, raw=True)
-    assert len(results_default) == 1, f"Expected only near-expiry result, got {len(results_default)}"
+    assert len(results_default) == 1, (
+        f"Expected only near-expiry result, got {len(results_default)}"
+    )
     assert results_default.iloc[0]["dte_entry"] == near_dte
 
     # With max_entry_dte=160: both expirations should be included
