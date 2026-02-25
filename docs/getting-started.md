@@ -170,9 +170,10 @@ This gives you every individual trade for custom analysis.
 
 - Explore [all 28 strategies](strategies.md)
 - Learn about [strategy parameters](parameters.md)
-- Filter entries with [technical analysis signals](entry-signals.md)
+- Run full simulations with `simulate()` for equity curves and risk metrics — see [Examples](examples.md#strategy-simulation)
+- Filter entries with [technical analysis signals](entry-signals.md) including IV Rank and custom DataFrame signals
 - Try the [AI Chat UI](chat-ui.md) for natural language backtesting
-- See more [examples](examples.md) with Greeks filtering and slippage
+- See more [examples](examples.md) with Greeks filtering, slippage, and risk metrics
 - Read the [API Reference](api-reference.md) for detailed function documentation
 
 ## Common Issues

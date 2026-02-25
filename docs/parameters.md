@@ -2,6 +2,16 @@
 
 All Optopsy strategies accept a common set of parameters for filtering, grouping, and output formatting. This guide covers all available parameters and their usage.
 
+!!! warning "Strict Parameter Validation"
+    Parameters are validated at runtime using Pydantic. This means:
+
+    - **Boolean parameters** (`raw`, `drop_nan`) must be actual `bool` values. `raw=1` or `raw=0` will raise a validation error — use `raw=True` or `raw=False`.
+    - **Float parameters** (`max_otm_pct`, `otm_pct_interval`, `min_bid_ask`) must be `float` type. `max_otm_pct=5` will be rejected — use `max_otm_pct=5.0`.
+    - **Integer parameters** (`max_entry_dte`, `exit_dte`, etc.) reject `float` and `bool` values.
+    - **Calendar/diagonal cross-field rules** are enforced: `front_dte_min` must be &le; `front_dte_max`, `back_dte_min` must be &le; `back_dte_max`, and `front_dte_max` must be &lt; `back_dte_min`.
+
+    Validation errors include the field name and constraint for easy debugging.
+
 ## Core Parameters
 
 #### Entry and Exit Timing
