@@ -21,7 +21,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
 - **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
 - **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
-- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via pandas-ta
+- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via pandas-ta-classic
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
 
 ## AI Chat UI (Beta)

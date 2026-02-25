@@ -33,7 +33,7 @@ import operator
 from typing import Callable
 
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 from .timestamps import normalize_dates
 
@@ -69,10 +69,10 @@ def _groupby_symbol(
 
 def _compute_rsi(prices: pd.Series, period: int) -> pd.Series:
     """
-    Compute RSI for a price series using pandas_ta.
+    Compute RSI for a price series using pandas_ta_classic.
 
     Kept as a named function for test compatibility. Uses Wilder smoothing
-    (RMA) internally via pandas_ta, which is equivalent to the previous
+    (RMA) internally via pandas_ta_classic, which is equivalent to the previous
     hand-rolled EWM implementation.
 
     Args:
@@ -81,7 +81,7 @@ def _compute_rsi(prices: pd.Series, period: int) -> pd.Series:
 
     Returns:
         Series of RSI values (0-100), with NaN for the first `period` entries.
-        Returns a NaN series if pandas_ta cannot compute (insufficient data).
+        Returns a NaN series if pandas_ta_classic cannot compute (insufficient data).
     """
     result = ta.rsi(prices, length=period)
     if result is None:
@@ -310,14 +310,14 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
         above: True → price > upper band; False → price < lower band
     """
     length, std = int(length), float(std)
-    # pandas_ta names BB columns as BBU_{length}_{std}_{std} where std is a float.
-    # The float() cast above ensures we match this format (e.g. 2 -> 2.0 -> "BBU_20_2.0_2.0").
+    # pandas_ta_classic names BB columns as BBU_{length}_{std} where std is a float.
+    # The float() cast above ensures we match this format (e.g. 2 -> 2.0 -> "BBU_20_2.0").
     if above:
-        band_col = f"BBU_{length}_{std}_{std}"
+        band_col = f"BBU_{length}_{std}"
         fill_val = float("inf")
         cmp = operator.gt
     else:
-        band_col = f"BBL_{length}_{std}_{std}"
+        band_col = f"BBL_{length}_{std}"
         fill_val = float("-inf")
         cmp = operator.lt
 
