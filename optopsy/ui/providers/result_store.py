@@ -21,10 +21,11 @@ import tempfile
 import pandas as pd
 
 from optopsy.ui._dataframe_utils import stringify_interval_cols
+from optopsy.ui.paths import RESULTS_DIR
 
 _log = logging.getLogger(__name__)
 
-_RESULTS_DIR = os.path.join(os.path.expanduser("~"), ".optopsy", "results")
+_RESULTS_DIR = str(RESULTS_DIR)
 
 
 class ResultStore:

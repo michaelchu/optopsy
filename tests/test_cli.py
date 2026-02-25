@@ -174,6 +174,12 @@ class TestCmdRun:
         # Remove CHAINLIT_AUTH_SECRET from env
         env_copy = {k: v for k, v in os.environ.items() if k != "CHAINLIT_AUTH_SECRET"}
 
+        mock_path = MagicMock()
+        mock_path.parent.mkdir = MagicMock()
+        mock_path.exists.return_value = False
+        mock_path.write_text = MagicMock()
+        mock_path.read_text = MagicMock(return_value="generated")
+
         with (
             patch.dict(
                 sys.modules,
@@ -187,19 +193,14 @@ class TestCmdRun:
                 mock_compat.import_optional_dependency,
             ),
             patch.dict(os.environ, env_copy, clear=True),
+            patch("optopsy.ui.paths.AUTH_SECRET_PATH", mock_path),
         ):
-            mock_path = MagicMock()
-            mock_path.parent.mkdir = MagicMock()
-            mock_path.exists.return_value = False
-            mock_path.write_text = MagicMock()
-            mock_path.read_text = MagicMock(return_value="generated")
-            with patch("pathlib.Path.expanduser", return_value=mock_path):
-                _cmd_run(args)
-                assert "CHAINLIT_AUTH_SECRET" in os.environ
-                # Verify the secret was actually written to file
-                mock_path.write_text.assert_called_once()
-                written = mock_path.write_text.call_args[0][0]
-                assert len(written) == 64  # token_hex(32) produces 64 hex chars
+            _cmd_run(args)
+            assert "CHAINLIT_AUTH_SECRET" in os.environ
+            # Verify the secret was actually written to file
+            mock_path.write_text.assert_called_once()
+            written = mock_path.write_text.call_args[0][0]
+            assert len(written) == 64  # token_hex(32) produces 64 hex chars
 
     def test_auth_secret_read_from_file(self):
         """Existing auth secret file is read instead of generating new one."""
@@ -212,6 +213,11 @@ class TestCmdRun:
 
         env_copy = {k: v for k, v in os.environ.items() if k != "CHAINLIT_AUTH_SECRET"}
 
+        mock_path = MagicMock()
+        mock_path.parent.mkdir = MagicMock()
+        mock_path.exists.return_value = True
+        mock_path.read_text.return_value = "existing_secret_value\n"
+
         with (
             patch.dict(
                 sys.modules,
@@ -225,16 +231,12 @@ class TestCmdRun:
                 mock_compat.import_optional_dependency,
             ),
             patch.dict(os.environ, env_copy, clear=True),
+            patch("optopsy.ui.paths.AUTH_SECRET_PATH", mock_path),
         ):
-            mock_path = MagicMock()
-            mock_path.parent.mkdir = MagicMock()
-            mock_path.exists.return_value = True
-            mock_path.read_text.return_value = "existing_secret_value\n"
-            with patch("pathlib.Path.expanduser", return_value=mock_path):
-                _cmd_run(args)
-                assert os.environ.get("CHAINLIT_AUTH_SECRET") == "existing_secret_value"
-                # write_text should NOT have been called
-                mock_path.write_text.assert_not_called()
+            _cmd_run(args)
+            assert os.environ.get("CHAINLIT_AUTH_SECRET") == "existing_secret_value"
+            # write_text should NOT have been called
+            mock_path.write_text.assert_not_called()
 
     def test_chainlit_config_set(self):
         """Chainlit config values are set correctly."""

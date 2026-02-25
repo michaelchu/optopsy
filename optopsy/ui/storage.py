@@ -11,7 +11,8 @@ from typing import Any, Dict, Union
 import aiofiles
 from chainlit.data.storage_clients.base import BaseStorageClient
 
-STORAGE_DIR = Path("~/.optopsy/storage").expanduser()
+from optopsy.ui.paths import STORAGE_DIR
+
 STORAGE_ROUTE_PREFIX = "/optopsy-storage"
 
 

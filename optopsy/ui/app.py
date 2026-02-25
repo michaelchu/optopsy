@@ -2,8 +2,8 @@
 
 This module is the Chainlit entry point.  It sets up:
 
-- **Database** — SQLite-backed persistence for chat threads, steps, and feedback
-  (``_init_db_sync()``).
+- **Database** — Configurable persistence via ``DATABASE_URL`` (PostgreSQL) or
+  SQLite fallback (``_init_db_sync()``).
 - **Authentication** — Header-based auto-auth for single-user local use.
 - **Session lifecycle** — ``on_chat_start`` creates a fresh ``OptopsyAgent``;
   ``on_chat_resume`` rebuilds message history from persisted steps.
@@ -47,8 +47,9 @@ from fastapi.routing import APIRoute
 
 import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
+from optopsy.ui.paths import DB_PATH, STORAGE_DIR
 from optopsy.ui.providers import get_provider_names
-from optopsy.ui.storage import STORAGE_DIR, STORAGE_ROUTE_PREFIX, LocalStorageClient
+from optopsy.ui.storage import STORAGE_ROUTE_PREFIX, LocalStorageClient
 
 # ---------------------------------------------------------------------------
 # Plotly binary-array patch
@@ -116,97 +117,142 @@ def _patched_plotly_post_init(self):
 
 cl.Plotly.__post_init__ = _patched_plotly_post_init
 
-DB_PATH = Path("~/.optopsy/chat.db").expanduser()
-
-_DB_SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    identifier TEXT NOT NULL UNIQUE,
-    "createdAt" TEXT NOT NULL,
-    metadata TEXT DEFAULT '{}'
-);
-CREATE TABLE IF NOT EXISTS threads (
-    id TEXT PRIMARY KEY,
-    "userId" TEXT,
-    "userIdentifier" TEXT,
-    "createdAt" TEXT,
-    name TEXT,
-    metadata TEXT,
-    tags TEXT,
-    FOREIGN KEY("userId") REFERENCES users(id)
-);
-CREATE TABLE IF NOT EXISTS steps (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    type TEXT,
-    "threadId" TEXT NOT NULL,
-    "parentId" TEXT,
-    streaming INTEGER DEFAULT 0,
-    "waitForAnswer" INTEGER,
-    "isError" INTEGER,
-    metadata TEXT DEFAULT '{}',
-    tags TEXT,
-    input TEXT,
-    output TEXT,
-    "createdAt" TEXT,
-    start TEXT,
-    "end" TEXT,
-    generation TEXT DEFAULT '{}',
-    "defaultOpen" INTEGER DEFAULT 0,
-    "showInput" TEXT,
-    language TEXT,
-    FOREIGN KEY("threadId") REFERENCES threads(id)
-);
-CREATE TABLE IF NOT EXISTS feedbacks (
-    id TEXT PRIMARY KEY,
-    "forId" TEXT NOT NULL,
-    value REAL,
-    comment TEXT,
-    FOREIGN KEY("forId") REFERENCES steps(id)
-);
-CREATE TABLE IF NOT EXISTS elements (
-    id TEXT PRIMARY KEY,
-    "threadId" TEXT NOT NULL,
-    type TEXT,
-    "chainlitKey" TEXT,
-    url TEXT,
-    "objectKey" TEXT,
-    name TEXT,
-    display TEXT,
-    size TEXT,
-    language TEXT,
-    page TEXT,
-    "forId" TEXT,
-    mime TEXT,
-    props TEXT DEFAULT '{}',
-    "autoPlay" TEXT,
-    "playerConfig" TEXT,
-    FOREIGN KEY("threadId") REFERENCES threads(id)
-);
-"""
+_DB_SCHEMA_STATEMENTS = [
+    """CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        identifier TEXT NOT NULL UNIQUE,
+        "createdAt" TEXT NOT NULL,
+        metadata TEXT DEFAULT '{}'
+    )""",
+    """CREATE TABLE IF NOT EXISTS threads (
+        id TEXT PRIMARY KEY,
+        "userId" TEXT,
+        "userIdentifier" TEXT,
+        "createdAt" TEXT,
+        name TEXT,
+        metadata TEXT,
+        tags TEXT,
+        FOREIGN KEY("userId") REFERENCES users(id)
+    )""",
+    """CREATE TABLE IF NOT EXISTS steps (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        type TEXT,
+        "threadId" TEXT NOT NULL,
+        "parentId" TEXT,
+        streaming INTEGER DEFAULT 0,
+        "waitForAnswer" INTEGER,
+        "isError" INTEGER,
+        metadata TEXT DEFAULT '{}',
+        tags TEXT,
+        input TEXT,
+        output TEXT,
+        "createdAt" TEXT,
+        start TEXT,
+        "end" TEXT,
+        generation TEXT DEFAULT '{}',
+        "defaultOpen" INTEGER DEFAULT 0,
+        "showInput" TEXT,
+        language TEXT,
+        FOREIGN KEY("threadId") REFERENCES threads(id)
+    )""",
+    """CREATE TABLE IF NOT EXISTS feedbacks (
+        id TEXT PRIMARY KEY,
+        "forId" TEXT NOT NULL,
+        value REAL,
+        comment TEXT,
+        FOREIGN KEY("forId") REFERENCES steps(id)
+    )""",
+    """CREATE TABLE IF NOT EXISTS elements (
+        id TEXT PRIMARY KEY,
+        "threadId" TEXT NOT NULL,
+        type TEXT,
+        "chainlitKey" TEXT,
+        url TEXT,
+        "objectKey" TEXT,
+        name TEXT,
+        display TEXT,
+        size TEXT,
+        language TEXT,
+        page TEXT,
+        "forId" TEXT,
+        mime TEXT,
+        props TEXT DEFAULT '{}',
+        "autoPlay" TEXT,
+        "playerConfig" TEXT,
+        FOREIGN KEY("threadId") REFERENCES threads(id)
+    )""",
+]
 
 
-# Initialize database synchronously at module import time, before Chainlit
-# tries to use it via @cl.data_layer or authentication callbacks.
+def _get_async_conninfo() -> str:
+    """Return the async SQLAlchemy connection string.
+
+    When ``DATABASE_URL`` is set (e.g. ``postgresql://…``), it is converted to
+    an asyncpg connection string.  Otherwise, falls back to a local SQLite file.
+    """
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url:
+        # Railway/Heroku sometimes use ``postgres://`` (legacy) — normalise.
+        if db_url.startswith("postgres://"):
+            db_url = "postgresql://" + db_url[len("postgres://") :]
+        # Convert to async driver variant.
+        if db_url.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + db_url[len("postgresql://") :]
+        return db_url
+    return f"sqlite+aiosqlite:///{DB_PATH}"
+
+
+def _get_sync_conninfo() -> str:
+    """Return the synchronous SQLAlchemy connection string for schema init.
+
+    For PostgreSQL, uses the ``psycopg2`` driver (``postgresql+psycopg2://``).
+    """
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url:
+        if db_url.startswith("postgres://"):
+            db_url = "postgresql://" + db_url[len("postgres://") :]
+        if db_url.startswith("postgresql+asyncpg://"):
+            db_url = "postgresql://" + db_url[len("postgresql+asyncpg://") :]
+        if db_url.startswith("postgresql://"):
+            return "postgresql+psycopg2://" + db_url[len("postgresql://") :]
+        return db_url
+    return f"sqlite:///{DB_PATH}"
+
+
 def _init_db_sync() -> None:
-    import sqlite3
+    """Create tables synchronously at module import time.
 
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    Uses SQLAlchemy so the same DDL works for both SQLite and PostgreSQL.
+    The sync Postgres path requires ``psycopg2`` (included in the ``ui`` extra).
+    """
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    sync_url = _get_sync_conninfo()
+
+    # Ensure parent directory exists for SQLite.
+    if sync_url.startswith("sqlite"):
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    engine = create_engine(sync_url)
     try:
-        conn.executescript(_DB_SCHEMA)
-        # Add columns introduced in newer Chainlit versions (safe to run repeatedly).
-        for col, definition in [
-            ("defaultOpen", "INTEGER DEFAULT 0"),
-            ("waitForAnswer", "INTEGER"),
-        ]:
-            try:
-                conn.execute(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
-            except Exception:
-                pass  # column already exists
-        conn.commit()
+        with engine.begin() as conn:
+            for stmt in _DB_SCHEMA_STATEMENTS:
+                conn.execute(text(stmt))
+            # Add columns introduced in newer Chainlit versions.
+            for col, definition in [
+                ("defaultOpen", "INTEGER DEFAULT 0"),
+                ("waitForAnswer", "INTEGER"),
+            ]:
+                try:
+                    conn.execute(
+                        text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
+                    )
+                except (OperationalError, ProgrammingError):
+                    pass  # column already exists
     finally:
-        conn.close()
+        engine.dispose()
 
 
 _init_db_sync()
@@ -216,19 +262,23 @@ _storage_client = LocalStorageClient()
 
 async def _lookup_element_mime(object_key: str) -> str | None:
     """Look up the stored mime type for an element by its object key."""
-    import aiosqlite
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
 
+    engine = create_async_engine(_get_async_conninfo())
     try:
-        async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute(
-                'SELECT mime FROM elements WHERE "objectKey" = ? LIMIT 1',
-                (object_key,),
+        async with engine.begin() as conn:
+            result = await conn.execute(
+                text('SELECT mime FROM elements WHERE "objectKey" = :key LIMIT 1'),
+                {"key": object_key},
             )
-            row = await cursor.fetchone()
+            row = result.fetchone()
             if row and row[0] and row[0] != "application/octet-stream":
                 return row[0]
     except Exception:
         pass
+    finally:
+        await engine.dispose()
     return None
 
 
@@ -286,7 +336,7 @@ chainlit_app.routes.insert(_insert_idx, _storage_route)
 @cl.data_layer
 def get_data_layer() -> SQLAlchemyDataLayer:
     return SQLAlchemyDataLayer(
-        conninfo=f"sqlite+aiosqlite:///{DB_PATH}",
+        conninfo=_get_async_conninfo(),
         storage_provider=_storage_client,
     )
 
