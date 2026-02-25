@@ -9,13 +9,13 @@ This module validates two things before a strategy runs:
 
 2. **DataFrame schema checks** — The input DataFrame must contain the required
    columns (``expected_types``) with compatible dtypes.  The ``delta`` column
-   is always required.  Optional columns for liquidity
-   (``optional_liquidity_types``) are validated only when the corresponding
-   features are enabled.
+   is always required (included in ``expected_types``).  Optional columns for
+   liquidity (``optional_liquidity_types``) are validated only when the
+   corresponding features are enabled.
 
 Entry points:
-- ``_run_checks()`` — standard strategies (validates params, dtypes, delta)
-- ``_run_calendar_checks()`` — calendar/diagonal spreads (adds DTE range ordering)
+- ``_run_checks()`` — standard strategies (validates params and dtypes)
+- ``_run_calendar_checks()`` — calendar/diagonal spreads
 
 Both return a validated params dict with defaults applied by the Pydantic model.
 """
@@ -50,6 +50,7 @@ expected_types: Dict[str, Tuple[str, ...]] = {
     "strike": ("int64", "float64"),
     "bid": ("int64", "float64"),
     "ask": ("int64", "float64"),
+    "delta": ("int64", "float64"),
 }
 
 # Optional Greek columns — validated only when delta filtering/grouping is enabled.
@@ -95,12 +96,7 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str, Any]:
 
     Returns a validated params dict with defaults applied by the Pydantic model.
     """
-    validated = _validate_and_check(StrategyParams, params, data)
-
-    # Delta column is always required for delta targeting
-    _check_greek_column(data, "delta")
-
-    return validated
+    return _validate_and_check(StrategyParams, params, data)
 
 
 def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str, Any]:
@@ -108,12 +104,7 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str
 
     Returns a validated params dict with defaults applied by the Pydantic model.
     """
-    validated = _validate_and_check(CalendarStrategyParams, params, data)
-
-    # Delta column is always required for delta targeting
-    _check_greek_column(data, "delta")
-
-    return validated
+    return _validate_and_check(CalendarStrategyParams, params, data)
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
