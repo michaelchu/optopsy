@@ -102,17 +102,17 @@ uv sync --extra ui
 uv run optopsy-chat
 
 # With options
-optopsy-chat run --port 9000 --headless --debug
+uv run optopsy-chat run --port 9000 --headless --debug
 
 # Download historical options data (requires EODHD_API_KEY)
-optopsy-chat download SPY       # download single symbol
-optopsy-chat download SPY AAPL  # download multiple symbols
-optopsy-chat download SPY -v    # verbose/debug logging
+uv run optopsy-chat download SPY       # download single symbol
+uv run optopsy-chat download SPY AAPL  # download multiple symbols
+uv run optopsy-chat download SPY -v    # verbose/debug logging
 
 # Cache management
-optopsy-chat cache size          # show disk usage
-optopsy-chat cache clear         # clear all cached data
-optopsy-chat cache clear SPY     # clear specific symbol
+uv run optopsy-chat cache size          # show disk usage
+uv run optopsy-chat cache clear         # clear all cached data
+uv run optopsy-chat cache clear SPY     # clear specific symbol
 ```
 
 ### Configuration
