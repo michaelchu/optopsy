@@ -16,9 +16,8 @@ class TestStrategyParamsDefaults:
         assert model.exit_dte == 0
         assert model.exit_dte_tolerance == 0
         assert model.dte_interval == 7
-        assert model.max_otm_pct == 0.5
-        assert model.otm_pct_interval == 0.05
         assert model.min_bid_ask == 0.05
+        assert model.delta_interval == 0.05
         assert model.slippage == "mid"
         assert model.fill_ratio == 0.5
         assert model.reference_volume == 1000
@@ -27,9 +26,10 @@ class TestStrategyParamsDefaults:
 
     def test_optional_fields_default_to_none(self):
         model = StrategyParams.model_validate({})
-        assert model.delta_min is None
-        assert model.delta_max is None
-        assert model.delta_interval is None
+        assert model.leg1_delta is None
+        assert model.leg2_delta is None
+        assert model.leg3_delta is None
+        assert model.leg4_delta is None
         assert model.entry_dates is None
         assert model.exit_dates is None
         assert model.side is None
@@ -41,6 +41,14 @@ class TestStrategyParamsDefaults:
         assert model.max_entry_dte == 60
         assert model.exit_dte == 30
         assert model.raw is True
+
+    def test_delta_interval_default(self):
+        model = StrategyParams.model_validate({})
+        assert model.delta_interval == 0.05
+
+    def test_delta_interval_override(self):
+        model = StrategyParams.model_validate({"delta_interval": 0.10})
+        assert model.delta_interval == 0.10
 
 
 class TestStrategyParamsValidation:
@@ -62,14 +70,15 @@ class TestStrategyParamsValidation:
         with pytest.raises(ValidationError):
             StrategyParams.model_validate({"exit_dte": -1})
 
-    def test_rejects_int_for_max_otm_pct(self):
-        """max_otm_pct uses strict float — must reject int."""
+    def test_rejects_int_for_min_bid_ask(self):
+        """min_bid_ask uses strict float — must reject int."""
         with pytest.raises(ValidationError):
-            StrategyParams.model_validate({"max_otm_pct": 1})
+            StrategyParams.model_validate({"min_bid_ask": 1})
 
-    def test_accepts_float_for_max_otm_pct(self):
-        model = StrategyParams.model_validate({"max_otm_pct": 0.5})
-        assert model.max_otm_pct == 0.5
+    def test_rejects_int_for_delta_interval(self):
+        """delta_interval uses strict float — must reject int."""
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"delta_interval": 1})
 
     def test_rejects_int_for_raw(self):
         """raw uses StrictBool — must reject int."""
@@ -134,40 +143,12 @@ class TestStrategyParamsValidation:
         """Only genuinely optional fields accept None."""
         model = StrategyParams.model_validate(
             {
-                "delta_min": None,
-                "delta_max": None,
-                "delta_interval": None,
                 "entry_dates": None,
                 "exit_dates": None,
                 "side": None,
             }
         )
-        assert model.delta_min is None
         assert model.side is None
-
-    def test_accepts_int_for_delta_min(self):
-        model = StrategyParams.model_validate({"delta_min": 1})
-        assert model.delta_min == 1
-
-    def test_accepts_float_for_delta_min(self):
-        model = StrategyParams.model_validate({"delta_min": 0.3})
-        assert model.delta_min == 0.3
-
-    def test_rejects_string_for_delta_min(self):
-        with pytest.raises(ValidationError):
-            StrategyParams.model_validate({"delta_min": "bad"})
-
-    def test_rejects_numeric_string_for_delta_min(self):
-        with pytest.raises(ValidationError):
-            StrategyParams.model_validate({"delta_min": "0.3"})
-
-    def test_rejects_numeric_string_for_delta_max(self):
-        with pytest.raises(ValidationError):
-            StrategyParams.model_validate({"delta_max": "0.5"})
-
-    def test_rejects_numeric_string_for_delta_interval(self):
-        with pytest.raises(ValidationError):
-            StrategyParams.model_validate({"delta_interval": "0.1"})
 
     def test_fill_ratio_rejects_numeric_string(self):
         with pytest.raises(ValidationError):

@@ -13,6 +13,28 @@ from pydantic import (
 )
 
 
+class TargetRange(BaseModel):
+    """Generic range selector with target, min, and max values.
+
+    Used for per-leg delta targeting (and extensible to other Greeks).
+    All values are unsigned (0-1 for delta).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    target: float = Field(gt=0, le=1)
+    min: float = Field(gt=0, le=1)
+    max: float = Field(gt=0, le=1)
+
+    @model_validator(mode="after")
+    def check_ordering(self):
+        if self.min > self.target:
+            raise ValueError(f"min ({self.min}) must be <= target ({self.target})")
+        if self.target > self.max:
+            raise ValueError(f"target ({self.target}) must be <= max ({self.max})")
+        return self
+
+
 class StrategyParamsDict(TypedDict, total=False):
     """Common parameters for all option strategies (TypedDict for Unpack[] annotations).
 
@@ -26,16 +48,16 @@ class StrategyParamsDict(TypedDict, total=False):
     dte_interval: int
 
     # Filtering parameters
-    max_otm_pct: float
-    otm_pct_interval: float
     min_bid_ask: float
 
-    # Greeks filtering (optional)
-    delta_min: Optional[float]
-    delta_max: Optional[float]
+    # Delta grouping interval
+    delta_interval: float
 
-    # Greeks grouping (optional)
-    delta_interval: Optional[float]
+    # Per-leg delta targeting (optional)
+    leg1_delta: Optional[TargetRange]
+    leg2_delta: Optional[TargetRange]
+    leg3_delta: Optional[TargetRange]
+    leg4_delta: Optional[TargetRange]
 
     # Pre-computed signal dates (optional).
     # DataFrames with (underlying_symbol, quote_date) pairs indicating
@@ -87,16 +109,16 @@ class StrategyParams(BaseModel):
     dte_interval: int = Field(7, gt=0, strict=True)
 
     # Filtering parameters (strict float enforced by validate_strict_float below)
-    max_otm_pct: float = Field(0.5, gt=0)
-    otm_pct_interval: float = Field(0.05, gt=0)
     min_bid_ask: float = Field(0.05, gt=0)
 
-    # Greeks filtering (optional) — accepts int or float
-    delta_min: Optional[Union[int, float]] = None
-    delta_max: Optional[Union[int, float]] = None
+    # Delta grouping interval (always-on, non-optional)
+    delta_interval: float = Field(0.05, gt=0)
 
-    # Greeks grouping (optional) — accepts int or float
-    delta_interval: Optional[Union[int, float]] = None
+    # Per-leg delta targeting (optional)
+    leg1_delta: Optional[TargetRange] = None
+    leg2_delta: Optional[TargetRange] = None
+    leg3_delta: Optional[TargetRange] = None
+    leg4_delta: Optional[TargetRange] = None
 
     # Pre-computed signal dates (optional)
     entry_dates: Optional[pd.DataFrame] = None
@@ -114,7 +136,7 @@ class StrategyParams(BaseModel):
     raw: StrictBool = False
     drop_nan: StrictBool = True
 
-    @field_validator("max_otm_pct", "otm_pct_interval", "min_bid_ask", mode="before")
+    @field_validator("min_bid_ask", "delta_interval", mode="before")
     @classmethod
     def validate_strict_float(cls, v, info):
         if v is not None and not isinstance(v, float):
@@ -123,9 +145,7 @@ class StrategyParams(BaseModel):
             )
         return v
 
-    @field_validator(
-        "delta_min", "delta_max", "delta_interval", "fill_ratio", mode="before"
-    )
+    @field_validator("fill_ratio", mode="before")
     @classmethod
     def validate_strict_number(cls, v, info):
         if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):

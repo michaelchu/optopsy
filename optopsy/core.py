@@ -4,8 +4,8 @@ This module implements the core pipeline that transforms raw option chain data
 into strategy performance results. The pipeline flows through several stages:
 
 1. **Validation** -- ``_run_checks()`` verifies parameter types and DataFrame schemas.
-2. **Evaluation** -- ``_evaluate_all_options()`` filters by DTE, OTM%, bid/ask thresholds,
-   and optionally delta; then merges entry and exit rows for each contract.
+2. **Evaluation** -- ``_evaluate_all_options()`` filters by DTE, delta targeting,
+   and bid/ask thresholds; then merges entry and exit rows for each contract.
 3. **Strategy construction** -- ``_strategy_engine()`` joins legs (single or multi-leg),
    applies strike-ordering rules, and calculates P&L with optional slippage.
 4. **Output formatting** -- ``_format_output()`` returns raw trades or grouped
@@ -52,6 +52,30 @@ def _rename_leg_columns(
         col: f"{col}_leg{leg_idx}" for col in data.columns if col not in join_on
     }
     return data.rename(columns=rename_map)
+
+
+def _merge_legs(
+    partials: List[pd.DataFrame],
+    leg_def: List[Tuple],
+    join_on: List[str],
+    rules: Optional[Callable] = None,
+    slippage: str = "mid",
+    fill_ratio: float = 0.5,
+    reference_volume: int = 1000,
+) -> pd.DataFrame:
+    """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L."""
+    suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
+
+    result = partials[0]
+    for partial in partials[1:]:
+        result = pd.merge(result, partial, on=join_on, how="inner")
+
+    if rules is not None:
+        result = rules(result, leg_def)
+
+    return _assign_profit(
+        result, leg_def, suffixes, slippage, fill_ratio, reference_volume
+    )
 
 
 def _strategy_engine(
@@ -119,32 +143,14 @@ def _strategy_engine(
         )
         return leg_def[0][1](data)
 
-    def _rule_func(
-        d: pd.DataFrame, r: Optional[Callable], ld: List[Tuple]
-    ) -> pd.DataFrame:
-        return d if r is None else r(d, ld)
-
-    # Multi-leg construction:
-    # 1. Filter data for each leg's option type (calls/puts) and pre-rename
-    #    columns with _legN suffixes to avoid ambiguity during merges.
-    # 2. Sequentially inner-join all legs on shared columns (symbol,
-    #    expiration, DTE, etc.) to produce every valid leg combination.
-    # 3. Apply strategy-specific rules (e.g. ascending strikes, equal wings).
-    # 4. Calculate P&L across all legs with slippage adjustments.
+    # Filter data for each leg's option type (calls/puts) and pre-rename
     partials = [
         _rename_leg_columns(leg[1](data), idx, join_on or [])
         for idx, leg in enumerate(leg_def, start=1)
     ]
-    suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
-    # Merge all legs sequentially on shared columns (inner join ensures
-    # only rows present in ALL legs are kept)
-    result = partials[0]
-    for partial in partials[1:]:
-        result = pd.merge(result, partial, on=join_on, how="inner")
-
-    return result.pipe(_rule_func, rules, leg_def).pipe(
-        _assign_profit, leg_def, suffixes, slippage, fill_ratio, reference_volume
+    return _merge_legs(
+        partials, leg_def, join_on or [], rules, slippage, fill_ratio, reference_volume
     )
 
 
@@ -152,9 +158,13 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     Main entry point for processing option strategies.
 
+    Each leg is evaluated independently with its own delta TargetRange,
+    then legs are joined via _strategy_engine().
+
     Args:
         data: DataFrame containing raw option chain data
-        **context: Dictionary containing strategy parameters, leg definitions, and formatting options
+        **context: Dictionary containing strategy parameters, leg definitions,
+                   and formatting options
 
     Returns:
         DataFrame with processed strategy results
@@ -169,42 +179,83 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     # Normalize option_type once so _calls/_puts avoid repeated .str.lower() calls
     data["option_type"] = data["option_type"].str.lower()
 
-    # Build external_cols, adding delta_range if delta grouping is enabled
-    external_cols = context["external_cols"].copy()
-    if params["delta_interval"] is not None:
-        external_cols = ["delta_range"] + external_cols
+    leg_def = context["leg_def"]
+    leg_deltas = [params.get(f"leg{i}_delta") for i in range(1, 5)]
 
-    return (
-        _evaluate_all_options(
-            data,
+    # Validate that each leg has a delta target
+    active_deltas = [d for d in leg_deltas[: len(leg_def)] if d is not None]
+    if len(active_deltas) != len(leg_def):
+        raise ValueError(
+            f"Expected {len(leg_def)} leg*_delta parameters for "
+            f"{len(leg_def)}-leg strategy, got {len(active_deltas)}"
+        )
+
+    # Build join_on from context
+    join_on = context.get("join_on")
+
+    # Evaluate each leg independently
+    leg_results = []
+    for leg, delta_target in zip(leg_def, leg_deltas[: len(leg_def)]):
+        option_filter = leg[1]  # _calls or _puts
+        leg_data = option_filter(data)
+
+        evaluated = _evaluate_all_options(
+            leg_data,
             dte_interval=params["dte_interval"],
             max_entry_dte=params["max_entry_dte"],
             exit_dte=params["exit_dte"],
             exit_dte_tolerance=params["exit_dte_tolerance"],
-            otm_pct_interval=params["otm_pct_interval"],
-            max_otm_pct=params["max_otm_pct"],
             min_bid_ask=params["min_bid_ask"],
-            delta_min=params["delta_min"],
-            delta_max=params["delta_max"],
+            delta_target=delta_target["target"],
+            delta_range_min=delta_target["min"],
+            delta_range_max=delta_target["max"],
             delta_interval=params["delta_interval"],
             entry_dates=params["entry_dates"],
             exit_dates=params["exit_dates"],
         )
-        .pipe(
-            _strategy_engine,
-            context["leg_def"],
-            context.get("join_on"),
+        leg_results.append(evaluated)
+
+    # Build external_cols with delta_range_legN
+    if len(leg_def) == 1:
+        external_cols = ["dte_range", "delta_range"]
+    else:
+        external_cols = ["dte_range"]
+        for idx in range(1, len(leg_def) + 1):
+            external_cols.append(f"delta_range_leg{idx}")
+
+    # For single-leg, use _strategy_engine directly
+    if len(leg_def) == 1:
+        result = _strategy_engine(
+            leg_results[0],
+            leg_def,
+            slippage=params["slippage"],
+            fill_ratio=params["fill_ratio"],
+            reference_volume=params["reference_volume"],
+        )
+    else:
+        if not join_on:
+            join_on = ["underlying_symbol", "expiration", "dte_entry", "dte_range"]
+
+        partials = [
+            _rename_leg_columns(lr, idx, join_on)
+            for idx, lr in enumerate(leg_results, start=1)
+        ]
+
+        result = _merge_legs(
+            partials,
+            leg_def,
+            join_on,
             context.get("rules"),
             params["slippage"],
             params["fill_ratio"],
             params["reference_volume"],
         )
-        .pipe(
-            _format_output,
-            params,
-            context["internal_cols"],
-            external_cols,
-        )
+
+    return _format_output(
+        result,
+        params,
+        context["internal_cols"],
+        external_cols,
     )
 
 
@@ -230,6 +281,17 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     internal_cols = context["internal_cols"]
     external_cols = context["external_cols"]
 
+    # Extract per-leg delta targets
+    leg1_delta = params.get("leg1_delta")
+    leg2_delta = params.get("leg2_delta")
+
+    # For calendar spreads (same strike), both legs target the same delta
+    # For diagonal spreads, each leg can target a different delta
+    if leg1_delta is None:
+        raise ValueError("leg1_delta is required for calendar/diagonal strategies")
+    if not same_strike and leg2_delta is None:
+        raise ValueError("leg2_delta is required for diagonal strategies")
+
     def _fmt(df: pd.DataFrame) -> pd.DataFrame:
         return _format_calendar_output(
             df, params, internal_cols, external_cols, same_strike
@@ -242,21 +304,24 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     data["option_type"] = data["option_type"].str.lower()
     data = _assign_dte(data)
 
-    # Get front and back leg options
+    # Get front and back leg options with delta targeting
+    front_delta = leg1_delta
+    back_delta = leg2_delta if leg2_delta is not None else leg1_delta
+
     front_options = _evaluate_calendar_options(
         data,
         params["front_dte_min"],
         params["front_dte_max"],
-        max_otm_pct=params["max_otm_pct"],
         min_bid_ask=params["min_bid_ask"],
+        delta_target=front_delta,
     )
 
     back_options = _evaluate_calendar_options(
         data,
         params["back_dte_min"],
         params["back_dte_max"],
-        max_otm_pct=params["max_otm_pct"],
         min_bid_ask=params["min_bid_ask"],
+        delta_target=back_delta,
     )
 
     # Filter by option type (calls or puts) based on leg definition

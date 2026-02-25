@@ -203,33 +203,35 @@ def _handle_suggest_strategy_params(
         "max": int(dte_series.max()),
     }
 
-    # OTM% distribution — only rows where underlying_price > 0
-    mask = active_ds["underlying_price"] > 0
-    otm_series = (
-        (active_ds.loc[mask, "strike"] - active_ds.loc[mask, "underlying_price"]).abs()
-        / active_ds.loc[mask, "underlying_price"]
-    ).dropna()
-    otm_pcts = {
-        k: round(float(otm_series.quantile(q)), 4)
-        for k, q in [
-            ("p10", 0.10),
-            ("p25", 0.25),
-            ("p50", 0.50),
-            ("p75", 0.75),
-            ("p90", 0.90),
-        ]
-    }
-    otm_stats = {
-        "min": round(float(otm_series.min()), 4),
-        **otm_pcts,
-        "max": round(float(otm_series.max()), 4),
-    }
+    # Delta distribution — only include rows that have a delta column
+    delta_series = (
+        active_ds["delta"].dropna()
+        if "delta" in active_ds.columns
+        else pd.Series(dtype="float64")
+    )
+    if not delta_series.empty:
+        delta_pcts = {
+            k: round(float(delta_series.abs().quantile(q)), 4)
+            for k, q in [
+                ("p10", 0.10),
+                ("p25", 0.25),
+                ("p50", 0.50),
+                ("p75", 0.75),
+                ("p90", 0.90),
+            ]
+        }
+        delta_stats = {
+            "min": round(float(delta_series.abs().min()), 4),
+            **delta_pcts,
+            "max": round(float(delta_series.abs().max()), 4),
+        }
+    else:
+        delta_stats = {}
 
     # Base recommendations
     recommended: dict = {
         "max_entry_dte": dte_stats["p75"],
         "exit_dte": max(0, dte_stats["p10"]),
-        "max_otm_pct": otm_stats["p75"],
     }
     strategy_note = ""
 
@@ -251,34 +253,45 @@ def _handle_suggest_strategy_params(
         "reverse_iron_butterfly",
     }:
         recommended["max_entry_dte"] = min(45, dte_stats["p75"])
-        recommended["max_otm_pct"] = min(0.3, otm_stats["p75"])
         strategy_note = (
             "Multi-leg strategies typically work best in the 20-45 DTE range."
         )
     elif strategy_name and "spread" in strategy_name:
-        recommended["max_otm_pct"] = min(0.2, otm_stats["p75"])
-        strategy_note = "Spreads often use tighter OTM% for better liquidity."
+        strategy_note = "Spreads often work best with tighter delta targets."
 
     reco_json = _json.dumps(recommended, indent=2)
     label = f" for `{strategy_name}`" if strategy_name else ""
 
     dte_rows = "\n".join(f"| {k} | {v} |" for k, v in dte_stats.items())
-    otm_rows = "\n".join(f"| {k} | {v:.4f} |" for k, v in otm_stats.items())
 
-    llm_summary = (
-        f"suggest_strategy_params{label}\n"
-        f"DTE distribution: {dte_stats}\n"
-        f"OTM% distribution: {otm_stats}\n"
-        f"Recommended: {recommended}"
-        + (f"\nNote: {strategy_note}" if strategy_note else "")
-    )
-    user_display = (
-        f"### Parameter Suggestions{label}\n\n"
-        f"**DTE Distribution** ({len(dte_series):,} options)\n\n"
-        f"| Percentile | DTE |\n|---|---|\n{dte_rows}\n\n"
-        f"**OTM% Distribution** ({len(otm_series):,} options)\n\n"
-        f"| Percentile | OTM% |\n|---|---|\n{otm_rows}\n\n"
+    llm_parts = [
+        f"suggest_strategy_params{label}",
+        f"DTE distribution: {dte_stats}",
+    ]
+    display_parts = [
+        f"### Parameter Suggestions{label}\n",
+        f"**DTE Distribution** ({len(dte_series):,} options)\n",
+        f"| Percentile | DTE |\n|---|---|\n{dte_rows}\n",
+    ]
+
+    if delta_stats:
+        delta_rows = "\n".join(f"| {k} | {v:.4f} |" for k, v in delta_stats.items())
+        llm_parts.append(f"Delta (abs) distribution: {delta_stats}")
+        display_parts.append(
+            f"**Delta (abs) Distribution** ({len(delta_series):,} options)\n\n"
+            f"| Percentile | |Delta| |\n|---|---|\n{delta_rows}\n"
+        )
+
+    llm_parts.append(f"Recommended: {recommended}")
+    if strategy_note:
+        llm_parts.append(f"Note: {strategy_note}")
+
+    display_parts.append(
         f"**Recommended starting parameters:**\n```json\n{reco_json}\n```"
-        + (f"\n\n*{strategy_note}*" if strategy_note else "")
     )
+    if strategy_note:
+        display_parts.append(f"\n*{strategy_note}*")
+
+    llm_summary = "\n".join(llm_parts)
+    user_display = "\n".join(display_parts)
     return _result(llm_summary, user_display=user_display)

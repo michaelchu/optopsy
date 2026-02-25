@@ -22,6 +22,7 @@ from optopsy.signals import (
     sma_above,
 )
 from optopsy.simulator import _TRADE_LOG_COLUMNS, SimulationResult
+from optopsy.types import TargetRange
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -46,8 +47,20 @@ def _make_chain(rows: list[list]) -> pd.DataFrame:
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     return pd.DataFrame(data=rows, columns=cols)
+
+
+# ---------------------------------------------------------------------------
+# Per-leg delta overrides for multi-leg strategies
+# ---------------------------------------------------------------------------
+
+# For spreads: leg1 picks 210 (delta=0.30), leg2 picks 215 (delta=0.10)
+_SPREAD_LEG_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+    leg2_delta=TargetRange(target=0.10, min=0.05, max=0.20),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -82,35 +95,35 @@ def chain_csv():
 
     rows = [
         # --- Entry 1 (Jan 2) → exits at exp1 (Jan 31) ---
-        ["SPX", 212.0, "call", exp1, entry1, 210.0, 4.50, 4.60],
-        ["SPX", 212.0, "call", exp1, entry1, 215.0, 1.40, 1.50],
-        ["SPX", 212.0, "put", exp1, entry1, 210.0, 2.40, 2.50],
-        ["SPX", 212.0, "put", exp1, entry1, 215.0, 5.30, 5.40],
+        ["SPX", 212.0, "call", exp1, entry1, 210.0, 4.50, 4.60, 0.30],
+        ["SPX", 212.0, "call", exp1, entry1, 215.0, 1.40, 1.50, 0.10],
+        ["SPX", 212.0, "put", exp1, entry1, 210.0, 2.40, 2.50, -0.30],
+        ["SPX", 212.0, "put", exp1, entry1, 215.0, 5.30, 5.40, -0.60],
         # --- Exit 1 (Jan 31) ---
-        ["SPX", 216.0, "call", exp1, exp1, 210.0, 6.00, 6.10],
-        ["SPX", 216.0, "call", exp1, exp1, 215.0, 1.00, 1.10],
-        ["SPX", 216.0, "put", exp1, exp1, 210.0, 0.00, 0.10],
-        ["SPX", 216.0, "put", exp1, exp1, 215.0, 0.00, 0.10],
+        ["SPX", 216.0, "call", exp1, exp1, 210.0, 6.00, 6.10, 0.65],
+        ["SPX", 216.0, "call", exp1, exp1, 215.0, 1.00, 1.10, 0.30],
+        ["SPX", 216.0, "put", exp1, exp1, 210.0, 0.00, 0.10, -0.05],
+        ["SPX", 216.0, "put", exp1, exp1, 215.0, 0.00, 0.10, -0.05],
         # --- Entry 2 (Jan 16) → exits at exp2 (Feb 28) ---
-        ["SPX", 214.0, "call", exp2, entry2, 210.0, 6.00, 6.10],
-        ["SPX", 214.0, "call", exp2, entry2, 215.0, 2.00, 2.10],
-        ["SPX", 214.0, "put", exp2, entry2, 210.0, 1.90, 2.00],
-        ["SPX", 214.0, "put", exp2, entry2, 215.0, 4.90, 5.00],
+        ["SPX", 214.0, "call", exp2, entry2, 210.0, 6.00, 6.10, 0.30],
+        ["SPX", 214.0, "call", exp2, entry2, 215.0, 2.00, 2.10, 0.10],
+        ["SPX", 214.0, "put", exp2, entry2, 210.0, 1.90, 2.00, -0.30],
+        ["SPX", 214.0, "put", exp2, entry2, 215.0, 4.90, 5.00, -0.60],
         # --- Exit 2 (Feb 28) ---
-        ["SPX", 218.0, "call", exp2, exp2, 210.0, 8.00, 8.10],
-        ["SPX", 218.0, "call", exp2, exp2, 215.0, 3.00, 3.10],
-        ["SPX", 218.0, "put", exp2, exp2, 210.0, 0.00, 0.10],
-        ["SPX", 218.0, "put", exp2, exp2, 215.0, 0.00, 0.10],
+        ["SPX", 218.0, "call", exp2, exp2, 210.0, 8.00, 8.10, 0.65],
+        ["SPX", 218.0, "call", exp2, exp2, 215.0, 3.00, 3.10, 0.30],
+        ["SPX", 218.0, "put", exp2, exp2, 210.0, 0.00, 0.10, -0.05],
+        ["SPX", 218.0, "put", exp2, exp2, 215.0, 0.00, 0.10, -0.05],
         # --- Entry 3 (Feb 1) → exits at exp3 (Mar 29) ---
-        ["SPX", 215.0, "call", exp3, entry3, 210.0, 7.00, 7.10],
-        ["SPX", 215.0, "call", exp3, entry3, 215.0, 2.50, 2.60],
-        ["SPX", 215.0, "put", exp3, entry3, 210.0, 1.90, 2.00],
-        ["SPX", 215.0, "put", exp3, entry3, 215.0, 4.80, 4.90],
+        ["SPX", 215.0, "call", exp3, entry3, 210.0, 7.00, 7.10, 0.30],
+        ["SPX", 215.0, "call", exp3, entry3, 215.0, 2.50, 2.60, 0.10],
+        ["SPX", 215.0, "put", exp3, entry3, 210.0, 1.90, 2.00, -0.30],
+        ["SPX", 215.0, "put", exp3, entry3, 215.0, 4.80, 4.90, -0.60],
         # --- Exit 3 (Mar 29) ---
-        ["SPX", 220.0, "call", exp3, exp3, 210.0, 10.00, 10.10],
-        ["SPX", 220.0, "call", exp3, exp3, 215.0, 5.00, 5.10],
-        ["SPX", 220.0, "put", exp3, exp3, 210.0, 0.00, 0.10],
-        ["SPX", 220.0, "put", exp3, exp3, 215.0, 0.00, 0.10],
+        ["SPX", 220.0, "call", exp3, exp3, 210.0, 10.00, 10.10, 0.65],
+        ["SPX", 220.0, "call", exp3, exp3, 215.0, 5.00, 5.10, 0.30],
+        ["SPX", 220.0, "put", exp3, exp3, 210.0, 0.00, 0.10, -0.05],
+        ["SPX", 220.0, "put", exp3, exp3, 215.0, 0.00, 0.10, -0.05],
     ]
 
     df = _make_chain(rows)
@@ -122,16 +135,16 @@ def chain_csv():
 @pytest.fixture(scope="module")
 def chain_data(chain_csv):
     """Load the chain CSV into a DataFrame (avoids repeating op.csv_data)."""
-    return op.csv_data(chain_csv)
+    return op.csv_data(chain_csv, delta=8)
 
 
 # ---------------------------------------------------------------------------
 # Losing-trade fixture — underlying drops, long calls lose
 #
-# Nearest selector picks 215 strike (distance 0 from underlying 215).
-# Entry: mid = (2.40+2.50)/2 = 2.45
+# Delta targeting (DEFAULT 0.30) picks 210 strike (delta=0.30).
+# Entry: mid = (5.90+6.00)/2 = 5.95
 # Exit:  mid = (0.00+0.10)/2 = 0.05 (OTM, nearly worthless)
-# P&L = (0.05 - 2.45) * 1 * 100 = -240
+# P&L = (0.05 - 5.95) * 1 * 100 = -590
 # ---------------------------------------------------------------------------
 
 
@@ -140,15 +153,15 @@ def losing_csv():
     """Chain where underlying drops — long calls lose money."""
     rows = [
         # Entry (Jan 2)
-        ["SPX", 215.0, "call", "2018-01-31", "2018-01-02", 210.0, 5.90, 6.00],
-        ["SPX", 215.0, "call", "2018-01-31", "2018-01-02", 215.0, 2.40, 2.50],
-        ["SPX", 215.0, "put", "2018-01-31", "2018-01-02", 210.0, 0.80, 0.90],
-        ["SPX", 215.0, "put", "2018-01-31", "2018-01-02", 215.0, 2.30, 2.40],
+        ["SPX", 215.0, "call", "2018-01-31", "2018-01-02", 210.0, 5.90, 6.00, 0.30],
+        ["SPX", 215.0, "call", "2018-01-31", "2018-01-02", 215.0, 2.40, 2.50, 0.10],
+        ["SPX", 215.0, "put", "2018-01-31", "2018-01-02", 210.0, 0.80, 0.90, -0.30],
+        ["SPX", 215.0, "put", "2018-01-31", "2018-01-02", 215.0, 2.30, 2.40, -0.60],
         # Exit (Jan 31) — underlying dropped to 208
-        ["SPX", 208.0, "call", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10],
-        ["SPX", 208.0, "call", "2018-01-31", "2018-01-31", 215.0, 0.00, 0.10],
-        ["SPX", 208.0, "put", "2018-01-31", "2018-01-31", 210.0, 1.90, 2.00],
-        ["SPX", 208.0, "put", "2018-01-31", "2018-01-31", 215.0, 6.90, 7.00],
+        ["SPX", 208.0, "call", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10, 0.05],
+        ["SPX", 208.0, "call", "2018-01-31", "2018-01-31", 215.0, 0.00, 0.10, 0.02],
+        ["SPX", 208.0, "put", "2018-01-31", "2018-01-31", 210.0, 1.90, 2.00, -0.70],
+        ["SPX", 208.0, "put", "2018-01-31", "2018-01-31", 215.0, 6.90, 7.00, -0.90],
     ]
     df = _make_chain(rows)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -159,7 +172,7 @@ def losing_csv():
 @pytest.fixture(scope="module")
 def losing_data(losing_csv):
     """Load the losing CSV into a DataFrame."""
-    return op.csv_data(losing_csv)
+    return op.csv_data(losing_csv, delta=8)
 
 
 # ---------------------------------------------------------------------------
@@ -249,10 +262,10 @@ class TestLongCallsE2E:
 class TestLosingTradeE2E:
     """Underlying drops — long call expires nearly worthless.
 
-    Nearest selector picks 215 strike (distance 0 from underlying 215).
-    entry_cost = mid = (2.40+2.50)/2 = 2.45
+    Delta targeting (DEFAULT 0.30) picks 210 strike (delta=0.30).
+    entry_cost = mid = (5.90+6.00)/2 = 5.95
     exit_proceeds = mid = (0.00+0.10)/2 = 0.05
-    realized_pnl = (0.05 - 2.45) * 1 * 100 = -240.00
+    realized_pnl = (0.05 - 5.95) * 1 * 100 = -590.00
     """
 
     def test_losing_trade_negative_pnl(self, losing_data):
@@ -261,8 +274,8 @@ class TestLosingTradeE2E:
         )
         assert len(result.trade_log) == 1
         trade = result.trade_log.iloc[0]
-        assert trade["realized_pnl"] == pytest.approx(-240.0)
-        assert trade["equity"] == pytest.approx(100_000 - 240.0)
+        assert trade["realized_pnl"] == pytest.approx(-590.0)
+        assert trade["equity"] == pytest.approx(100_000 - 590.0)
 
     def test_losing_trade_counted_as_loss(self, losing_data):
         result = op.simulate(losing_data, op.long_calls)
@@ -273,8 +286,8 @@ class TestLosingTradeE2E:
     def test_total_return_reflects_loss(self, losing_data):
         capital = 100_000.0
         result = op.simulate(losing_data, op.long_calls, capital=capital)
-        assert result.summary["total_pnl"] == pytest.approx(-240.0)
-        assert result.summary["total_return"] == pytest.approx(-240.0 / capital)
+        assert result.summary["total_pnl"] == pytest.approx(-590.0)
+        assert result.summary["total_return"] == pytest.approx(-590.0 / capital)
 
 
 # ---------------------------------------------------------------------------
@@ -328,12 +341,12 @@ class TestSpreadE2E:
     """Full pipeline for a multi-leg strategy."""
 
     def test_long_call_spread_produces_trades(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         assert isinstance(result, SimulationResult)
         assert len(result.trade_log) > 0
 
     def test_spread_trade_log_complete(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         log = result.trade_log
         assert set(log.columns) == set(_TRADE_LOG_COLUMNS)
         assert not log["realized_pnl"].isna().any()
@@ -411,17 +424,16 @@ class TestSelectorsE2E:
         assert isinstance(result, SimulationResult)
         assert set(result.trade_log.columns) == set(_TRADE_LOG_COLUMNS)
 
-    def test_nearest_vs_highest_premium_select_different_strikes(self, chain_data):
-        """Nearest picks 210 (closer to underlying 212);
-        highest_premium also picks 210 (higher ask). Verify entry costs match
-        the expected strikes."""
+    def test_selectors_produce_consistent_results(self, chain_data):
+        """Different selectors produce valid results; with one candidate per
+        entry date (delta targeting picks one strike), they select the same trade."""
         r_nearest = op.simulate(chain_data, op.long_calls, selector="nearest")
         r_lowest = op.simulate(chain_data, op.long_calls, selector="lowest_premium")
         assert len(r_nearest.trade_log) > 0
         assert len(r_lowest.trade_log) > 0
-        # Lowest premium picks 215 strike (mid=1.45), nearest picks 210 (mid=4.55)
+        # Both select 210 call (only candidate after delta filtering)
         assert r_nearest.trade_log.iloc[0]["entry_cost"] == pytest.approx(4.55)
-        assert r_lowest.trade_log.iloc[0]["entry_cost"] == pytest.approx(1.45)
+        assert r_lowest.trade_log.iloc[0]["entry_cost"] == pytest.approx(4.55)
 
 
 # ---------------------------------------------------------------------------
@@ -570,11 +582,12 @@ class TestEdgeCasesE2E:
             "strike",
             "bid",
             "ask",
+            "delta",
         ]
         df = pd.DataFrame(columns=cols)
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _write_csv(df, tmpdir)
-            data = op.csv_data(path)
+            data = op.csv_data(path, delta=8)
             result = op.simulate(data, op.long_calls)
             assert isinstance(result, SimulationResult)
             assert len(result.trade_log) == 0
@@ -583,13 +596,13 @@ class TestEdgeCasesE2E:
     def test_single_date_no_exit(self):
         """Only one quote date — no exit possible, should return empty."""
         rows = [
-            ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60],
-            ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50],
+            ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60, 0.30],
+            ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50, -0.30],
         ]
         df = _make_chain(rows)
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _write_csv(df, tmpdir)
-            data = op.csv_data(path)
+            data = op.csv_data(path, delta=8)
             result = op.simulate(data, op.long_calls)
             assert isinstance(result, SimulationResult)
             assert len(result.trade_log) == 0
@@ -624,29 +637,29 @@ def drawdown_csv():
     """Three non-overlapping trades: win (+150), loss (-200), win (+100)."""
     rows = [
         # Entry 1 (Jan 2): underlying 212
-        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60],
-        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 215.0, 1.40, 1.50],
-        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50],
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60, 0.30],
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 215.0, 1.40, 1.50, 0.10],
+        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50, -0.30],
         # Exit 1 (Jan 31): underlying 216
-        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10],
-        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 215.0, 1.00, 1.10],
-        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10],
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10, 0.65],
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 215.0, 1.00, 1.10, 0.30],
+        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10, -0.05],
         # Entry 2 (Feb 1): underlying 210
-        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 210.0, 2.00, 2.10],
-        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 215.0, 0.50, 0.60],
-        ["SPX", 210.0, "put", "2018-02-28", "2018-02-01", 210.0, 1.90, 2.00],
+        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 210.0, 2.00, 2.10, 0.30],
+        ["SPX", 210.0, "call", "2018-02-28", "2018-02-01", 215.0, 0.50, 0.60, 0.10],
+        ["SPX", 210.0, "put", "2018-02-28", "2018-02-01", 210.0, 1.90, 2.00, -0.30],
         # Exit 2 (Feb 28): underlying 206
-        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 210.0, 0.00, 0.10],
-        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 215.0, 0.00, 0.10],
-        ["SPX", 206.0, "put", "2018-02-28", "2018-02-28", 210.0, 3.90, 4.00],
+        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 210.0, 0.00, 0.10, 0.05],
+        ["SPX", 206.0, "call", "2018-02-28", "2018-02-28", 215.0, 0.00, 0.10, 0.02],
+        ["SPX", 206.0, "put", "2018-02-28", "2018-02-28", 210.0, 3.90, 4.00, -0.70],
         # Entry 3 (Mar 1): underlying 212
-        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 210.0, 3.00, 3.10],
-        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 215.0, 0.80, 0.90],
-        ["SPX", 212.0, "put", "2018-03-29", "2018-03-01", 210.0, 1.90, 2.00],
+        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 210.0, 3.00, 3.10, 0.30],
+        ["SPX", 212.0, "call", "2018-03-29", "2018-03-01", 215.0, 0.80, 0.90, 0.10],
+        ["SPX", 212.0, "put", "2018-03-29", "2018-03-01", 210.0, 1.90, 2.00, -0.30],
         # Exit 3 (Mar 29): underlying 214
-        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 210.0, 4.00, 4.10],
-        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 215.0, 0.00, 0.10],
-        ["SPX", 214.0, "put", "2018-03-29", "2018-03-29", 210.0, 0.00, 0.10],
+        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 210.0, 4.00, 4.10, 0.55],
+        ["SPX", 214.0, "call", "2018-03-29", "2018-03-29", 215.0, 0.00, 0.10, 0.10],
+        ["SPX", 214.0, "put", "2018-03-29", "2018-03-29", 210.0, 0.00, 0.10, -0.05],
     ]
     df = _make_chain(rows)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -657,7 +670,7 @@ def drawdown_csv():
 @pytest.fixture(scope="module")
 def drawdown_data(drawdown_csv):
     """Load the drawdown CSV into a DataFrame."""
-    return op.csv_data(drawdown_csv)
+    return op.csv_data(drawdown_csv, delta=8)
 
 
 class TestSummaryMetricsE2E:
@@ -731,23 +744,23 @@ class TestSpreadPnlE2E:
     """Hand-calculated P&L for long call spread through full pipeline."""
 
     def test_spread_entry_cost(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         first = result.trade_log.iloc[0]
         assert first["entry_cost"] == pytest.approx(3.10)
 
     def test_spread_exit_proceeds(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         first = result.trade_log.iloc[0]
         assert first["exit_proceeds"] == pytest.approx(5.00)
 
     def test_spread_realized_pnl(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         first = result.trade_log.iloc[0]
         assert first["realized_pnl"] == pytest.approx(190.0)
 
     def test_spread_debit_entry(self, chain_data):
         """Long call spread is a debit strategy — entry_cost > 0."""
-        result = op.simulate(chain_data, op.long_call_spread)
+        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
         assert (result.trade_log["entry_cost"] > 0).all()
 
 
@@ -766,15 +779,15 @@ def multi_symbol_csv():
     """Two symbols (SPX and AAPL) with one trade each on different dates."""
     rows = [
         # SPX: Entry Jan 2, exp Jan 31, underlying 212→216
-        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60],
-        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50],
-        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10],
-        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10],
+        ["SPX", 212.0, "call", "2018-01-31", "2018-01-02", 210.0, 4.50, 4.60, 0.30],
+        ["SPX", 212.0, "put", "2018-01-31", "2018-01-02", 210.0, 2.40, 2.50, -0.30],
+        ["SPX", 216.0, "call", "2018-01-31", "2018-01-31", 210.0, 6.00, 6.10, 0.65],
+        ["SPX", 216.0, "put", "2018-01-31", "2018-01-31", 210.0, 0.00, 0.10, -0.05],
         # AAPL: Entry Feb 1, exp Feb 28, underlying 170→175
-        ["AAPL", 170.0, "call", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10],
-        ["AAPL", 170.0, "put", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10],
-        ["AAPL", 175.0, "call", "2018-02-28", "2018-02-28", 170.0, 5.00, 5.10],
-        ["AAPL", 175.0, "put", "2018-02-28", "2018-02-28", 170.0, 0.00, 0.10],
+        ["AAPL", 170.0, "call", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10, 0.30],
+        ["AAPL", 170.0, "put", "2018-02-28", "2018-02-01", 170.0, 3.00, 3.10, -0.30],
+        ["AAPL", 175.0, "call", "2018-02-28", "2018-02-28", 170.0, 5.00, 5.10, 0.65],
+        ["AAPL", 175.0, "put", "2018-02-28", "2018-02-28", 170.0, 0.00, 0.10, -0.05],
     ]
     df = _make_chain(rows)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -785,7 +798,7 @@ def multi_symbol_csv():
 @pytest.fixture(scope="module")
 def multi_symbol_data(multi_symbol_csv):
     """Load the multi-symbol CSV into a DataFrame."""
-    return op.csv_data(multi_symbol_csv)
+    return op.csv_data(multi_symbol_csv, delta=8)
 
 
 class TestMultiSymbolE2E:

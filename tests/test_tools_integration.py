@@ -38,16 +38,17 @@ def basic_dataset():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.30],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.65],
+        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.30],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
+        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.05],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -285,7 +286,7 @@ class TestValidationPreservesState:
             )
         }
         existing_results = {
-            "long_calls:dte=90,exit=0,otm=0.50,slip=mid": {
+            "long_calls:dte=90,exit=0,slip=mid": {
                 "strategy": "long_calls",
                 "count": 5,
                 "mean_return": 0.02,
@@ -665,8 +666,15 @@ class TestOutputModelEnforcement:
             model = StrategyResultSummary(**summary)
             dumped = model.model_dump()
             # Round-tripped dict should match the original
-            for key in ("strategy", "count", "mean_return", "std", "win_rate"):
+            for key in ("strategy", "count", "mean_return", "win_rate"):
                 assert dumped[key] == summary[key], f"Mismatch on {key}"
+            # std can be NaN (single observation) — use 'is' or approx
+            import math
+
+            if summary["std"] is not None and math.isnan(summary["std"]):
+                assert math.isnan(dumped["std"])
+            else:
+                assert dumped["std"] == summary["std"]
 
     def test_scan_strategies_results_validate(self, basic_dataset):
         """Each result dict from scan_strategies validates as StrategyResultSummary."""

@@ -21,14 +21,10 @@ from ..definitions import (
     calendar_spread_internal_cols,
     diagonal_spread_external_cols,
     diagonal_spread_internal_cols,
-    double_strike_external_cols,
     double_strike_internal_cols,
-    quadruple_strike_external_cols,
     quadruple_strike_internal_cols,
-    single_strike_external_cols,
     single_strike_internal_cols,
     straddle_internal_cols,
-    triple_strike_external_cols,
     triple_strike_internal_cols,
 )
 from ..rules import (
@@ -48,14 +44,26 @@ class Side(Enum):
     short = -1
 
 
+# ---------------------------------------------------------------------------
+# Default delta TargetRange dicts for each role
+# ---------------------------------------------------------------------------
+_DEFAULT_DELTA = {"target": 0.30, "min": 0.20, "max": 0.40}
+_DEFAULT_ATM_DELTA = {"target": 0.50, "min": 0.40, "max": 0.60}
+_DEFAULT_OTM_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
+_DEFAULT_WING_DELTA = {"target": 0.20, "min": 0.10, "max": 0.30}
+_DEFAULT_DEEP_ITM_DELTA = {"target": 0.80, "min": 0.60, "max": 0.95}
+_DEFAULT_ITM_WING_DELTA = {"target": 0.40, "min": 0.30, "max": 0.50}
+_DEFAULT_OTM_WING_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
+
+
 def _singles(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process single-leg option strategies (calls or puts)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
     return _process_strategy(
         data,
         internal_cols=single_strike_internal_cols,
-        external_cols=single_strike_external_cols,
         leg_def=leg_def,
         params=kwargs,
     )
@@ -65,10 +73,11 @@ def _straddles(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process straddle strategies (call and put at same strike)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_ATM_DELTA)
     return _process_strategy(
         data,
         internal_cols=straddle_internal_cols,
-        external_cols=single_strike_external_cols,
         leg_def=leg_def,
         join_on=[
             "underlying_symbol",
@@ -76,7 +85,6 @@ def _straddles(
             "strike",
             "dte_entry",
             "dte_range",
-            "otm_pct_range",
             "underlying_price_entry",
         ],
         params=kwargs,
@@ -87,10 +95,11 @@ def _strangles(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process strangle strategies (call and put at different strikes)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
     return _process_strategy(
         data,
         internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_non_overlapping_strike,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -102,10 +111,11 @@ def _spread(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process vertical spread strategies (call or put spreads at different strikes)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_OTM_DELTA)
     return _process_strategy(
         data,
         internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_non_overlapping_strike,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -117,10 +127,12 @@ def _butterfly(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process butterfly strategies (3 legs at different strikes)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_ITM_WING_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg3_delta", _DEFAULT_OTM_WING_DELTA)
     return _process_strategy(
         data,
         internal_cols=triple_strike_internal_cols,
-        external_cols=triple_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_butterfly_strikes,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -132,10 +144,13 @@ def _iron_condor(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process iron condor strategies (4 legs at different strikes)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_OTM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
+    kwargs.setdefault("leg3_delta", _DEFAULT_DELTA)
+    kwargs.setdefault("leg4_delta", _DEFAULT_OTM_DELTA)
     return _process_strategy(
         data,
         internal_cols=quadruple_strike_internal_cols,
-        external_cols=quadruple_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_iron_condor_strikes,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -147,10 +162,13 @@ def _iron_butterfly(
     data: pd.DataFrame, leg_def: List[Tuple], **kwargs: Unpack[StrategyParamsDict]
 ) -> pd.DataFrame:
     """Process iron butterfly strategies (4 legs, middle legs share strike)."""
+    kwargs.setdefault("leg1_delta", _DEFAULT_OTM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg3_delta", _DEFAULT_ATM_DELTA)
+    kwargs.setdefault("leg4_delta", _DEFAULT_OTM_DELTA)
     return _process_strategy(
         data,
         internal_cols=quadruple_strike_internal_cols,
-        external_cols=quadruple_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_iron_butterfly_strikes,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -168,10 +186,11 @@ def _covered_call(
     approximating the underlying position through the relationship between
     option premiums and underlying price changes.
     """
+    kwargs.setdefault("leg1_delta", _DEFAULT_DEEP_ITM_DELTA)
+    kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
     return _process_strategy(
         data,
         internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
         leg_def=leg_def,
         rules=_rule_non_overlapping_strike,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
@@ -200,6 +219,10 @@ def _calendar_spread(
     Returns:
         DataFrame with calendar/diagonal spread strategy results
     """
+    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
+    if not same_strike:
+        kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
+
     internal_cols = (
         calendar_spread_internal_cols if same_strike else diagonal_spread_internal_cols
     )

@@ -354,7 +354,6 @@ def _handle_list_results(arguments, dataset, signals, datasets, results, _result
         "strategy",
         "max_entry_dte",
         "exit_dte",
-        "max_otm_pct",
         "slippage",
         "count",
         "mean_return",
@@ -375,8 +374,6 @@ def _handle_list_results(arguments, dataset, signals, datasets, results, _result
             parts.append(f"dte={int(row['max_entry_dte'])}")
         if "exit_dte" in row:
             parts.append(f"exit={int(row['exit_dte'])}")
-        if "max_otm_pct" in row:
-            parts.append(f"otm={row['max_otm_pct']:.2f}")
         if "mean_return" in row and pd.notna(row["mean_return"]):
             parts.append(f"mean={row['mean_return']:.4f}")
         if "win_rate" in row and pd.notna(row["win_rate"]):

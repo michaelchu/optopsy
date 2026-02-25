@@ -4,13 +4,7 @@ from typing import Unpack
 
 import pandas as pd
 
-from ..core import _process_strategy
-from ..definitions import (
-    double_strike_external_cols,
-    double_strike_internal_cols,
-)
 from ..evaluation import _calls, _puts
-from ..rules import _rule_non_overlapping_strike
 from ..types import StrategyParamsDict
 from ._helpers import (
     Side,
@@ -156,8 +150,8 @@ def covered_call(
     Generate covered call strategy statistics.
 
     A covered call consists of:
-    - Long underlying position (simulated via long deep ITM call)
-    - Short 1 call at higher strike
+    - Long deep ITM call (simulates underlying position, default delta ~0.80)
+    - Short 1 OTM call at higher strike (default delta ~0.30)
 
     This is an income strategy that profits from time decay on the short call
     while maintaining upside exposure up to the short strike. The long deep
@@ -191,8 +185,8 @@ def protective_put(
     Generate protective put (married put) strategy statistics.
 
     A protective put consists of:
-    - Long underlying position (simulated via long deep ITM call)
-    - Long 1 put at lower strike for protection
+    - Long deep ITM call (simulates underlying position, default delta ~0.80)
+    - Long 1 OTM put at lower strike for protection (default delta ~0.30)
 
     This strategy provides downside protection while maintaining upside
     potential. The long deep ITM call acts as a synthetic long stock position.
@@ -206,15 +200,11 @@ def protective_put(
     Returns:
         DataFrame with protective put strategy performance statistics
     """
-    return _process_strategy(
+    return _covered_call(
         data,
-        internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
-        leg_def=[
+        [
             (Side.long, _calls),
             (Side.long, _puts),
         ],
-        rules=_rule_non_overlapping_strike,
-        join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
-        params=kwargs,
+        **kwargs,
     )

@@ -13,7 +13,6 @@ from optopsy.simulator import (
     _derive_entry_date,
     _filter_trades,
     _find_cost_col,
-    _find_otm_col,
     _is_calendar,
     _is_single_leg,
     _normalise_trades,
@@ -23,6 +22,7 @@ from optopsy.simulator import (
     _select_nearest,
     simulate,
 )
+from optopsy.types import TargetRange
 
 # ---------------------------------------------------------------------------
 # Shared constants
@@ -37,6 +37,7 @@ _CHAIN_COLS = [
     "strike",
     "bid",
     "ask",
+    "delta",
 ]
 
 # ---------------------------------------------------------------------------
@@ -46,36 +47,46 @@ _CHAIN_COLS = [
 
 
 def _make_standard_data(direction):
-    """2 strikes, calls+puts — entry identical, exit varies by direction."""
+    """3 strikes, calls+puts — entry identical, exit varies by direction."""
     exp_date = datetime.datetime(2018, 1, 31)
     entry = datetime.datetime(2018, 1, 1)
     exit_day = datetime.datetime(2018, 1, 31)
     rows = [
-        ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, entry, 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, entry, 215.0, 7.10, 7.20],
+        # Entry — Calls (delta: 210→0.65, 212.5→0.50, 215→0.30)
+        ["SPX", 213.93, "call", exp_date, entry, 210.0, 8.50, 8.60, 0.65],
+        ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
+        # Entry — Puts (delta: 210→-0.30, 212.5→-0.50, 215→-0.65)
+        ["SPX", 213.93, "put", exp_date, entry, 210.0, 4.50, 4.60, -0.30],
+        ["SPX", 213.93, "put", exp_date, entry, 212.5, 5.70, 5.80, -0.50],
+        ["SPX", 213.93, "put", exp_date, entry, 215.0, 7.10, 7.20, -0.65],
     ]
     if direction == "up":
         rows += [
-            ["SPX", 220.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55],
-            ["SPX", 220.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05],
-            ["SPX", 220.0, "put", exp_date, exit_day, 212.5, 0.0, 0.0],
-            ["SPX", 220.0, "put", exp_date, exit_day, 215.0, 0.0, 0.0],
+            ["SPX", 220.0, "call", exp_date, exit_day, 210.0, 9.90, 10.0, 0.99],
+            ["SPX", 220.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.95],
+            ["SPX", 220.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.85],
+            ["SPX", 220.0, "put", exp_date, exit_day, 210.0, 0.0, 0.0, -0.01],
+            ["SPX", 220.0, "put", exp_date, exit_day, 212.5, 0.0, 0.0, -0.05],
+            ["SPX", 220.0, "put", exp_date, exit_day, 215.0, 0.0, 0.0, -0.15],
         ]
     elif direction == "down":
         rows += [
-            ["SPX", 207.0, "call", exp_date, exit_day, 212.5, 0.10, 0.20],
-            ["SPX", 207.0, "call", exp_date, exit_day, 215.0, 0.02, 0.08],
-            ["SPX", 207.0, "put", exp_date, exit_day, 212.5, 5.30, 5.50],
-            ["SPX", 207.0, "put", exp_date, exit_day, 215.0, 7.80, 8.00],
+            ["SPX", 207.0, "call", exp_date, exit_day, 210.0, 0.50, 0.60, 0.15],
+            ["SPX", 207.0, "call", exp_date, exit_day, 212.5, 0.10, 0.20, 0.05],
+            ["SPX", 207.0, "call", exp_date, exit_day, 215.0, 0.02, 0.08, 0.01],
+            ["SPX", 207.0, "put", exp_date, exit_day, 210.0, 2.80, 3.00, -0.85],
+            ["SPX", 207.0, "put", exp_date, exit_day, 212.5, 5.30, 5.50, -0.95],
+            ["SPX", 207.0, "put", exp_date, exit_day, 215.0, 7.80, 8.00, -0.99],
         ]
     else:  # sideways
         rows += [
-            ["SPX", 214.0, "call", exp_date, exit_day, 212.5, 2.00, 2.20],
-            ["SPX", 214.0, "call", exp_date, exit_day, 215.0, 0.50, 0.70],
-            ["SPX", 214.0, "put", exp_date, exit_day, 212.5, 1.00, 1.20],
-            ["SPX", 214.0, "put", exp_date, exit_day, 215.0, 2.40, 2.60],
+            ["SPX", 214.0, "call", exp_date, exit_day, 210.0, 4.40, 4.60, 0.70],
+            ["SPX", 214.0, "call", exp_date, exit_day, 212.5, 2.00, 2.20, 0.50],
+            ["SPX", 214.0, "call", exp_date, exit_day, 215.0, 0.50, 0.70, 0.25],
+            ["SPX", 214.0, "put", exp_date, exit_day, 210.0, 0.40, 0.60, -0.25],
+            ["SPX", 214.0, "put", exp_date, exit_day, 212.5, 1.00, 1.20, -0.50],
+            ["SPX", 214.0, "put", exp_date, exit_day, 215.0, 2.40, 2.60, -0.70],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -86,57 +97,57 @@ def _make_multi_strike_data(direction):
     entry = datetime.datetime(2018, 1, 1)
     exit_day = datetime.datetime(2018, 1, 31)
     rows = [
-        # Entry — Calls
-        ["SPX", 212.5, "call", exp_date, entry, 207.5, 6.90, 7.00],
-        ["SPX", 212.5, "call", exp_date, entry, 210.0, 4.90, 5.00],
-        ["SPX", 212.5, "call", exp_date, entry, 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "call", exp_date, entry, 215.0, 1.50, 1.60],
-        ["SPX", 212.5, "call", exp_date, entry, 217.5, 0.60, 0.70],
-        # Entry — Puts
-        ["SPX", 212.5, "put", exp_date, entry, 207.5, 0.40, 0.50],
-        ["SPX", 212.5, "put", exp_date, entry, 210.0, 1.40, 1.50],
-        ["SPX", 212.5, "put", exp_date, entry, 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "put", exp_date, entry, 215.0, 5.00, 5.10],
-        ["SPX", 212.5, "put", exp_date, entry, 217.5, 7.00, 7.10],
+        # Entry — Calls (delta: 207.5→0.80, 210→0.65, 212.5→0.50, 215→0.35, 217.5→0.20)
+        ["SPX", 212.5, "call", exp_date, entry, 207.5, 6.90, 7.00, 0.80],
+        ["SPX", 212.5, "call", exp_date, entry, 210.0, 4.90, 5.00, 0.65],
+        ["SPX", 212.5, "call", exp_date, entry, 212.5, 3.00, 3.10, 0.50],
+        ["SPX", 212.5, "call", exp_date, entry, 215.0, 1.50, 1.60, 0.35],
+        ["SPX", 212.5, "call", exp_date, entry, 217.5, 0.60, 0.70, 0.20],
+        # Entry — Puts (delta: 207.5→-0.20, 210→-0.35, 212.5→-0.50, 215→-0.65, 217.5→-0.80)
+        ["SPX", 212.5, "put", exp_date, entry, 207.5, 0.40, 0.50, -0.20],
+        ["SPX", 212.5, "put", exp_date, entry, 210.0, 1.40, 1.50, -0.35],
+        ["SPX", 212.5, "put", exp_date, entry, 212.5, 3.00, 3.10, -0.50],
+        ["SPX", 212.5, "put", exp_date, entry, 215.0, 5.00, 5.10, -0.65],
+        ["SPX", 212.5, "put", exp_date, entry, 217.5, 7.00, 7.10, -0.80],
     ]
     if direction == "up":
         rows += [
-            ["SPX", 215.0, "call", exp_date, exit_day, 207.5, 7.45, 7.55],
-            ["SPX", 215.0, "call", exp_date, exit_day, 210.0, 4.95, 5.05],
-            ["SPX", 215.0, "call", exp_date, exit_day, 212.5, 2.45, 2.55],
-            ["SPX", 215.0, "call", exp_date, exit_day, 215.0, 0.0, 0.10],
-            ["SPX", 215.0, "call", exp_date, exit_day, 217.5, 0.0, 0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 207.5, 0.0, 0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 210.0, 0.0, 0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 212.5, 0.0, 0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 215.0, 0.0, 0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 217.5, 2.45, 2.55],
+            ["SPX", 215.0, "call", exp_date, exit_day, 207.5, 7.45, 7.55, 0.99],
+            ["SPX", 215.0, "call", exp_date, exit_day, 210.0, 4.95, 5.05, 0.95],
+            ["SPX", 215.0, "call", exp_date, exit_day, 212.5, 2.45, 2.55, 0.85],
+            ["SPX", 215.0, "call", exp_date, exit_day, 215.0, 0.0, 0.10, 0.50],
+            ["SPX", 215.0, "call", exp_date, exit_day, 217.5, 0.0, 0.05, 0.10],
+            ["SPX", 215.0, "put", exp_date, exit_day, 207.5, 0.0, 0.05, -0.01],
+            ["SPX", 215.0, "put", exp_date, exit_day, 210.0, 0.0, 0.05, -0.05],
+            ["SPX", 215.0, "put", exp_date, exit_day, 212.5, 0.0, 0.05, -0.15],
+            ["SPX", 215.0, "put", exp_date, exit_day, 215.0, 0.0, 0.05, -0.50],
+            ["SPX", 215.0, "put", exp_date, exit_day, 217.5, 2.45, 2.55, -0.90],
         ]
     elif direction == "down":
         rows += [
-            ["SPX", 208.0, "call", exp_date, exit_day, 207.5, 0.80, 0.90],
-            ["SPX", 208.0, "call", exp_date, exit_day, 210.0, 0.10, 0.20],
-            ["SPX", 208.0, "call", exp_date, exit_day, 212.5, 0.02, 0.08],
-            ["SPX", 208.0, "call", exp_date, exit_day, 215.0, 0.01, 0.05],
-            ["SPX", 208.0, "call", exp_date, exit_day, 217.5, 0.0, 0.04],
-            ["SPX", 208.0, "put", exp_date, exit_day, 207.5, 0.30, 0.40],
-            ["SPX", 208.0, "put", exp_date, exit_day, 210.0, 1.90, 2.10],
-            ["SPX", 208.0, "put", exp_date, exit_day, 212.5, 4.40, 4.60],
-            ["SPX", 208.0, "put", exp_date, exit_day, 215.0, 6.90, 7.10],
-            ["SPX", 208.0, "put", exp_date, exit_day, 217.5, 9.40, 9.60],
+            ["SPX", 208.0, "call", exp_date, exit_day, 207.5, 0.80, 0.90, 0.55],
+            ["SPX", 208.0, "call", exp_date, exit_day, 210.0, 0.10, 0.20, 0.15],
+            ["SPX", 208.0, "call", exp_date, exit_day, 212.5, 0.02, 0.08, 0.05],
+            ["SPX", 208.0, "call", exp_date, exit_day, 215.0, 0.01, 0.05, 0.01],
+            ["SPX", 208.0, "call", exp_date, exit_day, 217.5, 0.0, 0.04, 0.005],
+            ["SPX", 208.0, "put", exp_date, exit_day, 207.5, 0.30, 0.40, -0.45],
+            ["SPX", 208.0, "put", exp_date, exit_day, 210.0, 1.90, 2.10, -0.85],
+            ["SPX", 208.0, "put", exp_date, exit_day, 212.5, 4.40, 4.60, -0.95],
+            ["SPX", 208.0, "put", exp_date, exit_day, 215.0, 6.90, 7.10, -0.99],
+            ["SPX", 208.0, "put", exp_date, exit_day, 217.5, 9.40, 9.60, -1.0],
         ]
     else:  # sideways
         rows += [
-            ["SPX", 212.5, "call", exp_date, exit_day, 207.5, 5.40, 5.60],
-            ["SPX", 212.5, "call", exp_date, exit_day, 210.0, 3.00, 3.20],
-            ["SPX", 212.5, "call", exp_date, exit_day, 212.5, 1.00, 1.20],
-            ["SPX", 212.5, "call", exp_date, exit_day, 215.0, 0.20, 0.40],
-            ["SPX", 212.5, "call", exp_date, exit_day, 217.5, 0.05, 0.15],
-            ["SPX", 212.5, "put", exp_date, exit_day, 207.5, 0.20, 0.30],
-            ["SPX", 212.5, "put", exp_date, exit_day, 210.0, 0.80, 1.00],
-            ["SPX", 212.5, "put", exp_date, exit_day, 212.5, 2.40, 2.60],
-            ["SPX", 212.5, "put", exp_date, exit_day, 215.0, 4.80, 5.00],
-            ["SPX", 212.5, "put", exp_date, exit_day, 217.5, 7.20, 7.40],
+            ["SPX", 212.5, "call", exp_date, exit_day, 207.5, 5.40, 5.60, 0.80],
+            ["SPX", 212.5, "call", exp_date, exit_day, 210.0, 3.00, 3.20, 0.65],
+            ["SPX", 212.5, "call", exp_date, exit_day, 212.5, 1.00, 1.20, 0.50],
+            ["SPX", 212.5, "call", exp_date, exit_day, 215.0, 0.20, 0.40, 0.35],
+            ["SPX", 212.5, "call", exp_date, exit_day, 217.5, 0.05, 0.15, 0.20],
+            ["SPX", 212.5, "put", exp_date, exit_day, 207.5, 0.20, 0.30, -0.20],
+            ["SPX", 212.5, "put", exp_date, exit_day, 210.0, 0.80, 1.00, -0.35],
+            ["SPX", 212.5, "put", exp_date, exit_day, 212.5, 2.40, 2.60, -0.50],
+            ["SPX", 212.5, "put", exp_date, exit_day, 215.0, 4.80, 5.00, -0.65],
+            ["SPX", 212.5, "put", exp_date, exit_day, 217.5, 7.20, 7.40, -0.80],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -149,46 +160,46 @@ def _make_calendar_data(direction):
     exit_date = datetime.datetime(2018, 1, 24)
     rows = [
         # Entry — Front month calls
-        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50],
-        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00],
-        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80],
+        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50, 0.65],
+        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00, 0.50],
+        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80, 0.35],
         # Entry — Back month calls
-        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50],
-        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00],
-        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70],
+        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50, 0.60],
+        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00, 0.48],
+        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70, 0.35],
     ]
     if direction == "up":
         rows += [
             # Exit — Front month
-            ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50],
-            ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10],
-            ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90],
+            ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50, 0.85],
+            ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10, 0.65],
+            ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90, 0.35],
             # Exit — Back month
-            ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00],
-            ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10],
-            ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40],
+            ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00, 0.75],
+            ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10, 0.60],
+            ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40, 0.45],
         ]
     elif direction == "down":
         rows += [
             # Exit — Front month
-            ["SPX", 209.0, "call", front_exp, exit_date, 210.0, 1.00, 1.20],
-            ["SPX", 209.0, "call", front_exp, exit_date, 212.5, 0.20, 0.40],
-            ["SPX", 209.0, "call", front_exp, exit_date, 215.0, 0.05, 0.15],
+            ["SPX", 209.0, "call", front_exp, exit_date, 210.0, 1.00, 1.20, 0.30],
+            ["SPX", 209.0, "call", front_exp, exit_date, 212.5, 0.20, 0.40, 0.10],
+            ["SPX", 209.0, "call", front_exp, exit_date, 215.0, 0.05, 0.15, 0.03],
             # Exit — Back month (retains more time value)
-            ["SPX", 209.0, "call", back_exp, exit_date, 210.0, 3.00, 3.20],
-            ["SPX", 209.0, "call", back_exp, exit_date, 212.5, 1.80, 2.00],
-            ["SPX", 209.0, "call", back_exp, exit_date, 215.0, 0.90, 1.10],
+            ["SPX", 209.0, "call", back_exp, exit_date, 210.0, 3.00, 3.20, 0.40],
+            ["SPX", 209.0, "call", back_exp, exit_date, 212.5, 1.80, 2.00, 0.28],
+            ["SPX", 209.0, "call", back_exp, exit_date, 215.0, 0.90, 1.10, 0.15],
         ]
     else:  # sideways
         rows += [
             # Exit — Front month
-            ["SPX", 212.5, "call", front_exp, exit_date, 210.0, 3.20, 3.40],
-            ["SPX", 212.5, "call", front_exp, exit_date, 212.5, 1.20, 1.40],
-            ["SPX", 212.5, "call", front_exp, exit_date, 215.0, 0.30, 0.50],
+            ["SPX", 212.5, "call", front_exp, exit_date, 210.0, 3.20, 3.40, 0.65],
+            ["SPX", 212.5, "call", front_exp, exit_date, 212.5, 1.20, 1.40, 0.45],
+            ["SPX", 212.5, "call", front_exp, exit_date, 215.0, 0.30, 0.50, 0.20],
             # Exit — Back month (retains more time value)
-            ["SPX", 212.5, "call", back_exp, exit_date, 210.0, 5.20, 5.40],
-            ["SPX", 212.5, "call", back_exp, exit_date, 212.5, 3.40, 3.60],
-            ["SPX", 212.5, "call", back_exp, exit_date, 215.0, 2.00, 2.20],
+            ["SPX", 212.5, "call", back_exp, exit_date, 210.0, 5.20, 5.40, 0.60],
+            ["SPX", 212.5, "call", back_exp, exit_date, 212.5, 3.40, 3.60, 0.48],
+            ["SPX", 212.5, "call", back_exp, exit_date, 215.0, 2.00, 2.20, 0.35],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -201,46 +212,46 @@ def _make_calendar_put_data(direction):
     exit_date = datetime.datetime(2018, 1, 24)
     rows = [
         # Entry — Front month puts
-        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50],
-        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10],
-        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50],
+        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50, -0.35],
+        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10, -0.50],
+        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50, -0.65],
         # Entry — Back month puts
-        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50],
-        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00],
-        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50],
+        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50, -0.40],
+        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00, -0.48],
+        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50, -0.60],
     ]
     if direction == "up":
         rows += [
             # Exit — Front month
-            ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30],
-            ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50],
-            ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50],
+            ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30, -0.10],
+            ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50, -0.25],
+            ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50, -0.55],
             # Exit — Back month
-            ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50],
-            ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00],
-            ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50],
+            ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50, -0.25],
+            ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00, -0.40],
+            ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50, -0.55],
         ]
     elif direction == "down":
         rows += [
             # Exit — Front month
-            ["SPX", 209.0, "put", front_exp, exit_date, 210.0, 2.80, 3.00],
-            ["SPX", 209.0, "put", front_exp, exit_date, 212.5, 4.80, 5.00],
-            ["SPX", 209.0, "put", front_exp, exit_date, 215.0, 7.00, 7.20],
+            ["SPX", 209.0, "put", front_exp, exit_date, 210.0, 2.80, 3.00, -0.65],
+            ["SPX", 209.0, "put", front_exp, exit_date, 212.5, 4.80, 5.00, -0.85],
+            ["SPX", 209.0, "put", front_exp, exit_date, 215.0, 7.00, 7.20, -0.95],
             # Exit — Back month (retains more time value)
-            ["SPX", 209.0, "put", back_exp, exit_date, 210.0, 4.40, 4.60],
-            ["SPX", 209.0, "put", back_exp, exit_date, 212.5, 6.20, 6.40],
-            ["SPX", 209.0, "put", back_exp, exit_date, 215.0, 8.20, 8.40],
+            ["SPX", 209.0, "put", back_exp, exit_date, 210.0, 4.40, 4.60, -0.55],
+            ["SPX", 209.0, "put", back_exp, exit_date, 212.5, 6.20, 6.40, -0.72],
+            ["SPX", 209.0, "put", back_exp, exit_date, 215.0, 8.20, 8.40, -0.85],
         ]
     else:  # sideways
         rows += [
             # Exit — Front month
-            ["SPX", 212.5, "put", front_exp, exit_date, 210.0, 0.80, 1.00],
-            ["SPX", 212.5, "put", front_exp, exit_date, 212.5, 2.00, 2.20],
-            ["SPX", 212.5, "put", front_exp, exit_date, 215.0, 3.80, 4.00],
+            ["SPX", 212.5, "put", front_exp, exit_date, 210.0, 0.80, 1.00, -0.35],
+            ["SPX", 212.5, "put", front_exp, exit_date, 212.5, 2.00, 2.20, -0.50],
+            ["SPX", 212.5, "put", front_exp, exit_date, 215.0, 3.80, 4.00, -0.65],
             # Exit — Back month (retains more time value)
-            ["SPX", 212.5, "put", back_exp, exit_date, 210.0, 3.00, 3.20],
-            ["SPX", 212.5, "put", back_exp, exit_date, 212.5, 4.60, 4.80],
-            ["SPX", 212.5, "put", back_exp, exit_date, 215.0, 6.20, 6.40],
+            ["SPX", 212.5, "put", back_exp, exit_date, 210.0, 3.00, 3.20, -0.40],
+            ["SPX", 212.5, "put", back_exp, exit_date, 212.5, 4.60, 4.80, -0.48],
+            ["SPX", 212.5, "put", back_exp, exit_date, 215.0, 6.20, 6.40, -0.60],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -273,17 +284,17 @@ def multi_entry_data():
     exit2 = datetime.datetime(2018, 2, 28)
     d = [
         # Entry 1 — exp1
-        ["SPX", 213.93, "call", exp1, entry1, 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp1, entry1, 215.0, 6.00, 6.05],
+        ["SPX", 213.93, "call", exp1, entry1, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", 213.93, "call", exp1, entry1, 215.0, 6.00, 6.05, 0.30],
         # Entry 2 — exp2
-        ["SPX", 215.0, "call", exp2, entry2, 212.5, 8.00, 8.10],
-        ["SPX", 215.0, "call", exp2, entry2, 215.0, 5.50, 5.60],
+        ["SPX", 215.0, "call", exp2, entry2, 212.5, 8.00, 8.10, 0.50],
+        ["SPX", 215.0, "call", exp2, entry2, 215.0, 5.50, 5.60, 0.30],
         # Exit 1
-        ["SPX", 220, "call", exp1, exit1, 212.5, 7.45, 7.55],
-        ["SPX", 220, "call", exp1, exit1, 215.0, 4.96, 5.05],
+        ["SPX", 220, "call", exp1, exit1, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", 220, "call", exp1, exit1, 215.0, 4.96, 5.05, 0.85],
         # Exit 2
-        ["SPX", 222, "call", exp2, exit2, 212.5, 9.50, 9.60],
-        ["SPX", 222, "call", exp2, exit2, 215.0, 7.00, 7.10],
+        ["SPX", 222, "call", exp2, exit2, 212.5, 9.50, 9.60, 0.95],
+        ["SPX", 222, "call", exp2, exit2, 215.0, 7.00, 7.10, 0.85],
     ]
     return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -304,7 +315,34 @@ def calendar_put_data():
 # Strategy specs and shared assertion helper
 # ---------------------------------------------------------------------------
 
-_Spec = namedtuple("_Spec", ["fn", "entry_sign"])
+_Spec = namedtuple("_Spec", ["fn", "entry_sign", "kwargs"], defaults=[{}])
+
+# Delta overrides for strategies that need distinct deltas per leg.
+# With only 3 strikes (210, 212.5, 215) in standard data, spreads and
+# protective puts need explicit deltas to select different strikes per leg.
+_CALL_SPREAD_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg2_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+)
+_PUT_SPREAD_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+)
+_PROT_PUT_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg2_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+)
+# Butterfly deltas: need 3 distinct strikes in ascending order
+_BF_CALL_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+)
+_BF_PUT_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg3_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+)
 
 _STANDARD_SPECS = [
     _Spec(op.long_calls, "debit"),
@@ -316,18 +354,18 @@ _STANDARD_SPECS = [
     _Spec(op.long_strangles, "debit"),
     _Spec(op.short_strangles, "credit"),
     _Spec(op.covered_call, "debit"),
-    _Spec(op.protective_put, "debit"),
-    _Spec(op.long_call_spread, "debit"),
-    _Spec(op.short_call_spread, "credit"),
-    _Spec(op.long_put_spread, "debit"),
-    _Spec(op.short_put_spread, "credit"),
+    _Spec(op.protective_put, "debit", _PROT_PUT_DELTAS),
+    _Spec(op.long_call_spread, "debit", _CALL_SPREAD_DELTAS),
+    _Spec(op.short_call_spread, "credit", _CALL_SPREAD_DELTAS),
+    _Spec(op.long_put_spread, "debit", _PUT_SPREAD_DELTAS),
+    _Spec(op.short_put_spread, "credit", _PUT_SPREAD_DELTAS),
 ]
 
 _MULTI_STRIKE_SPECS = [
-    _Spec(op.long_call_butterfly, "debit"),
-    _Spec(op.short_call_butterfly, "credit"),
-    _Spec(op.long_put_butterfly, "debit"),
-    _Spec(op.short_put_butterfly, "credit"),
+    _Spec(op.long_call_butterfly, "debit", _BF_CALL_DELTAS),
+    _Spec(op.short_call_butterfly, "credit", _BF_CALL_DELTAS),
+    _Spec(op.long_put_butterfly, "debit", _BF_PUT_DELTAS),
+    _Spec(op.short_put_butterfly, "credit", _BF_PUT_DELTAS),
     _Spec(op.iron_condor, "credit"),
     _Spec(op.iron_butterfly, "credit"),
     _Spec(op.reverse_iron_condor, "debit"),
@@ -554,8 +592,14 @@ class TestCreditStrategy:
 
     def test_short_call_losing_trade_negative_pnl(self, data):
         """Short call where underlying goes up should lose money."""
-        # Data has underlying going from 213.93 to 220 — calls go up
-        result = simulate(data, op.short_calls, selector="first")
+        # Data has underlying going from 213.93 to 220 — ATM calls go up
+        # Target ATM delta to select the 212.5 call which gains value
+        result = simulate(
+            data,
+            op.short_calls,
+            selector="first",
+            leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        )
         assert result.summary["total_trades"] == 1
         trade = result.trade_log.iloc[0]
         # Option went up: bad for short seller → negative P&L
@@ -563,7 +607,9 @@ class TestCreditStrategy:
 
     def test_short_put_spread_pnl(self, data):
         """Short put spread (credit spread) P&L = (exit - entry) * qty * mult."""
-        result = simulate(data, op.short_put_spread, selector="first")
+        result = simulate(
+            data, op.short_put_spread, selector="first", **_PUT_SPREAD_DELTAS
+        )
         assert result.summary["total_trades"] == 1
         trade = result.trade_log.iloc[0]
         expected_pnl = (
@@ -629,7 +675,13 @@ class TestSummaryStats:
         assert s["total_return"] == pytest.approx(s["total_pnl"] / capital)
 
     def test_profit_factor_no_losses(self, data):
-        result = simulate(data, op.long_calls, selector="first")
+        # Target ITM call (210 strike, delta=0.65) that gains value in up market
+        result = simulate(
+            data,
+            op.long_calls,
+            selector="first",
+            leg1_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+        )
         s = result.summary
         assert s["total_trades"] > 0
         assert s["losing_trades"] == 0
@@ -766,10 +818,10 @@ class TestExitDte:
         # exit_dte=7 means exit 7 days before expiration → Jan 24
         exit_day = datetime.datetime(2018, 1, 24)
         d = [
-            ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45],
-            ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05],
-            ["SPX", 218.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55],
-            ["SPX", 218.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05],
+            ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
+            ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
+            ["SPX", 218.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.85],
+            ["SPX", 218.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.65],
         ]
         df = pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -824,14 +876,6 @@ class TestColumnDetection:
         df = pd.DataFrame({"expiration": ["2020-02-01"], "dte_entry": [30]})
         result = _resolve_entry_date(df)
         assert result.iloc[0] == pd.Timestamp("2020-01-02")
-
-    def test_find_otm_col(self):
-        df = pd.DataFrame({"otm_pct_entry": [0.05]})
-        assert _find_otm_col(df) == "otm_pct_entry"
-
-    def test_find_otm_col_missing(self):
-        df = pd.DataFrame({"strike": [100]})
-        assert _find_otm_col(df) is None
 
     def test_find_cost_col_multi_leg(self):
         df = pd.DataFrame({"total_entry_cost": [1.0]})
@@ -999,81 +1043,82 @@ class TestSpotCheckPnl:
         """Long strangle from ``data`` fixture (selector=first).
 
         Strangles combine OTM call + OTM put at different strikes.
-        With underlying at 213.93 and strikes 212.5/215.0:
-          leg1 (put 212.5):  entry mid = (5.70+5.80)/2 = 5.75
-          leg2 (call 215.0): entry mid = (6.00+6.05)/2 = 6.025
-          total_entry_cost = 5.75 + 6.025 = 11.775  (debit)
+        Delta targeting (DEFAULT 0.30) selects:
+          leg1 (put 210.0, abs delta 0.30): entry mid = (4.50+4.60)/2 = 4.55
+          leg2 (call 215.0, delta 0.30):    entry mid = (6.00+6.05)/2 = 6.025
+          total_entry_cost = 4.55 + 6.025 = 10.575  (debit)
 
         Exit (underlying 220):
-          leg1 (put 212.5):  exit mid = (0.0+0.0)/2 = 0.0
+          leg1 (put 210.0):  exit mid = (0.0+0.0)/2 = 0.0
           leg2 (call 215.0): exit mid = (4.96+5.05)/2 = 5.005
           total_exit_proceeds = 0.0 + 5.005 = 5.005
 
-        realized_pnl = (5.005 - 11.775) * 1 * 100 = -677.0
+        realized_pnl = (5.005 - 10.575) * 1 * 100 = -557.0
         """
         result = simulate(data, op.long_strangles, selector="first")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(11.775)
+        assert trade["entry_cost"] == pytest.approx(10.575)
         assert trade["exit_proceeds"] == pytest.approx(5.005)
-        assert trade["realized_pnl"] == pytest.approx(-677.0)
+        assert trade["realized_pnl"] == pytest.approx(-557.0)
 
     def test_long_put_butterfly_pnl(self, multi_strike_data):
         """Long put butterfly from ``multi_strike_data`` (selector=first).
 
         Long put butterfly: buy lower put, sell 2x middle put, buy upper put.
-        With first selector the engine picks the first valid 3-strike combo
-        with equal-width wings.
-
-        Strikes 207.5 / 210.0 / 212.5 (width=2.5 each):
-          leg1 (long put 207.5):  entry mid = (0.40+0.50)/2 = 0.45
-          leg2 (short 2x put 210.0): entry mid = -(1.40+1.50)/2 * 2 = -2.90
-          leg3 (long put 212.5):  entry mid = (3.00+3.10)/2 = 3.05
-          total_entry_cost = 0.45 + (-2.90) + 3.05 = 0.60
+        Explicit deltas select 210.0/212.5/215.0 (width=2.5 each):
+          leg1 (long put 210.0, abs delta 0.35): entry mid = (1.40+1.50)/2 = 1.45
+          leg2 (short 2x put 212.5, abs delta 0.50): entry mid = -(3.00+3.10)/2 * 2 = -6.10
+          leg3 (long put 215.0, abs delta 0.65): entry mid = (5.00+5.10)/2 = 5.05
+          total_entry_cost = 1.45 + (-6.10) + 5.05 = 0.40
 
         Exit (underlying 215.0):
-          leg1 (long put 207.5):  exit mid = (0.0+0.05)/2 = 0.025
-          leg2 (short 2x put 210.0): exit mid = -(0.0+0.05)/2 * 2 = -0.05
-          leg3 (long put 212.5):  exit mid = (0.0+0.05)/2 = 0.025
+          leg1 (long put 210.0):    exit mid = (0.0+0.05)/2 = 0.025
+          leg2 (short 2x put 212.5): exit mid = -(0.0+0.05)/2 * 2 = -0.05
+          leg3 (long put 215.0):    exit mid = (0.0+0.05)/2 = 0.025
           total_exit_proceeds = 0.025 + (-0.05) + 0.025 = 0.0
 
-        realized_pnl = (0.0 - 0.60) * 1 * 100 = -60.0
+        realized_pnl = (0.0 - 0.40) * 1 * 100 = -40.0
         """
-        result = simulate(multi_strike_data, op.long_put_butterfly, selector="first")
+        result = simulate(
+            multi_strike_data,
+            op.long_put_butterfly,
+            selector="first",
+            **_BF_PUT_DELTAS,
+        )
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(0.60)
+        assert trade["entry_cost"] == pytest.approx(0.40)
         assert trade["exit_proceeds"] == pytest.approx(0.0)
-        assert trade["realized_pnl"] == pytest.approx(-60.0)
+        assert trade["realized_pnl"] == pytest.approx(-40.0)
 
     def test_iron_condor_pnl(self, multi_strike_data):
         """Iron condor from ``multi_strike_data`` (selector=first).
 
         Iron condor: long OTM put / short put / short call / long OTM call.
-        First selector picks the first valid 4-strike combo (ascending):
-        207.5 / 210.0 / 212.5 / 215.0.
+        Delta targeting selects 207.5/210.0/215.0/217.5:
 
-          leg1 (long put 207.5):   entry mid = (0.40+0.50)/2 = 0.45
-          leg2 (short put 210.0):  entry mid = -(1.40+1.50)/2 = -1.45
-          leg3 (short call 212.5): entry mid = -(3.00+3.10)/2 = -3.05
-          leg4 (long call 215.0):  entry mid = (1.50+1.60)/2 = 1.55
-          total_entry_cost = 0.45 - 1.45 - 3.05 + 1.55 = -2.50 (credit)
+          leg1 (long put 207.5, OTM):    entry mid = (0.40+0.50)/2 = 0.45
+          leg2 (short put 210.0, DEFAULT): entry mid = -(1.40+1.50)/2 = -1.45
+          leg3 (short call 215.0, DEFAULT): entry mid = -(1.50+1.60)/2 = -1.55
+          leg4 (long call 217.5, OTM):   entry mid = (0.60+0.70)/2 = 0.65
+          total_entry_cost = 0.45 - 1.45 - 1.55 + 0.65 = -1.90 (credit)
 
         Exit (underlying 215.0):
           leg1 (long put 207.5):   exit mid = (0.0+0.05)/2 = 0.025
           leg2 (short put 210.0):  exit mid = -(0.0+0.05)/2 = -0.025
-          leg3 (short call 212.5): exit mid = -(2.45+2.55)/2 = -2.50
-          leg4 (long call 215.0):  exit mid = (0.0+0.10)/2 = 0.05
-          total_exit_proceeds = 0.025 - 0.025 - 2.50 + 0.05 = -2.45
+          leg3 (short call 215.0): exit mid = -(0.0+0.10)/2 = -0.05
+          leg4 (long call 217.5):  exit mid = (0.0+0.05)/2 = 0.025
+          total_exit_proceeds = 0.025 - 0.025 - 0.05 + 0.025 = -0.025
 
-        realized_pnl = (-2.45 - (-2.50)) * 1 * 100 = 5.0
+        realized_pnl = (-0.025 - (-1.90)) * 1 * 100 = 187.5
         """
         result = simulate(multi_strike_data, op.iron_condor, selector="first")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(-2.50)
-        assert trade["exit_proceeds"] == pytest.approx(-2.45)
-        assert trade["realized_pnl"] == pytest.approx(5.0)
+        assert trade["entry_cost"] == pytest.approx(-1.90)
+        assert trade["exit_proceeds"] == pytest.approx(-0.025)
+        assert trade["realized_pnl"] == pytest.approx(187.5)
 
 
 # ---------------------------------------------------------------------------
@@ -1112,13 +1157,13 @@ class TestAllStrategiesDirectional:
     @pytest.mark.parametrize("spec", _STANDARD_SPECS, ids=_spec_id)
     def test_standard(self, directional_data, spec):
         df, _direction = directional_data
-        result = simulate(df, spec.fn, selector="first")
+        result = simulate(df, spec.fn, selector="first", **spec.kwargs)
         _assert_strategy_traits(result, spec.entry_sign)
 
     @pytest.mark.parametrize("spec", _MULTI_STRIKE_SPECS, ids=_spec_id)
     def test_multi_strike(self, directional_multi_strike_data, spec):
         df, _direction = directional_multi_strike_data
-        result = simulate(df, spec.fn, selector="first")
+        result = simulate(df, spec.fn, selector="first", **spec.kwargs)
         _assert_strategy_traits(result, spec.entry_sign)
 
     @pytest.mark.parametrize("spec", _CALL_CALENDAR_SPECS, ids=_spec_id)
@@ -1146,47 +1191,50 @@ class TestSpotCheckCoveredProtective:
         """Covered call from ``data`` fixture (UP market, selector=first).
 
         Covered call: long call (lower strike) + short call (upper strike).
-        Strikes 212.5 / 215.0:
-          leg1 (long call 212.5):  entry mid = (7.35+7.45)/2 = 7.40
+        Default deep ITM leg1 (target delta 0.80) → 210.0 (delta 0.65, closest)
+        Default leg2 (target delta 0.30) → 215.0 (delta 0.30)
+
+        Strikes 210.0 / 215.0:
+          leg1 (long call 210.0):  entry mid = (8.50+8.60)/2 = 8.55
           leg2 (short call 215.0): entry mid = -(6.00+6.05)/2 = -6.025
-          total_entry_cost = 7.40 + (-6.025) = 1.375  (debit)
+          total_entry_cost = 8.55 + (-6.025) = 2.525  (debit)
 
         Exit (underlying 220):
-          leg1 (long call 212.5):  exit mid = (7.45+7.55)/2 = 7.50
+          leg1 (long call 210.0):  exit mid = (9.90+10.00)/2 = 9.95
           leg2 (short call 215.0): exit mid = -(4.96+5.05)/2 = -5.005
-          total_exit_proceeds = 7.50 + (-5.005) = 2.495
+          total_exit_proceeds = 9.95 + (-5.005) = 4.945
 
-        realized_pnl = (2.495 - 1.375) * 1 * 100 = 112.0
+        realized_pnl = (4.945 - 2.525) * 1 * 100 = 242.0
         """
         result = simulate(data, op.covered_call, selector="first")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(1.375)
-        assert trade["exit_proceeds"] == pytest.approx(2.495)
-        assert trade["realized_pnl"] == pytest.approx(112.0)
+        assert trade["entry_cost"] == pytest.approx(2.525)
+        assert trade["exit_proceeds"] == pytest.approx(4.945)
+        assert trade["realized_pnl"] == pytest.approx(242.0)
 
     def test_protective_put_pnl(self, data):
         """Protective put from ``data`` fixture (UP market, selector=first).
 
         Protective put: long call (lower strike) + long put (upper strike).
-        Strikes 212.5 / 215.0:
-          leg1 (long call 212.5):  entry mid = (7.35+7.45)/2 = 7.40
-          leg2 (long put 215.0):   entry mid = (7.10+7.20)/2 = 7.15
-          total_entry_cost = 7.40 + 7.15 = 14.55  (debit)
+        Delta targeting: leg1 call delta 0.65 → 210.0, leg2 put abs 0.65 → 215.0.
+          leg1 (long call 210.0): entry mid = (8.50+8.60)/2 = 8.55
+          leg2 (long put 215.0):  entry mid = (7.10+7.20)/2 = 7.15
+          total_entry_cost = 8.55 + 7.15 = 15.70  (debit)
 
         Exit (underlying 220):
-          leg1 (long call 212.5):  exit mid = (7.45+7.55)/2 = 7.50
-          leg2 (long put 215.0):   exit mid = (0.0+0.0)/2 = 0.0
-          total_exit_proceeds = 7.50 + 0.0 = 7.50
+          leg1 (long call 210.0): exit mid = (9.90+10.0)/2 = 9.95
+          leg2 (long put 215.0):  exit mid = (0.0+0.0)/2 = 0.0
+          total_exit_proceeds = 9.95 + 0.0 = 9.95
 
-        realized_pnl = (7.50 - 14.55) * 1 * 100 = -705.0
+        realized_pnl = (9.95 - 15.70) * 1 * 100 = -575.0
         """
-        result = simulate(data, op.protective_put, selector="first")
+        result = simulate(data, op.protective_put, selector="first", **_PROT_PUT_DELTAS)
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(14.55)
-        assert trade["exit_proceeds"] == pytest.approx(7.50)
-        assert trade["realized_pnl"] == pytest.approx(-705.0)
+        assert trade["entry_cost"] == pytest.approx(15.70)
+        assert trade["exit_proceeds"] == pytest.approx(9.95)
+        assert trade["realized_pnl"] == pytest.approx(-575.0)
 
 
 # ---------------------------------------------------------------------------
@@ -1198,27 +1246,29 @@ class TestSpotCheckCalendar:
     """Hand-calculated P&L for calendar spreads."""
 
     def test_long_call_calendar_pnl(self, calendar_data):
-        """Long call calendar from ``calendar_data`` (UP, selector=first → strike 210).
+        """Long call calendar from ``calendar_data`` (UP, selector=first → strike 215).
 
-        Front (short call 210): entry mid = -(4.40+4.50)/2 = -4.45
-        Back (long call 210):   entry mid = (6.40+6.50)/2 = 6.45
-        total_entry_cost = -4.45 + 6.45 = 2.00
+        Delta targeting (DEFAULT 0.30) selects strike 215.0 (delta 0.35).
+
+        Front (short call 215): entry mid = -(1.70+1.80)/2 = -1.75
+        Back (long call 215):   entry mid = (3.60+3.70)/2 = 3.65
+        total_entry_cost = -1.75 + 3.65 = 1.90
 
         Exit:
-        Front (short call 210): exit mid = -(5.40+5.50)/2 = -5.45
-        Back (long call 210):   exit mid = (6.90+7.00)/2 = 6.95
-        total_exit_proceeds = -5.45 + 6.95 = 1.50
+        Front (short call 215): exit mid = -(0.80+0.90)/2 = -0.85
+        Back (long call 215):   exit mid = (3.30+3.40)/2 = 3.35
+        total_exit_proceeds = -0.85 + 3.35 = 2.50
 
-        realized_pnl = (1.50 - 2.00) * 1 * 100 = -50.0
+        realized_pnl = (2.50 - 1.90) * 1 * 100 = 60.0
         """
         result = simulate(
             calendar_data, op.long_call_calendar, selector="first", **_CALENDAR_KWARGS
         )
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
-        assert trade["entry_cost"] == pytest.approx(2.00)
-        assert trade["exit_proceeds"] == pytest.approx(1.50)
-        assert trade["realized_pnl"] == pytest.approx(-50.0)
+        assert trade["entry_cost"] == pytest.approx(1.90)
+        assert trade["exit_proceeds"] == pytest.approx(2.50)
+        assert trade["realized_pnl"] == pytest.approx(60.0)
 
     def test_long_put_calendar_pnl(self, calendar_put_data):
         """Long put calendar from ``calendar_put_data`` (UP, selector=first → strike 210).
@@ -1263,17 +1313,17 @@ def multi_entry_spread_data():
     exit2 = datetime.datetime(2018, 3, 2)
     d = [
         # Entry 1 — exp1
-        ["SPX", 213.93, "put", exp1, entry1, 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp1, entry1, 215.0, 7.10, 7.20],
+        ["SPX", 213.93, "put", exp1, entry1, 212.5, 5.70, 5.80, -0.50],
+        ["SPX", 213.93, "put", exp1, entry1, 215.0, 7.10, 7.20, -0.65],
         # Exit 1
-        ["SPX", 220.0, "put", exp1, exit1, 212.5, 0.10, 0.20],
-        ["SPX", 220.0, "put", exp1, exit1, 215.0, 0.05, 0.15],
+        ["SPX", 220.0, "put", exp1, exit1, 212.5, 0.10, 0.20, -0.05],
+        ["SPX", 220.0, "put", exp1, exit1, 215.0, 0.05, 0.15, -0.10],
         # Entry 2 — exp2
-        ["SPX", 214.0, "put", exp2, entry2, 212.5, 4.80, 4.90],
-        ["SPX", 214.0, "put", exp2, entry2, 215.0, 6.80, 6.90],
+        ["SPX", 214.0, "put", exp2, entry2, 212.5, 4.80, 4.90, -0.50],
+        ["SPX", 214.0, "put", exp2, entry2, 215.0, 6.80, 6.90, -0.65],
         # Exit 2
-        ["SPX", 218.0, "put", exp2, exit2, 212.5, 0.20, 0.30],
-        ["SPX", 218.0, "put", exp2, exit2, 215.0, 0.10, 0.20],
+        ["SPX", 218.0, "put", exp2, exit2, 212.5, 0.20, 0.30, -0.10],
+        ["SPX", 218.0, "put", exp2, exit2, 215.0, 0.10, 0.20, -0.15],
     ]
     return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -1287,6 +1337,8 @@ def multi_trade_spread_result(multi_entry_spread_data):
         capital=100_000.0,
         max_positions=5,
         selector="first",
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.65, min=0.55, max=0.75),
     )
 
 
@@ -1318,17 +1370,17 @@ class TestMultiTradeSpread:
 
 
 class TestSelectorEdgeCases:
-    def test_select_nearest_with_otm_column(self):
-        """When otm_pct_entry is present, select row with smallest abs OTM%."""
+    def test_select_nearest_with_delta_column(self):
+        """When delta_entry is present, select row with abs(delta) closest to 0.50."""
         candidates = pd.DataFrame(
             {
-                "otm_pct_entry": [0.10, -0.02, 0.05],
+                "delta_entry": [0.30, 0.52, 0.80],
                 "strike": [100, 105, 110],
                 "entry": [3.0, 4.0, 2.0],
             }
         )
         result = _select_nearest(candidates)
-        # Row 1 has abs(otm) = 0.02 (smallest)
+        # Row 1 has abs(delta - 0.50) = 0.02 (smallest)
         assert result["strike"] == 105
 
     def test_select_nearest_ultimate_fallback(self):

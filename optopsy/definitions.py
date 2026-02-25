@@ -22,7 +22,6 @@ evaluated_cols: List[str] = [
     "quote_date_entry",
     "dte_entry",
     "strike",
-    "otm_pct_entry",
     "underlying_price_entry",
     "underlying_price_exit",
     "bid_entry",
@@ -45,6 +44,7 @@ single_strike_internal_cols: List[str] = [
     "entry",
     "exit",
     "pct_change",
+    "delta_entry",
 ]
 
 
@@ -59,6 +59,8 @@ straddle_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
 ]
 
 
@@ -74,6 +76,8 @@ double_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
 ]
 
 triple_strike_internal_cols: List[str] = [
@@ -91,6 +95,9 @@ triple_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
+    "delta_entry_leg3",
 ]
 
 quadruple_strike_internal_cols: List[str] = [
@@ -110,27 +117,31 @@ quadruple_strike_internal_cols: List[str] = [
     "total_entry_cost",
     "total_exit_proceeds",
     "pct_change",
+    "delta_entry_leg1",
+    "delta_entry_leg2",
+    "delta_entry_leg3",
+    "delta_entry_leg4",
 ]
 
 # base columns of dataframe after aggregation(minus the calculated columns)
-single_strike_external_cols: List[str] = ["dte_range", "otm_pct_range"]
+single_strike_external_cols: List[str] = ["dte_range", "delta_range"]
 double_strike_external_cols: List[str] = [
     "dte_range",
-    "otm_pct_range_leg1",
-    "otm_pct_range_leg2",
+    "delta_range_leg1",
+    "delta_range_leg2",
 ]
 triple_strike_external_cols: List[str] = [
     "dte_range",
-    "otm_pct_range_leg1",
-    "otm_pct_range_leg2",
-    "otm_pct_range_leg3",
+    "delta_range_leg1",
+    "delta_range_leg2",
+    "delta_range_leg3",
 ]
 quadruple_strike_external_cols: List[str] = [
     "dte_range",
-    "otm_pct_range_leg1",
-    "otm_pct_range_leg2",
-    "otm_pct_range_leg3",
-    "otm_pct_range_leg4",
+    "delta_range_leg1",
+    "delta_range_leg2",
+    "delta_range_leg3",
+    "delta_range_leg4",
 ]
 
 # Calendar spread columns (same strike, different expirations)
@@ -155,7 +166,7 @@ calendar_spread_internal_cols: List[str] = [
 calendar_spread_external_cols: List[str] = [
     "dte_range_leg1",
     "dte_range_leg2",
-    "otm_pct_range",
+    "delta_range",
 ]
 
 # Diagonal spread columns (different strikes, different expirations)
@@ -181,8 +192,8 @@ diagonal_spread_internal_cols: List[str] = [
 diagonal_spread_external_cols: List[str] = [
     "dte_range_leg1",
     "dte_range_leg2",
-    "otm_pct_range_leg1",
-    "otm_pct_range_leg2",
+    "delta_range_leg1",
+    "delta_range_leg2",
 ]
 
 # Columns added by pandas describe() plus risk metrics for aggregated statistics output

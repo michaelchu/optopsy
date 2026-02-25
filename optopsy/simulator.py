@@ -249,10 +249,12 @@ def _select_one(candidates: pd.DataFrame, idx: Any) -> pd.Series:
 
 
 def _select_nearest(candidates: pd.DataFrame) -> pd.Series:
-    """Select the trade closest to ATM (lowest absolute OTM%)."""
-    otm_col = _find_otm_col(candidates)
-    if otm_col is not None:
-        return _select_one(candidates, candidates[otm_col].abs().idxmin())
+    """Select the trade closest to ATM (delta closest to 0.50)."""
+    for delta_col in ("delta_entry", "delta_entry_leg1"):
+        if delta_col in candidates.columns:
+            return _select_one(
+                candidates, (candidates[delta_col].abs() - 0.50).abs().idxmin()
+            )
 
     # Fallback: use strike - underlying_price distance
     strike_col = "strike" if "strike" in candidates.columns else None
@@ -306,14 +308,6 @@ _BUILTIN_SELECTORS: dict[str, Callable[..., pd.Series]] = {
     "lowest_premium": _select_lowest_premium,
     "first": _select_first,
 }
-
-
-def _find_otm_col(df: pd.DataFrame) -> str | None:
-    """Find the OTM percentage column in the dataframe."""
-    for col in ("otm_pct_entry", "otm_pct_entry_leg1", "otm_pct_leg1"):
-        if col in df.columns:
-            return col
-    return None
 
 
 def _find_cost_col(df: pd.DataFrame) -> str:

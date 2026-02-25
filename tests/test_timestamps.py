@@ -63,20 +63,21 @@ class TestCrossSourceDateMatching:
             "strike",
             "bid",
             "ask",
+            "delta",
         ]
         d = [
-            ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45],
-            ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05],
-            ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80],
-            ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20],
-            ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65],
-            ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20],
-            ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60],
-            ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00],
-            ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55],
-            ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05],
-            ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05],
-            ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05],
+            ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45, 0.55],
+            ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05, 0.30],
+            ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80, -0.30],
+            ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20, -0.55],
+            ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65, 0.55],
+            ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20, 0.30],
+            ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60, -0.30],
+            ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00, -0.55],
+            ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55, 0.55],
+            ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05, 0.30],
+            ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05, -0.30],
+            ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05, -0.55],
         ]
         return pd.DataFrame(data=d, columns=cols)
 

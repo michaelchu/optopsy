@@ -18,10 +18,9 @@ from optopsy.ui.tools import execute_tool
 
 @pytest.fixture
 def option_data():
-    """Option dataset with known DTE and OTM% distributions.
+    """Option dataset with known DTE and delta distributions.
 
     DTE values: 4 rows with DTE=30, 4 rows with DTE=0.
-    OTM% values (sorted): 0.005, 0.005, 0.0067, 0.0067, 0.0227, 0.0227, 0.0341, 0.0341
     """
     exp_date = datetime.datetime(2018, 1, 31)
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
@@ -34,29 +33,28 @@ def option_data():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
-        ["SPX", 220.0, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
-        ["SPX", 220.0, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
-        ["SPX", 220.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
-        ["SPX", 220.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
+        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.45],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.45],
+        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
+        ["SPX", 220.0, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.60],
+        ["SPX", 220.0, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.50],
+        ["SPX", 220.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
+        ["SPX", 220.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.10],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
 
 @pytest.fixture
-def wide_dte_otm_data():
-    """Option dataset with high DTE (90) and high OTM% (>0.3).
+def wide_dte_data():
+    """Option dataset with high DTE (90).
 
-    Used to exercise capping logic in iron condor and spread overrides.
+    Used to exercise capping logic in iron condor overrides.
     DTE distribution: 4 rows with DTE=90, 4 rows with DTE=0.
-    OTM% values: strikes far from underlying → OTM% > 0.3.
     """
-    # Expiration 90 days from quote_date
     quote_date = datetime.datetime(2018, 1, 1)
     exp_date = datetime.datetime(2018, 4, 1)  # ~90 days
     exp_date_near = datetime.datetime(2018, 1, 1)  # DTE=0
@@ -69,17 +67,17 @@ def wide_dte_otm_data():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
-    # Underlying price 100; strikes at 140 (40% OTM for calls) and 60 (40% OTM for puts)
     d = [
-        ["SPX", 100.0, "call", exp_date, quote_date, 140.0, 1.0, 1.1],
-        ["SPX", 100.0, "call", exp_date, quote_date, 150.0, 0.5, 0.6],
-        ["SPX", 100.0, "put", exp_date, quote_date, 60.0, 1.0, 1.1],
-        ["SPX", 100.0, "put", exp_date, quote_date, 50.0, 0.5, 0.6],
-        ["SPX", 100.0, "call", exp_date_near, quote_date, 140.0, 0.1, 0.2],
-        ["SPX", 100.0, "call", exp_date_near, quote_date, 150.0, 0.05, 0.1],
-        ["SPX", 100.0, "put", exp_date_near, quote_date, 60.0, 0.1, 0.2],
-        ["SPX", 100.0, "put", exp_date_near, quote_date, 50.0, 0.05, 0.1],
+        ["SPX", 100.0, "call", exp_date, quote_date, 140.0, 1.0, 1.1, 0.10],
+        ["SPX", 100.0, "call", exp_date, quote_date, 150.0, 0.5, 0.6, 0.05],
+        ["SPX", 100.0, "put", exp_date, quote_date, 60.0, 1.0, 1.1, -0.10],
+        ["SPX", 100.0, "put", exp_date, quote_date, 50.0, 0.5, 0.6, -0.05],
+        ["SPX", 100.0, "call", exp_date_near, quote_date, 140.0, 0.1, 0.2, 0.08],
+        ["SPX", 100.0, "call", exp_date_near, quote_date, 150.0, 0.05, 0.1, 0.03],
+        ["SPX", 100.0, "put", exp_date_near, quote_date, 60.0, 0.1, 0.2, -0.08],
+        ["SPX", 100.0, "put", exp_date_near, quote_date, 50.0, 0.05, 0.1, -0.03],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -103,27 +101,24 @@ def _extract_recommended_json(text):
 
 class TestSuggestStrategyParams:
     def test_basic_recommendations_have_correct_keys(self, option_data):
-        """Base recommendations contain max_entry_dte, exit_dte, max_otm_pct."""
+        """Base recommendations contain max_entry_dte, exit_dte."""
         result = execute_tool("suggest_strategy_params", {}, option_data)
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
         assert "max_entry_dte" in reco
         assert "exit_dte" in reco
-        assert "max_otm_pct" in reco
 
     def test_base_recommendations_use_correct_percentiles(self, option_data):
-        """Base max_entry_dte = p75(DTE), exit_dte = p10(DTE), max_otm_pct = p75(OTM%).
+        """Base max_entry_dte = p75(DTE), exit_dte = p10(DTE).
 
         Data has 4 rows with DTE=30 and 4 with DTE=0.
         p75 of DTE [0,0,0,0,30,30,30,30] = 30, p10 = 0.
-        OTM% values are all < 0.04, so p75 should be < 0.05.
         """
         result = execute_tool("suggest_strategy_params", {}, option_data)
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
         assert reco["max_entry_dte"] == 30
         assert reco["exit_dte"] == 0
-        assert 0.0 < reco["max_otm_pct"] < 0.05
 
     def test_no_dataset(self):
         """Returns error when no dataset is loaded."""
@@ -148,40 +143,36 @@ class TestSuggestStrategyParams:
         # front_dte_min = max(10, p10) = 10 (since p10=0, floor is 10)
         assert reco["front_dte_min"] == 10
 
-    def test_iron_condor_caps_dte_and_otm(self, wide_dte_otm_data):
-        """Iron condor caps max_entry_dte at 45 and max_otm_pct at 0.3.
+    def test_iron_condor_caps_dte(self, wide_dte_data):
+        """Iron condor caps max_entry_dte at 45.
 
-        Uses wide_dte_otm_data where p75 DTE=90 and p75 OTM%≈0.4,
-        both above the caps, so min() actually clamps the values.
+        Uses wide_dte_data where p75 DTE=90, above the cap.
         """
         result = execute_tool(
             "suggest_strategy_params",
             {"strategy_name": "iron_condor"},
-            wide_dte_otm_data,
+            wide_dte_data,
         )
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
         # p75 DTE is 90 but cap is 45 → must be exactly 45
         assert reco["max_entry_dte"] == 45
-        # p75 OTM% is ~0.4 but cap is 0.3 → must be exactly 0.3
-        assert reco["max_otm_pct"] == 0.3
         # Multi-leg note should be present
         assert "multi-leg" in result.llm_summary.lower()
 
-    def test_spread_caps_otm(self, wide_dte_otm_data):
-        """Spread strategy caps max_otm_pct at 0.2.
-
-        Uses wide_dte_otm_data where p75 OTM%≈0.4, above the 0.2 cap.
-        """
+    def test_spread_strategy_note(self, wide_dte_data):
+        """Spread strategy includes strategy note."""
         result = execute_tool(
             "suggest_strategy_params",
             {"strategy_name": "long_call_spread"},
-            wide_dte_otm_data,
+            wide_dte_data,
         )
         reco = _extract_recommended_json(result.user_display)
         assert reco is not None
-        # p75 OTM% is ~0.4 but cap is 0.2 → must be exactly 0.2
-        assert reco["max_otm_pct"] == 0.2
+        assert (
+            "spread" in result.llm_summary.lower()
+            or "delta" in result.llm_summary.lower()
+        )
 
     def test_unknown_strategy_rejected(self, option_data):
         """Unknown strategy name is rejected by Pydantic validation."""
@@ -196,7 +187,7 @@ class TestSuggestStrategyParams:
         )
 
     def test_display_has_percentile_tables(self, option_data):
-        """User display includes percentile tables for DTE and OTM%."""
+        """User display includes percentile tables for DTE and delta."""
         result = execute_tool("suggest_strategy_params", {}, option_data)
         display = result.user_display
         assert "p10" in display
@@ -206,15 +197,12 @@ class TestSuggestStrategyParams:
         assert "p90" in display
         # Verify it's actually a markdown table
         assert "| Percentile | DTE |" in display
-        assert "| Percentile | OTM% |" in display
+        assert "Delta" in display
 
-    def test_otm_values_are_reasonable(self, option_data):
-        """OTM% values in recommendations are within data range."""
+    def test_delta_distribution_shown(self, option_data):
+        """Delta distribution values are shown when delta column exists."""
         result = execute_tool("suggest_strategy_params", {}, option_data)
-        reco = _extract_recommended_json(result.user_display)
-        # All OTM% values in fixture are < 0.04, so p75 should be < 0.04
-        assert reco["max_otm_pct"] < 0.05
-        assert reco["max_otm_pct"] > 0.0
+        assert "delta" in result.llm_summary.lower()
 
     def test_empty_dataframe_raises_value_error(self):
         """Empty DataFrame raises ValueError from NaN quantile conversion."""
@@ -227,6 +215,7 @@ class TestSuggestStrategyParams:
             "strike",
             "bid",
             "ask",
+            "delta",
         ]
         empty_df = pd.DataFrame(columns=cols)
         with pytest.raises(ValueError, match="cannot convert float NaN"):

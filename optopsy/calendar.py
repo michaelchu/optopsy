@@ -13,8 +13,8 @@ from typing import Any, List, Tuple
 import numpy as np
 import pandas as pd
 
-from .filters import _remove_min_bid_ask, _trim
-from .pricing import _calculate_fill_price, _calculate_otm_pct
+from .filters import _remove_min_bid_ask, _select_closest_delta, _trim
+from .pricing import _calculate_fill_price
 
 
 def _evaluate_calendar_options(
@@ -27,7 +27,7 @@ def _evaluate_calendar_options(
         data: DataFrame containing option chain data with DTE assigned
         dte_min: Minimum DTE for this leg
         dte_max: Maximum DTE for this leg
-        **kwargs: Additional parameters including max_otm_pct, min_bid_ask
+        **kwargs: Additional parameters including min_bid_ask, delta_target
 
     Returns:
         DataFrame with evaluated options for this leg
@@ -35,16 +35,12 @@ def _evaluate_calendar_options(
     # Filter by DTE range for this leg
     leg_data = _trim(data, "dte", dte_min, dte_max)
 
-    # Calculate OTM percentage and filter
-    leg_data = leg_data.pipe(_calculate_otm_pct).pipe(
-        _trim,
-        "otm_pct",
-        lower=kwargs["max_otm_pct"] * -1,
-        upper=kwargs["max_otm_pct"],
-    )
-
     # Remove options with bid/ask below minimum
     leg_data = _remove_min_bid_ask(leg_data, kwargs["min_bid_ask"])
+
+    # Apply delta targeting
+    dt = kwargs["delta_target"]
+    leg_data = _select_closest_delta(leg_data, dt["target"], dt["min"], dt["max"])
 
     return leg_data
 
@@ -78,7 +74,7 @@ def _prepare_calendar_leg(
             "strike": strike_col,
             "bid": f"bid_leg{leg_num}",
             "ask": f"ask_leg{leg_num}",
-            "otm_pct": f"otm_pct_leg{leg_num}",
+            "delta": f"delta_leg{leg_num}",
             "underlying_price": price_col,
         }
     )
@@ -95,7 +91,7 @@ def _get_calendar_leg_columns(leg_num: int, same_strike: bool) -> List[str]:
         f"dte_entry_leg{leg_num}",
         f"bid_leg{leg_num}",
         f"ask_leg{leg_num}",
-        f"otm_pct_leg{leg_num}",
+        f"delta_leg{leg_num}",
     ]
     if leg_num == 1:
         cols.append("underlying_price_entry")

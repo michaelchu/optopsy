@@ -2,7 +2,7 @@
 
 Tests the public entry points ``_run_checks`` and ``_run_calendar_checks``
 which validate parameters via Pydantic models and check DataFrame schemas.
-Also tests the helper predicates ``_requires_delta`` and ``_requires_volume``.
+Delta column is always required.
 """
 
 import pandas as pd
@@ -17,7 +17,25 @@ import optopsy.checks as op
 
 @pytest.fixture
 def valid_data():
-    """Minimal valid option chain DataFrame for checks."""
+    """Minimal valid option chain DataFrame for checks (includes delta)."""
+    return pd.DataFrame(
+        {
+            "underlying_symbol": ["SPY"],
+            "underlying_price": [450.0],
+            "option_type": ["call"],
+            "expiration": pd.to_datetime(["2024-03-15"]),
+            "quote_date": pd.to_datetime(["2024-01-15"]),
+            "strike": [455.0],
+            "bid": [2.50],
+            "ask": [2.80],
+            "delta": [0.45],
+        }
+    )
+
+
+@pytest.fixture
+def valid_data_no_delta():
+    """Option chain DataFrame without delta column."""
     return pd.DataFrame(
         {
             "underlying_symbol": ["SPY"],
@@ -46,6 +64,7 @@ class TestRunChecks:
         assert result["max_entry_dte"] == 90
         assert result["exit_dte"] == 0
         assert result["dte_interval"] == 7
+        assert result["delta_interval"] == 0.05
         assert result["slippage"] == "mid"
         assert result["raw"] is False
         assert result["drop_nan"] is True
@@ -79,6 +98,7 @@ class TestRunChecks:
                 "strike": [455.0],
                 "bid": [2.50],
                 "ask": [2.80],
+                "delta": [0.45],
             }
         )
         with pytest.raises(ValueError, match="does not match expected types"):
@@ -87,6 +107,11 @@ class TestRunChecks:
     def test_raises_on_exit_dte_gte_max_entry_dte(self, valid_data):
         with pytest.raises(ValueError):
             op._run_checks({"exit_dte": 90, "max_entry_dte": 90}, valid_data)
+
+    def test_delta_always_required(self, valid_data_no_delta):
+        """Delta column is required even with no explicit delta params."""
+        with pytest.raises(ValueError, match="delta"):
+            op._run_checks({}, valid_data_no_delta)
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +150,11 @@ class TestRunCalendarChecks:
     def test_raises_on_unknown_params(self, valid_data):
         with pytest.raises(ValueError):
             op._run_calendar_checks({"bad_param": 42}, valid_data)
+
+    def test_delta_always_required(self, valid_data_no_delta):
+        """Delta column is required for calendar strategies."""
+        with pytest.raises(ValueError, match="delta"):
+            op._run_calendar_checks({}, valid_data_no_delta)
 
 
 # ---------------------------------------------------------------------------
@@ -173,28 +203,6 @@ class TestCheckVolumeColumn:
 # ---------------------------------------------------------------------------
 # Helper predicates
 # ---------------------------------------------------------------------------
-
-
-class TestRequiresDelta:
-    def test_true_when_delta_min_set(self):
-        assert op._requires_delta(
-            {"delta_min": 0.3, "delta_max": None, "delta_interval": None}
-        )
-
-    def test_true_when_delta_max_set(self):
-        assert op._requires_delta(
-            {"delta_min": None, "delta_max": -0.3, "delta_interval": None}
-        )
-
-    def test_true_when_delta_interval_set(self):
-        assert op._requires_delta(
-            {"delta_min": None, "delta_max": None, "delta_interval": 0.1}
-        )
-
-    def test_false_when_all_none(self):
-        assert not op._requires_delta(
-            {"delta_min": None, "delta_max": None, "delta_interval": None}
-        )
 
 
 class TestRequiresVolume:

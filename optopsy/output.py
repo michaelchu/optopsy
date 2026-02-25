@@ -90,6 +90,11 @@ def _format_output(
         for opt_col in ("implied_volatility_entry", "delta_entry"):
             if opt_col in data.columns and opt_col not in cols:
                 cols.append(opt_col)
+        # Include per-leg delta columns from delta-targeted path
+        for leg_idx in range(1, 5):
+            col = f"delta_entry_leg{leg_idx}"
+            if col in data.columns and col not in cols:
+                cols.append(col)
         return data[cols].reset_index(drop=True)
 
     return data.pipe(
@@ -130,7 +135,7 @@ def _format_calendar_output(
     # Work with a copy to avoid modifying input
     data = data.copy()
 
-    # For aggregated output, create DTE ranges and OTM ranges
+    # For aggregated output, create DTE ranges and delta ranges
     dte_interval = params["dte_interval"]
 
     # Create DTE ranges for both legs
@@ -144,18 +149,17 @@ def _format_calendar_output(
     data["dte_range_leg1"] = pd.cut(data["dte_entry_leg1"], front_dte_intervals)
     data["dte_range_leg2"] = pd.cut(data["dte_entry_leg2"], back_dte_intervals)
 
-    # Create OTM ranges
-    otm_pct_interval = params["otm_pct_interval"]
-    max_otm_pct = params["max_otm_pct"]
-    otm_pct_intervals = np.round(
-        np.arange(max_otm_pct * -1, max_otm_pct, otm_pct_interval), 2
+    # Create delta ranges
+    delta_interval = params["delta_interval"]
+    delta_intervals = np.round(
+        np.arange(-1.0, 1.0 + delta_interval, delta_interval), 2
     ).tolist()
 
     if same_strike:
-        data["otm_pct_range"] = pd.cut(data["otm_pct_leg1"], otm_pct_intervals)
+        data["delta_range"] = pd.cut(data["delta_leg1"], delta_intervals)
     else:
-        data["otm_pct_range_leg1"] = pd.cut(data["otm_pct_leg1"], otm_pct_intervals)
-        data["otm_pct_range_leg2"] = pd.cut(data["otm_pct_leg2"], otm_pct_intervals)
+        data["delta_range_leg1"] = pd.cut(data["delta_leg1"], delta_intervals)
+        data["delta_range_leg2"] = pd.cut(data["delta_leg2"], delta_intervals)
 
     return data.pipe(
         _group_by_intervals, external_cols, params["drop_nan"]

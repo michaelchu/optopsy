@@ -354,8 +354,8 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "suggest_strategy_params": (
         "Analyze a loaded dataset and suggest good starting parameters "
-        "(max_entry_dte, exit_dte, max_otm_pct) based on the actual DTE "
-        "and OTM% distributions. Call this before running a strategy when "
+        "(max_entry_dte, exit_dte) based on the actual DTE "
+        "and delta distributions. Call this before running a strategy when "
         "the user has not specified explicit parameters, to avoid guessing "
         "values the data can't satisfy. Returns percentile tables and a "
         "JSON block of recommended parameter values ready to pass to "
@@ -369,8 +369,8 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "scan_strategies": (
         "Run multiple strategy/parameter combinations in one call and "
         "return a ranked leaderboard. Use this instead of calling "
-        "run_strategy repeatedly when the user wants to compare DTE values, "
-        "OTM% values, or multiple strategies on the same dataset. "
+        "run_strategy repeatedly when the user wants to compare DTE values "
+        "or multiple strategies on the same dataset. "
         "Does NOT support signals or calendar strategies — use run_strategy "
         "for those."
     ),

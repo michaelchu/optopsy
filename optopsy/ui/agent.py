@@ -117,7 +117,6 @@ into a multi-row DataFrame with columns like `strategy`, `mean_return`, `win_rat
 ## Key Parameters (all optional)
 - max_entry_dte: Max days to expiration at entry (default 90)
 - exit_dte: DTE at exit (default 0, i.e. hold to expiration)
-- max_otm_pct: Max out-of-the-money percentage (default 0.5)
 - min_bid_ask: Min bid/ask threshold (default 0.05)
 - raw: Set true for individual trades, false for aggregated stats (default false)
 - slippage: "mid", "spread", or "liquidity" (default "mid")
@@ -136,10 +135,10 @@ Column order can be remapped but the defaults assume this order.
 ## Understanding Output
 
 ### Aggregated mode (default, raw=false)
-Results are grouped by DTE range and OTM percentage range, then `pct_change` is summarized \
+Results are grouped by DTE range and delta range, then `pct_change` is summarized \
 with descriptive statistics. Columns:
 - **dte_range**: The DTE bucket at entry (e.g. "(7, 14]" means 8-14 DTE)
-- **otm_pct_range** (or otm_pct_range_leg1/leg2/...): OTM % bucket for each leg
+- **delta_range** (or delta_range_leg1/leg2/...): Delta bucket for each leg
 - **count**: Number of trades in this bucket
 - **mean**: Average percentage return (positive = profitable on average)
 - **std**: Standard deviation of returns (volatility of outcomes)
@@ -147,7 +146,7 @@ with descriptive statistics. Columns:
 - **25%/50%/75%**: Quartile returns (50% is the median)
 - **max**: Best single trade return
 
-For multi-leg strategies, there are separate otm_pct_range columns per leg. \
+For multi-leg strategies, there are separate delta_range columns per leg. \
 Calendar/diagonal strategies have dte_range_leg1 and dte_range_leg2 for the front and back legs.
 
 Use `mean` to judge overall profitability, `count` for sample size, `std` for risk, and \
@@ -328,7 +327,7 @@ on what the data actually contains (e.g. if max DTE in the data is 45, don't set
 Retry up to 10 times, changing one or two parameters each attempt. Explain your reasoning to the user each \
 time. After 10 failed attempts, report what you tried and suggest the user try a different strategy, date \
 range, or expiration type. Never re-fetch data just because a strategy was empty.
-- When interpreting aggregated results, focus on: which DTE/OTM buckets are most profitable (highest mean), \
+- When interpreting aggregated results, focus on: which DTE/delta buckets are most profitable (highest mean), \
 which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
 and consistency (lower std is better).
@@ -336,8 +335,8 @@ and consistency (lower std is better).
 
 ## Avoiding Redundant Strategy Calls
 - Before running a strategy when the user has not specified parameters, call \
-`suggest_strategy_params` first to get data-anchored DTE/OTM% recommendations. Do not guess.
-- When comparing multiple DTE values, OTM% values, or strategies, use `scan_strategies` (one \
+`suggest_strategy_params` first to get data-anchored DTE recommendations. Do not guess.
+- When comparing multiple DTE values or strategies, use `scan_strategies` (one \
 call) instead of multiple `run_strategy` calls.
 - Before re-running a strategy with parameters you may have tried before, call `list_results` \
 to check what combinations were already executed this session.
