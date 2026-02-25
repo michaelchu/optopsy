@@ -29,7 +29,9 @@ results = long_calls(data, entry_dates=entry_dates)
 | **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` | `length=20`, `std=2.0` |
 | **EMA Crossover** | `ema_cross_above`, `ema_cross_below` | `fast=10`, `slow=50` |
 | **ATR Volatility** | `atr_above`, `atr_below` | `period=14`, `multiplier=1.5` / `0.75` |
+| **IV Rank** | `iv_rank_above`, `iv_rank_below` | `threshold=0.5`, `window=252` |
 | **Calendar** | `day_of_week` | Days: `0`=Mon ... `4`=Fri |
+| **Custom** | `custom_signal` | `flag_col='signal'` |
 
 ## Combinators
 
@@ -176,6 +178,71 @@ entry_dates = apply_signal(stock_df, entry)
 
 # Pass pre-computed dates to the strategy
 results = op.long_straddles(data, entry_dates=entry_dates)
+```
+
+## IV Rank - volatility regime filter
+
+IV Rank measures where current implied volatility sits relative to its trailing range. Requires an `implied_volatility` column in your options data.
+
+### Sell premium when IV is elevated
+
+```python
+from optopsy import apply_signal, iv_rank_above
+
+# Enter short strategies when IV rank is above 50th percentile (1-year lookback)
+entry_dates = apply_signal(data, iv_rank_above(threshold=0.5, window=252))
+results = op.iron_condor(data, entry_dates=entry_dates)
+```
+
+### Buy options when IV is cheap
+
+```python
+from optopsy import apply_signal, iv_rank_below
+
+# Enter long strategies when IV rank is in the bottom 30%
+entry_dates = apply_signal(data, iv_rank_below(threshold=0.3, window=252))
+results = op.long_straddles(data, entry_dates=entry_dates)
+```
+
+!!! note
+    IV rank signals work directly on options chain data (not stock OHLCV). The signal computes ATM implied volatility per quote date and ranks it over the trailing window.
+
+## Custom Signal from DataFrame
+
+Use `custom_signal()` to create a signal from any DataFrame with a boolean flag column. This lets you define arbitrary entry/exit conditions using external data sources, model outputs, or manual annotations.
+
+```python
+import pandas as pd
+import optopsy as op
+
+# Any DataFrame with dates and a boolean flag works
+my_signals = pd.DataFrame({
+    "underlying_symbol": ["SPY", "SPY", "SPY"],
+    "quote_date": ["2018-01-02", "2018-01-03", "2018-01-04"],
+    "buy": [True, False, True],
+})
+
+# Create a signal from the DataFrame
+sig = op.custom_signal(my_signals, flag_col="buy")
+entry_dates = op.apply_signal(my_signals, sig)
+
+# Pass to any strategy
+results = op.long_calls(data, entry_dates=entry_dates, raw=True)
+```
+
+The DataFrame must contain `underlying_symbol`, `quote_date`, and the flag column. Integer (0/1), nullable boolean, and NaN values are all handled — NaN is treated as False.
+
+### Composing custom signals with built-in signals
+
+```python
+import optopsy as op
+
+sig = op.custom_signal(my_signals, flag_col="buy")
+
+# Combine with built-in signals using & and |
+combined = op.signal(sig) & op.signal(op.day_of_week(1))
+entry_dates = op.apply_signal(my_signals, combined)
+results = op.long_calls(data, entry_dates=entry_dates)
 ```
 
 ## Custom Signal Functions
