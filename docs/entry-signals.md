@@ -1,6 +1,6 @@
 # Entry Signals
 
-Filter strategy entries using technical analysis signals powered by [pandas-ta](https://github.com/twopirllc/pandas-ta). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
+Filter strategy entries using technical analysis signals powered by [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
 
 ```python
 from optopsy import long_calls, apply_signal, rsi_below, sustained, signal, day_of_week

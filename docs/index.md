@@ -11,7 +11,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
 - **Strategy Simulation** - Chronological simulation with capital tracking, position limits, and equity curves via `simulate()`
 - **Risk Metrics** - Sharpe, Sortino, VaR, CVaR, Calmar, Omega, tail ratio, and more via `compute_risk_metrics()`
-- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR, IV Rank) via [pandas-ta](https://github.com/twopirllc/pandas-ta)
+- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR, IV Rank) via [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic)
 - **Custom Signals** - Use `custom_signal()` to drive entries from any DataFrame with a boolean flag column
 - **Greeks Filtering** - Filter options by delta to target specific probability ranges
 - **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
