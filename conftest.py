@@ -1,14 +1,14 @@
-"""Root conftest: mock pandas_ta when it's not installable (Python < 3.12)."""
+"""Root conftest: mock pandas_ta_classic when it's not installable (Python < 3.12)."""
 
 import sys
 import types
 
 try:
-    import pandas_ta  # noqa: F401
+    import pandas_ta_classic  # noqa: F401
 except (ImportError, ModuleNotFoundError, Exception):
     import pandas as pd
 
-    pta = types.ModuleType("pandas_ta")
+    pta = types.ModuleType("pandas_ta_classic")
     pta.version = "0.0.0-mock"
 
     def _rsi(prices, length=14):
@@ -54,9 +54,9 @@ except (ImportError, ModuleNotFoundError, Exception):
         lower = mid - std * std_dev
         return pd.DataFrame(
             {
-                f"BBU_{length}_{std}_{std}": upper,
-                f"BBM_{length}_{std}_{std}": mid,
-                f"BBL_{length}_{std}_{std}": lower,
+                f"BBU_{length}_{std}": upper,
+                f"BBM_{length}_{std}": mid,
+                f"BBL_{length}_{std}": lower,
             },
             index=prices.index,
         )
@@ -75,4 +75,4 @@ except (ImportError, ModuleNotFoundError, Exception):
     pta.bbands = _bbands
     pta.atr = _atr
 
-    sys.modules["pandas_ta"] = pta
+    sys.modules["pandas_ta_classic"] = pta

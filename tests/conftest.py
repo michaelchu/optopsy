@@ -457,12 +457,12 @@ def stock_data_long_history():
     - Bars 140–199: recovery from ~174 → ~227 (SMA crossover, RSI > 70)
 
     The bounce at bars 41–42 creates a gap where rsi_below(14,30) resets,
-    so sustained(rsi_below(14,30), days=3) rejects bar 53 (RSI just crossed
+    so sustained(rsi_below(14,30), days=3) rejects bar 55 (RSI just crossed
     back below 30 for <3 bars) but accepts bar 30 (deep in the streak).
 
     Key bar values:
       bar 30:  RSI=0,    sma_above(20)=False, rsi_below(14,30)=True,  sustained(3)=True
-      bar 53:  RSI≈29.8, sma_above(20)=False, rsi_below(14,30)=True,  sustained(3)=False
+      bar 55:  RSI≈27.1, sma_above(20)=False, rsi_below(14,30)=True,  sustained(3)=False
       bar 100: RSI≈14,   rsi_above(14,70)=False (exit signal rejects exp-A)
       bar 160: RSI≈99.8, sma_above(20)=True,  rsi_below(14,30)=False
       bar 170: RSI≈99.9, sma_above(20)=True,  rsi_below(14,30)=False
@@ -505,7 +505,7 @@ def option_data_with_stock(stock_data_long_history):
 
     Entry dates (4):
       - Bar 30 (decline, RSI=0, sma=False)
-      - Bar 53 (post-bounce, RSI≈29.8, sma=False — sustained(3) rejects this)
+      - Bar 55 (post-bounce, RSI≈27.1, sma=False — sustained(3) rejects this)
       - Bar 160 (recovery, RSI≈99.8, sma=True)
       - Bar 170 (recovery, RSI≈99.9, sma=True)
 
@@ -514,11 +514,11 @@ def option_data_with_stock(stock_data_long_history):
       - Exp B = bar 195 (recovery, RSI≈100 → rsi_above(14,70) keeps)
 
     Recovery entries (bars 160, 170) are AFTER exp-A so they only match
-    exp-B. Decline entries (bars 30, 53) can match both.
+    exp-B. Decline entries (bars 30, 55) can match both.
 
     Baseline row count for long_calls: 18
       - Bar 30: 3 calls × 2 exps = 6
-      - Bar 53: 3 calls × 2 exps = 6
+      - Bar 55: 3 calls × 2 exps = 6
       - Bar 160: 3 calls × 1 exp (B only) = 3
       - Bar 170: 3 calls × 1 exp (B only) = 3
     """
@@ -528,7 +528,7 @@ def option_data_with_stock(stock_data_long_history):
 
     # Entry dates
     entry_decline_1 = pd.Timestamp(dates[30])  # deep in decline
-    entry_decline_2 = pd.Timestamp(dates[53])  # post-bounce, RSI just < 30
+    entry_decline_2 = pd.Timestamp(dates[55])  # post-bounce, RSI just < 30
     entry_recovery_1 = pd.Timestamp(dates[160])  # recovery phase
     entry_recovery_2 = pd.Timestamp(dates[170])  # recovery phase
     exit_date_a = pd.Timestamp(dates[100])  # flat phase, RSI < 70

@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 # ---------------------------------------------------------------------------
 # Indicator classification
@@ -120,7 +120,7 @@ def add_bbands_traces(
     bb = ta.bbands(close, length=period, std=std)  # type: ignore[arg-type]
     if bb is None or bb.empty:
         return
-    # pandas_ta column names vary (e.g. BBL_20_2.0 vs BBL_20_2.0_2.0)
+    # pandas_ta_classic column names use format: BBL_{length}_{std} (e.g. BBL_20_2.0)
     upper_col = next(c for c in bb.columns if c.startswith("BBU_"))
     lower_col = next(c for c in bb.columns if c.startswith("BBL_"))
     mid_col = next(c for c in bb.columns if c.startswith("BBM_"))

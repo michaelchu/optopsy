@@ -1560,11 +1560,11 @@ class TestTASignalE2E:
 
     Key entry-bar properties:
       bar 30:  RSI=0,    sma_above=False, rsi_below=True,  sustained(3)=True
-      bar 53:  RSI≈29.8, sma_above=False, rsi_below=True,  sustained(3)=False
+      bar 55:  RSI≈27.1, sma_above=False, rsi_below=True,  sustained(3)=False
       bar 160: RSI≈99.8, sma_above=True,  rsi_below=False, atr_ohlcv=True,  atr_close=False
       bar 170: RSI≈99.9, sma_above=True,  rsi_below=False, atr_ohlcv=True,  atr_close=True
 
-    Decline entries (30, 53) match both exps → 3 calls × 2 exps = 6 each.
+    Decline entries (30, 55) match both exps → 3 calls × 2 exps = 6 each.
     Recovery entries (160, 170) are after exp-A → 3 calls × 1 exp = 3 each.
     Baseline: 6 + 6 + 3 + 3 = 18 call rows.
 
@@ -1578,7 +1578,7 @@ class TestTASignalE2E:
         return {
             "decline": {
                 pd.Timestamp(dates[30]),
-                pd.Timestamp(dates[53]),
+                pd.Timestamp(dates[55]),
             },
             "recovery": {
                 pd.Timestamp(dates[160]),
@@ -1754,10 +1754,10 @@ class TestTASignalE2E:
     def test_sustained_ta_signal_with_apply_signal(
         self, option_data_with_stock, stock_data_long_history
     ):
-        """sustained(rsi_below(14, 30), days=3) must reject bar 53.
+        """sustained(rsi_below(14, 30), days=3) must reject bar 55.
 
-        The bounce at bars 41-42 resets the RSI streak.  At bar 53,
-        RSI just crossed back below 30 for <3 consecutive bars, so
+        The bounce at bars 41-42 resets the RSI streak.  At bar 55,
+        RSI has crossed back below 30 for only 2 consecutive bars, so
         sustained(days=3) rejects it.  Bar 30 is deep in the streak
         (30+ consecutive bars with RSI=0) and survives.
 
@@ -1777,7 +1777,7 @@ class TestTASignalE2E:
         )
         assert len(results_plain) > 0
 
-        # sustained(days=3) rejects bar 53 (streak < 3 bars)
+        # sustained(days=3) rejects bar 55 (streak < 3 bars)
         entry_dates_sust = apply_signal(
             stock_data_long_history, sustained(rsi_below(14, 30), days=3)
         )
