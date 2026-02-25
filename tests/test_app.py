@@ -766,7 +766,6 @@ class TestBuildSettingsContext:
         result = _build_settings_context(
             {
                 "max_entry_dte": 90,
-                "max_otm_pct": 0.5,
                 "raw_mode": False,
                 "slippage": "mid",
             }
@@ -780,13 +779,6 @@ class TestBuildSettingsContext:
         result = _build_settings_context({"max_entry_dte": 45})
         assert "[User settings:" in result
         assert "max_entry_dte=45" in result
-
-    def test_non_default_otm_pct(self):
-        """Changed OTM % is formatted with 2 decimal places."""
-        from optopsy.ui.app import _build_settings_context
-
-        result = _build_settings_context({"max_otm_pct": 0.2})
-        assert "max_otm_pct=0.20" in result
 
     def test_non_default_slippage(self):
         """Changed slippage model appears in context."""
@@ -1222,7 +1214,6 @@ class TestSettingsContextInjection:
                 "messages": [],
                 "chat_settings": {
                     "max_entry_dte": 90,
-                    "max_otm_pct": 0.5,
                     "raw_mode": False,
                     "slippage": "mid",
                 },
@@ -1296,9 +1287,9 @@ class TestOnChatStartSettings:
             ):
                 await on_chat_start()
 
-            # ChatSettings was created with 3 input widgets
+            # ChatSettings was created with 2 input widgets
             assert len(captured_settings_args) == 1
-            assert len(captured_settings_args[0]) == 3
+            assert len(captured_settings_args[0]) == 2
             # settings.send() was called
             mock_settings.send.assert_called_once()
 

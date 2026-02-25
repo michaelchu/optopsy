@@ -10,7 +10,7 @@ This module is the Chainlit entry point.  It sets up:
 - **Message handling** — ``on_message`` processes user input, handles CSV
   drag-and-drop uploads, and streams LLM responses with tool-call step UI.
 - **Conversation starters** — Clickable quick-start prompts for new chats.
-- **Chat settings** — Persistent parameter controls (DTE, OTM%, slippage).
+- **Chat settings** — Persistent parameter controls (DTE, slippage).
 - **Action buttons** — Quick follow-up actions on strategy results.
 - **Rich elements** — Interactive DataFrames and CSV file exports.
 """
@@ -431,15 +431,6 @@ async def on_chat_start():
                 step=7,
                 description="Maximum days to expiration at entry",
             ),
-            cl.input_widget.Slider(
-                id="max_otm_pct",
-                label="Max OTM %",
-                initial=0.5,
-                min=0.01,
-                max=1.0,
-                step=0.01,
-                description="Maximum out-of-the-money percentage",
-            ),
             cl.input_widget.Select(
                 id="slippage",
                 label="Slippage Model",
@@ -564,16 +555,12 @@ def _build_settings_context(settings: dict) -> str:
     parts = []
     defaults = {
         "max_entry_dte": 90,
-        "max_otm_pct": 0.5,
         "slippage": "mid",
     }
     for key, default in defaults.items():
         val = settings.get(key)
         if val is not None and val != default:
-            if key == "max_otm_pct":
-                parts.append(f"max_otm_pct={val:.2f}")
-            else:
-                parts.append(f"{key}={val}")
+            parts.append(f"{key}={val}")
     if parts:
         return f"[User settings: {', '.join(parts)}]"
     return ""
