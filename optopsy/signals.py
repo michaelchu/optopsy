@@ -47,6 +47,26 @@ SignalFunc = Callable[[pd.DataFrame], "pd.Series[bool]"]
 # ---------------------------------------------------------------------------
 
 
+def _groupby_symbol(
+    data: pd.DataFrame,
+    compute_group: Callable[[pd.DataFrame], "pd.Series[bool]"],
+) -> "pd.Series[bool]":
+    """Apply *compute_group* per underlying_symbol and concatenate results.
+
+    Handles the empty-DataFrame and empty-groups (all-NA symbols) edge cases
+    that every per-symbol signal needs.
+    """
+    if data.empty:
+        return pd.Series(False, index=data.index, dtype=bool)
+    parts = [
+        compute_group(group)
+        for _, group in data.groupby("underlying_symbol", sort=False)
+    ]
+    if not parts:
+        return pd.Series(False, index=data.index, dtype=bool)
+    return pd.concat(parts).reindex(data.index, fill_value=False)
+
+
 def _compute_rsi(prices: pd.Series, period: int) -> pd.Series:
     """
     Compute RSI for a price series using pandas_ta.
@@ -88,9 +108,6 @@ def _per_symbol_signal(
     """
 
     def signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if data.empty:
-            return pd.Series(False, index=data.index, dtype=bool)
-
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = group["underlying_price"]
             indicator = indicator_fn(prices)
@@ -98,13 +115,7 @@ def _per_symbol_signal(
                 return pd.Series(False, index=group.index)
             return compare_fn(prices, indicator).fillna(False)
 
-        parts = [
-            _compute_group(group)
-            for _, group in data.groupby("underlying_symbol", sort=False)
-        ]
-        if not parts:
-            return pd.Series(False, index=data.index, dtype=bool)
-        return pd.concat(parts).reindex(data.index, fill_value=False)
+        return _groupby_symbol(data, _compute_group)
 
     return signal
 
@@ -131,9 +142,6 @@ def _crossover_signal(
         cur_op, prev_op = operator.lt, operator.ge
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if data.empty:
-            return pd.Series(False, index=data.index, dtype=bool)
-
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = group["underlying_price"]
             line_a, line_b = compute_lines_fn(prices)
@@ -142,13 +150,7 @@ def _crossover_signal(
             cross = cur_op(line_a, line_b) & prev_op(line_a.shift(1), line_b.shift(1))
             return cross.fillna(False)
 
-        parts = [
-            _compute_group(group)
-            for _, group in data.groupby("underlying_symbol", sort=False)
-        ]
-        if not parts:
-            return pd.Series(False, index=data.index, dtype=bool)
-        return pd.concat(parts).reindex(data.index, fill_value=False)
+        return _groupby_symbol(data, _compute_group)
 
     return _signal
 
@@ -320,9 +322,6 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
         cmp = operator.lt
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if data.empty:
-            return pd.Series(False, index=data.index, dtype=bool)
-
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = group["underlying_price"]
             bb = ta.bbands(prices, length=length, std=std)  # type: ignore[arg-type]
@@ -331,13 +330,7 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
             band = bb[band_col].fillna(fill_val)
             return cmp(prices, band).fillna(False)
 
-        parts = [
-            _compute_group(group)
-            for _, group in data.groupby("underlying_symbol", sort=False)
-        ]
-        if not parts:
-            return pd.Series(False, index=data.index, dtype=bool)
-        return pd.concat(parts).reindex(data.index, fill_value=False)
+        return _groupby_symbol(data, _compute_group)
 
     return _signal
 
@@ -478,9 +471,6 @@ def _atr_signal(period: int, multiplier: float, above: bool) -> SignalFunc:
     cmp = operator.gt if above else operator.lt
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if data.empty:
-            return pd.Series(False, index=data.index, dtype=bool)
-
         has_ohlcv = "high" in data.columns and "low" in data.columns
 
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
@@ -493,13 +483,7 @@ def _atr_signal(period: int, multiplier: float, above: bool) -> SignalFunc:
                 return pd.Series(False, index=group.index)
             return cmp(atr, multiplier * median_atr).fillna(False)
 
-        parts = [
-            _compute_group(group)
-            for _, group in data.groupby("underlying_symbol", sort=False)
-        ]
-        if not parts:
-            return pd.Series(False, index=data.index, dtype=bool)
-        return pd.concat(parts).reindex(data.index, fill_value=False)
+        return _groupby_symbol(data, _compute_group)
 
     return _signal
 
@@ -828,22 +812,13 @@ def sustained(signal_func: SignalFunc, days: int = 5) -> SignalFunc:
         raise ValueError(f"days must be >= 1, got {days}")
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
-        if data.empty:
-            return pd.Series(False, index=data.index, dtype=bool)
-
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             raw = signal_func(group)
             # rolling(days).min() == 1 only when all `days` bars in the window are True.
             # One False resets to 0. fillna(0) makes the warmup period False.
             return raw.astype(int).rolling(days).min().fillna(0).astype(bool)
 
-        parts = [
-            _compute_group(group)
-            for _, group in data.groupby("underlying_symbol", sort=False)
-        ]
-        if not parts:
-            return pd.Series(False, index=data.index, dtype=bool)
-        return pd.concat(parts).reindex(data.index, fill_value=False)
+        return _groupby_symbol(data, _compute_group)
 
     return _signal
 
