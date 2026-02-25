@@ -141,7 +141,15 @@ def _requires_delta(params: Dict[str, Any]) -> bool:
     """Check if any delta-related parameters are set."""
     return any(
         params.get(key) is not None
-        for key in ["delta_min", "delta_max", "delta_interval"]
+        for key in [
+            "delta_min",
+            "delta_max",
+            "delta_interval",
+            "leg1_delta",
+            "leg2_delta",
+            "leg3_delta",
+            "leg4_delta",
+        ]
     )
 
 

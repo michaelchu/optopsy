@@ -90,6 +90,11 @@ def _format_output(
         for opt_col in ("implied_volatility_entry", "delta_entry"):
             if opt_col in data.columns and opt_col not in cols:
                 cols.append(opt_col)
+        # Include per-leg delta columns from delta-targeted path
+        for leg_idx in range(1, 5):
+            col = f"delta_entry_leg{leg_idx}"
+            if col in data.columns and col not in cols:
+                cols.append(col)
         return data[cols].reset_index(drop=True)
 
     return data.pipe(

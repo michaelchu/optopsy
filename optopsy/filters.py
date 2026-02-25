@@ -102,6 +102,34 @@ def _filter_by_delta(
         return _rtrim(data, "delta", delta_max)
 
 
+def _select_closest_delta(
+    data: pd.DataFrame, target: float, delta_min: float, delta_max: float
+) -> pd.DataFrame:
+    """Select the option with abs(delta) closest to target per group.
+
+    Filters to options within [delta_min, delta_max] abs(delta) range,
+    then picks the single closest-to-target row per
+    (underlying_symbol, quote_date, expiration, option_type) group.
+    """
+    data = data.copy()
+    data["_abs_delta"] = data["delta"].abs()
+    data = data.loc[
+        (data["_abs_delta"] >= delta_min) & (data["_abs_delta"] <= delta_max)
+    ]
+
+    if data.empty:
+        return data.drop(columns=["_abs_delta"])
+
+    data["_delta_diff"] = (data["_abs_delta"] - target).abs()
+    group_cols = ["underlying_symbol", "quote_date", "expiration", "option_type"]
+    result = (
+        data.sort_values("_delta_diff")
+        .drop_duplicates(subset=group_cols, keep="first")
+        .drop(columns=["_abs_delta", "_delta_diff"])
+    )
+    return result
+
+
 def _cut_options_by_dte(
     data: pd.DataFrame, dte_interval: int, max_entry_dte: int
 ) -> pd.DataFrame:

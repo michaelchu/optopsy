@@ -103,6 +103,7 @@ from .types import (
     CalendarStrategyParamsDict,
     StrategyParams,
     StrategyParamsDict,
+    TargetRange,
 )
 
 __all__ = [
@@ -148,6 +149,7 @@ __all__ = [
     "StrategyParamsDict",
     "CalendarStrategyParams",
     "CalendarStrategyParamsDict",
+    "TargetRange",
     # Signal functions
     "apply_signal",
     "rsi_below",

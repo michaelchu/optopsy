@@ -37,7 +37,7 @@ from .calendar import (
     _prepare_calendar_leg,
 )
 from .checks import _run_calendar_checks, _run_checks
-from .evaluation import _evaluate_all_options
+from .evaluation import _evaluate_all_options, _evaluate_all_options_by_delta
 from .filters import _apply_signal_filter, _assign_dte
 from .output import _format_calendar_output, _format_output
 from .pricing import _assign_profit, _calculate_fill_price
@@ -148,6 +148,121 @@ def _strategy_engine(
     )
 
 
+def _get_leg_deltas(params: dict) -> List[Optional[dict]]:
+    """Extract per-leg delta TargetRange objects from params."""
+    return [params.get(f"leg{i}_delta") for i in range(1, 5)]
+
+
+def _has_leg_deltas(params: dict) -> bool:
+    """Check if any per-leg delta targets are set."""
+    return any(d is not None for d in _get_leg_deltas(params))
+
+
+def _process_strategy_delta_targeted(
+    data: pd.DataFrame, params: dict, context: dict
+) -> pd.DataFrame:
+    """Process strategy using per-leg delta targeting.
+
+    Each leg is evaluated independently with its own TargetRange,
+    then legs are joined via _strategy_engine().
+    """
+    leg_def = context["leg_def"]
+    leg_deltas = _get_leg_deltas(params)
+
+    # Validate that each leg has a delta target
+    active_deltas = [d for d in leg_deltas[: len(leg_def)] if d is not None]
+    if len(active_deltas) != len(leg_def):
+        raise ValueError(
+            f"Expected {len(leg_def)} leg*_delta parameters for "
+            f"{len(leg_def)}-leg strategy, got {len(active_deltas)}"
+        )
+
+    # Build join_on — strip otm_pct_range* since legs target different deltas
+    join_on = context.get("join_on")
+    if join_on:
+        join_on = [c for c in join_on if not c.startswith("otm_pct_range")]
+
+    # Evaluate each leg independently
+    leg_results = []
+    for idx, (leg, delta_target) in enumerate(
+        zip(leg_def, leg_deltas[: len(leg_def)]), start=1
+    ):
+        option_filter = leg[1]  # _calls or _puts
+        leg_data = option_filter(data)
+
+        evaluated = _evaluate_all_options_by_delta(
+            leg_data,
+            dte_interval=params["dte_interval"],
+            max_entry_dte=params["max_entry_dte"],
+            exit_dte=params["exit_dte"],
+            exit_dte_tolerance=params["exit_dte_tolerance"],
+            min_bid_ask=params["min_bid_ask"],
+            delta_target=delta_target["target"],
+            delta_range_min=delta_target["min"],
+            delta_range_max=delta_target["max"],
+            delta_interval=params["delta_interval"]
+            if params["delta_interval"] is not None
+            else 0.05,
+            entry_dates=params["entry_dates"],
+            exit_dates=params["exit_dates"],
+        )
+        leg_results.append(evaluated)
+
+    # Build external_cols with delta_range_legN instead of otm_pct_range*
+    if len(leg_def) == 1:
+        external_cols = ["dte_range", "delta_range"]
+    else:
+        external_cols = ["dte_range"]
+        for idx in range(1, len(leg_def) + 1):
+            external_cols.append(f"delta_range_leg{idx}")
+
+    # For single-leg, use _strategy_engine directly
+    if len(leg_def) == 1:
+        result = _strategy_engine(
+            leg_results[0],
+            leg_def,
+            slippage=params["slippage"],
+            fill_ratio=params["fill_ratio"],
+            reference_volume=params["reference_volume"],
+        )
+    else:
+        # Rename columns per leg and merge
+        if not join_on:
+            join_on = ["underlying_symbol", "expiration", "dte_entry", "dte_range"]
+
+        partials = []
+        for idx, lr in enumerate(leg_results, start=1):
+            renamed = _rename_leg_columns(lr, idx, join_on)
+            partials.append(renamed)
+
+        result = partials[0]
+        for partial in partials[1:]:
+            result = pd.merge(result, partial, on=join_on, how="inner")
+
+        # Apply rules
+        rules = context.get("rules")
+        if rules is not None:
+            result = rules(result, leg_def)
+
+        # Calculate P&L
+        suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
+        result = _assign_profit(
+            result,
+            leg_def,
+            suffixes,
+            params["slippage"],
+            params["fill_ratio"],
+            params["reference_volume"],
+        )
+
+    return _format_output(
+        result,
+        params,
+        context["internal_cols"],
+        external_cols,
+    )
+
+
 def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     Main entry point for processing option strategies.
@@ -168,6 +283,10 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     data["expiration"] = normalize_dates(data["expiration"])
     # Normalize option_type once so _calls/_puts avoid repeated .str.lower() calls
     data["option_type"] = data["option_type"].str.lower()
+
+    # Branch to delta-targeted path when leg*_delta params are set
+    if _has_leg_deltas(params):
+        return _process_strategy_delta_targeted(data, params, context)
 
     # Build external_cols, adding delta_range if delta grouping is enabled
     external_cols = context["external_cols"].copy()

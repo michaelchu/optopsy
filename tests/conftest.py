@@ -160,6 +160,56 @@ def multi_strike_data():
 
 
 @pytest.fixture(scope="module")
+def multi_strike_data_with_delta():
+    """
+    Test data with multiple strikes and realistic delta values for delta targeting tests.
+    Strikes: 207.5, 210.0, 212.5, 215.0, 217.5
+    Underlying price at entry: 212.5 (ATM)
+    Underlying price at exit: 215.0 (moved up)
+    """
+    exp_date = datetime.datetime(2018, 1, 31)
+    quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    d = [
+        # Entry day - Calls (delta positive, decreasing as strike increases / more OTM)
+        ["SPX", 212.5, "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00, 0.80],
+        ["SPX", 212.5, "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00, 0.65],
+        ["SPX", 212.5, "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10, 0.50],
+        ["SPX", 212.5, "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60, 0.35],
+        ["SPX", 212.5, "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70, 0.20],
+        # Entry day - Puts (delta negative, more negative as strike increases / more ITM)
+        ["SPX", 212.5, "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50, -0.20],
+        ["SPX", 212.5, "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50, -0.35],
+        ["SPX", 212.5, "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10, -0.50],
+        ["SPX", 212.5, "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10, -0.65],
+        ["SPX", 212.5, "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10, -0.80],
+        # Exit day - Calls (underlying at 215.0)
+        ["SPX", 215.0, "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55, 0.99],
+        ["SPX", 215.0, "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05, 0.95],
+        ["SPX", 215.0, "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55, 0.85],
+        ["SPX", 215.0, "call", exp_date, quote_dates[1], 215.0, 0.10, 0.20, 0.50],
+        ["SPX", 215.0, "call", exp_date, quote_dates[1], 217.5, 0.0, 0.10, 0.10],
+        # Exit day - Puts
+        ["SPX", 215.0, "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05, -0.01],
+        ["SPX", 215.0, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05, -0.05],
+        ["SPX", 215.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.15],
+        ["SPX", 215.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.50],
+        ["SPX", 215.0, "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55, -0.85],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+@pytest.fixture(scope="module")
 def data_with_delta():
     """
     Test data with delta Greek column for testing delta filtering and grouping.

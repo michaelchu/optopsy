@@ -13,6 +13,28 @@ from pydantic import (
 )
 
 
+class TargetRange(BaseModel):
+    """Generic range selector with target, min, and max values.
+
+    Used for per-leg delta targeting (and extensible to other Greeks).
+    All values are unsigned (0-1 for delta).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    target: float = Field(gt=0, le=1)
+    min: float = Field(gt=0, le=1)
+    max: float = Field(gt=0, le=1)
+
+    @model_validator(mode="after")
+    def check_ordering(self):
+        if self.min > self.target:
+            raise ValueError(f"min ({self.min}) must be <= target ({self.target})")
+        if self.target > self.max:
+            raise ValueError(f"target ({self.target}) must be <= max ({self.max})")
+        return self
+
+
 class StrategyParamsDict(TypedDict, total=False):
     """Common parameters for all option strategies (TypedDict for Unpack[] annotations).
 
@@ -36,6 +58,12 @@ class StrategyParamsDict(TypedDict, total=False):
 
     # Greeks grouping (optional)
     delta_interval: Optional[float]
+
+    # Per-leg delta targeting (optional)
+    leg1_delta: Optional[TargetRange]
+    leg2_delta: Optional[TargetRange]
+    leg3_delta: Optional[TargetRange]
+    leg4_delta: Optional[TargetRange]
 
     # Pre-computed signal dates (optional).
     # DataFrames with (underlying_symbol, quote_date) pairs indicating
@@ -98,6 +126,12 @@ class StrategyParams(BaseModel):
     # Greeks grouping (optional) — accepts int or float
     delta_interval: Optional[Union[int, float]] = None
 
+    # Per-leg delta targeting (optional)
+    leg1_delta: Optional[TargetRange] = None
+    leg2_delta: Optional[TargetRange] = None
+    leg3_delta: Optional[TargetRange] = None
+    leg4_delta: Optional[TargetRange] = None
+
     # Pre-computed signal dates (optional)
     entry_dates: Optional[pd.DataFrame] = None
     exit_dates: Optional[pd.DataFrame] = None
@@ -151,6 +185,22 @@ class StrategyParams(BaseModel):
                 f"Expected at least: underlying_symbol, quote_date."
             )
         return v
+
+    @model_validator(mode="after")
+    def check_leg_delta_exclusivity(self):
+        leg_deltas = [
+            self.leg1_delta,
+            self.leg2_delta,
+            self.leg3_delta,
+            self.leg4_delta,
+        ]
+        has_leg_delta = any(d is not None for d in leg_deltas)
+        has_delta_range = self.delta_min is not None or self.delta_max is not None
+        if has_leg_delta and has_delta_range:
+            raise ValueError(
+                "leg*_delta parameters cannot be combined with delta_min/delta_max"
+            )
+        return self
 
     @model_validator(mode="after")
     def check_exit_dte_ordering(self):
