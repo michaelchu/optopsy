@@ -401,5 +401,3 @@ results = op.iron_condor(
 
 !!! warning "Strict Type Validation"
     Parameters are now validated with Pydantic. Boolean parameters like `raw` must be actual `bool` values — `raw=1` will be rejected. Use `raw=True` instead. Similarly, float parameters like `max_otm_pct` must be `float` — `max_otm_pct=5` will be rejected, use `max_otm_pct=5.0`.
-
-See [TYPE_HINTS.md](https://github.com/michaelchu/optopsy/blob/main/TYPE_HINTS.md) for detailed documentation on using type hints with Optopsy.
