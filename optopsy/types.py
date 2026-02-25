@@ -71,24 +71,25 @@ class CalendarStrategyParamsDict(StrategyParamsDict):
 
 
 class StrategyParams(BaseModel):
-    """Pydantic model for validating common strategy parameters.
+    """Pydantic model for validating and defaulting strategy parameters.
 
-    All fields are optional to allow partial parameter specification.
-    Mirrors the StrategyParamsDict TypedDict but with runtime validation.
+    This is the single source of truth for parameter defaults and validation.
+    Fields with defaults are applied automatically when not provided by the user.
+    Uses ``extra="forbid"`` to catch typos in parameter names.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     # Timing parameters (strict rejects float/bool coercion)
-    max_entry_dte: Optional[int] = Field(None, gt=0, strict=True)
-    exit_dte: Optional[int] = Field(None, ge=0, strict=True)
-    exit_dte_tolerance: Optional[int] = Field(None, ge=0, strict=True)
-    dte_interval: Optional[int] = Field(None, gt=0, strict=True)
+    max_entry_dte: int = Field(90, gt=0, strict=True)
+    exit_dte: int = Field(0, ge=0, strict=True)
+    exit_dte_tolerance: int = Field(0, ge=0, strict=True)
+    dte_interval: int = Field(7, gt=0, strict=True)
 
     # Filtering parameters (strict float enforced by validate_strict_float below)
-    max_otm_pct: Optional[float] = Field(None, gt=0)
-    otm_pct_interval: Optional[float] = Field(None, gt=0)
-    min_bid_ask: Optional[float] = Field(None, gt=0)
+    max_otm_pct: float = Field(0.5, gt=0)
+    otm_pct_interval: float = Field(0.05, gt=0)
+    min_bid_ask: float = Field(0.05, gt=0)
 
     # Greeks filtering (optional) — accepts int or float
     delta_min: Optional[Union[int, float]] = None
@@ -102,16 +103,16 @@ class StrategyParams(BaseModel):
     exit_dates: Optional[pd.DataFrame] = None
 
     # Slippage settings
-    slippage: Optional[Literal["mid", "spread", "liquidity"]] = None
-    fill_ratio: Optional[Union[int, float]] = Field(None, ge=0, le=1)
-    reference_volume: Optional[int] = Field(None, gt=0, strict=True)
+    slippage: Literal["mid", "spread", "liquidity"] = "mid"
+    fill_ratio: Union[int, float] = Field(0.5, ge=0, le=1)
+    reference_volume: int = Field(1000, gt=0, strict=True)
 
-    # Side
+    # Side (optional — not consumed by core pipeline, reserved for future use)
     side: Optional[Literal["long", "short"]] = None
 
     # Output control — strict bool (rejects int)
-    raw: Optional[StrictBool] = None
-    drop_nan: Optional[StrictBool] = None
+    raw: StrictBool = False
+    drop_nan: StrictBool = True
 
     @field_validator("max_otm_pct", "otm_pct_interval", "min_bid_ask", mode="before")
     @classmethod
@@ -151,41 +152,54 @@ class StrategyParams(BaseModel):
             )
         return v
 
+    @model_validator(mode="after")
+    def check_exit_dte_ordering(self):
+        if self.max_entry_dte is not None and self.exit_dte >= self.max_entry_dte:
+            raise ValueError(
+                f"exit_dte ({self.exit_dte}) must be < "
+                f"max_entry_dte ({self.max_entry_dte})"
+            )
+        return self
+
 
 class CalendarStrategyParams(StrategyParams):
     """Pydantic model for calendar/diagonal spread parameter validation.
 
-    Extends StrategyParams with front/back DTE fields and cross-field validators.
+    Extends StrategyParams with front/back DTE fields, overrides defaults
+    for calendar-specific behavior, and adds cross-field DTE range validators.
     """
 
+    # Calendar strategies don't use max_entry_dte — override to Optional
+    max_entry_dte: Optional[int] = Field(None, gt=0, strict=True)
+
+    # Calendar strategies default to exit_dte=7 instead of 0
+    exit_dte: int = Field(7, ge=0, strict=True)
+
     # Additional timing parameters for calendar/diagonal strategies
-    front_dte_min: Optional[int] = Field(None, gt=0, strict=True)
-    front_dte_max: Optional[int] = Field(None, gt=0, strict=True)
-    back_dte_min: Optional[int] = Field(None, gt=0, strict=True)
-    back_dte_max: Optional[int] = Field(None, gt=0, strict=True)
+    front_dte_min: int = Field(20, gt=0, strict=True)
+    front_dte_max: int = Field(40, gt=0, strict=True)
+    back_dte_min: int = Field(50, gt=0, strict=True)
+    back_dte_max: int = Field(90, gt=0, strict=True)
 
     @model_validator(mode="after")
     def check_dte_ranges(self):
-        if self.front_dte_min is not None and self.front_dte_max is not None:
-            if self.front_dte_min > self.front_dte_max:
-                raise ValueError(
-                    f"front_dte_min ({self.front_dte_min}) must be <= "
-                    f"front_dte_max ({self.front_dte_max})"
-                )
+        if self.front_dte_min > self.front_dte_max:
+            raise ValueError(
+                f"front_dte_min ({self.front_dte_min}) must be <= "
+                f"front_dte_max ({self.front_dte_max})"
+            )
 
-        if self.back_dte_min is not None and self.back_dte_max is not None:
-            if self.back_dte_min > self.back_dte_max:
-                raise ValueError(
-                    f"back_dte_min ({self.back_dte_min}) must be <= "
-                    f"back_dte_max ({self.back_dte_max})"
-                )
+        if self.back_dte_min > self.back_dte_max:
+            raise ValueError(
+                f"back_dte_min ({self.back_dte_min}) must be <= "
+                f"back_dte_max ({self.back_dte_max})"
+            )
 
-        if self.front_dte_max is not None and self.back_dte_min is not None:
-            if self.front_dte_max >= self.back_dte_min:
-                raise ValueError(
-                    f"front_dte_max ({self.front_dte_max}) must be < "
-                    f"back_dte_min ({self.back_dte_min}) to avoid overlapping ranges"
-                )
+        if self.front_dte_max >= self.back_dte_min:
+            raise ValueError(
+                f"front_dte_max ({self.front_dte_max}) must be < "
+                f"back_dte_min ({self.back_dte_min}) to avoid overlapping ranges"
+            )
 
         return self
 

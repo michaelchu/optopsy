@@ -1,171 +1,135 @@
+"""Tests for parameter and DataFrame validation in optopsy.checks.
+
+Tests the public entry points ``_run_checks`` and ``_run_calendar_checks``
+which validate parameters via Pydantic models and check DataFrame schemas.
+Also tests the helper predicates ``_requires_delta`` and ``_requires_volume``.
+"""
+
 import pandas as pd
 import pytest
 
 import optopsy.checks as op
 
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
-class TestCheckPositiveInteger:
-    def test_rejects_negative(self):
+
+@pytest.fixture
+def valid_data():
+    """Minimal valid option chain DataFrame for checks."""
+    return pd.DataFrame(
+        {
+            "underlying_symbol": ["SPY"],
+            "underlying_price": [450.0],
+            "option_type": ["call"],
+            "expiration": pd.to_datetime(["2024-03-15"]),
+            "quote_date": pd.to_datetime(["2024-01-15"]),
+            "strike": [455.0],
+            "bid": [2.50],
+            "ask": [2.80],
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# _run_checks — standard strategies
+# ---------------------------------------------------------------------------
+
+
+class TestRunChecks:
+    """Integration tests for _run_checks (standard strategy validation)."""
+
+    def test_returns_dict_with_defaults(self, valid_data):
+        result = op._run_checks({}, valid_data)
+        assert isinstance(result, dict)
+        assert result["max_entry_dte"] == 90
+        assert result["exit_dte"] == 0
+        assert result["dte_interval"] == 7
+        assert result["slippage"] == "mid"
+        assert result["raw"] is False
+        assert result["drop_nan"] is True
+
+    def test_user_overrides_applied(self, valid_data):
+        result = op._run_checks({"max_entry_dte": 60, "exit_dte": 14}, valid_data)
+        assert result["max_entry_dte"] == 60
+        assert result["exit_dte"] == 14
+
+    def test_raises_on_invalid_params(self, valid_data):
         with pytest.raises(ValueError):
-            op._check_positive_integer("some key", -1)
+            op._run_checks({"max_entry_dte": -1}, valid_data)
 
-    def test_rejects_zero(self):
+    def test_raises_on_unknown_params(self, valid_data):
         with pytest.raises(ValueError):
-            op._check_positive_integer("some key", 0)
+            op._run_checks({"unknown_param": 42}, valid_data)
 
-    def test_rejects_float(self):
+    def test_raises_on_missing_columns(self):
+        bad_data = pd.DataFrame({"foo": [1]})
+        with pytest.raises(ValueError, match="Expected column"):
+            op._run_checks({}, bad_data)
+
+    def test_raises_on_wrong_column_dtype(self):
+        bad_data = pd.DataFrame(
+            {
+                "underlying_symbol": [123],  # wrong type
+                "underlying_price": [450.0],
+                "option_type": ["call"],
+                "expiration": pd.to_datetime(["2024-03-15"]),
+                "quote_date": pd.to_datetime(["2024-01-15"]),
+                "strike": [455.0],
+                "bid": [2.50],
+                "ask": [2.80],
+            }
+        )
+        with pytest.raises(ValueError, match="does not match expected types"):
+            op._run_checks({}, bad_data)
+
+    def test_raises_on_exit_dte_gte_max_entry_dte(self, valid_data):
         with pytest.raises(ValueError):
-            op._check_positive_integer("some key", 1.0)
-
-    def test_accepts_positive(self):
-        assert op._check_positive_integer("some key", 1) is None
+            op._run_checks({"exit_dte": 90, "max_entry_dte": 90}, valid_data)
 
 
-class TestCheckPositiveIntegerInclusive:
-    def test_rejects_negative(self):
+# ---------------------------------------------------------------------------
+# _run_calendar_checks — calendar/diagonal strategies
+# ---------------------------------------------------------------------------
+
+
+class TestRunCalendarChecks:
+    """Integration tests for _run_calendar_checks."""
+
+    def test_returns_dict_with_calendar_defaults(self, valid_data):
+        result = op._run_calendar_checks({}, valid_data)
+        assert isinstance(result, dict)
+        assert result["exit_dte"] == 7
+        assert result["max_entry_dte"] is None
+        assert result["front_dte_min"] == 20
+        assert result["front_dte_max"] == 40
+        assert result["back_dte_min"] == 50
+        assert result["back_dte_max"] == 90
+
+    def test_user_overrides_applied(self, valid_data):
+        result = op._run_calendar_checks(
+            {"front_dte_min": 10, "front_dte_max": 30, "back_dte_min": 40},
+            valid_data,
+        )
+        assert result["front_dte_min"] == 10
+        assert result["front_dte_max"] == 30
+        assert result["back_dte_min"] == 40
+
+    def test_raises_on_overlapping_ranges(self, valid_data):
         with pytest.raises(ValueError):
-            op._check_positive_integer_inclusive("some key", -1)
+            op._run_calendar_checks(
+                {"front_dte_max": 60, "back_dte_min": 50}, valid_data
+            )
 
-    def test_rejects_float(self):
+    def test_raises_on_unknown_params(self, valid_data):
         with pytest.raises(ValueError):
-            op._check_positive_integer_inclusive("some key", 1.0)
-
-    def test_accepts_positive(self):
-        assert op._check_positive_integer_inclusive("some key", 1) is None
-
-    def test_accepts_zero(self):
-        assert op._check_positive_integer_inclusive("some key", 0) is None
+            op._run_calendar_checks({"bad_param": 42}, valid_data)
 
 
-class TestCheckPositiveFloat:
-    def test_rejects_negative(self):
-        with pytest.raises(ValueError):
-            op._check_positive_float("some key", -1.0)
-
-    def test_rejects_zero(self):
-        with pytest.raises(ValueError):
-            op._check_positive_float("some key", 0.0)
-
-    def test_rejects_int(self):
-        with pytest.raises(ValueError):
-            op._check_positive_float("some key", 1)
-
-    def test_accepts_positive_float(self):
-        assert op._check_positive_float("some key", 1.0) is None
-
-
-class TestCheckSide:
-    def test_rejects_invalid(self):
-        with pytest.raises(ValueError):
-            op._check_side("some key", "invalid")
-
-    def test_accepts_short(self):
-        assert op._check_side("some key", "short") is None
-
-    def test_accepts_long(self):
-        assert op._check_side("some key", "long") is None
-
-
-class TestCheckBoolType:
-    def test_rejects_string(self):
-        with pytest.raises(ValueError):
-            op._check_bool_type("some key", "invalid")
-
-    def test_rejects_int(self):
-        with pytest.raises(ValueError):
-            op._check_bool_type("some key", 1)
-
-    def test_accepts_true(self):
-        assert op._check_bool_type("some key", True) is None
-
-    def test_accepts_false(self):
-        assert op._check_bool_type("some key", False) is None
-
-
-class TestCheckListType:
-    def test_rejects_string(self):
-        with pytest.raises(ValueError):
-            op._check_list_type("some key", "invalid")
-
-    def test_rejects_tuple(self):
-        with pytest.raises(ValueError):
-            op._check_list_type("some key", (1, 2))
-
-    def test_accepts_empty_list(self):
-        assert op._check_list_type("some key", []) is None
-
-    def test_accepts_list(self):
-        assert op._check_list_type("some key", [1, 2]) is None
-
-
-class TestCheckOptionalFloat:
-    def test_accepts_none(self):
-        assert op._check_optional_float("some key", None) is None
-
-    def test_accepts_float(self):
-        assert op._check_optional_float("some key", 0.5) is None
-
-    def test_accepts_int(self):
-        assert op._check_optional_float("some key", 1) is None
-
-    def test_rejects_string(self):
-        with pytest.raises(ValueError):
-            op._check_optional_float("some key", "invalid")
-
-
-class TestCheckSlippage:
-    def test_rejects_invalid(self):
-        with pytest.raises(ValueError, match="must be 'mid', 'spread', or 'liquidity'"):
-            op._check_slippage("some key", "invalid")
-
-    def test_accepts_mid(self):
-        assert op._check_slippage("some key", "mid") is None
-
-    def test_accepts_spread(self):
-        assert op._check_slippage("some key", "spread") is None
-
-    def test_accepts_liquidity(self):
-        assert op._check_slippage("some key", "liquidity") is None
-
-
-class TestCheckFillRatio:
-    def test_rejects_above_one(self):
-        with pytest.raises(ValueError, match="between 0 and 1"):
-            op._check_fill_ratio("some key", 1.5)
-
-    def test_rejects_negative(self):
-        with pytest.raises(ValueError, match="between 0 and 1"):
-            op._check_fill_ratio("some key", -0.1)
-
-    def test_rejects_string(self):
-        with pytest.raises(ValueError, match="between 0 and 1"):
-            op._check_fill_ratio("some key", "invalid")
-
-    def test_accepts_zero(self):
-        assert op._check_fill_ratio("some key", 0) is None
-
-    def test_accepts_one(self):
-        assert op._check_fill_ratio("some key", 1) is None
-
-    def test_accepts_mid(self):
-        assert op._check_fill_ratio("some key", 0.5) is None
-
-
-class TestCheckDatesDataframe:
-    def test_accepts_none(self):
-        assert op._check_dates_dataframe("some key", None) is None
-
-    def test_rejects_non_dataframe(self):
-        with pytest.raises(ValueError, match="must be a DataFrame"):
-            op._check_dates_dataframe("some key", "invalid")
-
-    def test_rejects_missing_columns(self):
-        with pytest.raises(ValueError, match="missing required columns"):
-            op._check_dates_dataframe("some key", pd.DataFrame({"foo": [1]}))
-
-    def test_accepts_valid_dataframe(self):
-        df = pd.DataFrame({"underlying_symbol": ["SPX"], "quote_date": ["2024-01-01"]})
-        assert op._check_dates_dataframe("some key", df) is None
+# ---------------------------------------------------------------------------
+# DataFrame schema checks
+# ---------------------------------------------------------------------------
 
 
 class TestCheckDataTypes:
@@ -206,68 +170,39 @@ class TestCheckVolumeColumn:
         assert op._check_volume_column(pd.DataFrame({"volume": [100]})) is None
 
 
-class TestCheckPositiveNumber:
-    def test_rejects_negative(self):
-        with pytest.raises(ValueError):
-            op._check_positive_number("some key", -1)
-
-    def test_rejects_zero(self):
-        with pytest.raises(ValueError):
-            op._check_positive_number("some key", 0)
-
-    def test_rejects_string(self):
-        with pytest.raises(ValueError):
-            op._check_positive_number("some key", "invalid")
-
-    def test_accepts_positive_int(self):
-        assert op._check_positive_number("some key", 1) is None
-
-    def test_accepts_positive_float(self):
-        assert op._check_positive_number("some key", 1.5) is None
+# ---------------------------------------------------------------------------
+# Helper predicates
+# ---------------------------------------------------------------------------
 
 
 class TestRequiresDelta:
     def test_true_when_delta_min_set(self):
-        assert (
-            op._requires_delta(
-                {"delta_min": 0.3, "delta_max": None, "delta_interval": None}
-            )
-            is True
+        assert op._requires_delta(
+            {"delta_min": 0.3, "delta_max": None, "delta_interval": None}
+        )
+
+    def test_true_when_delta_max_set(self):
+        assert op._requires_delta(
+            {"delta_min": None, "delta_max": -0.3, "delta_interval": None}
         )
 
     def test_true_when_delta_interval_set(self):
-        assert (
-            op._requires_delta(
-                {"delta_min": None, "delta_max": None, "delta_interval": 0.1}
-            )
-            is True
+        assert op._requires_delta(
+            {"delta_min": None, "delta_max": None, "delta_interval": 0.1}
         )
 
     def test_false_when_all_none(self):
-        assert (
-            op._requires_delta(
-                {"delta_min": None, "delta_max": None, "delta_interval": None}
-            )
-            is False
+        assert not op._requires_delta(
+            {"delta_min": None, "delta_max": None, "delta_interval": None}
         )
 
 
 class TestRequiresVolume:
     def test_true_when_liquidity(self):
-        assert op._requires_volume({"slippage": "liquidity"}) is True
+        assert op._requires_volume({"slippage": "liquidity"})
 
     def test_false_when_mid(self):
-        assert op._requires_volume({"slippage": "mid"}) is False
+        assert not op._requires_volume({"slippage": "mid"})
 
     def test_false_when_spread(self):
-        assert op._requires_volume({"slippage": "spread"}) is False
-
-
-class TestRequiresDeltaMax:
-    def test_true_when_delta_max_set(self):
-        assert (
-            op._requires_delta(
-                {"delta_min": None, "delta_max": -0.3, "delta_interval": None}
-            )
-            is True
-        )
+        assert not op._requires_volume({"slippage": "spread"})

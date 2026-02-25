@@ -13,12 +13,12 @@ and diagonal spreads).
 The ``Side`` enum encodes direction as a multiplier (``long=1``, ``short=-1``).
 ``filter_fn`` is ``_calls`` or ``_puts`` from ``core.py``.
 
-**Default parameters** are defined in ``default_kwargs`` (standard strategies) and
-``calendar_default_kwargs`` (calendar/diagonal spreads).  Users override any
-parameter via keyword arguments.
+**Default parameters** are defined in the Pydantic models ``StrategyParams`` and
+``CalendarStrategyParams`` in ``types.py``.  Users override any parameter via
+keyword arguments.
 """
 
-from ._helpers import Side, calendar_default_kwargs, default_kwargs
+from ._helpers import Side
 from .butterflies import (
     long_call_butterfly,
     long_put_butterfly,
@@ -57,8 +57,6 @@ from .spreads import (
 
 __all__ = [
     "Side",
-    "default_kwargs",
-    "calendar_default_kwargs",
     # Singles
     "long_calls",
     "long_puts",

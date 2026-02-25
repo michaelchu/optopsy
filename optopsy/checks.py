@@ -4,9 +4,8 @@ This module validates two things before a strategy runs:
 
 1. **Parameter checks** — User-supplied parameters (DTE intervals, OTM %,
    slippage mode, etc.) are validated via Pydantic models defined in
-   ``types.py`` (``StrategyParams``, ``CalendarStrategyParams``).  Legacy
-   checker functions and the ``param_checks`` dict are retained for
-   backward compatibility and unit tests.
+   ``types.py`` (``StrategyParams``, ``CalendarStrategyParams``).  The models
+   are the single source of truth for both defaults and validation.
 
 2. **DataFrame schema checks** — The input DataFrame must contain the required
    columns (``expected_types``) with compatible dtypes.  Optional columns for
@@ -16,12 +15,14 @@ This module validates two things before a strategy runs:
 Entry points:
 - ``_run_checks()`` — standard strategies (validates params, dtypes, delta)
 - ``_run_calendar_checks()`` — calendar/diagonal spreads (adds DTE range ordering)
+
+Both return a validated params dict with defaults applied by the Pydantic model.
 """
 
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Dict, Tuple, Type
 
 import pandas as pd
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from .types import CalendarStrategyParams, StrategyParams
 
@@ -66,155 +67,51 @@ optional_liquidity_types: Dict[str, Tuple[str, ...]] = {
 }
 
 
-def _run_common_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
-    """
-    Run parameter validation and data type checks shared by all strategies.
+def _validate_and_check(
+    model_cls: Type[BaseModel], params: Dict[str, Any], data: pd.DataFrame
+) -> Dict[str, Any]:
+    """Validate parameters via Pydantic model and check DataFrame schema.
 
-    Args:
-        params: Dictionary of strategy parameters
-        data: DataFrame containing option chain data
-
-    Raises:
-        ValueError: If any validation check fails
+    Returns a validated params dict with defaults applied.
     """
     try:
-        StrategyParams.model_validate(params)
+        model = model_cls.model_validate(params)
     except ValidationError as e:
         raise ValueError(_format_validation_error(e)) from e
+
     _check_data_types(data)
 
-    # Check for volume column if liquidity slippage is enabled
-    if _requires_volume(params):
+    validated = model.model_dump()
+
+    if _requires_volume(validated):
         _check_volume_column(data)
 
+    return validated
 
-def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+
+def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str, Any]:
+    """Validate parameters and DataFrame for standard strategies.
+
+    Returns a validated params dict with defaults applied by the Pydantic model.
     """
-    Run all validation checks on parameters and data.
+    validated = _validate_and_check(StrategyParams, params, data)
 
-    Args:
-        params: Dictionary of strategy parameters
-        data: DataFrame containing option chain data
-
-    Raises:
-        ValueError: If any validation check fails
-    """
-    _run_common_checks(params, data)
-
-    # Check for delta column if delta filtering/grouping is enabled
-    if _requires_delta(params):
+    if _requires_delta(validated):
         _check_greek_column(data, "delta")
 
+    return validated
 
-def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> None:
+
+def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str, Any]:
+    """Validate parameters and DataFrame for calendar/diagonal strategies.
+
+    Returns a validated params dict with defaults applied by the Pydantic model.
     """
-    Run validation checks for calendar/diagonal spread parameters.
-
-    Args:
-        params: Dictionary of strategy parameters
-        data: DataFrame containing option chain data
-
-    Raises:
-        ValueError: If any validation check fails
-    """
-    try:
-        CalendarStrategyParams.model_validate(params)
-    except ValidationError as e:
-        raise ValueError(_format_validation_error(e)) from e
-    _check_data_types(data)
-
-    # Check for volume column if liquidity slippage is enabled
-    if _requires_volume(params):
-        _check_volume_column(data)
-
-
-def _check_positive_integer(key: str, value: Any) -> None:
-    """Validate that value is a positive integer."""
-    if not isinstance(value, int) or value <= 0:
-        raise ValueError(f"Invalid setting for {key}, must be positive integer")
-
-
-def _check_positive_integer_inclusive(key: str, value: Any) -> None:
-    """Validate that value is a non-negative integer (zero allowed)."""
-    if not isinstance(value, int) or value < 0:
-        raise ValueError(f"Invalid setting for {key}, must be positive integer, or 0")
-
-
-def _check_positive_float(key: str, value: Any) -> None:
-    """Validate that value is a positive float."""
-    if not isinstance(value, float) or value <= 0:
-        raise ValueError(f"Invalid setting for {key}, must be positive float type")
-
-
-def _check_positive_number(key: str, value: Any) -> None:
-    """Validate that value is a positive int or float."""
-    if not isinstance(value, (int, float)) or value <= 0:
-        raise ValueError(f"Invalid setting for {key}, must be a positive number")
-
-
-def _check_side(key: str, value: Any) -> None:
-    """Validate that value is either 'long' or 'short'."""
-    if value != "long" and value != "short":
-        raise ValueError(f"Invalid setting for '{key}', must be only 'long' or 'short'")
-
-
-def _check_bool_type(key: str, value: Any) -> None:
-    """Validate that value is a boolean."""
-    if not isinstance(value, bool):
-        raise ValueError(f"Invalid setting for {key}, must be boolean type")
-
-
-def _check_list_type(key: str, value: Any) -> None:
-    """Validate that value is a list."""
-    if not isinstance(value, list):
-        raise ValueError(f"Invalid setting for {key}, must be a list type")
-
-
-def _check_optional_float(key: str, value: Any) -> None:
-    """Validate that value is a float or None."""
-    if value is not None and not isinstance(value, (int, float)):
-        raise ValueError(f"Invalid setting for {key}, must be float type or None")
-
-
-def _check_slippage(key: str, value: Any) -> None:
-    """Validate that value is a valid slippage mode."""
-    if value not in ("mid", "spread", "liquidity"):
-        raise ValueError(
-            f"Invalid setting for {key}, must be 'mid', 'spread', or 'liquidity'"
-        )
-
-
-def _check_fill_ratio(key: str, value: Any) -> None:
-    """Validate that value is a float between 0 and 1."""
-    if not isinstance(value, (int, float)) or not 0 <= value <= 1:
-        raise ValueError(f"Invalid setting for {key}, must be a number between 0 and 1")
-
-
-def _check_dates_dataframe(key: str, value: Any) -> None:
-    """Validate that value is a DataFrame with (underlying_symbol, quote_date), or None."""
-    if value is None:
-        return
-    if not isinstance(value, pd.DataFrame):
-        raise ValueError(f"Invalid setting for {key}, must be a DataFrame or None")
-    required = {"underlying_symbol", "quote_date"}
-    missing = required - set(value.columns)
-    if missing:
-        raise ValueError(
-            f"{key} missing required columns: {missing}. "
-            f"Expected at least: underlying_symbol, quote_date."
-        )
+    return _validate_and_check(CalendarStrategyParams, params, data)
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
-    """
-    Validate that DataFrame has required columns with correct data types.
-
-    Args:
-        data: DataFrame to validate
-
-    Raises:
-        ValueError: If required column is missing or has incorrect type
-    """
+    """Validate that DataFrame has required columns with correct data types."""
     df_type_dict = data.dtypes.astype(str).to_dict()
     for k, et in expected_types.items():
         if k not in df_type_dict:
@@ -226,16 +123,7 @@ def _check_data_types(data: pd.DataFrame) -> None:
 
 
 def _check_greek_column(data: pd.DataFrame, greek: str) -> None:
-    """
-    Validate that an optional Greek column exists and has correct data type.
-
-    Args:
-        data: DataFrame to validate
-        greek: Name of the Greek column to check (e.g., 'delta', 'gamma')
-
-    Raises:
-        ValueError: If Greek column is missing or has incorrect type
-    """
+    """Validate that an optional Greek column exists and has correct data type."""
     df_type_dict = data.dtypes.astype(str).to_dict()
     if greek not in df_type_dict:
         raise ValueError(
@@ -263,15 +151,7 @@ def _requires_volume(params: Dict[str, Any]) -> bool:
 
 
 def _check_volume_column(data: pd.DataFrame) -> None:
-    """
-    Validate that volume column exists and has correct data type.
-
-    Args:
-        data: DataFrame to validate
-
-    Raises:
-        ValueError: If volume column is missing or has incorrect type
-    """
+    """Validate that volume column exists and has correct data type."""
     df_type_dict = data.dtypes.astype(str).to_dict()
     if "volume" not in df_type_dict:
         raise ValueError(
@@ -283,41 +163,3 @@ def _check_volume_column(data: pd.DataFrame) -> None:
         raise ValueError(
             f"{df_type_dict['volume']} of volume does not match expected types: {expected}"
         )
-
-
-# Maps parameter name → validation function.  Each checker raises ValueError
-# if the value is invalid.  Used by ``_run_common_checks()`` to validate all
-# user-supplied strategy parameters before execution.
-param_checks: Dict[str, Callable[[str, Any], None]] = {
-    "dte_interval": _check_positive_integer,
-    "max_entry_dte": _check_positive_integer,
-    "exit_dte": _check_positive_integer_inclusive,
-    "exit_dte_tolerance": _check_positive_integer_inclusive,
-    "otm_pct_interval": _check_positive_float,
-    "max_otm_pct": _check_positive_float,
-    "min_bid_ask": _check_positive_float,
-    "side": _check_side,
-    "drop_nan": _check_bool_type,
-    "raw": _check_bool_type,
-    # Greeks parameters (optional)
-    "delta_min": _check_optional_float,
-    "delta_max": _check_optional_float,
-    "delta_interval": _check_optional_float,
-    # Calendar/diagonal spread parameters
-    "front_dte_min": _check_positive_integer,
-    "front_dte_max": _check_positive_integer,
-    "back_dte_min": _check_positive_integer,
-    "back_dte_max": _check_positive_integer,
-    # Pre-computed signal dates
-    "entry_dates": _check_dates_dataframe,
-    "exit_dates": _check_dates_dataframe,
-    # Slippage parameters
-    "slippage": _check_slippage,
-    "fill_ratio": _check_fill_ratio,
-    "reference_volume": _check_positive_integer,
-    # Simulator parameters
-    "capital": _check_positive_number,
-    "quantity": _check_positive_integer,
-    "max_positions": _check_positive_integer,
-    "multiplier": _check_positive_integer,
-}

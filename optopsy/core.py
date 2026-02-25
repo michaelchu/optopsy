@@ -159,7 +159,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     Returns:
         DataFrame with processed strategy results
     """
-    _run_checks(context["params"], data)
+    params = _run_checks(context["params"], data)
 
     # Normalize date columns once at the root so all downstream merges
     # (signal filtering, entry/exit matching) work regardless of source.
@@ -171,37 +171,37 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
 
     # Build external_cols, adding delta_range if delta grouping is enabled
     external_cols = context["external_cols"].copy()
-    if context["params"].get("delta_interval") is not None:
+    if params["delta_interval"] is not None:
         external_cols = ["delta_range"] + external_cols
 
     return (
         _evaluate_all_options(
             data,
-            dte_interval=context["params"]["dte_interval"],
-            max_entry_dte=context["params"]["max_entry_dte"],
-            exit_dte=context["params"]["exit_dte"],
-            exit_dte_tolerance=context["params"].get("exit_dte_tolerance", 0),
-            otm_pct_interval=context["params"]["otm_pct_interval"],
-            max_otm_pct=context["params"]["max_otm_pct"],
-            min_bid_ask=context["params"]["min_bid_ask"],
-            delta_min=context["params"].get("delta_min"),
-            delta_max=context["params"].get("delta_max"),
-            delta_interval=context["params"].get("delta_interval"),
-            entry_dates=context["params"].get("entry_dates"),
-            exit_dates=context["params"].get("exit_dates"),
+            dte_interval=params["dte_interval"],
+            max_entry_dte=params["max_entry_dte"],
+            exit_dte=params["exit_dte"],
+            exit_dte_tolerance=params["exit_dte_tolerance"],
+            otm_pct_interval=params["otm_pct_interval"],
+            max_otm_pct=params["max_otm_pct"],
+            min_bid_ask=params["min_bid_ask"],
+            delta_min=params["delta_min"],
+            delta_max=params["delta_max"],
+            delta_interval=params["delta_interval"],
+            entry_dates=params["entry_dates"],
+            exit_dates=params["exit_dates"],
         )
         .pipe(
             _strategy_engine,
             context["leg_def"],
             context.get("join_on"),
             context.get("rules"),
-            context["params"].get("slippage", "mid"),
-            context["params"].get("fill_ratio", 0.5),
-            context["params"].get("reference_volume", 1000),
+            params["slippage"],
+            params["fill_ratio"],
+            params["reference_volume"],
         )
         .pipe(
             _format_output,
-            context["params"],
+            params,
             context["internal_cols"],
             external_cols,
         )
@@ -222,8 +222,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     Returns:
         DataFrame with processed calendar/diagonal strategy results
     """
-    params = context["params"]
-    _run_calendar_checks(params, data)
+    params = _run_calendar_checks(context["params"], data)
 
     leg_def = context["leg_def"]
     same_strike = context.get("same_strike", True)
@@ -275,7 +274,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         merged = rules(merged, leg_def)
 
     # Apply entry date filtering to calendar/diagonal spreads
-    entry_dates = params.get("entry_dates")
+    entry_dates = params["entry_dates"]
     if entry_dates is not None and not merged.empty:
         merged = _apply_signal_filter(merged, entry_dates)
 
@@ -288,14 +287,14 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         data,
         params["exit_dte"],
         same_strike,
-        params.get("exit_dte_tolerance", 0),
+        params["exit_dte_tolerance"],
     )
 
     if merged.empty:
         return _fmt(merged)
 
     # Apply exit date filtering to calendar/diagonal spreads
-    exit_dates = params.get("exit_dates")
+    exit_dates = params["exit_dates"]
     if exit_dates is not None and not merged.empty:
         merged = _apply_signal_filter(merged, exit_dates, date_col="exit_date")
 
@@ -306,9 +305,9 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     merged = _calculate_calendar_pnl(
         merged,
         leg_def,
-        params.get("slippage", "mid"),
-        params.get("fill_ratio", 0.5),
-        params.get("reference_volume", 1000),
+        params["slippage"],
+        params["fill_ratio"],
+        params["reference_volume"],
     )
 
     return _fmt(merged)

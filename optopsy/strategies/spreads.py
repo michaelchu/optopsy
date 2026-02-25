@@ -18,7 +18,6 @@ from ._helpers import (
     _spread,
     _straddles,
     _strangles,
-    default_kwargs,
 )
 
 
@@ -207,7 +206,6 @@ def protective_put(
     Returns:
         DataFrame with protective put strategy performance statistics
     """
-    params = {**default_kwargs, **kwargs}
     return _process_strategy(
         data,
         internal_cols=double_strike_internal_cols,
@@ -218,5 +216,5 @@ def protective_put(
         ],
         rules=_rule_non_overlapping_strike,
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
-        params=params,
+        params=kwargs,
     )

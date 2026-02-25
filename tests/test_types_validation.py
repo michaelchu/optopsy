@@ -7,20 +7,44 @@ from pydantic import ValidationError
 from optopsy.types import CalendarStrategyParams, SimulatorParams, StrategyParams
 
 
-class TestStrategyParamsValidation:
-    """Test StrategyParams Pydantic model validation."""
+class TestStrategyParamsDefaults:
+    """Test that StrategyParams applies correct defaults."""
 
-    def test_accepts_empty_params(self):
+    def test_defaults_filled_in(self):
         model = StrategyParams.model_validate({})
-        assert model.max_entry_dte is None
+        assert model.max_entry_dte == 90
+        assert model.exit_dte == 0
+        assert model.exit_dte_tolerance == 0
+        assert model.dte_interval == 7
+        assert model.max_otm_pct == 0.5
+        assert model.otm_pct_interval == 0.05
+        assert model.min_bid_ask == 0.05
+        assert model.slippage == "mid"
+        assert model.fill_ratio == 0.5
+        assert model.reference_volume == 1000
+        assert model.raw is False
+        assert model.drop_nan is True
 
-    def test_accepts_valid_params(self):
+    def test_optional_fields_default_to_none(self):
+        model = StrategyParams.model_validate({})
+        assert model.delta_min is None
+        assert model.delta_max is None
+        assert model.delta_interval is None
+        assert model.entry_dates is None
+        assert model.exit_dates is None
+        assert model.side is None
+
+    def test_user_overrides_applied(self):
         model = StrategyParams.model_validate(
             {"max_entry_dte": 60, "exit_dte": 30, "raw": True}
         )
         assert model.max_entry_dte == 60
         assert model.exit_dte == 30
         assert model.raw is True
+
+
+class TestStrategyParamsValidation:
+    """Test StrategyParams Pydantic model validation."""
 
     def test_rejects_negative_max_entry_dte(self):
         with pytest.raises(ValidationError):
@@ -96,20 +120,30 @@ class TestStrategyParamsValidation:
         with pytest.raises(ValidationError):
             StrategyParams.model_validate({"fill_ratio": -0.1})
 
-    def test_ignores_unknown_params(self):
-        model = StrategyParams.model_validate({"unknown_field": 42})
-        assert "unknown_field" not in model.model_dump()
+    def test_rejects_unknown_params(self):
+        """extra=forbid catches typos in parameter names."""
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"unknown_field": 42})
 
-    def test_all_none_values_accepted(self):
-        params = {
-            "max_entry_dte": None,
-            "exit_dte": None,
-            "max_otm_pct": None,
-            "raw": None,
-            "slippage": None,
-        }
-        model = StrategyParams.model_validate(params)
-        assert model.max_entry_dte is None
+    def test_rejects_typo_in_param_name(self):
+        """Catches common typos like wrong casing."""
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"max_entry_DTE": 45})
+
+    def test_accepts_none_for_optional_fields(self):
+        """Only genuinely optional fields accept None."""
+        model = StrategyParams.model_validate(
+            {
+                "delta_min": None,
+                "delta_max": None,
+                "delta_interval": None,
+                "entry_dates": None,
+                "exit_dates": None,
+                "side": None,
+            }
+        )
+        assert model.delta_min is None
+        assert model.side is None
 
     def test_accepts_int_for_delta_min(self):
         model = StrategyParams.model_validate({"delta_min": 1})
@@ -138,6 +172,22 @@ class TestStrategyParamsValidation:
     def test_fill_ratio_rejects_numeric_string(self):
         with pytest.raises(ValidationError):
             StrategyParams.model_validate({"fill_ratio": "0.5"})
+
+
+class TestStrategyParamsCrossFieldValidation:
+    """Test cross-field validators on StrategyParams."""
+
+    def test_rejects_exit_dte_equal_to_max_entry_dte(self):
+        with pytest.raises(ValidationError, match="exit_dte.*must be <.*max_entry_dte"):
+            StrategyParams.model_validate({"exit_dte": 90, "max_entry_dte": 90})
+
+    def test_rejects_exit_dte_greater_than_max_entry_dte(self):
+        with pytest.raises(ValidationError, match="exit_dte.*must be <.*max_entry_dte"):
+            StrategyParams.model_validate({"exit_dte": 100, "max_entry_dte": 90})
+
+    def test_accepts_exit_dte_less_than_max_entry_dte(self):
+        model = StrategyParams.model_validate({"exit_dte": 30, "max_entry_dte": 90})
+        assert model.exit_dte == 30
 
 
 class TestStrategyParamsDatesValidation:
@@ -174,6 +224,22 @@ class TestCalendarStrategyParamsValidation:
             }
         )
         assert model.front_dte_min == 20
+
+    def test_calendar_defaults(self):
+        """Calendar strategies have different defaults from standard."""
+        model = CalendarStrategyParams.model_validate({})
+        assert model.exit_dte == 7
+        assert model.max_entry_dte is None
+        assert model.front_dte_min == 20
+        assert model.front_dte_max == 40
+        assert model.back_dte_min == 50
+        assert model.back_dte_max == 90
+
+    def test_calendar_skips_exit_dte_ordering_when_no_max_entry_dte(self):
+        """Calendar strategies allow max_entry_dte=None, skipping cross-field check."""
+        model = CalendarStrategyParams.model_validate({"exit_dte": 30})
+        assert model.exit_dte == 30
+        assert model.max_entry_dte is None
 
     def test_rejects_front_dte_min_gt_max(self):
         with pytest.raises(
@@ -231,6 +297,11 @@ class TestCalendarStrategyParamsValidation:
         """Calendar params should also validate base StrategyParams fields."""
         with pytest.raises(ValidationError):
             CalendarStrategyParams.model_validate({"max_entry_dte": -1})
+
+    def test_rejects_unknown_params(self):
+        """extra=forbid inherited from base."""
+        with pytest.raises(ValidationError):
+            CalendarStrategyParams.model_validate({"typo_param": 42})
 
 
 class TestSimulatorParamsValidation:

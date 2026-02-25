@@ -1504,33 +1504,39 @@ class TestApplySignal:
 
     def test_dates_validation_rejects_non_dataframe(self):
         """entry_dates that is not a DataFrame should be rejected."""
-        from optopsy.checks import _check_dates_dataframe
+        from pydantic import ValidationError
 
-        with pytest.raises(ValueError, match="must be a DataFrame"):
-            _check_dates_dataframe("entry_dates", "not_a_dataframe")
+        from optopsy.types import StrategyParams
+
+        with pytest.raises(ValidationError, match="must be a DataFrame"):
+            StrategyParams.model_validate({"entry_dates": "not_a_dataframe"})
 
     def test_dates_validation_rejects_missing_columns(self):
         """entry_dates missing required columns should be rejected."""
-        from optopsy.checks import _check_dates_dataframe
+        from pydantic import ValidationError
+
+        from optopsy.types import StrategyParams
 
         df = pd.DataFrame({"quote_date": [1]})
-        with pytest.raises(ValueError, match="missing required columns"):
-            _check_dates_dataframe("entry_dates", df)
+        with pytest.raises(ValidationError, match="missing required columns"):
+            StrategyParams.model_validate({"entry_dates": df})
 
     def test_dates_validation_accepts_valid(self):
         """Valid dates DataFrame should pass validation."""
-        from optopsy.checks import _check_dates_dataframe
+        from optopsy.types import StrategyParams
 
         df = pd.DataFrame(
             {"underlying_symbol": ["SPX"], "quote_date": [pd.Timestamp("2018-01-01")]}
         )
-        _check_dates_dataframe("entry_dates", df)  # no exception
+        model = StrategyParams.model_validate({"entry_dates": df})
+        assert model.entry_dates is not None
 
     def test_dates_validation_accepts_none(self):
         """None should pass validation."""
-        from optopsy.checks import _check_dates_dataframe
+        from optopsy.types import StrategyParams
 
-        _check_dates_dataframe("entry_dates", None)  # no exception
+        model = StrategyParams.model_validate({"entry_dates": None})
+        assert model.entry_dates is None
 
 
 # ============================================================================
