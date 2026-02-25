@@ -235,7 +235,9 @@ def _covered_with_stock(
     option_side = option_leg[0]
     option_filter = option_leg[1]
 
-    # Only one delta target needed (for the option leg)
+    # Only one delta target needed (for the option leg).  We use
+    # ``leg1_delta`` because the option is evaluated as the sole leg
+    # through the single-leg pipeline.
     kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
     params = _run_checks(dict(kwargs), data)
 
@@ -263,6 +265,8 @@ def _covered_with_stock(
         exit_dates=params["exit_dates"],
     )
 
+    # Stock delta is always 1.0, so delta_range_leg1 is constant and not
+    # useful for grouping.  Only the option leg's delta range is included.
     external_cols = ["dte_range", "delta_range_leg2"]
 
     if evaluated.empty:
