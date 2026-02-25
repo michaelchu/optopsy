@@ -59,6 +59,8 @@ optopsy-chat download SPY AAPL TSLA    # multiple symbols
 optopsy-chat download SPY -v           # verbose/debug output
 ```
 
+> **Note:** If developing with `uv`, prefix commands with `uv run` (e.g., `uv run optopsy-chat download SPY`).
+
 Data is stored locally as Parquet files at `~/.optopsy/cache/`. Re-running the download command only fetches new data since your last download — it won't re-download what you already have. A Rich progress display shows download progress in the terminal.
 
 Once downloaded, the chat agent can query this data instantly without needing to re-fetch. Stock price history (via yfinance) is also cached locally and fetched automatically when the agent needs it for charting or signal analysis — no manual download required.
