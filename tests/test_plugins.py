@@ -161,6 +161,21 @@ def test_tool_plugin():
     assert result[0]["descriptions"]["my_tool"] == "A custom tool"
 
 
+def test_tool_registrar_non_dict_return(caplog):
+    """A tool registrar that returns a non-dict is warned and skipped."""
+    registrar = lambda: ["not", "a", "dict"]  # noqa: E731
+    ep = _make_ep("pro", registrar)
+
+    with (
+        patch("importlib.metadata.entry_points", return_value=[ep]),
+        caplog.at_level(logging.WARNING, logger="optopsy.plugins"),
+    ):
+        result = get_plugin_tools()
+
+    assert result == []
+    assert "non-dict" in caplog.text
+
+
 # ---------------------------------------------------------------------------
 # Error handling — broken plugins are logged and skipped
 # ---------------------------------------------------------------------------
