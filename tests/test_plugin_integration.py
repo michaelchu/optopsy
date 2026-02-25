@@ -370,3 +370,35 @@ class TestPluginProviderIntegration:
 
         # NotAProvider should have been skipped
         assert all(type(p).__name__ != "NotAProvider" for p in providers)
+
+    def test_provider_instantiation_failure_skipped(self):
+        """A DataProvider subclass that raises on __init__ is skipped."""
+        from optopsy.ui.providers.base import DataProvider
+
+        class BrokenProvider(DataProvider):
+            name = "broken"
+            env_key = "BROKEN_KEY"
+
+            def __init__(self):
+                raise RuntimeError("init exploded")
+
+            def get_tool_schemas(self):
+                return []
+
+            def get_tool_names(self):
+                return []
+
+            def execute(self, tool_name, arguments):
+                return "ok", None
+
+        with patch(
+            "optopsy.plugins.get_plugin_providers", return_value=[BrokenProvider]
+        ):
+            with patch.dict(sys.modules, {"optopsy.ui.providers.eodhd": None}):
+                import optopsy.ui.providers as _prov
+
+                importlib.reload(_prov)
+                _prov._ALL_PROVIDERS = None
+                providers = _prov._load_providers()
+
+        assert all(type(p).__name__ != "BrokenProvider" for p in providers)
