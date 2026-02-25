@@ -20,6 +20,7 @@ from ..core import _process_calendar_strategy, _process_strategy
 from ..definitions import (
     calendar_spread_external_cols,
     calendar_spread_internal_cols,
+    describe_cols,
     diagonal_spread_external_cols,
     diagonal_spread_internal_cols,
     double_strike_internal_cols,
@@ -304,10 +305,16 @@ def _covered_with_stock(
     option_side = option_leg[0]
     option_filter = option_leg[1]
 
-    # Only one delta target needed (for the option leg).  We use
-    # ``leg1_delta`` because the option is evaluated as the sole leg
-    # through the single-leg pipeline.
-    kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
+    # Only one delta target is needed (for the option leg).  The option is
+    # evaluated as a single leg, so we pass its delta target via
+    # ``leg1_delta`` to the single-leg pipeline.  However, for consistency
+    # with the synthetic 2-leg covered/protective strategies, allow a
+    # user-provided ``leg2_delta`` (which normally controls the option leg)
+    # to take effect when ``leg1_delta`` is not explicitly set.
+    if "leg1_delta" not in kwargs and "leg2_delta" in kwargs:
+        kwargs["leg1_delta"] = kwargs["leg2_delta"]
+    else:
+        kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
     params = _run_checks(dict(kwargs), data)
 
     # --- evaluate the option leg ---
@@ -338,13 +345,14 @@ def _covered_with_stock(
     # useful for grouping.  Only the option leg's delta range is included.
     external_cols = ["dte_range", "delta_range_leg2"]
 
+    def _empty_result() -> pd.DataFrame:
+        """Return a correctly shaped empty DataFrame for both raw and aggregated."""
+        if params["raw"]:
+            return pd.DataFrame(columns=double_strike_internal_cols)
+        return pd.DataFrame(columns=external_cols + describe_cols)
+
     if evaluated.empty:
-        return _format_output(
-            pd.DataFrame(columns=double_strike_internal_cols),
-            params,
-            double_strike_internal_cols,
-            external_cols,
-        )
+        return _empty_result()
 
     # --- match stock prices ---
     stock_prices = _normalize_stock_data(stock_data, data)
@@ -366,12 +374,7 @@ def _covered_with_stock(
     result = result.merge(exit_map, on=["underlying_symbol", "_exit_date"], how="inner")
 
     if result.empty:
-        return _format_output(
-            pd.DataFrame(columns=double_strike_internal_cols),
-            params,
-            double_strike_internal_cols,
-            external_cols,
-        )
+        return _empty_result()
 
     # --- compute combined P&L ---
     stock_entry = result["_stock_entry"]

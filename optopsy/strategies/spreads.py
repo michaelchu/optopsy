@@ -145,6 +145,7 @@ def short_put_spread(
 
 def covered_call(
     data: pd.DataFrame,
+    *,
     stock_data: Optional[pd.DataFrame] = None,
     **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:
@@ -184,6 +185,7 @@ def covered_call(
 
 def protective_put(
     data: pd.DataFrame,
+    *,
     stock_data: Optional[pd.DataFrame] = None,
     **kwargs: Unpack[StrategyParamsDict],
 ) -> pd.DataFrame:

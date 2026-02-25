@@ -388,6 +388,10 @@ def test_covered_call_with_stock_no_match(multi_strike_data):
     assert results.empty
     assert list(results.columns) == double_strike_internal_cols
 
+    # Aggregated mode should also return empty without groupby errors
+    results_agg = covered_call(multi_strike_data, stock_data=empty_stock)
+    assert results_agg.empty
+
 
 def test_covered_call_with_stock_partial_match(multi_strike_data):
     """When stock data matches entry but not exit date, result is empty."""
