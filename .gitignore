@@ -55,6 +55,7 @@ htmlcov/
 # Chainlit
 .chainlit/
 chainlit.md
+!optopsy/ui/chainlit.md
 .files/
 
 # Optopsy data uploads
