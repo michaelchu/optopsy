@@ -55,7 +55,7 @@ Four-leg strategies with defined risk.
 [Learn more →](strategies/iron-strategies.md)
 
 ### Covered Strategies (2)
-Stock + option combinations (synthetic).
+Stock + option combinations. Supports actual stock data via [yfinance](https://github.com/ranaroussi/yfinance) or synthetic deep ITM calls.
 
 - [Covered Call](strategies/covered.md#covered-call) - Income on stock holdings
 - [Protective Put](strategies/covered.md#protective-put) - Downside insurance

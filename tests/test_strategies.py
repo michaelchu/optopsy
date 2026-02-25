@@ -422,6 +422,80 @@ def test_covered_without_stock_unchanged(multi_strike_data):
     assert results.iloc[0]["strike_leg1"] == 207.5
 
 
+# --- yfinance-format stock data tests ---
+
+
+def test_covered_call_with_yfinance_format(multi_strike_data):
+    """Covered call accepts yfinance-style DataFrame (DatetimeIndex, capitalized cols)."""
+    yf_stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    results = covered_call(multi_strike_data, stock_data=yf_stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+    assert results.iloc[0]["strike_leg1"] == 212.5
+
+
+def test_protective_put_with_yfinance_format(multi_strike_data):
+    """Protective put accepts yfinance-style DataFrame."""
+    yf_stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    results = protective_put(multi_strike_data, stock_data=yf_stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+
+
+def test_covered_call_with_date_column(multi_strike_data):
+    """stock_data with 'date' column (no DatetimeIndex) is normalized."""
+    stock = pd.DataFrame(
+        {
+            "date": [
+                datetime.datetime(2018, 1, 1),
+                datetime.datetime(2018, 1, 31),
+            ],
+            "close": [212.5, 215.0],
+        }
+    )
+    results = covered_call(multi_strike_data, stock_data=stock, raw=True)
+    assert not results.empty
+    assert results.iloc[0]["option_type_leg1"] == "stock"
+
+
+def test_covered_call_stock_data_multi_symbol_error(multi_strike_data):
+    """Raise when stock_data has no symbol and options data has multiple symbols."""
+    # Create options data with two symbols
+    multi_sym = multi_strike_data.copy()
+    extra = multi_strike_data.copy()
+    extra["underlying_symbol"] = "AAPL"
+    multi_sym = pd.concat([multi_sym, extra], ignore_index=True)
+
+    stock = pd.DataFrame(
+        {
+            "Close": [212.5, 215.0],
+        },
+        index=pd.DatetimeIndex(
+            [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)],
+            name="Date",
+        ),
+    )
+    with pytest.raises(KeyError, match="multiple symbols"):
+        covered_call(multi_sym, stock_data=stock, raw=True)
+
+
 def test_single_long_calls_raw(data):
     results = long_calls(data, raw=True)
     assert len(results) == 1

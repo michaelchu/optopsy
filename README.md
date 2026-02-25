@@ -181,7 +181,7 @@ The simulator works with all 28 strategies. It selects one trade per entry date,
 | **Butterflies** | `long_call_butterfly`, `short_call_butterfly`, `long_put_butterfly`, `short_put_butterfly` |
 | **Iron Condors** | `iron_condor`, `reverse_iron_condor` |
 | **Iron Butterflies** | `iron_butterfly`, `reverse_iron_butterfly` |
-| **Covered** | `covered_call`, `protective_put` |
+| **Covered** | `covered_call`, `protective_put` (supports actual stock data via [yfinance](https://github.com/ranaroussi/yfinance)) |
 | **Calendar Spreads** | `long_call_calendar`, `short_call_calendar`, `long_put_calendar`, `short_put_calendar` |
 | **Diagonal Spreads** | `long_call_diagonal`, `short_call_diagonal`, `long_put_diagonal`, `short_put_diagonal` |
 

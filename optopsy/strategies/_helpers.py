@@ -194,8 +194,9 @@ def _covered_call(
     Args:
         data: DataFrame containing option chain data.
         leg_def: Leg definitions – ``[(Side, filter), ...]``.
-        stock_data: Optional DataFrame with columns
-            ``[underlying_symbol, quote_date, close]``.
+        stock_data: Optional DataFrame of stock prices.  Accepts
+            ``yf.download()`` output directly; normalized internally
+            via ``_normalize_stock_data()``.
         **kwargs: Strategy parameters forwarded to the processing pipeline.
     """
     if stock_data is not None:
@@ -211,6 +212,74 @@ def _covered_call(
         join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
         params=kwargs,
     )
+
+
+def _normalize_stock_data(
+    stock_data: pd.DataFrame, options_data: pd.DataFrame
+) -> pd.DataFrame:
+    """Normalize stock data to the internal format expected by the pipeline.
+
+    Accepts stock data from various sources (yfinance, CSV, user-provided
+    DataFrames) and returns a DataFrame with columns:
+    ``[underlying_symbol, quote_date, close]``.
+
+    Normalization steps:
+
+    1. If the index is a ``DatetimeIndex``, reset it to a column (handles
+       yfinance output where dates are the index).
+    2. Flatten ``MultiIndex`` columns (yfinance multi-ticker downloads).
+    3. Lowercase all column names (``Close`` → ``close``).
+    4. Map ``date`` → ``quote_date`` if ``quote_date`` is missing.
+    5. If ``underlying_symbol`` is absent, infer it from *options_data*
+       (works for single-symbol datasets, raises for multi-symbol).
+    """
+    from ..timestamps import normalize_dates
+
+    df = stock_data.copy()
+
+    # Flatten MultiIndex columns (yfinance multi-ticker downloads)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [c[0] for c in df.columns]
+
+    # Reset DatetimeIndex to a column (yfinance uses date as index)
+    if isinstance(df.index, pd.DatetimeIndex):
+        df = df.reset_index()
+
+    # Lowercase all column names
+    df.columns = [c.lower() for c in df.columns]
+
+    # Map common date column names to quote_date
+    if "quote_date" not in df.columns:
+        if "date" in df.columns:
+            df = df.rename(columns={"date": "quote_date"})
+        elif "index" in df.columns:
+            df = df.rename(columns={"index": "quote_date"})
+
+    # Infer underlying_symbol from options data if missing
+    if "underlying_symbol" not in df.columns:
+        symbols = options_data["underlying_symbol"].unique()
+        if len(symbols) == 1:
+            df["underlying_symbol"] = symbols[0]
+        else:
+            raise KeyError(
+                "stock_data has no 'underlying_symbol' column and the options "
+                "data contains multiple symbols. Please add an "
+                "'underlying_symbol' column to your stock data."
+            )
+
+    # Validate required columns are present after normalization
+    required = {"underlying_symbol", "quote_date", "close"}
+    missing = required - set(df.columns)
+    if missing:
+        raise KeyError(
+            f"stock_data is missing required columns after normalization: "
+            f"{', '.join(sorted(missing))}. "
+            f"Expected columns: underlying_symbol (or inferred), "
+            f"quote_date (or date/DatetimeIndex), close."
+        )
+
+    df["quote_date"] = normalize_dates(df["quote_date"])
+    return df[["underlying_symbol", "quote_date", "close"]]
 
 
 def _covered_with_stock(
@@ -278,17 +347,7 @@ def _covered_with_stock(
         )
 
     # --- match stock prices ---
-    required_stock_cols = {"underlying_symbol", "quote_date", "close"}
-    missing_stock_cols = required_stock_cols - set(stock_data.columns)
-    if missing_stock_cols:
-        missing_str = ", ".join(sorted(missing_stock_cols))
-        raise KeyError(
-            f"stock_data is missing required columns: {missing_str}. "
-            "Required columns are: underlying_symbol, quote_date, close."
-        )
-    stock = stock_data.copy()
-    stock["quote_date"] = normalize_dates(stock["quote_date"])
-    stock_prices = stock[["underlying_symbol", "quote_date", "close"]]
+    stock_prices = _normalize_stock_data(stock_data, data)
 
     # Entry price
     entry_map = stock_prices.rename(

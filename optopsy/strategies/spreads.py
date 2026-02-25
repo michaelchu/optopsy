@@ -160,10 +160,12 @@ def covered_call(
 
     Args:
         data: DataFrame containing option chain data
-        stock_data: Optional DataFrame with columns
-            ``[underlying_symbol, quote_date, close]`` for actual stock
-            prices.  When provided, the strategy uses real stock data
-            instead of a synthetic deep ITM call.
+        stock_data: Optional DataFrame of stock prices for the underlying.
+            Accepts output from ``yfinance`` directly (``yf.download()``)
+            as well as any DataFrame containing a ``close`` column and
+            dates.  The data is normalized internally — column names are
+            lowercased, a ``DatetimeIndex`` is converted to a column, and
+            ``underlying_symbol`` is inferred from *data* when absent.
         **kwargs: Optional strategy parameters
 
     Returns:
@@ -197,10 +199,12 @@ def protective_put(
 
     Args:
         data: DataFrame containing option chain data
-        stock_data: Optional DataFrame with columns
-            ``[underlying_symbol, quote_date, close]`` for actual stock
-            prices.  When provided, the strategy uses real stock data
-            instead of a synthetic deep ITM call.
+        stock_data: Optional DataFrame of stock prices for the underlying.
+            Accepts output from ``yfinance`` directly (``yf.download()``)
+            as well as any DataFrame containing a ``close`` column and
+            dates.  The data is normalized internally — column names are
+            lowercased, a ``DatetimeIndex`` is converted to a column, and
+            ``underlying_symbol`` is inferred from *data* when absent.
         **kwargs: Optional strategy parameters
 
     Returns:
