@@ -9,6 +9,7 @@ action buttons, rich elements (DataFrame + CSV export), and settings context.
 import asyncio
 import datetime
 import json
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
@@ -1306,6 +1307,241 @@ class TestOnChatStartSettings:
 
 # ---------------------------------------------------------------------------
 # ToolResult._result_df tests
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Connection info helper tests
+# ---------------------------------------------------------------------------
+
+
+class TestGetAsyncConninfo:
+    """Tests for _get_async_conninfo() URL conversion."""
+
+    def test_defaults_to_sqlite(self):
+        """Without DATABASE_URL, returns SQLite aiosqlite connection string."""
+        from optopsy.ui.app import _get_async_conninfo
+
+        with patch.dict("os.environ", {}, clear=False):
+            os.environ.pop("DATABASE_URL", None)
+            result = _get_async_conninfo()
+        assert result.startswith("sqlite+aiosqlite:///")
+
+    def test_postgresql_url_converted_to_asyncpg(self):
+        """Standard postgresql:// is converted to postgresql+asyncpg://."""
+        from optopsy.ui.app import _get_async_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "postgresql://user:pw@host/db"}):
+            result = _get_async_conninfo()
+        assert result == "postgresql+asyncpg://user:pw@host/db"
+
+    def test_legacy_postgres_url_normalized(self):
+        """Legacy postgres:// (Railway/Heroku) is normalized to asyncpg."""
+        from optopsy.ui.app import _get_async_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "postgres://user:pw@host/db"}):
+            result = _get_async_conninfo()
+        assert result == "postgresql+asyncpg://user:pw@host/db"
+
+    def test_non_postgresql_url_passed_through(self):
+        """Non-PostgreSQL DATABASE_URL is returned as-is."""
+        from optopsy.ui.app import _get_async_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "mysql://user:pw@host/db"}):
+            result = _get_async_conninfo()
+        assert result == "mysql://user:pw@host/db"
+
+
+class TestGetSyncConninfo:
+    """Tests for _get_sync_conninfo() URL conversion."""
+
+    def test_defaults_to_sqlite(self):
+        """Without DATABASE_URL, returns plain SQLite connection string."""
+        from optopsy.ui.app import _get_sync_conninfo
+
+        with patch.dict("os.environ", {}, clear=False):
+            os.environ.pop("DATABASE_URL", None)
+            result = _get_sync_conninfo()
+        assert result.startswith("sqlite:///")
+
+    def test_postgresql_url_uses_psycopg2(self):
+        """Standard postgresql:// is converted to postgresql+psycopg2://."""
+        from optopsy.ui.app import _get_sync_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "postgresql://user:pw@host/db"}):
+            result = _get_sync_conninfo()
+        assert result == "postgresql+psycopg2://user:pw@host/db"
+
+    def test_legacy_postgres_url_uses_psycopg2(self):
+        """Legacy postgres:// is normalized to psycopg2 dialect."""
+        from optopsy.ui.app import _get_sync_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "postgres://user:pw@host/db"}):
+            result = _get_sync_conninfo()
+        assert result == "postgresql+psycopg2://user:pw@host/db"
+
+    def test_asyncpg_url_converted_to_psycopg2(self):
+        """postgresql+asyncpg:// is converted to psycopg2 for sync use."""
+        from optopsy.ui.app import _get_sync_conninfo
+
+        with patch.dict(
+            "os.environ", {"DATABASE_URL": "postgresql+asyncpg://user:pw@host/db"}
+        ):
+            result = _get_sync_conninfo()
+        assert result == "postgresql+psycopg2://user:pw@host/db"
+
+    def test_non_postgresql_url_passed_through(self):
+        """Non-PostgreSQL DATABASE_URL is returned as-is."""
+        from optopsy.ui.app import _get_sync_conninfo
+
+        with patch.dict("os.environ", {"DATABASE_URL": "mysql://user:pw@host/db"}):
+            result = _get_sync_conninfo()
+        assert result == "mysql://user:pw@host/db"
+
+
+# ---------------------------------------------------------------------------
+# _lookup_element_mime tests
+# ---------------------------------------------------------------------------
+
+
+class TestLookupElementMime:
+    """Tests for _lookup_element_mime() connection cleanup."""
+
+    def test_returns_mime_and_disposes_engine(self):
+        """Found mime type is returned and engine is always disposed."""
+
+        async def _run():
+            from optopsy.ui.app import _lookup_element_mime
+
+            mock_row = ("application/json",)
+
+            mock_result = MagicMock()
+            mock_result.fetchone.return_value = mock_row
+
+            mock_conn = AsyncMock()
+            mock_conn.execute = AsyncMock(return_value=mock_result)
+
+            # Use a real async context manager for engine.begin()
+            class FakeCtx:
+                async def __aenter__(self):
+                    return mock_conn
+
+                async def __aexit__(self, *args):
+                    return False
+
+            mock_engine = MagicMock()
+            mock_engine.begin.return_value = FakeCtx()
+            mock_engine.dispose = AsyncMock()
+
+            with patch(
+                "sqlalchemy.ext.asyncio.create_async_engine",
+                return_value=mock_engine,
+            ):
+                result = await _lookup_element_mime("some/key")
+
+            assert result == "application/json"
+            mock_engine.dispose.assert_called_once()
+
+        asyncio.run(_run())
+
+    def test_returns_none_on_no_match_and_disposes(self):
+        """No matching row returns None and engine is still disposed."""
+
+        async def _run():
+            from optopsy.ui.app import _lookup_element_mime
+
+            mock_result = MagicMock()
+            mock_result.fetchone.return_value = None
+
+            mock_conn = AsyncMock()
+            mock_conn.execute = AsyncMock(return_value=mock_result)
+
+            mock_engine = AsyncMock()
+            mock_engine.begin.return_value.__aenter__ = AsyncMock(
+                return_value=mock_conn
+            )
+            mock_engine.begin.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_engine.dispose = AsyncMock()
+
+            with patch(
+                "sqlalchemy.ext.asyncio.create_async_engine",
+                return_value=mock_engine,
+            ):
+                result = await _lookup_element_mime("missing/key")
+
+            assert result is None
+            mock_engine.dispose.assert_called_once()
+
+        asyncio.run(_run())
+
+    def test_disposes_engine_on_exception(self):
+        """Engine is disposed even when the query raises an exception."""
+
+        async def _run():
+            from optopsy.ui.app import _lookup_element_mime
+
+            mock_engine = AsyncMock()
+            mock_engine.begin.return_value.__aenter__ = AsyncMock(
+                side_effect=RuntimeError("connection failed")
+            )
+            mock_engine.begin.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_engine.dispose = AsyncMock()
+
+            with patch(
+                "sqlalchemy.ext.asyncio.create_async_engine",
+                return_value=mock_engine,
+            ):
+                result = await _lookup_element_mime("any/key")
+
+            assert result is None
+            mock_engine.dispose.assert_called_once()
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# paths.py tests
+# ---------------------------------------------------------------------------
+
+
+class TestResolveDataDir:
+    """Tests for _resolve_data_dir() and OPTOPSY_DATA_DIR handling."""
+
+    def test_default_uses_home_optopsy(self):
+        """Without env var, returns ~/.optopsy."""
+        from optopsy.ui.paths import _resolve_data_dir
+
+        with patch.dict("os.environ", {}, clear=False):
+            os.environ.pop("OPTOPSY_DATA_DIR", None)
+            result = _resolve_data_dir()
+        from pathlib import Path
+
+        assert result == Path("~/.optopsy").expanduser()
+
+    def test_env_var_overrides_default(self):
+        """OPTOPSY_DATA_DIR overrides the default path."""
+        from optopsy.ui.paths import _resolve_data_dir
+
+        with patch.dict("os.environ", {"OPTOPSY_DATA_DIR": "/tmp/optopsy-test"}):
+            result = _resolve_data_dir()
+        from pathlib import Path
+
+        assert result == Path("/tmp/optopsy-test")
+
+    def test_env_var_expands_tilde(self):
+        """OPTOPSY_DATA_DIR with ~ is expanded via expanduser()."""
+        from optopsy.ui.paths import _resolve_data_dir
+
+        with patch.dict("os.environ", {"OPTOPSY_DATA_DIR": "~/my-optopsy"}):
+            result = _resolve_data_dir()
+        from pathlib import Path
+
+        assert result == Path("~/my-optopsy").expanduser()
+        assert "~" not in str(result)
+
+
+# ---------------------------------------------------------------------------
+# Plotly bdata decoding tests
 # ---------------------------------------------------------------------------
 
 
