@@ -5,7 +5,7 @@ Optopsy is a Python library for backtesting options trading strategies using
 historical options chain data. It provides:
 
 - 28 built-in options strategies (singles, spreads, butterflies, condors, calendars)
-- Flexible filtering by DTE, OTM%, bid-ask spread, and option Greeks
+- Flexible filtering by DTE, delta targeting, bid-ask spread, and option Greeks
 - Configurable slippage models (mid, spread, liquidity-based)
 - Statistical analysis with aggregated performance metrics
 - Raw trade data export for custom analysis

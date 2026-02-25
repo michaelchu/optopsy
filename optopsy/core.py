@@ -4,8 +4,8 @@ This module implements the core pipeline that transforms raw option chain data
 into strategy performance results. The pipeline flows through several stages:
 
 1. **Validation** -- ``_run_checks()`` verifies parameter types and DataFrame schemas.
-2. **Evaluation** -- ``_evaluate_all_options()`` filters by DTE, OTM%, bid/ask thresholds,
-   and optionally delta; then merges entry and exit rows for each contract.
+2. **Evaluation** -- ``_evaluate_all_options()`` filters by DTE, delta targeting,
+   and bid/ask thresholds; then merges entry and exit rows for each contract.
 3. **Strategy construction** -- ``_strategy_engine()`` joins legs (single or multi-leg),
    applies strike-ordering rules, and calculates P&L with optional slippage.
 4. **Output formatting** -- ``_format_output()`` returns raw trades or grouped
@@ -63,11 +63,7 @@ def _merge_legs(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
 ) -> pd.DataFrame:
-    """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L.
-
-    Shared by ``_strategy_engine()`` (OTM% path) and
-    ``_process_strategy_delta_targeted()`` (per-leg delta path).
-    """
+    """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L."""
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
 
     result = partials[0]
@@ -158,26 +154,33 @@ def _strategy_engine(
     )
 
 
-def _get_leg_deltas(params: dict) -> List[Optional[dict]]:
-    """Extract per-leg delta TargetRange objects from params."""
-    return [params.get(f"leg{i}_delta") for i in range(1, 5)]
-
-
-def _has_leg_deltas(params: dict) -> bool:
-    """Check if any per-leg delta targets are set."""
-    return any(d is not None for d in _get_leg_deltas(params))
-
-
-def _process_strategy_delta_targeted(
-    data: pd.DataFrame, params: dict, context: dict
-) -> pd.DataFrame:
-    """Process strategy using per-leg delta targeting.
-
-    Each leg is evaluated independently with its own TargetRange,
-    then legs are joined via _strategy_engine().
+def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
+    Main entry point for processing option strategies.
+
+    Each leg is evaluated independently with its own delta TargetRange,
+    then legs are joined via _strategy_engine().
+
+    Args:
+        data: DataFrame containing raw option chain data
+        **context: Dictionary containing strategy parameters, leg definitions,
+                   and formatting options
+
+    Returns:
+        DataFrame with processed strategy results
+    """
+    params = _run_checks(context["params"], data)
+
+    # Normalize date columns once at the root so all downstream merges
+    # (signal filtering, entry/exit matching) work regardless of source.
+    data = data.copy()
+    data["quote_date"] = normalize_dates(data["quote_date"])
+    data["expiration"] = normalize_dates(data["expiration"])
+    # Normalize option_type once so _calls/_puts avoid repeated .str.lower() calls
+    data["option_type"] = data["option_type"].str.lower()
+
     leg_def = context["leg_def"]
-    leg_deltas = _get_leg_deltas(params)
+    leg_deltas = [params.get(f"leg{i}_delta") for i in range(1, 5)]
 
     # Validate that each leg has a delta target
     active_deltas = [d for d in leg_deltas[: len(leg_def)] if d is not None]
@@ -187,10 +190,8 @@ def _process_strategy_delta_targeted(
             f"{len(leg_def)}-leg strategy, got {len(active_deltas)}"
         )
 
-    # Build join_on — strip otm_pct_range* since legs target different deltas
+    # Build join_on from context
     join_on = context.get("join_on")
-    if join_on:
-        join_on = [c for c in join_on if not c.startswith("otm_pct_range")]
 
     # Evaluate each leg independently
     leg_results = []
@@ -208,15 +209,13 @@ def _process_strategy_delta_targeted(
             delta_target=delta_target["target"],
             delta_range_min=delta_target["min"],
             delta_range_max=delta_target["max"],
-            delta_interval=params["delta_interval"]
-            if params["delta_interval"] is not None
-            else 0.05,
+            delta_interval=params["delta_interval"],
             entry_dates=params["entry_dates"],
             exit_dates=params["exit_dates"],
         )
         leg_results.append(evaluated)
 
-    # Build external_cols with delta_range_legN instead of otm_pct_range*
+    # Build external_cols with delta_range_legN
     if len(leg_def) == 1:
         external_cols = ["dte_range", "delta_range"]
     else:
@@ -260,70 +259,6 @@ def _process_strategy_delta_targeted(
     )
 
 
-def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
-    """
-    Main entry point for processing option strategies.
-
-    Args:
-        data: DataFrame containing raw option chain data
-        **context: Dictionary containing strategy parameters, leg definitions, and formatting options
-
-    Returns:
-        DataFrame with processed strategy results
-    """
-    params = _run_checks(context["params"], data)
-
-    # Normalize date columns once at the root so all downstream merges
-    # (signal filtering, entry/exit matching) work regardless of source.
-    data = data.copy()
-    data["quote_date"] = normalize_dates(data["quote_date"])
-    data["expiration"] = normalize_dates(data["expiration"])
-    # Normalize option_type once so _calls/_puts avoid repeated .str.lower() calls
-    data["option_type"] = data["option_type"].str.lower()
-
-    # Branch to delta-targeted path when leg*_delta params are set
-    if _has_leg_deltas(params):
-        return _process_strategy_delta_targeted(data, params, context)
-
-    # Build external_cols, adding delta_range if delta grouping is enabled
-    external_cols = context["external_cols"].copy()
-    if params["delta_interval"] is not None:
-        external_cols = ["delta_range"] + external_cols
-
-    return (
-        _evaluate_all_options(
-            data,
-            dte_interval=params["dte_interval"],
-            max_entry_dte=params["max_entry_dte"],
-            exit_dte=params["exit_dte"],
-            exit_dte_tolerance=params["exit_dte_tolerance"],
-            otm_pct_interval=params["otm_pct_interval"],
-            max_otm_pct=params["max_otm_pct"],
-            min_bid_ask=params["min_bid_ask"],
-            delta_min=params["delta_min"],
-            delta_max=params["delta_max"],
-            delta_interval=params["delta_interval"],
-            entry_dates=params["entry_dates"],
-            exit_dates=params["exit_dates"],
-        )
-        .pipe(
-            _strategy_engine,
-            context["leg_def"],
-            context.get("join_on"),
-            context.get("rules"),
-            params["slippage"],
-            params["fill_ratio"],
-            params["reference_volume"],
-        )
-        .pipe(
-            _format_output,
-            params,
-            context["internal_cols"],
-            external_cols,
-        )
-    )
-
-
 def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     """
     Process calendar/diagonal spread strategies with different expirations.
@@ -346,6 +281,17 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     internal_cols = context["internal_cols"]
     external_cols = context["external_cols"]
 
+    # Extract per-leg delta targets
+    leg1_delta = params.get("leg1_delta")
+    leg2_delta = params.get("leg2_delta")
+
+    # For calendar spreads (same strike), both legs target the same delta
+    # For diagonal spreads, each leg can target a different delta
+    if leg1_delta is None:
+        raise ValueError("leg1_delta is required for calendar/diagonal strategies")
+    if not same_strike and leg2_delta is None:
+        raise ValueError("leg2_delta is required for diagonal strategies")
+
     def _fmt(df: pd.DataFrame) -> pd.DataFrame:
         return _format_calendar_output(
             df, params, internal_cols, external_cols, same_strike
@@ -358,21 +304,24 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     data["option_type"] = data["option_type"].str.lower()
     data = _assign_dte(data)
 
-    # Get front and back leg options
+    # Get front and back leg options with delta targeting
+    front_delta = leg1_delta
+    back_delta = leg2_delta if leg2_delta is not None else leg1_delta
+
     front_options = _evaluate_calendar_options(
         data,
         params["front_dte_min"],
         params["front_dte_max"],
-        max_otm_pct=params["max_otm_pct"],
         min_bid_ask=params["min_bid_ask"],
+        delta_target=front_delta,
     )
 
     back_options = _evaluate_calendar_options(
         data,
         params["back_dte_min"],
         params["back_dte_max"],
-        max_otm_pct=params["max_otm_pct"],
         min_bid_ask=params["min_bid_ask"],
+        delta_target=back_delta,
     )
 
     # Filter by option type (calls or puts) based on leg definition

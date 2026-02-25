@@ -36,31 +36,6 @@ class TestTargetRangeValidation:
             TargetRange(target=1.5, min=0.5, max=1.5)
 
 
-class TestLegDeltaMutualExclusivity:
-    """Test that leg*_delta is mutually exclusive with delta_min/delta_max."""
-
-    def test_leg_delta_with_delta_min_raises(self):
-        with pytest.raises(ValueError, match="cannot be combined"):
-            op.StrategyParams(
-                leg1_delta=TargetRange(target=0.30, min=0.25, max=0.35),
-                delta_min=0.10,
-            )
-
-    def test_leg_delta_with_delta_max_raises(self):
-        with pytest.raises(ValueError, match="cannot be combined"):
-            op.StrategyParams(
-                leg1_delta=TargetRange(target=0.30, min=0.25, max=0.35),
-                delta_max=0.90,
-            )
-
-    def test_leg_delta_without_delta_range_ok(self):
-        params = op.StrategyParams(
-            leg1_delta=TargetRange(target=0.30, min=0.25, max=0.35),
-        )
-        assert params.leg1_delta is not None
-        assert params.delta_min is None
-
-
 class TestSingleLegDeltaTargeting:
     """Test single-leg strategies with delta targeting."""
 
@@ -165,21 +140,29 @@ class TestStraddleDeltaTargeting:
 class TestDeltaTargetingValidationErrors:
     """Test validation errors for delta targeting."""
 
-    def test_missing_delta_column_raises(self, data):
+    def test_missing_delta_column_raises(self):
         """Data without delta column should raise ValueError."""
-        with pytest.raises(ValueError, match="delta"):
-            op.long_calls(
-                data,
-                leg1_delta=TargetRange(target=0.30, min=0.25, max=0.35),
-            )
+        import datetime
 
-    def test_too_few_leg_deltas_raises(self, multi_strike_data_with_delta):
-        """Providing leg1_delta for a 2-leg strategy should raise."""
-        with pytest.raises(ValueError, match="Expected 2"):
-            op.short_put_spread(
-                multi_strike_data_with_delta,
-                leg1_delta=TargetRange(target=0.30, min=0.25, max=0.35),
-            )
+        import pandas as pd
+
+        # Create data without delta column
+        exp_date = datetime.datetime(2018, 1, 31)
+        entry_date = datetime.datetime(2018, 1, 1)
+        no_delta_data = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPX"],
+                "underlying_price": [212.5],
+                "option_type": ["call"],
+                "expiration": [exp_date],
+                "quote_date": [entry_date],
+                "strike": [212.5],
+                "bid": [3.0],
+                "ask": [3.10],
+            }
+        )
+        with pytest.raises(ValueError, match="delta"):
+            op.long_calls(no_delta_data, raw=True)
 
 
 class TestAggregatedOutput:

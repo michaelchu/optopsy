@@ -58,13 +58,6 @@ def _calculate_fill_price(
         return mid - (half_spread * ratio)
 
 
-def _calculate_otm_pct(data: pd.DataFrame) -> pd.DataFrame:
-    """Calculate out-of-the-money percentage for each option."""
-    return data.assign(
-        otm_pct=lambda r: round((r["strike"] - r["underlying_price"]) / r["strike"], 2)
-    )
-
-
 def _get_leg_quantity(leg: Tuple) -> int:
     """Get quantity for a leg, defaulting to 1 if not specified."""
     return leg[2] if len(leg) > 2 else 1

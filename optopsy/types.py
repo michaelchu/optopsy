@@ -48,16 +48,10 @@ class StrategyParamsDict(TypedDict, total=False):
     dte_interval: int
 
     # Filtering parameters
-    max_otm_pct: float
-    otm_pct_interval: float
     min_bid_ask: float
 
-    # Greeks filtering (optional)
-    delta_min: Optional[float]
-    delta_max: Optional[float]
-
-    # Greeks grouping (optional)
-    delta_interval: Optional[float]
+    # Delta grouping interval
+    delta_interval: float
 
     # Per-leg delta targeting (optional)
     leg1_delta: Optional[TargetRange]
@@ -115,16 +109,10 @@ class StrategyParams(BaseModel):
     dte_interval: int = Field(7, gt=0, strict=True)
 
     # Filtering parameters (strict float enforced by validate_strict_float below)
-    max_otm_pct: float = Field(0.5, gt=0)
-    otm_pct_interval: float = Field(0.05, gt=0)
     min_bid_ask: float = Field(0.05, gt=0)
 
-    # Greeks filtering (optional) — accepts int or float
-    delta_min: Optional[Union[int, float]] = None
-    delta_max: Optional[Union[int, float]] = None
-
-    # Greeks grouping (optional) — accepts int or float
-    delta_interval: Optional[Union[int, float]] = None
+    # Delta grouping interval (always-on, non-optional)
+    delta_interval: float = Field(0.05, gt=0)
 
     # Per-leg delta targeting (optional)
     leg1_delta: Optional[TargetRange] = None
@@ -148,7 +136,7 @@ class StrategyParams(BaseModel):
     raw: StrictBool = False
     drop_nan: StrictBool = True
 
-    @field_validator("max_otm_pct", "otm_pct_interval", "min_bid_ask", mode="before")
+    @field_validator("min_bid_ask", "delta_interval", mode="before")
     @classmethod
     def validate_strict_float(cls, v, info):
         if v is not None and not isinstance(v, float):
@@ -157,9 +145,7 @@ class StrategyParams(BaseModel):
             )
         return v
 
-    @field_validator(
-        "delta_min", "delta_max", "delta_interval", "fill_ratio", mode="before"
-    )
+    @field_validator("fill_ratio", mode="before")
     @classmethod
     def validate_strict_number(cls, v, info):
         if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
@@ -185,22 +171,6 @@ class StrategyParams(BaseModel):
                 f"Expected at least: underlying_symbol, quote_date."
             )
         return v
-
-    @model_validator(mode="after")
-    def check_leg_delta_exclusivity(self):
-        leg_deltas = [
-            self.leg1_delta,
-            self.leg2_delta,
-            self.leg3_delta,
-            self.leg4_delta,
-        ]
-        has_leg_delta = any(d is not None for d in leg_deltas)
-        has_delta_range = self.delta_min is not None or self.delta_max is not None
-        if has_leg_delta and has_delta_range:
-            raise ValueError(
-                "leg*_delta parameters cannot be combined with delta_min/delta_max"
-            )
-        return self
 
     @model_validator(mode="after")
     def check_exit_dte_ordering(self):

@@ -6,7 +6,7 @@ pure functions with no side effects and no dependencies on other optopsy
 modules.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -76,32 +76,6 @@ def _apply_signal_filter(
     return data.merge(valid_dates, on=["underlying_symbol", date_col], how="inner")
 
 
-def _filter_by_delta(
-    data: pd.DataFrame, delta_min: Optional[float], delta_max: Optional[float]
-) -> pd.DataFrame:
-    """
-    Filter options by delta range.
-
-    Args:
-        data: DataFrame with delta column
-        delta_min: Minimum delta value (inclusive), or None for no lower bound
-        delta_max: Maximum delta value (inclusive), or None for no upper bound
-
-    Returns:
-        Filtered DataFrame
-    """
-    if delta_min is None and delta_max is None:
-        return data
-
-    if delta_min is not None and delta_max is not None:
-        return _trim(data, "delta", delta_min, delta_max)
-    elif delta_min is not None:
-        return _ltrim(data, "delta", delta_min)
-    else:
-        assert delta_max is not None
-        return _rtrim(data, "delta", delta_max)
-
-
 def _select_closest_delta(
     data: pd.DataFrame, target: float, delta_min: float, delta_max: float
 ) -> pd.DataFrame:
@@ -139,38 +113,17 @@ def _cut_options_by_dte(
     return data
 
 
-def _cut_options_by_otm(
-    data: pd.DataFrame, otm_pct_interval: float, max_otm_pct_interval: float
-) -> pd.DataFrame:
-    """Categorize options into out-of-the-money percentage intervals."""
-    otm_pct_intervals = np.round(
-        np.arange(
-            max_otm_pct_interval * -1,
-            max_otm_pct_interval,
-            otm_pct_interval,
-        ),
-        2,
-    ).tolist()
-    data["otm_pct_range"] = pd.cut(data["otm_pct_entry"], otm_pct_intervals)
-    return data
-
-
-def _cut_options_by_delta(
-    data: pd.DataFrame, delta_interval: Optional[float]
-) -> pd.DataFrame:
+def _cut_options_by_delta(data: pd.DataFrame, delta_interval: float) -> pd.DataFrame:
     """
     Categorize options into delta intervals for grouping.
 
     Args:
         data: DataFrame with delta_entry column
-        delta_interval: Interval size for delta grouping, or None to skip
+        delta_interval: Interval size for delta grouping
 
     Returns:
-        DataFrame with delta_range column added (if delta_interval provided)
+        DataFrame with delta_range column added
     """
-    if delta_interval is None:
-        return data
-
     # Delta ranges from -1 to 1 for puts and calls
     delta_intervals = np.round(
         np.arange(-1.0, 1.0 + delta_interval, delta_interval), 2

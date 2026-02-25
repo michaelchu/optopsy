@@ -2,15 +2,16 @@
 
 This module validates two things before a strategy runs:
 
-1. **Parameter checks** — User-supplied parameters (DTE intervals, OTM %,
+1. **Parameter checks** — User-supplied parameters (DTE intervals,
    slippage mode, etc.) are validated via Pydantic models defined in
    ``types.py`` (``StrategyParams``, ``CalendarStrategyParams``).  The models
    are the single source of truth for both defaults and validation.
 
 2. **DataFrame schema checks** — The input DataFrame must contain the required
-   columns (``expected_types``) with compatible dtypes.  Optional columns for
-   Greeks (``optional_greek_types``) and liquidity (``optional_liquidity_types``)
-   are validated only when the corresponding features are enabled.
+   columns (``expected_types``) with compatible dtypes.  The ``delta`` column
+   is always required.  Optional columns for liquidity
+   (``optional_liquidity_types``) are validated only when the corresponding
+   features are enabled.
 
 Entry points:
 - ``_run_checks()`` — standard strategies (validates params, dtypes, delta)
@@ -96,8 +97,8 @@ def _run_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str, Any]:
     """
     validated = _validate_and_check(StrategyParams, params, data)
 
-    if _requires_delta(validated):
-        _check_greek_column(data, "delta")
+    # Delta column is always required for delta targeting
+    _check_greek_column(data, "delta")
 
     return validated
 
@@ -107,7 +108,12 @@ def _run_calendar_checks(params: Dict[str, Any], data: pd.DataFrame) -> Dict[str
 
     Returns a validated params dict with defaults applied by the Pydantic model.
     """
-    return _validate_and_check(CalendarStrategyParams, params, data)
+    validated = _validate_and_check(CalendarStrategyParams, params, data)
+
+    # Delta column is always required for delta targeting
+    _check_greek_column(data, "delta")
+
+    return validated
 
 
 def _check_data_types(data: pd.DataFrame) -> None:
@@ -135,22 +141,6 @@ def _check_greek_column(data: pd.DataFrame, greek: str) -> None:
         raise ValueError(
             f"{df_type_dict[greek]} of {greek} does not match expected types: {expected}"
         )
-
-
-def _requires_delta(params: Dict[str, Any]) -> bool:
-    """Check if any delta-related parameters are set."""
-    return any(
-        params.get(key) is not None
-        for key in [
-            "delta_min",
-            "delta_max",
-            "delta_interval",
-            "leg1_delta",
-            "leg2_delta",
-            "leg3_delta",
-            "leg4_delta",
-        ]
-    )
 
 
 def _requires_volume(params: Dict[str, Any]) -> bool:

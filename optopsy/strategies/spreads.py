@@ -4,13 +4,7 @@ from typing import Unpack
 
 import pandas as pd
 
-from ..core import _process_strategy
-from ..definitions import (
-    double_strike_external_cols,
-    double_strike_internal_cols,
-)
 from ..evaluation import _calls, _puts
-from ..rules import _rule_non_overlapping_strike
 from ..types import StrategyParamsDict
 from ._helpers import (
     Side,
@@ -206,15 +200,11 @@ def protective_put(
     Returns:
         DataFrame with protective put strategy performance statistics
     """
-    return _process_strategy(
+    return _covered_call(
         data,
-        internal_cols=double_strike_internal_cols,
-        external_cols=double_strike_external_cols,
-        leg_def=[
+        [
             (Side.long, _calls),
             (Side.long, _puts),
         ],
-        rules=_rule_non_overlapping_strike,
-        join_on=["underlying_symbol", "expiration", "dte_entry", "dte_range"],
-        params=kwargs,
+        **kwargs,
     )
