@@ -66,8 +66,56 @@ optopsy-chat cache clear         # clear all cached data
 optopsy-chat cache clear SPY     # clear a specific symbol
 ```
 
+## Conversation Starters
+
+New chats display clickable quick-start prompts so you can jump straight into common workflows:
+
+- **Backtest iron condors** on a specific symbol and date range
+- **Compare spreads** side by side with different parameters
+- **RSI-filtered strategies** with entry signal conditions
+- **Simulate** a strategy with capital tracking and equity curve
+
+## Chat Settings Panel
+
+Persistent parameter controls are available via the settings gear icon. Changes apply to all subsequent prompts in the session:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `max_entry_dte` | Maximum DTE at entry | 90 |
+| `max_otm_pct` | Maximum OTM percentage | 0.50 |
+| Slippage model | mid, spread, or liquidity | mid |
+
+## Action Buttons
+
+After a strategy runs, context-aware action buttons appear for quick follow-ups:
+
+- **Toggle raw/aggregated** — Switch between summary stats and individual trades
+- **Try wider DTE** — Re-run with a broader DTE range
+- **Create chart** — Visualize the results
+
+## Result Caching
+
+Strategy results are automatically cached with content-based hashing. Running the same strategy with the same parameters skips re-computation. You can query cached results instead of re-running strategies:
+
+- *"Sort the long_calls results by return"*
+- *"Show me the top 5 DTE buckets from the last scan"*
+- *"Filter to trades with profit_factor > 1.5"*
+
+Results persist in `~/.optopsy/results/` across sessions.
+
+## Multi-Series Charts
+
+The `create_chart` tool supports comparing multiple metrics or strategies in a single visualization:
+
+- **Multiple Y columns** — Plot metrics like `mean_return` and `win_rate` side by side
+- **Group by** — Split data by category (e.g., strategy name)
+- **Stacked or grouped bars** — Choose bar layout for comparisons
+- **Cross-strategy comparison** — Use `data_source: "results"` to compare all strategies run in a session
+
 ## Example Prompts
 
 - *"Fetch SPY options from 2024-01-01 to 2024-06-30 and run short puts with max 45 DTE, exit at 7 DTE"*
 - *"Compare iron condors vs iron butterflies on SPY from 2023-06-01 to 2024-01-01 with 30 and 60 day max entry DTE"*
 - *"Run short puts on SPY from 2024-01-01 to 2024-12-31 with RSI below 30 sustained for 3 days as the entry signal"*
+- *"Simulate short puts on SPY with $100k capital and 2 max positions, then chart the equity curve"*
+- *"Create a bar chart comparing mean return and win rate across all strategies I've run"*

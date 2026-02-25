@@ -303,5 +303,3 @@ results = op.iron_condor(
     fill_ratio=0.5,        # 类型: float
 )
 ```
-
-有关在 Optopsy 中使用类型提示的详细文档,请参阅 [TYPE_HINTS.md](https://github.com/michaelchu/optopsy/blob/main/TYPE_HINTS.md)。

@@ -269,30 +269,125 @@ When `raw=True`, strategies return individual trade details:
 
 ---
 
+## Entry Signals
+
+Functions for filtering strategy entries/exits using technical analysis or custom conditions. See the [Entry Signals](entry-signals.md) page for full usage examples.
+
+#### apply_signal
+
+::: optopsy.signals.apply_signal
+
+#### custom_signal
+
+::: optopsy.signals.custom_signal
+
+#### iv_rank_above
+
+::: optopsy.signals.iv_rank_above
+
+#### iv_rank_below
+
+::: optopsy.signals.iv_rank_below
+
+---
+
+## Simulation
+
+Run chronological strategy simulations with capital tracking, position limits, and equity curve generation.
+
+#### simulate
+
+::: optopsy.simulator.simulate
+
+#### SimulationResult
+
+::: optopsy.simulator.SimulationResult
+
+---
+
+## Risk Metrics
+
+Performance metrics for strategy evaluation. Used by `simulate()` internally and available for standalone use.
+
+#### compute_risk_metrics
+
+::: optopsy.metrics.compute_risk_metrics
+
+#### sharpe_ratio
+
+::: optopsy.metrics.sharpe_ratio
+
+#### sortino_ratio
+
+::: optopsy.metrics.sortino_ratio
+
+#### max_drawdown
+
+::: optopsy.metrics.max_drawdown
+
+#### value_at_risk
+
+::: optopsy.metrics.value_at_risk
+
+#### conditional_value_at_risk
+
+::: optopsy.metrics.conditional_value_at_risk
+
+#### win_rate
+
+::: optopsy.metrics.win_rate
+
+#### profit_factor
+
+::: optopsy.metrics.profit_factor
+
+#### calmar_ratio
+
+::: optopsy.metrics.calmar_ratio
+
+#### omega_ratio
+
+::: optopsy.metrics.omega_ratio
+
+#### tail_ratio
+
+::: optopsy.metrics.tail_ratio
+
+---
+
 ## Examples
 
 See the [Examples page](examples.md) for detailed usage examples.
 
-## Type Hints
+## Type Hints and Validation
 
-All functions include full type hints with TypedDict for IDE autocomplete support:
+All strategy functions use Pydantic-based validation for parameters. Type errors produce clear, field-specific error messages.
 
 ```python
 import pandas as pd
 from typing_extensions import Unpack
-from optopsy import StrategyParams
+from optopsy import StrategyParamsDict
 
-def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParams]) -> pd.DataFrame:
+def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]) -> pd.DataFrame:
     ...
 ```
 
+### Exported Types
+
+| Type | Description |
+|------|-------------|
+| `StrategyParamsDict` | TypedDict for `Unpack[]` annotations on standard strategies |
+| `StrategyParams` | Pydantic model for runtime validation of standard strategy parameters |
+| `CalendarStrategyParamsDict` | TypedDict for `Unpack[]` annotations on calendar/diagonal strategies |
+| `CalendarStrategyParams` | Pydantic model for calendar/diagonal parameters with cross-field validation |
+
 ### Using Type Hints
 
-Import `StrategyParams` or `CalendarStrategyParams` for better IDE support:
+Import `StrategyParamsDict` or `CalendarStrategyParamsDict` for better IDE support:
 
 ```python
 import optopsy as op
-from optopsy import StrategyParams
+from optopsy import StrategyParamsDict
 
 # Your IDE will now provide autocomplete for all parameters
 results = op.iron_condor(
@@ -304,4 +399,5 @@ results = op.iron_condor(
 )
 ```
 
-See [TYPE_HINTS.md](https://github.com/michaelchu/optopsy/blob/main/TYPE_HINTS.md) for detailed documentation on using type hints with Optopsy.
+!!! warning "Strict Type Validation"
+    Parameters are now validated with Pydantic. Boolean parameters like `raw` must be actual `bool` values — `raw=1` will be rejected. Use `raw=True` instead. Similarly, float parameters like `max_otm_pct` must be `float` — `max_otm_pct=5` will be rejected, use `max_otm_pct=5.0`.

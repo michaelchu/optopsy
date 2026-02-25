@@ -277,9 +277,102 @@ print(f"Portfolio Std Dev: {portfolio_returns.std():.2%}")
 print(f"Sharpe Ratio (annualized): {(portfolio_returns.mean() / portfolio_returns.std()) * (252**0.5):.2f}")
 ```
 
-## Performance Metrics
+## Strategy Simulation
 
-Calculate comprehensive performance statistics:
+Use `simulate()` for chronological backtesting with capital tracking, position limits, and a full equity curve:
+
+```python
+import optopsy as op
+
+data = op.csv_data('SPX_2023.csv')
+
+# Simulate short puts with $100k capital
+result = op.simulate(
+    data,
+    op.short_puts,
+    capital=100_000,
+    quantity=1,
+    max_positions=2,
+    multiplier=100,
+    selector='nearest',        # Pick ATM strike per entry date
+    max_entry_dte=45,
+    exit_dte=14,
+)
+
+# Summary statistics (includes Sharpe, Sortino, VaR, max drawdown, etc.)
+print(result.summary)
+
+# Individual trade log with P&L
+print(result.trade_log)
+
+# Equity curve indexed by exit date
+print(result.equity_curve)
+```
+
+The `selector` parameter controls how a trade is picked when multiple candidates exist for the same entry date:
+
+| Selector | Behavior |
+|----------|----------|
+| `'nearest'` | Closest to ATM (lowest absolute OTM%) |
+| `'highest_premium'` | Largest credit received |
+| `'lowest_premium'` | Cheapest debit paid |
+| `'first'` | First candidate (deterministic) |
+
+You can also pass a custom callable as the selector.
+
+## Risk Metrics
+
+Optopsy provides built-in risk metrics via the `metrics` module. These are used automatically by `simulate()` and are also available standalone:
+
+```python
+import optopsy as op
+
+trades = op.iron_condor(data, raw=True)
+returns = trades['pct_change']
+
+# Individual metrics
+print(f"Sharpe: {op.sharpe_ratio(returns):.2f}")
+print(f"Sortino: {op.sortino_ratio(returns):.2f}")
+print(f"Win Rate: {op.win_rate(returns):.1%}")
+print(f"Profit Factor: {op.profit_factor(returns):.2f}")
+print(f"VaR (95%): {op.value_at_risk(returns, 0.95):.2%}")
+print(f"CVaR (95%): {op.conditional_value_at_risk(returns, 0.95):.2%}")
+print(f"Max Drawdown: {op.max_drawdown_from_returns(returns):.2%}")
+print(f"Calmar: {op.calmar_ratio(returns):.2f}")
+print(f"Omega: {op.omega_ratio(returns):.2f}")
+print(f"Tail Ratio: {op.tail_ratio(returns):.2f}")
+
+# Or compute all at once
+all_metrics = op.compute_risk_metrics(returns)
+print(all_metrics)
+```
+
+## Custom Signal Entry Example
+
+Use `custom_signal()` to drive entries from any external data source:
+
+```python
+import pandas as pd
+import optopsy as op
+
+# Load your own signal data (model output, manual flags, external indicator, etc.)
+my_flags = pd.DataFrame({
+    "underlying_symbol": ["SPY"] * 5,
+    "quote_date": pd.date_range("2023-01-02", periods=5, freq="B"),
+    "go": [True, False, True, False, True],
+})
+
+sig = op.custom_signal(my_flags, flag_col="go")
+entry_dates = op.apply_signal(my_flags, sig)
+
+data = op.csv_data('SPY_2023.csv')
+results = op.long_calls(data, entry_dates=entry_dates)
+print(results)
+```
+
+## Performance Metrics (Manual)
+
+Calculate performance statistics manually from raw trades:
 
 ```python
 def calculate_metrics(trades_df):
@@ -305,6 +398,9 @@ trades = op.iron_condor(data, raw=True)
 metrics = calculate_metrics(trades)
 print(metrics)
 ```
+
+!!! tip
+    For most use cases, prefer `op.simulate()` or `op.compute_risk_metrics()` over manual calculations — they handle edge cases, annualisation, and additional metrics automatically.
 
 ## Working with Different Data Sources
 
