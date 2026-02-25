@@ -11,9 +11,12 @@ Public helpers:
 - ``get_all_provider_tool_schemas()`` — aggregate tool schemas for the LLM
 """
 
+import logging
 from typing import Any
 
 from .base import DataProvider
+
+_log = logging.getLogger(__name__)
 
 # Providers are lazily imported to avoid requiring UI extras (requests,
 # pyarrow, etc.) when only the core library is installed.
@@ -23,12 +26,31 @@ _ALL_PROVIDERS: list[DataProvider] | None = None
 def _load_providers() -> list[DataProvider]:
     global _ALL_PROVIDERS
     if _ALL_PROVIDERS is None:
+        providers: list[DataProvider] = []
         try:
             from .eodhd import EODHDProvider
 
-            _ALL_PROVIDERS = [EODHDProvider()]
+            providers.append(EODHDProvider())
         except ImportError:
-            _ALL_PROVIDERS = []
+            pass
+
+        # Discover plugin providers
+        try:
+            from optopsy.plugins import get_plugin_providers
+
+            for cls in get_plugin_providers():
+                try:
+                    providers.append(cls())
+                except Exception:
+                    _log.warning(
+                        "Failed to instantiate plugin provider %s",
+                        cls,
+                        exc_info=True,
+                    )
+        except Exception:
+            _log.warning("Plugin provider discovery failed", exc_info=True)
+
+        _ALL_PROVIDERS = providers
     return _ALL_PROVIDERS
 
 
