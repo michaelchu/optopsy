@@ -702,15 +702,23 @@ class TestEdgeCases:
 
         # total_return = total_pnl / capital, so we can verify capital allocation
         if spy_result.summary["total_trades"] > 0:
-            expected_return = spy_result.summary["total_pnl"] / 70_000
-            assert spy_result.summary["total_return"] == pytest.approx(
-                expected_return, rel=1e-6
-            )
+            spy_pnl = spy_result.summary["total_pnl"]
+            if spy_pnl != 0:
+                expected_return = spy_pnl / 70_000
+                assert spy_result.summary["total_return"] == pytest.approx(
+                    expected_return, rel=1e-6
+                )
+            else:
+                assert spy_result.summary["total_return"] == pytest.approx(0.0)
         if qqq_result.summary["total_trades"] > 0:
-            expected_return = qqq_result.summary["total_pnl"] / 30_000
-            assert qqq_result.summary["total_return"] == pytest.approx(
-                expected_return, rel=1e-6
-            )
+            qqq_pnl = qqq_result.summary["total_pnl"]
+            if qqq_pnl != 0:
+                expected_return = qqq_pnl / 30_000
+                assert qqq_result.summary["total_return"] == pytest.approx(
+                    expected_return, rel=1e-6
+                )
+            else:
+                assert qqq_result.summary["total_return"] == pytest.approx(0.0)
 
     def test_strategy_kwargs_passthrough(self, spy_data_up):
         """Strategy-specific kwargs should pass through to simulate()."""
@@ -778,14 +786,20 @@ class TestEdgeCases:
         )
 
         # Per-leg capital should sum to total capital (not 100,500)
-        a_cap = (
-            result.leg_results["a"].summary["total_pnl"]
-            / result.leg_results["a"].summary["total_return"]
-        )
-        b_cap = (
-            result.leg_results["b"].summary["total_pnl"]
-            / result.leg_results["b"].summary["total_return"]
-        )
+        # Recover capital from total_pnl / total_return, guarding against zero
+        a_summary = result.leg_results["a"].summary
+        b_summary = result.leg_results["b"].summary
+
+        a_return = a_summary["total_return"]
+        b_return = b_summary["total_return"]
+
+        # Both legs use our test data which always produces non-zero P&L,
+        # but guard against zero to avoid ZeroDivisionError.
+        assert a_return != 0, "leg 'a' had zero return — test data issue"
+        assert b_return != 0, "leg 'b' had zero return — test data issue"
+
+        a_cap = a_summary["total_pnl"] / a_return
+        b_cap = b_summary["total_pnl"] / b_return
         assert a_cap + b_cap == pytest.approx(capital, rel=1e-4)
 
     def test_idle_cash_in_equity_curve(self, spy_data_up):
