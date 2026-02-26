@@ -1424,19 +1424,35 @@ def test_slippage_per_leg_covered_with_stock(
     assert round(row_per["total_entry_cost"], 4) == 210.9625
 
 
-def test_slippage_per_leg_ratio_clamped(data):
-    """Per-leg ratio is clamped to 1.0 (equivalent to spread mode)."""
-    # fill_ratio=0.9 + per_leg_slippage=0.5 on 1-leg: 0.9+0 = 0.9 (under 1.0, fine)
-    # But we're testing 1-leg here with extreme fill_ratio to verify behavior
-    results_extreme = long_calls(
-        data, raw=True, slippage="per_leg", fill_ratio=0.9, per_leg_slippage=0.5
+def test_slippage_per_leg_ratio_clamped(multi_strike_data):
+    """Per-leg ratio is clamped to 1.0 for multi-leg strategies (equivalent to spread mode)."""
+    # For a 2-leg spread, effective ratio is:
+    #   ratio = fill_ratio + per_leg_slippage * (num_legs - 1)
+    #         = 0.9 + 0.5 * (2 - 1) = 1.4 > 1.0
+    # This should be clamped to 1.0, making per-leg fills match spread-mode fills.
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
     )
-    results_spread = long_calls(data, raw=True, slippage="spread")
+    results_clamped = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.9,
+        per_leg_slippage=0.5,
+        **spread_deltas,
+    )
+    results_spread = long_call_spread(
+        multi_strike_data, raw=True, slippage="spread", **spread_deltas
+    )
 
-    # With ratio=0.9 (not clamped), should still be less than spread (ratio=1.0)
-    row_extreme = results_extreme[results_extreme["strike"] == 215.0].iloc[0]
-    row_spread = results_spread[results_spread["strike"] == 215.0].iloc[0]
-    assert row_extreme["entry"] < row_spread["entry"]
+    assert not results_clamped.empty
+    assert not results_spread.empty
+
+    # With clamping to 1.0, per-leg and spread total entry costs should match
+    assert round(results_clamped.iloc[0]["total_entry_cost"], 6) == round(
+        results_spread.iloc[0]["total_entry_cost"], 6
+    )
 
 
 def test_slippage_per_leg_custom_penalty(data):
