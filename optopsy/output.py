@@ -90,6 +90,7 @@ def _format_output(
         for opt_col in (
             "implied_volatility_entry",
             "delta_entry",
+            "total_commission",
             "exit_type",
             "_early_exit_date",
         ):
@@ -135,8 +136,8 @@ def _format_calendar_output(
     if params["raw"]:
         # Return only the columns that exist in the data
         available_cols = [c for c in internal_cols if c in data.columns]
-        # Conditionally include exit_type and early exit date when present
-        for opt_col in ("exit_type", "_early_exit_date"):
+        # Conditionally include commission and early exit columns when present
+        for opt_col in ("total_commission", "exit_type", "_early_exit_date"):
             if opt_col in data.columns and opt_col not in available_cols:
                 available_cols.append(opt_col)
         return data[available_cols].reset_index(drop=True)

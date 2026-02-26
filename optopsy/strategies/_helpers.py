@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple, Unpack
 import numpy as np
 import pandas as pd
 
+from ..checks import _run_checks
 from ..core import _process_calendar_strategy, _process_strategy
 from ..definitions import (
     calendar_spread_external_cols,
@@ -29,6 +30,9 @@ from ..definitions import (
     straddle_internal_cols,
     triple_strike_internal_cols,
 )
+from ..evaluation import _evaluate_all_options
+from ..output import _format_output
+from ..pricing import _calculate_commission
 from ..rules import (
     _rule_butterfly_strikes,
     _rule_expiration_ordering,
@@ -36,6 +40,7 @@ from ..rules import (
     _rule_iron_condor_strikes,
     _rule_non_overlapping_strike,
 )
+from ..timestamps import normalize_dates
 from ..types import CalendarStrategyParamsDict, StrategyParamsDict
 
 
@@ -295,11 +300,6 @@ def _covered_with_stock(
     single-leg pipeline.  Stock close prices are then matched by date to
     compute a combined entry cost, exit proceeds, and percentage change.
     """
-    from ..checks import _run_checks
-    from ..evaluation import _evaluate_all_options
-    from ..output import _format_output
-    from ..timestamps import normalize_dates
-
     # The option is always the second leg definition
     option_leg = leg_def[1]
     option_side = option_leg[0]
@@ -322,7 +322,6 @@ def _covered_with_stock(
     data["quote_date"] = normalize_dates(data["quote_date"])
     data["expiration"] = normalize_dates(data["expiration"])
     data["option_type"] = data["option_type"].str.lower()
-
     delta_target = params["leg1_delta"]
     leg_data = option_filter(data)
 
@@ -384,6 +383,20 @@ def _covered_with_stock(
 
     total_entry = stock_entry + option_entry
     total_exit = stock_exit + option_exit
+    net_pnl = total_exit - total_entry
+
+    # Apply commission if configured.
+    # commission is already a plain dict after _run_checks() -> model_dump()
+    commission_obj = params.get("commission")
+    total_commission = 0.0
+    if commission_obj is not None:
+        # Option leg only — wrap in a list for _calculate_commission
+        option_leg_def = [leg_def[1]]
+        comm_per_side = _calculate_commission(
+            option_leg_def, commission_obj, has_stock_leg=True, num_shares=100
+        )
+        total_commission = comm_per_side * 2
+        net_pnl = net_pnl - total_commission
 
     output = pd.DataFrame(
         {
@@ -399,7 +412,7 @@ def _covered_with_stock(
             "total_exit_proceeds": total_exit.values,
             "pct_change": np.where(
                 total_entry.abs() > 0,
-                (total_exit - total_entry) / total_entry.abs(),
+                net_pnl / total_entry.abs(),
                 np.nan,
             ),
             "delta_entry_leg1": 1.0,
@@ -410,6 +423,9 @@ def _covered_with_stock(
             ),
         }
     )
+
+    if commission_obj is not None:
+        output["total_commission"] = total_commission
 
     # Carry over grouping columns produced by the evaluation pipeline
     if "dte_range" in result.columns:

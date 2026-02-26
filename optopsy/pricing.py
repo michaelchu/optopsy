@@ -6,7 +6,7 @@ multipliers (long/short direction and quantity), and computing total P&L
 with percentage change.
 """
 
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -139,6 +139,35 @@ def _apply_ratios(
     return data
 
 
+def _calculate_commission(
+    leg_def: List[Tuple],
+    commission: Dict[str, Any],
+    has_stock_leg: bool = False,
+    num_shares: int = 100,
+) -> float:
+    """Calculate commission for one side of a trade (entry or exit).
+
+    Args:
+        leg_def: Strategy leg definitions used to determine per-leg quantities.
+        commission: Commission config dict with keys per_contract, per_share,
+            base_fee, min_fee.
+        has_stock_leg: Whether there is a stock leg (covered call / protective put).
+        num_shares: Number of shares for the stock leg.
+
+    Returns:
+        Commission amount for one side (always >= 0).
+    """
+    total_contracts = sum(_get_leg_quantity(leg) for leg in leg_def)
+    option_fee = commission["base_fee"] + commission["per_contract"] * total_contracts
+    option_fee = max(option_fee, commission["min_fee"])
+
+    stock_fee = 0.0
+    if has_stock_leg:
+        stock_fee = commission["per_share"] * num_shares
+
+    return option_fee + stock_fee
+
+
 def _assign_profit(
     data: pd.DataFrame,
     leg_def: List[Tuple],
@@ -146,6 +175,7 @@ def _assign_profit(
     slippage: str = "mid",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
+    commission: Optional[Dict[str, Any]] = None,
 ) -> pd.DataFrame:
     """Calculate total profit/loss and percentage change for multi-leg strategies."""
     data = _apply_ratios(data, leg_def, slippage, fill_ratio, reference_volume)
@@ -158,10 +188,16 @@ def _assign_profit(
     data["total_entry_cost"] = data.loc[:, entry_cols].sum(axis=1)
     data["total_exit_proceeds"] = data.loc[:, exit_cols].sum(axis=1)
 
+    net_pnl = data["total_exit_proceeds"] - data["total_entry_cost"]
+
+    if commission is not None:
+        comm_per_side = _calculate_commission(leg_def, commission)
+        data["total_commission"] = comm_per_side * 2
+        net_pnl = net_pnl - data["total_commission"]
+
     data["pct_change"] = np.where(
         data["total_entry_cost"].abs() > 0,
-        (data["total_exit_proceeds"] - data["total_entry_cost"])
-        / data["total_entry_cost"].abs(),
+        net_pnl / data["total_entry_cost"].abs(),
         np.nan,
     )
 
