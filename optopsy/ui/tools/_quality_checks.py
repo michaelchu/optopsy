@@ -59,7 +59,7 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     else:
         findings.append("PASS: all 9 required columns present with correct dtypes")
         display_parts.append(
-            "**Required Columns** — all 8 present with correct dtypes\n"
+            "**Required Columns** — all 9 present with correct dtypes\n"
         )
 
     # ---------------------------------------------------------------
@@ -81,8 +81,6 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
             features.append("IV surface/signals available")
         if "volume" in available_optional:
             features.append("liquidity slippage available")
-        if "underlying_price" in available_optional:
-            features.append("underlying_price present")
         feat_str = "; ".join(features) if features else ""
         findings.append(
             f"INFO: optional columns available: {', '.join(available_optional)}"

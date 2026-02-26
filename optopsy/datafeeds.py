@@ -8,7 +8,7 @@ specified by integer index, allowing the library to work with any CSV layout.
 The module also handles:
 - Date column inference (``_infer_date_cols``)
 - Optional date-range filtering (``_trim_dates``)
-- Optional Greek and liquidity columns (gamma, theta, vega, volume, etc.)
+- Optional Greek and liquidity columns (gamma, theta, vega, volume, etc.); delta is required
 """
 
 from typing import Any, Dict, List, Optional, Tuple

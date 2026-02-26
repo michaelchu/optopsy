@@ -254,10 +254,15 @@ def _handle_suggest_strategy_params(
             "back_dte_min": min(50, dte_stats["p75"]),
             "back_dte_max": min(120, dte_stats["p90"]),
         }
-        strategy_note = (
-            "Calendar strategy — use front/back DTE instead of max_entry_dte. "
-            "Delta defaults apply per-leg automatically."
-        )
+        if has_delta:
+            strategy_note = (
+                "Calendar strategy — use front/back DTE instead of max_entry_dte. "
+                "Delta defaults apply per-leg automatically."
+            )
+        else:
+            strategy_note = (
+                "Calendar strategy — use front/back DTE instead of max_entry_dte."
+            )
     elif strategy_name in {
         "iron_condor",
         "reverse_iron_condor",
