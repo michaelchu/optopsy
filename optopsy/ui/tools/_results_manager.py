@@ -650,6 +650,7 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
         )
 
     # --- Simulations ---
+    _LLM_SIM_CAP = 10  # max simulation lines included in llm_summary
     if sim_results:
         sim_lines_llm: list[str] = []
         sim_lines_display: list[str] = []
@@ -676,8 +677,12 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
                 f"win rate={wr_str}, "
                 f"profit factor={pf_str}"
             )
+        llm_sim_lines = sim_lines_llm[:_LLM_SIM_CAP]
+        omitted = len(sim_lines_llm) - len(llm_sim_lines)
+        if omitted:
+            llm_sim_lines.append(f"  … and {omitted} more (see display)")
         sections_llm.append(
-            f"Simulations ({len(sim_results)}):\n" + "\n".join(sim_lines_llm)
+            f"Simulations ({len(sim_results)}):\n" + "\n".join(llm_sim_lines)
         )
         sections_display.append(
             f"### Simulations ({len(sim_results)})\n\n" + "\n".join(sim_lines_display)

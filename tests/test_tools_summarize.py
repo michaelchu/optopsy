@@ -249,6 +249,28 @@ class TestSimulationResultsOnly:
         result = execute()
         assert "No simulations run" in result.user_display
 
+    def test_llm_summary_capped_at_10(self, execute):
+        # More than 10 simulations should truncate the llm_summary lines
+        results = {
+            f"sim:lc_{i}": _make_sim_entry() for i in range(15)
+        }
+        result = execute(results=results)
+        # All 15 should appear in user_display
+        assert "Simulations (15)" in result.user_display
+        # llm_summary should mention cap and omitted count
+        assert "… and 5 more" in result.llm_summary
+        # Only 10 entries should be listed before the "… and N more" line
+        llm_sim_section = [
+            line for line in result.llm_summary.splitlines()
+            if line.startswith("  sim:lc_")
+        ]
+        assert len(llm_sim_section) == 10
+
+    def test_llm_summary_not_capped_when_at_or_below_10(self, execute):
+        results = {f"sim:lc_{i}": _make_sim_entry() for i in range(10)}
+        result = execute(results=results)
+        assert "… and" not in result.llm_summary
+
 
 # ---------------------------------------------------------------------------
 # 5. Only signals
