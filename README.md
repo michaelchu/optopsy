@@ -10,19 +10,26 @@
 
 An AI-powered research and backtesting tool for options strategies.
 
-Optopsy combines a Python backtesting engine with a conversational AI interface that fetches data from online or local sources, runs strategies, and interprets results — so you can go from *"How do iron condors perform on SPX?"* to detailed performance statistics in seconds, not spreadsheets.
+Optopsy combines a Python backtesting engine with a conversational AI interface that fetches data from online or local sources, runs strategies, and interprets results — so you can go from *"How do 45-DTE iron condors on SPX perform with a 50% profit target and 2x stop loss vs holding to expiration?"* to detailed performance statistics in seconds, not spreadsheets.
 
 [Full Documentation](https://michaelchu.github.io/optopsy/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
 
 ## Features
 
-- **AI Chat UI** - Run backtests, fetch data, and interpret results using natural language
-- **Trade Simulator** - Full trade-by-trade simulation with capital tracking, equity curves, and performance metrics
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **Per-Leg Delta Targeting** - Select strikes by delta with `TargetRange(target, min, max)` per leg
+- **Trade Simulator** - Chronological simulation with capital tracking, position limits, and equity curves via `simulate()`
+- **Portfolio Simulation** - Weighted multi-strategy portfolio backtesting via `simulate_portfolio()`
+- **Early Exits** - Stop-loss, take-profit, and max-hold-days rules for automatic position management
+- **Commissions** - Model broker fees with per-contract, base fee, and min fee structures
+- **Risk Metrics** - Sharpe, Sortino, VaR, CVaR, Calmar, Omega, tail ratio, and more via `compute_risk_metrics()`
+- **80+ Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR, IV Rank) via [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic)
+- **Custom Signals** - Use `custom_signal()` to drive entries from any DataFrame with a boolean flag column
+- **Slippage Modeling** - Realistic fills with mid, spread, liquidity-based, or per-leg slippage
 - **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
 - **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
-- **80+ Entry Signals** - Filter entries with technical indicators across momentum, overlap, volatility, trend, and volume categories via [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic)
-- **Pandas Native** - Returns DataFrames that integrate with your existing workflow
+- **Plugin System** - Extend with custom strategies, signals, data providers, and auth via entry points
+- **AI Chat UI** - Interactive AI-powered chat interface with conversation starters, settings panel, and result caching
 
 ## AI Chat UI (Beta)
 
