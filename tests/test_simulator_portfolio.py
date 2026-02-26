@@ -331,6 +331,40 @@ class TestBasicPortfolio:
         assert "long_calls" in result.leg_results
         assert "long_calls_1" in result.leg_results
 
+    def test_dedup_avoids_collision_with_explicit_name(self, spy_data_up, qqq_data_up):
+        """Dedup suffix should not collide with an explicitly named leg."""
+        result = simulate_portfolio(
+            legs=[
+                {
+                    "data": spy_data_up,
+                    "strategy": op.long_calls,
+                    "weight": 1.0 / 3,
+                    "name": "strat_1",
+                    "selector": "first",
+                },
+                {
+                    "data": qqq_data_up,
+                    "strategy": op.long_calls,
+                    "weight": 1.0 / 3,
+                    "name": "strat",
+                    "selector": "first",
+                },
+                {
+                    "data": spy_data_up,
+                    "strategy": op.long_calls,
+                    "weight": 1.0 / 3,
+                    "name": "strat",
+                    "selector": "first",
+                },
+            ],
+            capital=100_000,
+        )
+
+        names = set(result.leg_results.keys())
+        # "strat_1" is taken, so the duplicate "strat" should get "strat_2"
+        assert names == {"strat_1", "strat", "strat_2"}
+        assert len(result.leg_results) == 3
+
 
 # ---------------------------------------------------------------------------
 # Trade log tests
@@ -418,8 +452,8 @@ class TestTradeLog:
                 check_names=False,
             )
 
-    def test_sorted_by_entry_date(self, spy_data_up, qqq_data_up):
-        """Combined trade log should be sorted by entry_date."""
+    def test_sorted_by_exit_date(self, spy_data_up, qqq_data_up):
+        """Combined trade log should be sorted by exit_date (P&L realization order)."""
         result = simulate_portfolio(
             legs=[
                 {
@@ -439,7 +473,7 @@ class TestTradeLog:
         )
 
         if len(result.trade_log) > 1:
-            dates = pd.to_datetime(result.trade_log["entry_date"])
+            dates = pd.to_datetime(result.trade_log["exit_date"])
             assert dates.is_monotonic_increasing
 
 

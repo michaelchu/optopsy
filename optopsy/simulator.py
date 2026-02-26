@@ -821,11 +821,15 @@ def simulate_portfolio(
         data = leg["data"]
         strategy = leg["strategy"]
         weight = leg["weight"] * norm_factor
-        name = leg.get("name") or getattr(strategy, "__name__", f"leg{i}")
+        base_name = leg.get("name") or getattr(strategy, "__name__", f"leg{i}")
+        name = base_name
 
-        # Deduplicate names
+        # Deduplicate names with incrementing suffix to avoid collisions
         if name in seen_names:
-            name = f"{name}_{i}"
+            suffix = 1
+            while f"{base_name}_{suffix}" in seen_names:
+                suffix += 1
+            name = f"{base_name}_{suffix}"
         seen_names.add(name)
 
         leg_capital = capital * weight
@@ -873,7 +877,11 @@ def _combine_trade_logs(
         return pd.DataFrame(columns=cols)
 
     combined = pd.concat(all_logs, ignore_index=True)
-    combined = combined.sort_values("entry_date").reset_index(drop=True)
+    # Sort by exit_date (when P&L is realized) for correct cumulative equity,
+    # with entry_date and leg as deterministic tie-breakers.
+    combined = combined.sort_values(["exit_date", "entry_date", "leg"]).reset_index(
+        drop=True
+    )
     combined["trade_id"] = np.arange(1, len(combined) + 1)
     combined["cumulative_pnl"] = combined["realized_pnl"].cumsum()
     combined["equity"] = capital + combined["cumulative_pnl"]
