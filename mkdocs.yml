@@ -9,8 +9,13 @@ theme:
   name: material
   palette:
     scheme: default
-    primary: indigo
-    accent: indigo
+    primary: custom
+    accent: custom
+  font:
+    text: Onest
+    code: JetBrains Mono
+  logo: assets/logo-small-dark.png
+  favicon: assets/logo-small.png
   features:
     - navigation.tracking
     - navigation.tabs
@@ -61,6 +66,9 @@ markdown_extensions:
   - tables
   - attr_list
   - md_in_html
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search

@@ -1,0 +1,6 @@
+:root {
+  --md-primary-fg-color: hsl(201, 19.3%, 23.3%);
+  --md-primary-fg-color--light: hsl(201, 19.3%, 35%);
+  --md-primary-fg-color--dark: hsl(201, 19.3%, 18%);
+  --md-accent-fg-color: hsl(201, 19.3%, 45%);
+}
