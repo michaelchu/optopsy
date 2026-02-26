@@ -384,6 +384,26 @@ def _covered_with_stock(
 
     total_entry = stock_entry + option_entry
     total_exit = stock_exit + option_exit
+    net_pnl = total_exit - total_entry
+
+    # Apply commission if configured
+    commission_obj = params.get("commission")
+    total_commission = 0.0
+    if commission_obj is not None:
+        from ..pricing import _calculate_commission
+
+        comm_dict = (
+            commission_obj.model_dump()
+            if hasattr(commission_obj, "model_dump")
+            else commission_obj
+        )
+        # Option leg only — use leg_def[1:] (the option leg)
+        option_leg_def = [leg_def[1]]
+        comm_per_side = _calculate_commission(
+            option_leg_def, comm_dict, has_stock_leg=True, num_shares=100
+        )
+        total_commission = comm_per_side * 2
+        net_pnl = net_pnl - total_commission
 
     output = pd.DataFrame(
         {
@@ -399,7 +419,7 @@ def _covered_with_stock(
             "total_exit_proceeds": total_exit.values,
             "pct_change": np.where(
                 total_entry.abs() > 0,
-                (total_exit - total_entry) / total_entry.abs(),
+                net_pnl / total_entry.abs(),
                 np.nan,
             ),
             "delta_entry_leg1": 1.0,
@@ -410,6 +430,9 @@ def _covered_with_stock(
             ),
         }
     )
+
+    if total_commission > 0:
+        output["total_commission"] = total_commission
 
     # Carry over grouping columns produced by the evaluation pipeline
     if "dte_range" in result.columns:
