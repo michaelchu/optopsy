@@ -809,6 +809,9 @@ def simulate_portfolio(
     if abs(total_weight - 1.0) > 0.01:
         raise ValueError(f"weights must sum to 1.0 (got {total_weight:.4f})")
 
+    # Normalize weights so allocated capital sums exactly to `capital`
+    norm_factor = 1.0 / total_weight if total_weight != 1.0 else 1.0
+
     # Run each leg
     leg_results: dict[str, SimulationResult] = {}
     leg_capitals: dict[str, float] = {}
@@ -817,7 +820,7 @@ def simulate_portfolio(
     for i, leg in enumerate(legs):
         data = leg["data"]
         strategy = leg["strategy"]
-        weight = leg["weight"]
+        weight = leg["weight"] * norm_factor
         name = leg.get("name") or getattr(strategy, "__name__", f"leg{i}")
 
         # Deduplicate names
@@ -839,8 +842,8 @@ def simulate_portfolio(
     # Combine trade logs
     combined_log = _combine_trade_logs(leg_results, capital)
 
-    # Combine equity curves
-    combined_curve = _combine_equity_curves(leg_results)
+    # Combine equity curves — pass leg_capitals so idle cash is represented
+    combined_curve = _combine_equity_curves(leg_results, leg_capitals)
 
     # Compute portfolio summary from combined trade log
     summary = _compute_summary(combined_log, capital)
@@ -879,21 +882,55 @@ def _combine_trade_logs(
 
 def _combine_equity_curves(
     leg_results: dict[str, SimulationResult],
+    leg_capitals: dict[str, float],
 ) -> pd.Series:
-    """Sum per-leg daily equity curves into a portfolio equity curve."""
-    daily_curves: dict[str, pd.Series] = {}
+    """Sum per-leg daily equity curves into a portfolio equity curve.
+
+    Each leg's curve is seeded with its starting capital so that idle cash
+    (before a leg's first trade closes or for legs that never trade) is
+    correctly represented in the portfolio total.
+    """
+    # Collect non-empty curves and determine the portfolio date range
+    raw_curves: dict[str, pd.Series] = {}
+    all_dates: list[pd.Timestamp] = []
     for name, result in leg_results.items():
         if result.equity_curve.empty:
             continue
         curve = result.equity_curve.copy()
         curve.index = pd.to_datetime(curve.index)
-        # Resample to daily; use last value per day, forward-fill gaps
-        daily = curve.resample("D").last().ffill()
-        daily_curves[name] = daily
+        raw_curves[name] = curve
+        all_dates.extend([curve.index.min(), curve.index.max()])
 
-    if not daily_curves:
+    if not all_dates:
         return pd.Series(dtype=float, name="equity")
 
-    combined = pd.DataFrame(daily_curves).ffill().sum(axis=1)
+    portfolio_start = min(all_dates)
+    portfolio_end = max(all_dates)
+    full_index = pd.date_range(portfolio_start, portfolio_end, freq="D")
+
+    # Build a daily curve for each leg, seeded with its starting capital
+    daily_curves: dict[str, pd.Series] = {}
+    for name in leg_results:
+        start_cap = leg_capitals.get(name, 0.0)
+
+        if name in raw_curves:
+            daily = raw_curves[name].resample("D").last().ffill()
+            # Prepend starting capital for days before first trade exit
+            first_date = daily.index.min()
+            if portfolio_start < first_date:
+                pre_index = pd.date_range(
+                    portfolio_start, first_date - pd.Timedelta(days=1), freq="D"
+                )
+                if len(pre_index) > 0:
+                    pre = pd.Series(start_cap, index=pre_index)
+                    daily = pd.concat([pre, daily])
+            daily = daily.reindex(full_index).ffill()
+        else:
+            # Leg never traded — flat line at allocated capital
+            daily = pd.Series(start_cap, index=full_index)
+
+        daily_curves[name] = daily
+
+    combined = pd.DataFrame(daily_curves).sum(axis=1)
     combined.name = "equity"
     return combined

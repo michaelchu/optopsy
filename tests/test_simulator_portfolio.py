@@ -718,3 +718,60 @@ class TestEdgeCases:
         )
 
         assert isinstance(result, PortfolioResult)
+
+    def test_weights_normalized(self, spy_data_up, qqq_data_up):
+        """Weights within tolerance are normalized so capital sums to total."""
+        capital = 100_000
+        # 0.501 + 0.504 = 1.005; after normalization, allocated capital = 100k
+        result = simulate_portfolio(
+            legs=[
+                {
+                    "data": spy_data_up,
+                    "strategy": op.long_calls,
+                    "weight": 0.501,
+                    "name": "a",
+                    "selector": "first",
+                },
+                {
+                    "data": qqq_data_up,
+                    "strategy": op.long_puts,
+                    "weight": 0.504,
+                    "name": "b",
+                    "selector": "first",
+                },
+            ],
+            capital=capital,
+        )
+
+        # Per-leg capital should sum to total capital (not 100,500)
+        a_cap = (
+            result.leg_results["a"].summary["total_pnl"]
+            / result.leg_results["a"].summary["total_return"]
+        )
+        b_cap = (
+            result.leg_results["b"].summary["total_pnl"]
+            / result.leg_results["b"].summary["total_return"]
+        )
+        assert a_cap + b_cap == pytest.approx(capital, rel=1e-4)
+
+    def test_idle_cash_in_equity_curve(self, spy_data_up):
+        """Equity curve for one-empty-leg portfolio should include idle cash."""
+        capital = 100_000
+        empty = pd.DataFrame(columns=_CHAIN_COLS)
+        result = simulate_portfolio(
+            legs=[
+                {"data": empty, "strategy": op.long_calls, "weight": 0.5},
+                {
+                    "data": spy_data_up,
+                    "strategy": op.long_calls,
+                    "weight": 0.5,
+                    "selector": "first",
+                },
+            ],
+            capital=capital,
+        )
+
+        # The empty leg's 50k should still be in the equity curve
+        # so equity should never drop below 50k (the idle cash)
+        assert not result.equity_curve.empty
+        assert result.equity_curve.iloc[0] >= capital * 0.5
