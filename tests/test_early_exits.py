@@ -461,17 +461,63 @@ class TestMaxHoldDaysCombined:
         assert not result.empty
         assert result["exit_type"].iloc[0] == "take_profit"
 
+    def test_stop_loss_and_max_hold_same_date(self, multi_date_data):
+        """When stop_loss and max_hold trigger on same date, stop_loss wins."""
+        # Long call: day 5 unrealized=-25%, stop_loss=-0.25, max_hold_days=5
+        # Both trigger at day 5 — stop_loss takes priority
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            stop_loss=-0.25,
+            max_hold_days=5,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "stop_loss"
+
+    def test_take_profit_and_max_hold_same_date(self, multi_date_data):
+        """When take_profit and max_hold trigger on same date, take_profit wins."""
+        # Long put: day 5 unrealized=+25%, take_profit=0.25, max_hold_days=5
+        # Both trigger at day 5 — take_profit takes priority
+        result = op.long_puts(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.70},
+            take_profit=0.25,
+            max_hold_days=5,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "take_profit"
+
+    def test_all_three_triggers_priority(self, multi_date_data):
+        """When all three conditions could trigger, priority order holds."""
+        # Long call: day 5 unrealized=-25%
+        # stop_loss=-0.25 triggers at day 5, take_profit=5.0 (very high, not hit
+        # for calls going down), max_hold_days=5 triggers at day 5
+        # stop_loss should win
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            stop_loss=-0.25,
+            take_profit=5.0,
+            max_hold_days=5,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "stop_loss"
+
 
 class TestMaxHoldDaysValidation:
     """Test validation of max_hold_days parameter."""
 
-    def test_max_hold_days_must_be_positive(self, multi_date_data):
+    @pytest.mark.parametrize("value", [0, -5])
+    def test_max_hold_days_rejects_non_positive(self, multi_date_data, value):
         """max_hold_days must be > 0."""
         with pytest.raises(Exception):
             op.long_calls(
                 multi_date_data,
                 leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
-                max_hold_days=0,
+                max_hold_days=value,
             )
 
     def test_max_hold_days_must_be_int(self, multi_date_data):
@@ -481,13 +527,4 @@ class TestMaxHoldDaysValidation:
                 multi_date_data,
                 leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
                 max_hold_days=5.0,
-            )
-
-    def test_max_hold_days_rejects_negative(self, multi_date_data):
-        """max_hold_days must be > 0."""
-        with pytest.raises(Exception):
-            op.long_calls(
-                multi_date_data,
-                leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
-                max_hold_days=-5,
             )

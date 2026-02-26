@@ -218,10 +218,12 @@ def _apply_multi_leg_exits(
         return result
 
     # Merge entry date for max_hold_days calculation
+    # Calendar strategies use plain "quote_date" as the entry date column
     entry_date_col = None
     for col in [
         "quote_date_entry",
         "quote_date_entry_leg1",
+        "quote_date",
     ]:
         if col in result.columns:
             entry_date_col = col
@@ -381,7 +383,12 @@ def _find_first_threshold_crossing(
             return "stop_loss"
         if take_profit is not None and pct >= take_profit:
             return "take_profit"
-        return "max_hold"
+        if max_hold_days is not None:
+            return "max_hold"
+        raise ValueError(
+            "Unable to classify early exit: trade did not hit stop_loss or "
+            "take_profit, and max_hold_days was not configured."
+        )
 
     first_per_trade["_exit_type"] = first_per_trade.apply(_classify, axis=1)
 

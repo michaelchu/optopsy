@@ -1199,6 +1199,73 @@ def test_slippage_calendar_spread_mode(calendar_data):
     )
 
 
+def test_slippage_covered_call_with_stock(multi_strike_data, stock_data_multi_strike):
+    """Test that slippage is applied to the option leg in stock-backed covered calls."""
+    results_mid = covered_call(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True, slippage="mid"
+    )
+    results_spread = covered_call(
+        multi_strike_data,
+        stock_data=stock_data_multi_strike,
+        raw=True,
+        slippage="spread",
+    )
+
+    assert not results_mid.empty
+    assert not results_spread.empty
+
+    row_mid = results_mid.iloc[0]
+    row_spread = results_spread.iloc[0]
+
+    # Stock prices are identical (close prices, no bid/ask)
+    assert row_mid["strike_leg1"] == row_spread["strike_leg1"]
+
+    # Covered call = long stock + short call.
+    # Short call entry fills at bid (worse for seller) under spread slippage,
+    # so option premium received is lower -> total entry cost is higher.
+    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+
+    # Verify exact values:
+    # Short call at 215.0: bid=1.50, ask=1.60, mid=1.55
+    # Mid mode: entry = stock(212.5) - mid(1.55) = 210.95
+    assert round(row_mid["total_entry_cost"], 2) == 210.95
+    # Spread mode: short entry fills at bid=1.50
+    # entry = stock(212.5) - bid(1.50) = 211.00
+    assert round(row_spread["total_entry_cost"], 2) == 211.00
+
+
+def test_slippage_protective_put_with_stock(multi_strike_data, stock_data_multi_strike):
+    """Test that slippage is applied to the option leg in stock-backed protective puts."""
+    results_mid = protective_put(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True, slippage="mid"
+    )
+    results_spread = protective_put(
+        multi_strike_data,
+        stock_data=stock_data_multi_strike,
+        raw=True,
+        slippage="spread",
+    )
+
+    assert not results_mid.empty
+    assert not results_spread.empty
+
+    row_mid = results_mid.iloc[0]
+    row_spread = results_spread.iloc[0]
+
+    # Protective put = long stock + long put.
+    # Long put entry fills at ask (worse for buyer) under spread slippage,
+    # so total entry cost is higher.
+    assert row_spread["total_entry_cost"] > row_mid["total_entry_cost"]
+
+    # Verify exact values:
+    # Long put at 210.0: bid=1.40, ask=1.50, mid=1.45
+    # Mid mode: entry = stock(212.5) + mid(1.45) = 213.95
+    assert round(row_mid["total_entry_cost"], 2) == 213.95
+    # Spread mode: long entry fills at ask=1.50
+    # entry = stock(212.5) + ask(1.50) = 214.00
+    assert round(row_spread["total_entry_cost"], 2) == 214.00
+
+
 # =============================================================================
 # Empty DataFrame Edge Cases
 # =============================================================================
