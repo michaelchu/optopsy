@@ -524,15 +524,14 @@ def _collar_with_stock(
     # Option legs are leg_def[1] (short call) and leg_def[2] (long put)
     option_leg_defs = leg_def[1:]  # skip the stock/synthetic leg
 
-    # Set up delta defaults for the two option legs
-    if "leg1_delta" not in kwargs and "leg2_delta" in kwargs:
-        kwargs["leg1_delta"] = kwargs["leg2_delta"]
-    else:
-        kwargs.setdefault("leg1_delta", _DEFAULT_DELTA)
-    if "leg2_delta" not in kwargs and "leg3_delta" in kwargs:
-        kwargs["leg2_delta"] = kwargs["leg3_delta"]
-    else:
-        kwargs.setdefault("leg2_delta", _DEFAULT_DELTA)
+    # Map collar-style 3-leg deltas to the 2-leg pipeline.
+    # Public API: leg2_delta = short call, leg3_delta = long put.
+    # Internal pipeline uses leg1_delta (opt leg 1) and leg2_delta (opt leg 2).
+    opt1_delta = kwargs.pop("leg2_delta", None)
+    opt2_delta = kwargs.pop("leg3_delta", None)
+    kwargs.pop("leg1_delta", None)  # stock leg delta — not used here
+    kwargs["leg1_delta"] = opt1_delta if opt1_delta is not None else _DEFAULT_DELTA
+    kwargs["leg2_delta"] = opt2_delta if opt2_delta is not None else _DEFAULT_DELTA
     params = _run_checks(dict(kwargs), data)
 
     # --- evaluate the option legs via 2-leg spread pipeline ---
