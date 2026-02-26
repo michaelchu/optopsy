@@ -785,15 +785,3 @@ def cross_price_data():
             "underlying_price": prices,
         }
     )
-
-
-def make_insufficient_data(periods=3):
-    """Create a small DataFrame for testing insufficient-data behaviour."""
-    dates = pd.date_range("2018-01-01", periods=periods, freq="B")
-    return pd.DataFrame(
-        {
-            "underlying_symbol": "SPX",
-            "quote_date": dates,
-            "underlying_price": [100.0 + i for i in range(periods)],
-        }
-    )
