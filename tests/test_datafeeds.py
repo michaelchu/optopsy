@@ -48,6 +48,7 @@ def test_import_csv_file():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     assert list(data.columns) == expected_columns
     assert not data.empty
@@ -139,6 +140,7 @@ def test_import_csv_noncontiguous_columns():
         strike=8,
         bid=9,
         ask=10,
+        delta=11,
     )
 
     expected_columns = [
@@ -150,6 +152,7 @@ def test_import_csv_noncontiguous_columns():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     assert list(data.columns) == expected_columns
     assert len(data) == 4
@@ -173,6 +176,7 @@ def test_import_csv_noncontiguous_columns_with_date_range():
         strike=8,
         bid=9,
         ask=10,
+        delta=11,
     )
     assert len(data) == 2
     assert data.iloc[0]["expiration"] == datetime(2000, 1, 20)

@@ -94,7 +94,7 @@ def csv_data(
     strike: int = 5,
     bid: int = 6,
     ask: int = 7,
-    delta: Optional[int] = None,
+    delta: int = 8,
     gamma: Optional[int] = None,
     theta: Optional[int] = None,
     vega: Optional[int] = None,
@@ -120,7 +120,7 @@ def csv_data(
         option_type: Column index containing option type (call/put)
         bid: Column index containing bid price
         ask: Column index containing ask price
-        delta: Optional column index containing delta Greek
+        delta: Column index containing delta Greek. **Required** — all strategies use per-leg delta targeting
         gamma: Optional column index containing gamma Greek
         theta: Optional column index containing theta Greek
         vega: Optional column index containing vega Greek
