@@ -41,7 +41,7 @@ from .evaluation import _evaluate_all_options
 from .exits import _apply_early_exits
 from .filters import _apply_signal_filter, _assign_dte
 from .output import _format_calendar_output, _format_output
-from .pricing import _assign_profit, _calculate_fill_price
+from .pricing import _assign_profit, _calculate_commission, _calculate_fill_price
 from .timestamps import normalize_dates
 
 
@@ -63,6 +63,7 @@ def _merge_legs(
     slippage: str = "mid",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
+    commission: Optional[dict] = None,
 ) -> pd.DataFrame:
     """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L."""
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
@@ -75,7 +76,7 @@ def _merge_legs(
         result = rules(result, leg_def)
 
     return _assign_profit(
-        result, leg_def, suffixes, slippage, fill_ratio, reference_volume
+        result, leg_def, suffixes, slippage, fill_ratio, reference_volume, commission
     )
 
 
@@ -87,6 +88,7 @@ def _strategy_engine(
     slippage: str = "mid",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
+    commission: Optional[dict] = None,
 ) -> pd.DataFrame:
     """
     Core strategy execution engine that constructs single or multi-leg option strategies.
@@ -137,9 +139,16 @@ def _strategy_engine(
                 reference_volume,
             )
 
+        net_pnl = side.value * (data["exit"] - data["entry"])
+
+        if commission is not None:
+            comm_per_side = _calculate_commission(leg_def, commission)
+            data["total_commission"] = comm_per_side * 2
+            net_pnl = net_pnl - data["total_commission"]
+
         data["pct_change"] = np.where(
             data["entry"].abs() > 0,
-            side.value * (data["exit"] - data["entry"]) / data["entry"].abs(),
+            net_pnl / data["entry"].abs(),
             np.nan,
         )
         return leg_def[0][1](data)
@@ -151,7 +160,14 @@ def _strategy_engine(
     ]
 
     return _merge_legs(
-        partials, leg_def, join_on or [], rules, slippage, fill_ratio, reference_volume
+        partials,
+        leg_def,
+        join_on or [],
+        rules,
+        slippage,
+        fill_ratio,
+        reference_volume,
+        commission,
     )
 
 
@@ -232,6 +248,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             slippage=params["slippage"],
             fill_ratio=params["fill_ratio"],
             reference_volume=params["reference_volume"],
+            commission=params.get("commission"),
         )
     else:
         if not join_on:
@@ -250,6 +267,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             params["slippage"],
             params["fill_ratio"],
             params["reference_volume"],
+            params.get("commission"),
         )
 
     # Apply early exits (stop-loss / take-profit) if configured
@@ -378,6 +396,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params["slippage"],
         params["fill_ratio"],
         params["reference_volume"],
+        params.get("commission"),
     )
 
     # Apply early exits (stop-loss / take-profit) if configured

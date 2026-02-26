@@ -13,6 +13,24 @@ from pydantic import (
 )
 
 
+class Commission(BaseModel):
+    """Commission fee structure for options and stock trades.
+
+    Supports multiple broker fee models:
+    - Flat per-contract: ``Commission(per_contract=0.65)``
+    - Base fee + per-contract: ``Commission(per_contract=0.65, base_fee=9.99)``
+    - Min fee + per-contract: ``Commission(per_contract=0.65, min_fee=4.95)``
+    - Per-share for stock legs: ``Commission(per_contract=0.65, per_share=0.005)``
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    per_contract: float = Field(0.0, ge=0)
+    per_share: float = Field(0.0, ge=0)
+    base_fee: float = Field(0.0, ge=0)
+    min_fee: float = Field(0.0, ge=0)
+
+
 class TargetRange(BaseModel):
     """Generic range selector with target, min, and max values.
 
@@ -72,6 +90,9 @@ class StrategyParamsDict(TypedDict, total=False):
 
     # Side
     side: Literal["long", "short"]
+
+    # Commission
+    commission: Optional[Union["Commission", float]]
 
     # Early exit thresholds (P&L-based)
     stop_loss: float
@@ -136,6 +157,9 @@ class StrategyParams(BaseModel):
     # Side (optional — not consumed by core pipeline, reserved for future use)
     side: Optional[Literal["long", "short"]] = None
 
+    # Commission
+    commission: Optional[Union[Commission, float]] = None
+
     # Early exit thresholds (P&L-based)
     stop_loss: Optional[float] = Field(None, lt=0)
     take_profit: Optional[float] = Field(None, gt=0)
@@ -143,6 +167,19 @@ class StrategyParams(BaseModel):
     # Output control — strict bool (rejects int)
     raw: StrictBool = False
     drop_nan: StrictBool = True
+
+    @field_validator("commission", mode="before")
+    @classmethod
+    def validate_commission(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, Commission):
+            return v
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return Commission(per_contract=float(v))
+        if isinstance(v, dict):
+            return Commission(**v)
+        raise ValueError("commission must be a float, dict, or Commission instance")
 
     @field_validator("min_bid_ask", "delta_interval", mode="before")
     @classmethod

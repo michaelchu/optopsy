@@ -581,7 +581,9 @@ def _build_trade_log(
             "multiplier": multiplier,
             "pct_change": trades["pct_change"].values,
             "description": trades["description"].values,
-            "exit_type": trades["exit_type"].values if "exit_type" in trades.columns else "expiration",
+            "exit_type": trades["exit_type"].values
+            if "exit_type" in trades.columns
+            else "expiration",
         }
     )
 

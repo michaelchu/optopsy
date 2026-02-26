@@ -1571,7 +1571,10 @@ class TestSimulateEarlyExits:
         # Stop-loss triggers at day 10 (Jan 11 − Jan 1 = 10 days)
         assert result_sl.trade_log.iloc[0]["days_held"] == 10
         # Normal exit at expiration (Jan 31 − Jan 1 = 30 days)
-        assert result_sl.trade_log.iloc[0]["days_held"] < result_normal.trade_log.iloc[0]["days_held"]
+        assert (
+            result_sl.trade_log.iloc[0]["days_held"]
+            < result_normal.trade_log.iloc[0]["days_held"]
+        )
 
     def test_equity_curve_date_reflects_early_exit(self, early_exit_sim_data):
         """Equity curve should be indexed at the early exit date, not expiration."""
