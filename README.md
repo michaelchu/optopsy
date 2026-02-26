@@ -2,7 +2,6 @@
 ![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fmichaelchu.github.io%2Foptopsy%2F&label=Docs&icon=github&color=%23d2f4ea&message=&style=flat&tz=Canada%2FEastern)
 [![CI](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/optopsy.svg)](https://badge.fury.io/py/optopsy)
-[![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
 [![Python](https://img.shields.io/pypi/pyversions/optopsy)](https://pypi.org/project/optopsy/)
 
 
