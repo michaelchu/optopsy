@@ -322,6 +322,7 @@ def _covered_with_stock(
     data["quote_date"] = normalize_dates(data["quote_date"])
     data["expiration"] = normalize_dates(data["expiration"])
     data["option_type"] = data["option_type"].str.lower()
+
     delta_target = params["leg1_delta"]
     leg_data = option_filter(data)
 
@@ -390,7 +391,7 @@ def _covered_with_stock(
     commission_obj = params.get("commission")
     total_commission = 0.0
     if commission_obj is not None:
-        # Option leg only — wrap in a list for _calculate_commission
+        # Option leg only — use leg_def[1:] (the option leg)
         option_leg_def = [leg_def[1]]
         comm_per_side = _calculate_commission(
             option_leg_def, commission_obj, has_stock_leg=True, num_shares=100
