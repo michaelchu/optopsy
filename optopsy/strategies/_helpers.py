@@ -17,6 +17,11 @@ import numpy as np
 import pandas as pd
 
 from ..core import _process_calendar_strategy, _process_strategy
+from ..checks import _run_checks
+from ..evaluation import _evaluate_all_options
+from ..output import _format_output
+from ..pricing import _calculate_commission
+from ..timestamps import normalize_dates
 from ..definitions import (
     calendar_spread_external_cols,
     calendar_spread_internal_cols,
@@ -295,11 +300,6 @@ def _covered_with_stock(
     single-leg pipeline.  Stock close prices are then matched by date to
     compute a combined entry cost, exit proceeds, and percentage change.
     """
-    from ..checks import _run_checks
-    from ..evaluation import _evaluate_all_options
-    from ..output import _format_output
-    from ..timestamps import normalize_dates
-
     # The option is always the second leg definition
     option_leg = leg_def[1]
     option_side = option_leg[0]
@@ -386,21 +386,15 @@ def _covered_with_stock(
     total_exit = stock_exit + option_exit
     net_pnl = total_exit - total_entry
 
-    # Apply commission if configured
+    # Apply commission if configured.
+    # commission is already a plain dict after _run_checks() -> model_dump()
     commission_obj = params.get("commission")
     total_commission = 0.0
     if commission_obj is not None:
-        from ..pricing import _calculate_commission
-
-        comm_dict = (
-            commission_obj.model_dump()
-            if hasattr(commission_obj, "model_dump")
-            else commission_obj
-        )
         # Option leg only — use leg_def[1:] (the option leg)
         option_leg_def = [leg_def[1]]
         comm_per_side = _calculate_commission(
-            option_leg_def, comm_dict, has_stock_leg=True, num_shares=100
+            option_leg_def, commission_obj, has_stock_leg=True, num_shares=100
         )
         total_commission = comm_per_side * 2
         net_pnl = net_pnl - total_commission
@@ -431,7 +425,7 @@ def _covered_with_stock(
         }
     )
 
-    if total_commission > 0:
+    if commission_obj is not None:
         output["total_commission"] = total_commission
 
     # Carry over grouping columns produced by the evaluation pipeline
