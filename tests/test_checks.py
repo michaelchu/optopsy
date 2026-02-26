@@ -214,3 +214,6 @@ class TestRequiresVolume:
 
     def test_false_when_spread(self):
         assert not op._requires_volume({"slippage": "spread"})
+
+    def test_false_when_per_leg(self):
+        assert not op._requires_volume({"slippage": "per_leg"})

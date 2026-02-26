@@ -253,6 +253,7 @@ def _calculate_calendar_pnl(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[Dict[str, Any]] = None,
+    per_leg_slippage: float = 0.0,
 ) -> pd.DataFrame:
     """
     Calculate P&L for calendar/diagonal spread positions.
@@ -260,9 +261,10 @@ def _calculate_calendar_pnl(
     Args:
         merged: DataFrame with entry and exit prices
         leg_def: List of tuples defining strategy legs
-        slippage: Slippage mode - "mid", "spread", or "liquidity"
-        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        slippage: Slippage mode - "mid", "spread", "liquidity", or "per_leg"
+        fill_ratio: Base fill ratio (0.0-1.0)
         reference_volume: Volume threshold for liquid options
+        per_leg_slippage: Additive penalty per additional leg (per_leg mode)
 
     Returns:
         DataFrame with P&L columns added
@@ -274,6 +276,7 @@ def _calculate_calendar_pnl(
     volume_leg1 = merged.get("volume_leg1") if "volume_leg1" in merged.columns else None
     volume_leg2 = merged.get("volume_leg2") if "volume_leg2" in merged.columns else None
 
+    num_legs = len(leg_def)
     merged["entry_leg1"] = _calculate_fill_price(
         merged["bid_leg1"],
         merged["ask_leg1"],
@@ -282,6 +285,8 @@ def _calculate_calendar_pnl(
         fill_ratio,
         volume_leg1,
         reference_volume,
+        per_leg_slippage,
+        num_legs,
     )
     merged["entry_leg2"] = _calculate_fill_price(
         merged["bid_leg2"],
@@ -291,6 +296,8 @@ def _calculate_calendar_pnl(
         fill_ratio,
         volume_leg2,
         reference_volume,
+        per_leg_slippage,
+        num_legs,
     )
 
     # Calculate exit prices (reverse sides for closing positions)
@@ -305,6 +312,8 @@ def _calculate_calendar_pnl(
         fill_ratio,
         None,
         reference_volume,
+        per_leg_slippage,
+        num_legs,
     )
     merged["exit_leg2"] = _calculate_fill_price(
         merged["exit_bid_leg2"],
@@ -314,6 +323,8 @@ def _calculate_calendar_pnl(
         fill_ratio,
         None,
         reference_volume,
+        per_leg_slippage,
+        num_legs,
     )
 
     # Apply position multipliers based on leg definition

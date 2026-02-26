@@ -84,9 +84,10 @@ class StrategyParamsDict(TypedDict, total=False):
     exit_dates: Optional[pd.DataFrame]
 
     # Slippage settings
-    slippage: Literal["mid", "spread", "liquidity"]
+    slippage: Literal["mid", "spread", "liquidity", "per_leg"]
     fill_ratio: float
     reference_volume: int
+    per_leg_slippage: float
 
     # Side
     side: Literal["long", "short"]
@@ -153,9 +154,10 @@ class StrategyParams(BaseModel):
     exit_dates: Optional[pd.DataFrame] = None
 
     # Slippage settings
-    slippage: Literal["mid", "spread", "liquidity"] = "mid"
+    slippage: Literal["mid", "spread", "liquidity", "per_leg"] = "mid"
     fill_ratio: Union[int, float] = Field(0.5, ge=0, le=1)
     reference_volume: int = Field(1000, gt=0, strict=True)
+    per_leg_slippage: Union[int, float] = Field(0.073, ge=0, le=1)
 
     # Side (optional — not consumed by core pipeline, reserved for future use)
     side: Optional[Literal["long", "short"]] = None
@@ -205,7 +207,7 @@ class StrategyParams(BaseModel):
             )
         return v
 
-    @field_validator("fill_ratio", mode="before")
+    @field_validator("fill_ratio", "per_leg_slippage", mode="before")
     @classmethod
     def validate_strict_number(cls, v, info):
         if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
