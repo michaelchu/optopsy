@@ -322,6 +322,20 @@ class TestSuggestStrategyParams:
         assert reco is not None
         assert reco["leg1_delta"]["target"] == 0.10
         assert reco["leg2_delta"]["target"] == 0.30
+        assert reco["leg3_delta"]["target"] == 0.30
+        assert reco["leg4_delta"]["target"] == 0.10
+
+    def test_protective_put_recommends_deep_itm_plus_otm(self, option_data):
+        """Protective put recommends deep ITM leg1 and 0.30 delta leg2."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "protective_put"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.80
+        assert reco["leg2_delta"]["target"] == 0.30
 
     def test_empty_dataframe_raises_value_error(self):
         """Empty DataFrame raises ValueError from NaN quantile conversion."""
