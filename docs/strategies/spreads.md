@@ -67,8 +67,6 @@ results = op.short_put_spread(data, max_entry_dte=45, exit_dte=21)
 
 ---
 
----
-
 ## Call Back Spread (Call Ratio Backspread) {#call-back-spread}
 
 #### Description

@@ -2590,3 +2590,15 @@ def test_short_put_condor_raw(multi_strike_data):
     assert results.iloc[0]["option_type_leg2"] == "put"
     assert results.iloc[0]["option_type_leg3"] == "put"
     assert results.iloc[0]["option_type_leg4"] == "put"
+
+
+def test_long_call_condor_default_deltas(multi_strike_data):
+    """Test long call condor runs without error using default deltas."""
+    results = long_call_condor(multi_strike_data, raw=True)
+    assert list(results.columns) == quadruple_strike_internal_cols
+
+
+def test_long_put_condor_default_deltas(multi_strike_data):
+    """Test long put condor runs without error using default deltas."""
+    results = long_put_condor(multi_strike_data, raw=True)
+    assert list(results.columns) == quadruple_strike_internal_cols

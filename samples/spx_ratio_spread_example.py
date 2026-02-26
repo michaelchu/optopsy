@@ -34,7 +34,7 @@ def run_strategy():
     print("RATIO SPREAD STRATEGIES")
     print("=" * 70)
 
-    # Call Back Spread: Short 1 ITM call + long 2 OTM calls (2:1 ratio)
+    # Call Back Spread: Short 1 ITM call + long 2 OTM calls (1:2 ratio)
     # Bullish strategy that profits from large upward moves
     call_back = op.call_back_spread(spx_data).round(2)
     print("\n1. Call Back Spread (1:2 Ratio)")
@@ -48,7 +48,7 @@ def run_strategy():
         )
     )
 
-    # Put Back Spread: Short 1 ITM put + long 2 OTM puts (2:1 ratio)
+    # Put Back Spread: Short 1 ITM put + long 2 OTM puts (1:2 ratio)
     # Bearish strategy that profits from large downward moves
     put_back = op.put_back_spread(spx_data).round(2)
     print("\n2. Put Back Spread (1:2 Ratio)")
