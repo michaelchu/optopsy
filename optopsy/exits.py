@@ -420,8 +420,10 @@ def _replace_exits_single_leg(
 ) -> pd.DataFrame:
     """Replace exit data for triggered single-leg trades.
 
-    Updates bid_exit, ask_exit, exit, dte_exit (if present), quote_date_exit
-    (if present), pct_change, and exit_type for each triggered trade.
+    Updates bid_exit, ask_exit, exit, dte_exit (if present), pct_change,
+    exit_type, and _early_exit_date for each triggered trade. The planned
+    exit date in quote_date_exit (if present) is not modified; the actual
+    early-exit quote date is stored in _early_exit_date.
     """
     # Build lookup keys: join triggered trades with result to get contract info,
     # then merge with data to get exit prices — all vectorized.
@@ -442,9 +444,14 @@ def _replace_exits_single_leg(
         data_merge_cols.append("option_type")
 
     lookup = lookup.rename(columns={"_exit_quote_date": "quote_date"})
+    # Deduplicate data on merge keys to avoid expanding trades
+    data_exit_keys = ["quote_date"] + data_merge_cols
+    data_exit = data[data_exit_keys + ["bid", "ask"]].drop_duplicates(
+        subset=data_exit_keys, keep="first"
+    )
     lookup = lookup.merge(
-        data[["quote_date"] + data_merge_cols + ["bid", "ask"]],
-        on=["quote_date"] + data_merge_cols,
+        data_exit,
+        on=data_exit_keys,
         how="inner",
     )
 
@@ -570,6 +577,8 @@ def _replace_exits_multi_leg(
             leg_lookup_merge = leg_lookup.rename(columns={"_strike": "strike"})
             merge_cols = ["quote_date", "underlying_symbol", "expiration", "strike"]
 
+        # Deduplicate data on merge keys to avoid expanding trades
+        data_merge = data_merge.drop_duplicates(subset=merge_cols, keep="first")
         merged = leg_lookup_merge.merge(
             data_merge, on=merge_cols, how="inner", suffixes=("", "_data")
         )

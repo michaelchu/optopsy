@@ -225,10 +225,11 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     # Build join_on from context
     join_on = context.get("join_on")
 
-    # Pre-filter calls and puts once to avoid redundant string scans per leg
+    # Pre-filter only the option types actually needed by this strategy
     from .evaluation import _calls, _puts
 
-    _prefiltered = {_calls: _calls(data), _puts: _puts(data)}
+    needed_filters = {leg[1] for leg in leg_def}
+    _prefiltered = {f: f(data) for f in needed_filters if f in (_calls, _puts)}
 
     # Evaluate each leg independently
     leg_results = []
