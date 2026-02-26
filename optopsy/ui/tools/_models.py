@@ -132,6 +132,12 @@ class StrategyParamsMixin(BaseModel):
             "'liquidity' (volume-based), or 'per_leg' (scales with leg count). Default: 'mid'"
         ),
     )
+    per_leg_slippage: float | None = Field(
+        None,
+        description=(
+            "Additive penalty per additional leg for per_leg slippage mode (default: 0.073)"
+        ),
+    )
 
 
 class CalendarParamsMixin(BaseModel):

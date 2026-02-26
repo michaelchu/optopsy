@@ -275,7 +275,7 @@ results = op.iron_condor(
     fill_ratio=0.25,          # 1-leg base: 75% edge retained
     per_leg_slippage=0.073,   # penalty per extra leg
 )
-# 1-leg: ratio=0.25 (75% edge), 2-leg: 0.32 (68%), 3-leg: 0.40 (60%), 4-leg: 0.47 (53%)
+# 1-leg: ratio=0.250 (75% edge), 2-leg: 0.323 (~68%), 3-leg: 0.396 (~60%), 4-leg: 0.469 (~53%)
 ```
 
 **Notes:**
