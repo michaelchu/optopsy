@@ -35,6 +35,12 @@ from .calendar import (
     short_put_calendar,
     short_put_diagonal,
 )
+from .condors import (
+    long_call_condor,
+    long_put_condor,
+    short_call_condor,
+    short_put_condor,
+)
 from .iron_strategies import (
     iron_butterfly,
     iron_condor,
@@ -43,12 +49,18 @@ from .iron_strategies import (
 )
 from .singles import long_calls, long_puts, short_calls, short_puts
 from .spreads import (
+    call_back_spread,
+    call_front_spread,
+    cash_secured_put,
+    collar,
     covered_call,
     long_call_spread,
     long_put_spread,
     long_straddles,
     long_strangles,
     protective_put,
+    put_back_spread,
+    put_front_spread,
     short_call_spread,
     short_put_spread,
     short_straddles,
@@ -72,9 +84,16 @@ __all__ = [
     "short_call_spread",
     "long_put_spread",
     "short_put_spread",
-    # Covered & protective
+    # Covered, protective & collar
     "covered_call",
     "protective_put",
+    "collar",
+    "cash_secured_put",
+    # Ratio spreads
+    "call_back_spread",
+    "put_back_spread",
+    "call_front_spread",
+    "put_front_spread",
     # Butterflies
     "long_call_butterfly",
     "short_call_butterfly",
@@ -85,6 +104,11 @@ __all__ = [
     "reverse_iron_condor",
     "iron_butterfly",
     "reverse_iron_butterfly",
+    # Condors (same option type)
+    "long_call_condor",
+    "short_call_condor",
+    "long_put_condor",
+    "short_put_condor",
     # Calendar spreads
     "long_call_calendar",
     "short_call_calendar",

@@ -1,6 +1,6 @@
 # Strategy Overview
 
-Optopsy includes 28 built-in options strategies covering single-leg, multi-leg, and time-based strategies.
+Optopsy includes 38 built-in options strategies covering single-leg, multi-leg, ratio, and time-based strategies.
 
 ## Strategy Categories
 
@@ -34,6 +34,16 @@ Limited-risk directional strategies.
 
 [Learn more →](strategies/spreads.md)
 
+### Ratio Spreads (4)
+Unequal-quantity spreads for directional or neutral trades.
+
+- [Call Back Spread](strategies/spreads.md#call-back-spread) - Bullish 1:2 ratio (short 1 ITM, long 2 OTM calls)
+- [Put Back Spread](strategies/spreads.md#put-back-spread) - Bearish 1:2 ratio (short 1 ITM, long 2 OTM puts)
+- [Call Front Spread](strategies/spreads.md#call-front-spread) - Neutral 1:2 ratio (long 1 ITM, short 2 OTM calls)
+- [Put Front Spread](strategies/spreads.md#put-front-spread) - Neutral 1:2 ratio (long 1 ITM, short 2 OTM puts)
+
+[Learn more →](strategies/spreads.md)
+
 ### Butterfly Spreads (4)
 Neutral strategies targeting specific price ranges.
 
@@ -54,11 +64,23 @@ Four-leg strategies with defined risk.
 
 [Learn more →](strategies/iron-strategies.md)
 
-### Covered Strategies (2)
+### Condor Spreads (4)
+Four-leg strategies using the same option type at four ascending strikes.
+
+- [Long Call Condor](strategies/condors.md#long-call-condor) - Neutral, all calls
+- [Short Call Condor](strategies/condors.md#short-call-condor) - Volatility play, all calls
+- [Long Put Condor](strategies/condors.md#long-put-condor) - Neutral, all puts
+- [Short Put Condor](strategies/condors.md#short-put-condor) - Volatility play, all puts
+
+[Learn more →](strategies/condors.md)
+
+### Covered & Collar Strategies (4)
 Stock + option combinations. Supports actual stock data via [yfinance](https://github.com/ranaroussi/yfinance) or synthetic deep ITM calls.
 
 - [Covered Call](strategies/covered.md#covered-call) - Income on stock holdings
 - [Protective Put](strategies/covered.md#protective-put) - Downside insurance
+- [Collar](strategies/covered.md#collar) - Hedged income (stock + short call + long put)
+- [Cash-Secured Put](strategies/covered.md#cash-secured-put) - Bullish income (alias for short puts)
 
 [Learn more →](strategies/covered.md)
 
@@ -91,6 +113,10 @@ Different strikes and expirations.
 | Iron Condor | 4 | Neutral | Net credit | Difference in strikes | Range-bound markets |
 | Long Straddle | 2 | High volatility | Unlimited | Premiums paid | Before earnings |
 | Call Butterfly | 3 | Neutral | Width of wing | Net debit | Pinning at strike |
+| Call Back Spread | 2 (1:2) | Very bullish | Unlimited | Limited | Large upside move |
+| Call Front Spread | 2 (1:2) | Neutral | Net credit | Unlimited | Time decay near strike |
+| Collar | 3 | Neutral/Hedged | Short call strike | Put strike | Hedging stock position |
+| Long Call Condor | 4 | Neutral | Net debit | Defined | Range-bound, all calls |
 | Call Calendar | 2 | Neutral | Variable | Net debit | Time decay play |
 
 ## Strategy Selection Guide
@@ -100,20 +126,28 @@ Different strikes and expirations.
 **Go Up Significantly**
 - Long Calls
 - Long Call Spread
+- Call Back Spread
 
 **Go Down Significantly**
 - Long Puts
 - Long Put Spread
+- Put Back Spread
 
 **Stay Flat**
 - Short Straddle
 - Short Strangle
 - Iron Condor
 - Iron Butterfly
+- Call/Put Front Spread
+- Call/Put Condor
 
 **Move But Unsure Direction**
 - Long Straddle
 - Long Strangle
+
+**Hedge an Existing Position**
+- Collar
+- Protective Put
 
 **Stay Near Current Price**
 - Calendar Spreads

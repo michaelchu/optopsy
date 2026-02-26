@@ -16,7 +16,7 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 
 ## Features
 
-- **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **38 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, condors, ratio spreads, collars, calendars, and diagonals
 - **Per-Leg Delta Targeting** - Select strikes by delta with `target, min, max` per leg
 - **Trade Simulator** - Chronological simulation with capital tracking, position limits, and equity curves via `simulate()`
 - **Portfolio Simulation** - Weighted multi-strategy portfolio backtesting via `simulate_portfolio()`
@@ -91,7 +91,7 @@ optopsy-chat run --debug             # enable debug logging
 
 ### What the Agent Can Do
 
-- **Run any of the 28 strategies** — ask in plain English (e.g. *"Run iron condors on SPY with 30-45 DTE"*) and the agent picks the right function and parameters
+- **Run any of the 38 strategies** — ask in plain English (e.g. *"Run iron condors on SPY with 30-45 DTE"*) and the agent picks the right function and parameters
 - **Fetch live options data** — pull options chains from EODHD and cache them locally for fast repeat access
 - **Fetch stock price history** — automatically download OHLCV data via yfinance for charting and signal analysis
 - **Load & preview CSV data** — drag-and-drop a CSV into the chat or point to a file on disk; inspect shape, columns, date ranges, and sample rows
@@ -176,7 +176,7 @@ print(result.trade_log)       # per-trade P&L, entry/exit dates, equity
 print(result.equity_curve)    # portfolio value over time
 ```
 
-The simulator works with all 28 strategies. It selects one trade per entry date, enforces concurrent position limits, and computes a full equity curve with metrics like win rate, profit factor, max drawdown, and average days in trade.
+The simulator works with all 38 strategies. It selects one trade per entry date, enforces concurrent position limits, and computes a full equity curve with metrics like win rate, profit factor, max drawdown, and average days in trade.
 
 ## Supported Strategies
 
@@ -186,16 +186,18 @@ The simulator works with all 28 strategies. It selects one trade per entry date,
 | **Straddles/Strangles** | `long_straddles`, `short_straddles`, `long_strangles`, `short_strangles` |
 | **Vertical Spreads** | `long_call_spread`, `short_call_spread`, `long_put_spread`, `short_put_spread` |
 | **Butterflies** | `long_call_butterfly`, `short_call_butterfly`, `long_put_butterfly`, `short_put_butterfly` |
+| **Ratio Spreads** | `call_back_spread`, `put_back_spread`, `call_front_spread`, `put_front_spread` |
 | **Iron Condors** | `iron_condor`, `reverse_iron_condor` |
 | **Iron Butterflies** | `iron_butterfly`, `reverse_iron_butterfly` |
-| **Covered** | `covered_call`, `protective_put` (supports actual stock data via [yfinance](https://github.com/ranaroussi/yfinance)) |
+| **Condors** | `long_call_condor`, `short_call_condor`, `long_put_condor`, `short_put_condor` |
+| **Covered & Collar** | `covered_call`, `protective_put`, `collar`, `cash_secured_put` (supports actual stock data via [yfinance](https://github.com/ranaroussi/yfinance)) |
 | **Calendar Spreads** | `long_call_calendar`, `short_call_calendar`, `long_put_calendar`, `short_put_calendar` |
 | **Diagonal Spreads** | `long_call_diagonal`, `short_call_diagonal`, `long_put_diagonal`, `short_put_diagonal` |
 
 ## Documentation
 
 - [Getting Started](https://michaelchu.github.io/optopsy/getting-started/) - Installation and first backtest
-- [Strategies](https://michaelchu.github.io/optopsy/strategies/) - All 28 strategies explained
+- [Strategies](https://michaelchu.github.io/optopsy/strategies/) - All 38 strategies explained
 - [Parameters](https://michaelchu.github.io/optopsy/parameters/) - Configuration options reference
 - [Entry Signals](https://michaelchu.github.io/optopsy/entry-signals/) - Technical analysis signal filters
 - [Chat UI](https://michaelchu.github.io/optopsy/chat-ui/) - AI-powered chat interface

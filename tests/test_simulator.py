@@ -1148,7 +1148,7 @@ def directional_calendar_put_data(request):
 
 
 # ---------------------------------------------------------------------------
-# Parametrized smoke tests — all 28 strategies × 3 directions
+# Parametrized smoke tests — all 38 strategies × 3 directions
 # ---------------------------------------------------------------------------
 
 

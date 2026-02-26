@@ -30,7 +30,8 @@ nav:
       - Vertical Spreads: strategies/spreads.md
       - Butterflies: strategies/butterflies.md
       - Iron Condors & Iron Butterflies: strategies/iron-strategies.md
-      - Covered Strategies: strategies/covered.md
+      - Condor Spreads: strategies/condors.md
+      - Covered & Collar Strategies: strategies/covered.md
       - Calendar Spreads: strategies/calendars.md
       - Diagonal Spreads: strategies/diagonals.md
   - Configuration:

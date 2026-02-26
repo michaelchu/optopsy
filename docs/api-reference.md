@@ -58,6 +58,21 @@ Load options data from CSV file.
 
 ---
 
+## Ratio Spreads
+
+!!! note
+    Ratio spreads use unequal quantities (1:2 ratio). They accept the same parameters as vertical spreads. See [Common Parameters](#common-parameters) for full documentation.
+
+::: optopsy.strategies.call_back_spread
+
+::: optopsy.strategies.put_back_spread
+
+::: optopsy.strategies.call_front_spread
+
+::: optopsy.strategies.put_front_spread
+
+---
+
 ## Butterfly Spreads
 
 !!! note
@@ -88,14 +103,33 @@ Load options data from CSV file.
 
 ---
 
-## Covered Strategies
+## Condor Spreads
 
 !!! note
-    Covered strategies accept all [Common Parameters](#common-parameters) plus an optional `stock_data` parameter for actual stock prices. We recommend [yfinance](https://github.com/ranaroussi/yfinance) (`pip install yfinance`) — pass `yf.download()` output directly as `stock_data`. When omitted, a synthetic deep ITM call is used.
+    Condor spreads use four legs of the same option type. They accept the same parameters as iron strategies. See [Common Parameters](#common-parameters) for full documentation.
+
+::: optopsy.strategies.long_call_condor
+
+::: optopsy.strategies.short_call_condor
+
+::: optopsy.strategies.long_put_condor
+
+::: optopsy.strategies.short_put_condor
+
+---
+
+## Covered & Collar Strategies
+
+!!! note
+    Covered and collar strategies accept all [Common Parameters](#common-parameters) plus an optional `stock_data` parameter for actual stock prices. We recommend [yfinance](https://github.com/ranaroussi/yfinance) (`pip install yfinance`) — pass `yf.download()` output directly as `stock_data`. When omitted, a synthetic deep ITM call is used.
 
 ::: optopsy.strategies.covered_call
 
 ::: optopsy.strategies.protective_put
+
+::: optopsy.strategies.collar
+
+::: optopsy.strategies.cash_secured_put
 
 ---
 
