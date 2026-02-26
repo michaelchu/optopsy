@@ -207,6 +207,7 @@ def _normalize_days_param(days):
 
 
 SIGNAL_REGISTRY: dict[str, Any] = {
+    # --- Momentum ---
     # RSI — defaults: period=14, threshold=30 (below) / 70 (above)
     "rsi_below": lambda **kw: _signals.rsi_below(
         kw.get("period", 14), kw.get("threshold", 30)
@@ -214,9 +215,6 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     "rsi_above": lambda **kw: _signals.rsi_above(
         kw.get("period", 14), kw.get("threshold", 70)
     ),
-    # SMA — default: period=50
-    "sma_below": lambda **kw: _signals.sma_below(kw.get("period", 50)),
-    "sma_above": lambda **kw: _signals.sma_above(kw.get("period", 50)),
     # MACD — defaults: fast=12, slow=26, signal_period=9
     "macd_cross_above": lambda **kw: _signals.macd_cross_above(
         kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)
@@ -224,19 +222,175 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     "macd_cross_below": lambda **kw: _signals.macd_cross_below(
         kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)
     ),
-    # Bollinger Bands — defaults: length=20, std=2.0
-    "bb_above_upper": lambda **kw: _signals.bb_above_upper(
-        kw.get("length", 20), kw.get("std", 2.0)
+    # Stochastic — defaults: k_period=14, d_period=3
+    "stoch_below": lambda **kw: _signals.stoch_below(
+        kw.get("k_period", 14), kw.get("d_period", 3), kw.get("threshold", 20)
     ),
-    "bb_below_lower": lambda **kw: _signals.bb_below_lower(
-        kw.get("length", 20), kw.get("std", 2.0)
+    "stoch_above": lambda **kw: _signals.stoch_above(
+        kw.get("k_period", 14), kw.get("d_period", 3), kw.get("threshold", 80)
     ),
+    # StochRSI — defaults: period=14, rsi_period=14
+    "stochrsi_below": lambda **kw: _signals.stochrsi_below(
+        kw.get("period", 14), kw.get("rsi_period", 14), kw.get("threshold", 20)
+    ),
+    "stochrsi_above": lambda **kw: _signals.stochrsi_above(
+        kw.get("period", 14), kw.get("rsi_period", 14), kw.get("threshold", 80)
+    ),
+    # Williams %R — defaults: period=14
+    "willr_below": lambda **kw: _signals.willr_below(
+        kw.get("period", 14), kw.get("threshold", -80)
+    ),
+    "willr_above": lambda **kw: _signals.willr_above(
+        kw.get("period", 14), kw.get("threshold", -20)
+    ),
+    # CCI — defaults: period=20
+    "cci_below": lambda **kw: _signals.cci_below(
+        kw.get("period", 20), kw.get("threshold", -100)
+    ),
+    "cci_above": lambda **kw: _signals.cci_above(
+        kw.get("period", 20), kw.get("threshold", 100)
+    ),
+    # ROC — defaults: period=10
+    "roc_above": lambda **kw: _signals.roc_above(
+        kw.get("period", 10), kw.get("threshold", 0)
+    ),
+    "roc_below": lambda **kw: _signals.roc_below(
+        kw.get("period", 10), kw.get("threshold", 0)
+    ),
+    # PPO crossover — defaults: fast=12, slow=26, signal_period=9
+    "ppo_cross_above": lambda **kw: _signals.ppo_cross_above(
+        kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)
+    ),
+    "ppo_cross_below": lambda **kw: _signals.ppo_cross_below(
+        kw.get("fast", 12), kw.get("slow", 26), kw.get("signal_period", 9)
+    ),
+    # TSI crossover — defaults: long=25, short=13, signal_period=13
+    "tsi_cross_above": lambda **kw: _signals.tsi_cross_above(
+        kw.get("long", 25), kw.get("short", 13), kw.get("signal_period", 13)
+    ),
+    "tsi_cross_below": lambda **kw: _signals.tsi_cross_below(
+        kw.get("long", 25), kw.get("short", 13), kw.get("signal_period", 13)
+    ),
+    # CMO — defaults: period=14
+    "cmo_above": lambda **kw: _signals.cmo_above(
+        kw.get("period", 14), kw.get("threshold", 50)
+    ),
+    "cmo_below": lambda **kw: _signals.cmo_below(
+        kw.get("period", 14), kw.get("threshold", -50)
+    ),
+    # UO — defaults: fast=7, medium=14, slow=28
+    "uo_above": lambda **kw: _signals.uo_above(
+        kw.get("fast", 7),
+        kw.get("medium", 14),
+        kw.get("slow", 28),
+        kw.get("threshold", 70),
+    ),
+    "uo_below": lambda **kw: _signals.uo_below(
+        kw.get("fast", 7),
+        kw.get("medium", 14),
+        kw.get("slow", 28),
+        kw.get("threshold", 30),
+    ),
+    # Squeeze
+    "squeeze_on": lambda **kw: _signals.squeeze_on(
+        kw.get("bb_length", 20),
+        kw.get("bb_std", 2.0),
+        kw.get("kc_length", 20),
+        kw.get("kc_scalar", 1.5),
+    ),
+    "squeeze_off": lambda **kw: _signals.squeeze_off(
+        kw.get("bb_length", 20),
+        kw.get("bb_std", 2.0),
+        kw.get("kc_length", 20),
+        kw.get("kc_scalar", 1.5),
+    ),
+    # Awesome Oscillator
+    "ao_above": lambda **kw: _signals.ao_above(
+        kw.get("fast", 5), kw.get("slow", 34), kw.get("threshold", 0)
+    ),
+    "ao_below": lambda **kw: _signals.ao_below(
+        kw.get("fast", 5), kw.get("slow", 34), kw.get("threshold", 0)
+    ),
+    # SMI crossover
+    "smi_cross_above": lambda **kw: _signals.smi_cross_above(
+        kw.get("fast", 5), kw.get("slow", 20), kw.get("signal_period", 5)
+    ),
+    "smi_cross_below": lambda **kw: _signals.smi_cross_below(
+        kw.get("fast", 5), kw.get("slow", 20), kw.get("signal_period", 5)
+    ),
+    # KST crossover
+    "kst_cross_above": lambda **kw: _signals.kst_cross_above(),
+    "kst_cross_below": lambda **kw: _signals.kst_cross_below(),
+    # Fisher Transform crossover
+    "fisher_cross_above": lambda **kw: _signals.fisher_cross_above(kw.get("period", 9)),
+    "fisher_cross_below": lambda **kw: _signals.fisher_cross_below(kw.get("period", 9)),
+    # --- Overlap / Moving Averages ---
+    # SMA — default: period=50
+    "sma_below": lambda **kw: _signals.sma_below(kw.get("period", 50)),
+    "sma_above": lambda **kw: _signals.sma_above(kw.get("period", 50)),
     # EMA crossover — defaults: fast=10, slow=50
     "ema_cross_above": lambda **kw: _signals.ema_cross_above(
         kw.get("fast", 10), kw.get("slow", 50)
     ),
     "ema_cross_below": lambda **kw: _signals.ema_cross_below(
         kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # DEMA crossover
+    "dema_cross_above": lambda **kw: _signals.dema_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "dema_cross_below": lambda **kw: _signals.dema_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # TEMA crossover
+    "tema_cross_above": lambda **kw: _signals.tema_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "tema_cross_below": lambda **kw: _signals.tema_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # HMA crossover
+    "hma_cross_above": lambda **kw: _signals.hma_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "hma_cross_below": lambda **kw: _signals.hma_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # KAMA crossover
+    "kama_cross_above": lambda **kw: _signals.kama_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "kama_cross_below": lambda **kw: _signals.kama_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # WMA crossover
+    "wma_cross_above": lambda **kw: _signals.wma_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "wma_cross_below": lambda **kw: _signals.wma_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # ZLMA crossover
+    "zlma_cross_above": lambda **kw: _signals.zlma_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "zlma_cross_below": lambda **kw: _signals.zlma_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # ALMA crossover
+    "alma_cross_above": lambda **kw: _signals.alma_cross_above(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    "alma_cross_below": lambda **kw: _signals.alma_cross_below(
+        kw.get("fast", 10), kw.get("slow", 50)
+    ),
+    # --- Volatility ---
+    # Bollinger Bands — defaults: length=20, std=2.0
+    "bb_above_upper": lambda **kw: _signals.bb_above_upper(
+        kw.get("length", 20), kw.get("std", 2.0)
+    ),
+    "bb_below_lower": lambda **kw: _signals.bb_below_lower(
+        kw.get("length", 20), kw.get("std", 2.0)
     ),
     # ATR volatility regime — defaults: period=14, multiplier=1.5 (above) / 0.75 (below)
     "atr_above": lambda **kw: _signals.atr_above(
@@ -245,11 +399,108 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     "atr_below": lambda **kw: _signals.atr_below(
         kw.get("period", 14), kw.get("multiplier", 0.75)
     ),
+    # Keltner Channel
+    "kc_above_upper": lambda **kw: _signals.kc_above_upper(
+        kw.get("length", 20), kw.get("scalar", 1.5)
+    ),
+    "kc_below_lower": lambda **kw: _signals.kc_below_lower(
+        kw.get("length", 20), kw.get("scalar", 1.5)
+    ),
+    # Donchian Channel
+    "donchian_above_upper": lambda **kw: _signals.donchian_above_upper(
+        kw.get("lower_length", 20), kw.get("upper_length", 20)
+    ),
+    "donchian_below_lower": lambda **kw: _signals.donchian_below_lower(
+        kw.get("lower_length", 20), kw.get("upper_length", 20)
+    ),
+    # NATR
+    "natr_above": lambda **kw: _signals.natr_above(
+        kw.get("period", 14), kw.get("threshold", 2.0)
+    ),
+    "natr_below": lambda **kw: _signals.natr_below(
+        kw.get("period", 14), kw.get("threshold", 1.0)
+    ),
+    # Mass Index
+    "massi_above": lambda **kw: _signals.massi_above(
+        kw.get("fast", 9), kw.get("slow", 25), kw.get("threshold", 27)
+    ),
+    "massi_below": lambda **kw: _signals.massi_below(
+        kw.get("fast", 9), kw.get("slow", 25), kw.get("threshold", 26.5)
+    ),
+    # --- Trend ---
+    # ADX
+    "adx_above": lambda **kw: _signals.adx_above(
+        kw.get("period", 14), kw.get("threshold", 25)
+    ),
+    "adx_below": lambda **kw: _signals.adx_below(
+        kw.get("period", 14), kw.get("threshold", 20)
+    ),
+    # Aroon crossover
+    "aroon_cross_above": lambda **kw: _signals.aroon_cross_above(kw.get("period", 25)),
+    "aroon_cross_below": lambda **kw: _signals.aroon_cross_below(kw.get("period", 25)),
+    # Supertrend
+    "supertrend_buy": lambda **kw: _signals.supertrend_buy(
+        kw.get("period", 7), kw.get("multiplier", 3.0)
+    ),
+    "supertrend_sell": lambda **kw: _signals.supertrend_sell(
+        kw.get("period", 7), kw.get("multiplier", 3.0)
+    ),
+    # PSAR
+    "psar_buy": lambda **kw: _signals.psar_buy(
+        kw.get("af0", 0.02), kw.get("af", 0.02), kw.get("max_af", 0.2)
+    ),
+    "psar_sell": lambda **kw: _signals.psar_sell(
+        kw.get("af0", 0.02), kw.get("af", 0.02), kw.get("max_af", 0.2)
+    ),
+    # Choppiness
+    "chop_above": lambda **kw: _signals.chop_above(
+        kw.get("period", 14), kw.get("threshold", 61.8)
+    ),
+    "chop_below": lambda **kw: _signals.chop_below(
+        kw.get("period", 14), kw.get("threshold", 38.2)
+    ),
+    # VHF
+    "vhf_above": lambda **kw: _signals.vhf_above(
+        kw.get("period", 28), kw.get("threshold", 0.4)
+    ),
+    "vhf_below": lambda **kw: _signals.vhf_below(
+        kw.get("period", 28), kw.get("threshold", 0.4)
+    ),
+    # --- Volume ---
+    # MFI
+    "mfi_above": lambda **kw: _signals.mfi_above(
+        kw.get("period", 14), kw.get("threshold", 80)
+    ),
+    "mfi_below": lambda **kw: _signals.mfi_below(
+        kw.get("period", 14), kw.get("threshold", 20)
+    ),
+    # OBV crossover with SMA
+    "obv_cross_above_sma": lambda **kw: _signals.obv_cross_above_sma(
+        kw.get("sma_period", 20)
+    ),
+    "obv_cross_below_sma": lambda **kw: _signals.obv_cross_below_sma(
+        kw.get("sma_period", 20)
+    ),
+    # CMF
+    "cmf_above": lambda **kw: _signals.cmf_above(
+        kw.get("period", 20), kw.get("threshold", 0.05)
+    ),
+    "cmf_below": lambda **kw: _signals.cmf_below(
+        kw.get("period", 20), kw.get("threshold", -0.05)
+    ),
+    # AD crossover with SMA
+    "ad_cross_above_sma": lambda **kw: _signals.ad_cross_above_sma(
+        kw.get("sma_period", 20)
+    ),
+    "ad_cross_below_sma": lambda **kw: _signals.ad_cross_below_sma(
+        kw.get("sma_period", 20)
+    ),
+    # --- Calendar ---
     # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
     "day_of_week": lambda **kw: _signals.day_of_week(
         *_normalize_days_param(kw.get("days", [4]))
     ),
-    # IV rank — defaults: threshold=0.5, window=252
+    # --- IV Rank ---
     # Require options data with implied_volatility column
     "iv_rank_above": lambda **kw: _signals.iv_rank_above(
         kw.get("threshold", 0.5), kw.get("window", 252)
@@ -273,6 +524,56 @@ _DATE_ONLY_SIGNALS = frozenset({"day_of_week"})
 # Signals that require options data (with implied_volatility column)
 # rather than stock OHLCV data.
 _IV_SIGNALS = frozenset({"iv_rank_above", "iv_rank_below"})
+
+# Signals that require OHLC data (high, low, close) — need stock data fetch.
+_OHLC_SIGNALS = frozenset(
+    {
+        "stoch_below",
+        "stoch_above",
+        "willr_below",
+        "willr_above",
+        "cci_below",
+        "cci_above",
+        "uo_above",
+        "uo_below",
+        "squeeze_on",
+        "squeeze_off",
+        "ao_above",
+        "ao_below",
+        "kc_above_upper",
+        "kc_below_lower",
+        "donchian_above_upper",
+        "donchian_below_lower",
+        "natr_above",
+        "natr_below",
+        "massi_above",
+        "massi_below",
+        "adx_above",
+        "adx_below",
+        "aroon_cross_above",
+        "aroon_cross_below",
+        "supertrend_buy",
+        "supertrend_sell",
+        "psar_buy",
+        "psar_sell",
+        "chop_above",
+        "chop_below",
+    }
+)
+
+# Signals that require OHLCV data (high, low, close, volume).
+_VOLUME_SIGNALS = frozenset(
+    {
+        "mfi_above",
+        "mfi_below",
+        "obv_cross_above_sma",
+        "obv_cross_below_sma",
+        "cmf_above",
+        "cmf_below",
+        "ad_cross_above_sma",
+        "ad_cross_below_sma",
+    }
+)
 
 # Maps strategy name -> required option_type for data fetching.
 # "call"/"put" means only that type is needed; None means both are needed.
