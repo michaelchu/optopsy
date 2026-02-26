@@ -32,7 +32,7 @@ from ..definitions import (
 )
 from ..evaluation import _evaluate_all_options
 from ..output import _format_output
-from ..pricing import _calculate_commission
+from ..pricing import _calculate_commission, _calculate_fill_price
 from ..rules import (
     _rule_butterfly_strikes,
     _rule_expiration_ordering,
@@ -375,6 +375,36 @@ def _covered_with_stock(
 
     if result.empty:
         return _empty_result()
+
+    # --- apply slippage to option leg ---
+    slippage = params["slippage"]
+    has_bid_ask = "bid_entry" in result.columns and "ask_entry" in result.columns
+    if has_bid_ask and slippage != "mid":
+        result = result.copy()
+        volume_entry = (
+            result.get("volume_entry") if "volume_entry" in result.columns else None
+        )
+        result["entry"] = _calculate_fill_price(
+            result["bid_entry"],
+            result["ask_entry"],
+            option_side.value,
+            slippage,
+            params["fill_ratio"],
+            volume_entry,
+            params["reference_volume"],
+        )
+        volume_exit = (
+            result.get("volume_exit") if "volume_exit" in result.columns else None
+        )
+        result["exit"] = _calculate_fill_price(
+            result["bid_exit"],
+            result["ask_exit"],
+            -option_side.value,
+            slippage,
+            params["fill_ratio"],
+            volume_exit,
+            params["reference_volume"],
+        )
 
     # --- compute combined P&L ---
     stock_entry = result["_stock_entry"]
