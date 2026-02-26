@@ -151,7 +151,7 @@ def _normalise_trades(
     elif "_early_exit_date" in raw.columns:
         early = pd.to_datetime(raw["_early_exit_date"].values)
         has_early = pd.notna(early)
-        df["exit_date"] = np.where(has_early, early, df["exit_date"].values)
+        df["exit_date"] = np.where(has_early, early, np.asarray(df["exit_date"]))
 
     return df
 
