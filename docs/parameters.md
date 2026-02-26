@@ -14,7 +14,7 @@ All Optopsy strategies accept a common set of parameters for filtering, grouping
 
 ## Core Parameters
 
-#### Entry and Exit Timing
+### Entry and Exit Timing
 
 #### `max_entry_dte`
 **Type:** `int` | **Default:** `90`
@@ -48,7 +48,7 @@ results = op.long_calls(data, max_entry_dte=60, exit_dte=30)  # Exit at 30 DTE
 
 ---
 
-#### Filtering Parameters
+### Filtering Parameters
 
 #### `min_bid_ask`
 **Type:** `float` | **Default:** `0.05`
@@ -66,7 +66,7 @@ results = op.iron_condor(data, min_bid_ask=0.10)  # Require $0.10+ spread
 
 ---
 
-#### Grouping and Aggregation
+### Grouping and Aggregation
 
 #### `dte_interval`
 **Type:** `int` | **Default:** `7`
@@ -98,7 +98,7 @@ results = op.iron_condor(
 
 ---
 
-#### Output Control
+### Output Control
 
 #### `raw`
 **Type:** `bool` | **Default:** `False`
@@ -136,7 +136,7 @@ results = op.long_calls(data, drop_nan=False)  # Keep NaN values
 
 Optopsy uses per-leg delta targeting to select option strikes. Each leg of a strategy has its own delta parameter (`leg1_delta`, `leg2_delta`, etc.) that takes a `TargetRange` value specifying the ideal delta and an acceptable range.
 
-#### `TargetRange`
+### `TargetRange`
 
 A `TargetRange` has three fields:
 
@@ -164,7 +164,7 @@ results = op.short_puts(
 )
 ```
 
-#### `leg1_delta` / `leg2_delta` / `leg3_delta` / `leg4_delta`
+### `leg1_delta` / `leg2_delta` / `leg3_delta` / `leg4_delta`
 **Type:** `TargetRange | dict | None` | **Default:** strategy-dependent
 
 Per-leg delta targeting. The number of legs depends on the strategy:
@@ -257,7 +257,7 @@ results = op.short_puts(
 
 ---
 
-#### `exit_type` Column Values
+### `exit_type` Column Values
 
 When early exits are enabled and `raw=True`, the output includes an `exit_type` column:
 
@@ -482,7 +482,7 @@ print(results.head())
 
 ## Default Values Reference
 
-#### Standard Strategies
+### Standard Strategies
 
 ```python
 default_params = {
@@ -508,7 +508,7 @@ default_params = {
 }
 ```
 
-#### Calendar & Diagonal Strategies
+### Calendar & Diagonal Strategies
 
 ```python
 calendar_default_params = {

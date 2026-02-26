@@ -46,6 +46,7 @@ Optopsy requires historical options chain data with the following columns:
 | `gamma` | Option gamma |
 | `theta` | Option theta |
 | `vega` | Option vega |
+| `implied_volatility` | Implied volatility |
 | `volume` | Trading volume (required for `slippage='liquidity'`) |
 | `open_interest` | Open interest |
 
@@ -60,20 +61,19 @@ import optopsy as op
 
 data = op.csv_data(
     'options_data.csv',
-    underlying_symbol=0,      # Column index or name
+    underlying_symbol=0,      # Column index (0-based)
     underlying_price=1,
     option_type=2,
     expiration=3,
     quote_date=4,
     strike=5,
     bid=6,
-    ask=7
+    ask=7,
+    delta=8
 )
 ```
 
-The function accepts either:
-- **Column indices** (integers): Position of each column
-- **Column names** (strings): Header names from your CSV
+Column parameters are **integer indices** (0-based) specifying the position of each column in your CSV.
 
 ### From DataFrame
 
@@ -194,7 +194,7 @@ The `csv_data()` function will attempt to auto-detect date formats.
 
 If you see a "KeyError" for a column, check that:
 1. The column exists in your data
-2. You've specified the correct column index or name in `csv_data()`
+2. You've specified the correct column index in `csv_data()`
 3. Column names match exactly (case-sensitive)
 
 ### Empty Results

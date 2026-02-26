@@ -58,30 +58,29 @@ print(results.groupby('delta_range')['mean'].describe())
 
 #### Earnings Straddle Strategy
 
-Backtest long straddles around earnings events:
+Backtest long straddles on specific dates using `entry_dates`:
 
 ```python
-# Load earnings dates
-earnings_dates = ['2023-01-15', '2023-04-15', '2023-07-15', '2023-10-15']
-
-# Filter data around earnings (±7 days)
 import pandas as pd
-data['quote_date'] = pd.to_datetime(data['quote_date'])
+from optopsy import custom_signal, apply_signal
 
-earnings_data = []
-for date in pd.to_datetime(earnings_dates):
-    mask = (data['quote_date'] >= date - pd.Timedelta(days=7)) & \
-           (data['quote_date'] <= date + pd.Timedelta(days=7))
-    earnings_data.append(data[mask])
+# Define earnings dates as entry signals
+earnings_dates = pd.DataFrame({
+    "underlying_symbol": ["SPX"] * 4,
+    "quote_date": pd.to_datetime(['2023-01-15', '2023-04-15', '2023-07-15', '2023-10-15']),
+    "enter": [True] * 4,
+})
 
-earnings_df = pd.concat(earnings_data)
+sig = custom_signal(earnings_dates, flag_col="enter")
+entry_dates = apply_signal(earnings_dates, sig)
 
-# Backtest ATM straddles
+# Backtest ATM straddles — only enters on earnings dates
 results = op.long_straddles(
-    earnings_df,
-    max_entry_dte=7,  # Enter 1 week before
-    exit_dte=0,       # Hold through earnings
+    data,
+    max_entry_dte=7,  # Enter up to 1 week before expiration
+    exit_dte=0,       # Hold to expiration
     leg1_delta={"target": 0.50, "min": 0.45, "max": 0.55},  # ATM
+    entry_dates=entry_dates,
 )
 
 print(results)
@@ -105,7 +104,7 @@ for exit_dte in exit_times:
 
 # Plot results
 import matplotlib.pyplot as plt
-plt.bar(exit_times, results_by_exit.values())
+plt.bar(exit_times, list(results_by_exit.values()))
 plt.xlabel('Exit DTE')
 plt.ylabel('Mean Return')
 plt.title('Short Strangle Returns by Exit Time')
@@ -117,7 +116,7 @@ plt.show()
 Compare different slippage models:
 
 ```python
-slippage_modes = ['mid', 'spread', 'liquidity']
+slippage_modes = ['mid', 'spread', 'liquidity', 'per_leg']
 results_comparison = {}
 
 for mode in slippage_modes:
@@ -173,7 +172,8 @@ trades = op.iron_condor(
     raw=True
 )
 
-print(f"Average days held: {trades['days_held'].mean():.0f}")
+# Check which exit condition triggered
+print(trades['exit_type'].value_counts())
 ```
 
 ## Commission Examples
@@ -243,7 +243,7 @@ Analyze strategy performance by month:
 trades = op.short_puts(data, raw=True)
 
 # Convert to datetime
-trades['entry_date'] = pd.to_datetime(trades['quote_date'])
+trades['entry_date'] = pd.to_datetime(trades['quote_date_entry'])
 trades['month'] = trades['entry_date'].dt.to_period('M')
 
 # Group by month
@@ -480,23 +480,11 @@ print(metrics)
 
 ```python
 # Example: Loading from different CSV formats
+# Column parameters are integer indices (0-based)
 
-# Format 1: CBOE data export
+# Format 1: CBOE data export (map columns by position)
 data = op.csv_data(
     'cboe_spx.csv',
-    underlying_symbol='underlying_symbol',
-    underlying_price='underlying_bid_1545',
-    option_type='option_type',
-    expiration='expiration',
-    quote_date='quote_date',
-    strike='strike',
-    bid='bid',
-    ask='ask'
-)
-
-# Format 2: Indexed columns
-data = op.csv_data(
-    'provider_data.csv',
     underlying_symbol=0,
     underlying_price=1,
     option_type=2,
@@ -504,7 +492,22 @@ data = op.csv_data(
     quote_date=4,
     strike=5,
     bid=6,
-    ask=7
+    ask=7,
+    delta=8
+)
+
+# Format 2: Non-standard column ordering
+data = op.csv_data(
+    'provider_data.csv',
+    underlying_symbol=0,
+    underlying_price=3,
+    option_type=5,
+    expiration=6,
+    quote_date=7,
+    strike=8,
+    bid=9,
+    ask=10,
+    delta=11
 )
 ```
 
