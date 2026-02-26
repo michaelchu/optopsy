@@ -165,7 +165,7 @@ Each `TargetRange` has `target`, `min`, and `max` fields. Can be passed as a dic
 
 ### Slippage Parameters
 
-- **slippage** (str, default='mid'): Slippage mode - 'mid', 'spread', or 'liquidity'
+- **slippage** (str, default='mid'): Slippage mode - 'mid', 'spread', 'liquidity', or 'per_leg'
 - **fill_ratio** (float, default=0.5): Fill ratio for liquidity mode (0.0-1.0)
 - **reference_volume** (int, default=1000): Volume threshold for liquid options
 

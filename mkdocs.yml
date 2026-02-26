@@ -33,12 +33,15 @@ nav:
       - Covered Strategies: strategies/covered.md
       - Calendar Spreads: strategies/calendars.md
       - Diagonal Spreads: strategies/diagonals.md
-  - Parameters: parameters.md
-  - Entry Signals: entry-signals.md
-  - AI Chat UI: chat-ui.md
-  - Plugins: plugins.md
-  - Examples: examples.md
-  - API Reference: api-reference.md
+  - Configuration:
+      - Parameters: parameters.md
+      - Entry Signals: entry-signals.md
+      - Plugins: plugins.md
+  - Guides:
+      - Examples: examples.md
+      - AI Chat UI: chat-ui.md
+  - Reference:
+      - API Reference: api-reference.md
 
 markdown_extensions:
   - admonition
