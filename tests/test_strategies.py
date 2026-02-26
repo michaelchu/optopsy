@@ -408,6 +408,75 @@ def test_covered_call_with_stock_partial_match(multi_strike_data):
     assert list(results.columns) == double_strike_internal_cols
 
 
+def test_covered_call_with_stock_exit_dte_tolerance():
+    """Stock exit date uses actual option exit date, not computed expiration - exit_dte.
+
+    Regression test for GitHub issue #187.  When exit_dte_tolerance > 0
+    the option exit row may land on a date different from
+    expiration - exit_dte.  The stock exit price must be looked up on
+    the actual option exit date (quote_date_exit), not the computed one.
+
+    Setup:
+    - Expiration 2018-02-28, entry 2018-01-15 (DTE=44), exit_dte=7, tolerance=3
+    - Computed exit date = expiration - 7 = 2018-02-21
+    - Only available exit row at DTE=9 (2018-02-19) — within tolerance [4,10]
+    - Stock data exists on 2018-01-15 and 2018-02-19, but NOT on 2018-02-21
+    - Old code joined on 2018-02-21 and got empty; fix joins on 2018-02-19.
+    """
+    exp_date = datetime.datetime(2018, 2, 28)
+    entry_date = datetime.datetime(2018, 1, 15)  # DTE = 44
+    actual_exit_date = datetime.datetime(2018, 2, 19)  # DTE = 9 (closest to 7)
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    rows = [
+        # Entry day — call at strike 105 (OTM)
+        ["SPX", 100.0, "call", exp_date, entry_date, 105.0, 1.50, 1.60, 0.35],
+        # Exit day — DTE=9, within tolerance of exit_dte=7±3
+        ["SPX", 103.0, "call", exp_date, actual_exit_date, 105.0, 0.40, 0.50, 0.25],
+    ]
+    data = pd.DataFrame(data=rows, columns=cols)
+
+    stock_data = pd.DataFrame(
+        {
+            "underlying_symbol": ["SPX", "SPX"],
+            "quote_date": [entry_date, actual_exit_date],
+            "close": [100.0, 103.0],
+        }
+    )
+    # No stock row on 2018-02-21 (the computed expiration - exit_dte date)
+
+    results = covered_call(
+        data,
+        stock_data=stock_data,
+        exit_dte=7,
+        exit_dte_tolerance=3,
+        raw=True,
+    )
+    assert not results.empty, (
+        "Should match stock exit on actual option exit date, not computed date"
+    )
+    row = results.iloc[0]
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "call"
+    # Stock entry price is the close at entry date
+    assert row["strike_leg1"] == 100.0
+    # Total exit uses stock close on actual_exit_date (2018-02-19), not computed date
+    stock_exit = 103.0
+    option_exit_mid = (0.40 + 0.50) / 2  # short call exit mid
+    expected_exit_proceeds = stock_exit - option_exit_mid
+    assert round(row["total_exit_proceeds"], 2) == round(expected_exit_proceeds, 2)
+
+
 def test_protective_put_with_stock_aggregated(
     multi_strike_data, stock_data_multi_strike
 ):

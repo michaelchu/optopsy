@@ -365,13 +365,13 @@ def _covered_with_stock(
         entry_map, on=["underlying_symbol", "quote_date_entry"], how="inner"
     )
 
-    # Exit price – exit date = expiration − exit_dte calendar days
-    exit_dte = params["exit_dte"]
-    result["_exit_date"] = result["expiration"] - pd.Timedelta(days=exit_dte)
+    # Exit price – use actual option exit date from the evaluation pipeline
     exit_map = stock_prices.rename(
-        columns={"quote_date": "_exit_date", "close": "_stock_exit"}
+        columns={"quote_date": "quote_date_exit", "close": "_stock_exit"}
     )
-    result = result.merge(exit_map, on=["underlying_symbol", "_exit_date"], how="inner")
+    result = result.merge(
+        exit_map, on=["underlying_symbol", "quote_date_exit"], how="inner"
+    )
 
     if result.empty:
         return _empty_result()
