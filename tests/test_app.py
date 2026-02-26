@@ -523,6 +523,70 @@ class TestOnChatResume:
 
         asyncio.run(_run())
 
+    def test_grouping_parent_steps_skipped(self):
+        """Tool steps without tool_call_id metadata (grouping-only parents) are skipped."""
+
+        async def _run():
+            from optopsy.ui.app import on_chat_resume
+
+            store: dict = {}
+            session = MagicMock()
+            session.get = lambda key: store.get(key)
+            session.set = lambda key, val: store.__setitem__(key, val)
+
+            thread = {
+                "steps": [
+                    {"type": "user_message", "output": "run strategy"},
+                    {
+                        "type": "assistant_message",
+                        "output": "Running...",
+                        "metadata": json.dumps(
+                            {
+                                "tool_calls": [
+                                    {
+                                        "id": "tc1",
+                                        "function": {"name": "run_strategy"},
+                                    }
+                                ]
+                            }
+                        ),
+                    },
+                    # Grouping-only parent step — no tool_call_id in metadata
+                    {
+                        "type": "tool",
+                        "output": "",
+                        "id": "step_parent",
+                        "metadata": json.dumps({}),
+                    },
+                    # Real tool step with tool_call_id
+                    {
+                        "type": "tool",
+                        "output": "Strategy results",
+                        "id": "step_child",
+                        "metadata": json.dumps({"tool_call_id": "tc1"}),
+                    },
+                    {"type": "assistant_message", "output": "Here are results."},
+                ],
+            }
+
+            import chainlit as cl
+
+            with (
+                patch.object(cl, "user_session", session),
+                patch("optopsy.ui.app.OptopsyAgent") as mock_agent_cls,
+            ):
+                mock_agent_cls.return_value = MagicMock()
+                await on_chat_resume(thread)
+
+            messages = store["messages"]
+            # The grouping-only parent step should be skipped
+            tool_msgs = [m for m in messages if m.get("role") == "tool"]
+            assert len(tool_msgs) == 1
+            assert tool_msgs[0]["tool_call_id"] == "tc1"
+            assert tool_msgs[0]["content"] == "Strategy results"
+
+        asyncio.run(_run())
+
 
 # ---------------------------------------------------------------------------
 # on_chat_start tests

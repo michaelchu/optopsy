@@ -883,9 +883,6 @@ async def on_message(message: cl.Message):
             on_thinking_token=on_thinking_token,
             on_assistant_tool_calls=on_assistant_tool_calls,
         )
-        # Finalize the tools parent step (close it so the spinner stops).
-        if tools_parent_step is not None:
-            await tools_parent_step.update()
 
         # Build action buttons if a strategy was run
         actions = _build_strategy_actions(last_strategy_info)
@@ -912,6 +909,11 @@ async def on_message(message: cl.Message):
         else:
             response_msg.content = f"Error: {e}"
             await response_msg.update()
+    finally:
+        # Finalize the tools parent step (close it so the spinner stops),
+        # even if agent.chat() raised an exception.
+        if tools_parent_step is not None:
+            await tools_parent_step.update()
 
 
 def main():
