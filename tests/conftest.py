@@ -635,3 +635,89 @@ def option_data_with_stock(stock_data_long_history):
             )
 
     return pd.DataFrame(data=rows, columns=cols)
+
+
+# ============================================================================
+# Shared signal-test fixtures (used by multiple test_signals_*.py files)
+# ============================================================================
+
+
+@pytest.fixture
+def always_true_signal():
+    """Signal function that always returns True (passes all dates)."""
+    return lambda data: pd.Series(True, index=data.index)
+
+
+@pytest.fixture
+def price_data():
+    """Simple underlying price data for testing signal functions."""
+    dates = pd.date_range("2018-01-01", periods=30, freq="B")
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": [
+                # Declining trend then recovering
+                100,
+                99,
+                98,
+                97,
+                96,
+                95,
+                94,
+                93,
+                92,
+                91,
+                90,
+                89,
+                88,
+                87,
+                86,
+                85,
+                86,
+                87,
+                88,
+                89,
+                90,
+                91,
+                92,
+                93,
+                94,
+                95,
+                96,
+                97,
+                98,
+                99,
+            ],
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_60bars():
+    """60 bars of OHLCV data with gradual uptrend, suitable for most new signals."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    close = [100.0 + i * 0.5 for i in range(60)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+        }
+    )
+
+
+@pytest.fixture
+def price_data_100bars():
+    """100 bars of price data: declining then recovering, for signals needing many bars."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    prices = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": prices,
+        }
+    )
