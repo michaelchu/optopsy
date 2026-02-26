@@ -1337,8 +1337,12 @@ def test_slippage_per_leg_4_leg_iron_condor(multi_strike_data):
 
 
 def test_slippage_per_leg_worse_with_more_legs(multi_strike_data):
-    """Per-leg slippage should produce worse fills for more legs."""
-    # Compare 2-leg spread vs 4-leg iron condor slippage impact
+    """Per-leg slippage impact increases monotonically with more legs."""
+    per_leg_kwargs = dict(
+        raw=True, slippage="per_leg", fill_ratio=0.25, per_leg_slippage=0.1
+    )
+
+    # 2-leg spread: effective ratio = 0.25 + 0.1*1 = 0.35
     spread_deltas = dict(
         leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
         leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
@@ -1347,22 +1351,39 @@ def test_slippage_per_leg_worse_with_more_legs(multi_strike_data):
         multi_strike_data, raw=True, slippage="mid", **spread_deltas
     )
     results_2leg_per = long_call_spread(
-        multi_strike_data,
-        raw=True,
-        slippage="per_leg",
-        fill_ratio=0.25,
-        per_leg_slippage=0.1,
-        **spread_deltas,
+        multi_strike_data, **per_leg_kwargs, **spread_deltas
     )
+    assert not results_2leg_mid.empty
+    assert not results_2leg_per.empty
 
-    if not results_2leg_mid.empty and not results_2leg_per.empty:
-        # 2-leg: effective ratio = 0.25 + 0.1*1 = 0.35
-        # Absolute cost difference reflects the slippage penalty
-        cost_diff_2leg = abs(
-            results_2leg_per.iloc[0]["total_entry_cost"]
-            - results_2leg_mid.iloc[0]["total_entry_cost"]
-        )
-        assert cost_diff_2leg > 0
+    cost_diff_2leg = abs(
+        results_2leg_per.iloc[0]["total_entry_cost"]
+        - results_2leg_mid.iloc[0]["total_entry_cost"]
+    )
+    assert cost_diff_2leg > 0
+
+    # 4-leg iron condor: effective ratio = 0.25 + 0.1*3 = 0.55
+    ic_deltas = dict(
+        leg1_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+        leg2_delta=TargetRange(target=0.40, min=0.30, max=0.50),
+        leg3_delta=TargetRange(target=0.40, min=0.30, max=0.50),
+        leg4_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_4leg_mid = iron_condor(
+        multi_strike_data, raw=True, slippage="mid", **ic_deltas
+    )
+    results_4leg_per = iron_condor(multi_strike_data, **per_leg_kwargs, **ic_deltas)
+    assert not results_4leg_mid.empty
+    assert not results_4leg_per.empty
+
+    cost_diff_4leg = abs(
+        results_4leg_per.iloc[0]["total_entry_cost"]
+        - results_4leg_mid.iloc[0]["total_entry_cost"]
+    )
+    assert cost_diff_4leg > 0
+
+    # 4-leg slippage impact should exceed 2-leg
+    assert cost_diff_4leg > cost_diff_2leg
 
 
 def test_slippage_per_leg_calendar(calendar_data):
@@ -1455,19 +1476,39 @@ def test_slippage_per_leg_ratio_clamped(multi_strike_data):
     )
 
 
-def test_slippage_per_leg_custom_penalty(data):
-    """Custom per_leg_slippage value changes fill differently than default."""
-    results_default = long_calls(
-        data, raw=True, slippage="per_leg", fill_ratio=0.25, per_leg_slippage=0.073
+def test_slippage_per_leg_custom_penalty(multi_strike_data):
+    """Different per_leg_slippage values produce different fills on multi-leg strategies."""
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
     )
-    results_custom = long_calls(
-        data, raw=True, slippage="per_leg", fill_ratio=0.25, per_leg_slippage=0.2
+    # 2-leg: effective ratio = 0.25 + 0.073*1 = 0.323
+    results_small = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+        **spread_deltas,
+    )
+    # 2-leg: effective ratio = 0.25 + 0.2*1 = 0.45
+    results_large = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.2,
+        **spread_deltas,
     )
 
-    # For single-leg both should be identical (num_legs=1, penalty doesn't apply)
-    row_default = results_default[results_default["strike"] == 215.0].iloc[0]
-    row_custom = results_custom[results_custom["strike"] == 215.0].iloc[0]
-    assert round(row_default["entry"], 5) == round(row_custom["entry"], 5)
+    assert not results_small.empty
+    assert not results_large.empty
+
+    # Larger penalty should produce a different (worse) total entry cost
+    assert (
+        results_small.iloc[0]["total_entry_cost"]
+        != results_large.iloc[0]["total_entry_cost"]
+    )
 
 
 # =============================================================================

@@ -543,7 +543,7 @@ def _make_result_key(strategy_name: str, arguments: dict) -> str:
     slippage = arguments.get("slippage", "mid")
     base = f"{strategy_name}:dte={dte},exit={exit_dte},slip={slippage}"
     per_leg = arguments.get("per_leg_slippage")
-    if per_leg is not None:
+    if slippage == "per_leg" and per_leg is not None:
         base += f",pls={per_leg}"
     return base
 
