@@ -75,6 +75,7 @@ def _apply_single_leg_exits(
     # Assign trade IDs for tracking
     result["_trade_id"] = np.arange(len(result))
     result["exit_type"] = "expiration"
+    result["_early_exit_date"] = pd.NaT
 
     # Get intermediate snapshots
     contract_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
@@ -128,6 +129,7 @@ def _apply_multi_leg_exits(
     n_legs = len(leg_def)
     result["_trade_id"] = np.arange(len(result))
     result["exit_type"] = "expiration"
+    result["_early_exit_date"] = pd.NaT
 
     # For each leg, get intermediate snapshots and compute per-leg unrealized P&L
     contract_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
@@ -414,6 +416,7 @@ def _replace_exits_single_leg(
             result.at[idx, "pct_change"] = np.nan
 
         result.at[idx, "exit_type"] = exit_type
+        result.at[idx, "_early_exit_date"] = pd.Timestamp(exit_date)
 
         # Update DTE at exit if column exists
         if "dte_exit" in result.columns and "expiration" in trade_row.index:
@@ -515,5 +518,6 @@ def _replace_exits_multi_leg(
             result.at[idx, "pct_change"] = np.nan
 
         result.at[idx, "exit_type"] = exit_type
+        result.at[idx, "_early_exit_date"] = pd.Timestamp(exit_date)
 
     return result

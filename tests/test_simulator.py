@@ -456,6 +456,7 @@ class TestSimulateSmoke:
             "cumulative_pnl",
             "equity",
             "description",
+            "exit_type",
         }
         assert expected == set(result.trade_log.columns)
 
@@ -1459,3 +1460,126 @@ class TestEmptyDataPaths:
         result = _build_trade_log(trades, capital=100_000.0, quantity=1, multiplier=100)
         assert result.empty
         assert list(result.columns) == _TRADE_LOG_COLUMNS
+
+
+# ---------------------------------------------------------------------------
+# Early exit (stop-loss / take-profit) in simulation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def early_exit_sim_data():
+    """Option chain with multiple quote dates to test early exits in simulations.
+
+    Day 0  (entry, dte=30): call mid = 6.00
+    Day 5  (dte=25):        call mid = 4.50 (down 25%)
+    Day 10 (dte=20):        call mid = 3.00 (down 50%)
+    Day 30 (dte=0):         call mid = 10.00 (expiration)
+    """
+    import datetime
+
+    entry_date = datetime.datetime(2018, 1, 1)
+    exp_date = datetime.datetime(2018, 1, 31)
+    day5 = datetime.datetime(2018, 1, 6)
+    day10 = datetime.datetime(2018, 1, 11)
+
+    cols = [
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    d = [
+        ["SPX", 200, "call", exp_date, entry_date, 200.0, 5.90, 6.10, 0.30],
+        ["SPX", 196, "call", exp_date, day5, 200.0, 4.40, 4.60, 0.25],
+        ["SPX", 192, "call", exp_date, day10, 200.0, 2.90, 3.10, 0.18],
+        ["SPX", 210, "call", exp_date, exp_date, 200.0, 9.90, 10.10, 0.90],
+    ]
+    return pd.DataFrame(data=d, columns=cols)
+
+
+class TestSimulateEarlyExits:
+    """Tests that stop_loss/take_profit P&L logic applies correctly in simulate()."""
+
+    def test_stop_loss_triggers_early_exit_date(self, early_exit_sim_data):
+        """Stop-loss should cause the trade to exit before expiration."""
+        result = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+            stop_loss=-0.40,
+        )
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        # Exit should be before expiration (stop triggered at day 10)
+        exp_date = pd.Timestamp("2018-01-31")
+        assert pd.Timestamp(trade["exit_date"]) < exp_date
+
+    def test_stop_loss_exit_type_in_trade_log(self, early_exit_sim_data):
+        """Trade log should record exit_type='stop_loss' when stop-loss triggers."""
+        result = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+            stop_loss=-0.40,
+        )
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        assert trade["exit_type"] == "stop_loss"
+
+    def test_no_early_exit_uses_expiration_exit_type(self, early_exit_sim_data):
+        """Without early exit, trade log should record exit_type='expiration'."""
+        result = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+        )
+        assert result.summary["total_trades"] == 1
+        trade = result.trade_log.iloc[0]
+        assert trade["exit_type"] == "expiration"
+
+    def test_stop_loss_pnl_is_correct(self, early_exit_sim_data):
+        """P&L should reflect stop-loss exit price, not expiration price."""
+        result = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+            stop_loss=-0.40,
+        )
+        trade = result.trade_log.iloc[0]
+        # pct_change should be near -50% (day 10 price = 3.00, entry = 6.00)
+        assert trade["pct_change"] == pytest.approx(-0.50, abs=0.02)
+
+    def test_days_held_shorter_with_stop_loss(self, early_exit_sim_data):
+        """Days held should be 10 days (stop triggered at day 10, not 30 for expiration)."""
+        result_sl = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+            stop_loss=-0.40,
+        )
+        result_normal = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+        )
+        # Stop-loss triggers at day 10 (Jan 11 − Jan 1 = 10 days)
+        assert result_sl.trade_log.iloc[0]["days_held"] == 10
+        # Normal exit at expiration (Jan 31 − Jan 1 = 30 days)
+        assert result_sl.trade_log.iloc[0]["days_held"] < result_normal.trade_log.iloc[0]["days_held"]
+
+    def test_equity_curve_date_reflects_early_exit(self, early_exit_sim_data):
+        """Equity curve should be indexed at the early exit date, not expiration."""
+        result = simulate(
+            early_exit_sim_data,
+            op.long_calls,
+            selector="first",
+            stop_loss=-0.40,
+        )
+        exp_date = pd.Timestamp("2018-01-31")
+        assert result.equity_curve.index[0] < exp_date
