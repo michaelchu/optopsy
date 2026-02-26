@@ -150,6 +150,10 @@ class DataProvider(ABC):
         """
         return True
 
+    def list_available_symbols(self) -> list[str] | None:
+        """Return symbols available for options download, or None if unsupported."""
+        return None
+
     @abstractmethod
     def execute(
         self, tool_name: str, arguments: dict[str, Any]

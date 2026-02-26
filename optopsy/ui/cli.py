@@ -82,6 +82,11 @@ def _cmd_download(args: argparse.Namespace) -> None:
         level=level,
     )
 
+    if getattr(args, "stocks", False):
+        for symbol in args.symbols:
+            _download_stocks_with_rich(symbol.upper())
+        return
+
     from optopsy.ui.providers import get_provider_for_tool
     from optopsy.ui.providers.eodhd import EODHDProvider
 
@@ -168,6 +173,97 @@ def _download_with_rich(provider: object, symbol: str) -> None:
     console.print(f"\n{summary}")
 
 
+def _download_stocks_with_rich(symbol: str) -> None:
+    """Download stock/index OHLCV data via yfinance with Rich progress display."""
+    from datetime import date
+
+    import pandas as pd
+    from rich.console import Console
+
+    from optopsy.ui.providers.cache import ParquetCache
+    from optopsy.ui.tools._helpers import _YF_CACHE_CATEGORY, _yf_fetch_and_cache
+
+    console = Console()
+    console.rule(f"Downloading stock data for {symbol}")
+
+    cache = ParquetCache()
+    cached = cache.read(_YF_CACHE_CATEGORY, symbol)
+
+    with console.status(f"[bold green]Fetching {symbol} from yfinance…"):
+        try:
+            result = _yf_fetch_and_cache(symbol, cached, date.today())
+        except (OSError, ValueError) as exc:
+            console.print(f"  [red]Error fetching {symbol}: {exc}[/red]")
+            return
+
+    if result is None or result.empty:
+        console.print(f"  [yellow]No data returned for {symbol}.[/yellow]")
+        return
+
+    date_min = pd.to_datetime(result["date"]).dt.date.min()
+    date_max = pd.to_datetime(result["date"]).dt.date.max()
+    row_count = len(result)
+
+    size_bytes = cache.size().get(f"{_YF_CACHE_CATEGORY}/{symbol}", 0)
+    size_str = _format_bytes(size_bytes)
+
+    console.print(f"  [bold]{symbol}[/bold]  {date_min} → {date_max}")
+    console.print(
+        f"  [cyan]{row_count:,} rows[/cyan]  [dim]({size_str} on disk)[/dim]\n"
+    )
+
+
+def _cmd_symbols(args: argparse.Namespace) -> None:
+    """List symbols that have options data available from configured providers."""
+    from rich.columns import Columns
+    from rich.console import Console
+
+    _load_env()
+
+    from optopsy.ui.providers import get_available_providers
+
+    console = Console()
+    search = getattr(args, "search", None)
+    use_pager = not search and console.is_terminal
+    found = False
+
+    def _render() -> None:
+        nonlocal found
+        for provider in get_available_providers():
+            if not provider.is_available():
+                continue
+            symbols = provider.list_available_symbols()
+            if symbols is None:
+                continue
+            found = True
+
+            if search:
+                term = search.upper()
+                symbols = [s for s in symbols if term in s]
+
+            if not symbols:
+                console.print(
+                    f"[yellow]No symbols matching '{search}' from {provider.name}.[/yellow]"
+                )
+                continue
+
+            console.rule(f"{provider.name} — {len(symbols):,} symbols")
+            console.print(Columns(symbols, padding=(0, 2), column_first=True))
+            console.print()
+
+    if use_pager:
+        with console.pager(styles=True):
+            _render()
+    else:
+        _render()
+
+    if not found:
+        console.print(
+            "[yellow]No data provider supports listing symbols.\n"
+            "Set EODHD_API_KEY in your environment or .env file.[/yellow]"
+        )
+
+
 def _cmd_run(args: argparse.Namespace) -> None:
     """Configure environment and launch the Chainlit server."""
     if args.host:
@@ -250,17 +346,43 @@ def main(argv: list[str] | None = None) -> None:
     # --- download ---
     dl_parser = subparsers.add_parser(
         "download",
-        help="Download historical options data for one or more symbols",
+        help="Download historical market data for one or more symbols",
     )
     dl_parser.add_argument(
         "symbols",
         nargs="+",
         help="One or more US stock ticker symbols (e.g. SPY AAPL TSLA)",
     )
+    dl_group = dl_parser.add_mutually_exclusive_group()
+    dl_group.add_argument(
+        "-o",
+        "--options",
+        action="store_true",
+        default=True,
+        help="Download options chain data via EODHD (default)",
+    )
+    dl_group.add_argument(
+        "-s",
+        "--stocks",
+        action="store_true",
+        help="Download stock/index OHLCV data via yfinance (no API key needed)",
+    )
     dl_parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug logging"
     )
     dl_parser.set_defaults(func=_cmd_download)
+
+    # --- symbols ---
+    sym_parser = subparsers.add_parser(
+        "symbols", help="List symbols with options data available for download"
+    )
+    sym_parser.add_argument(
+        "-q",
+        "--search",
+        default=None,
+        help="Filter symbols containing TERM (case-insensitive)",
+    )
+    sym_parser.set_defaults(func=_cmd_symbols)
 
     # --- cache ---
     cache_parser = subparsers.add_parser("cache", help="Manage the data cache")
