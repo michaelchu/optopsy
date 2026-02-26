@@ -116,7 +116,7 @@ def _apply_single_leg_exits(
     )
 
     if not triggered.empty:
-        result = _replace_exits_single_leg(result, triggered, data, contract_cols)
+        result = _replace_exits_single_leg(result, triggered, data, side_value)
 
     result.drop(columns=["_trade_id"], inplace=True)
     return result
@@ -267,9 +267,7 @@ def _apply_multi_leg_exits(
     )
 
     if not triggered.empty:
-        result = _replace_exits_multi_leg(
-            result, triggered, data, leg_def, contract_cols
-        )
+        result = _replace_exits_multi_leg(result, triggered, data, leg_def)
 
     result.drop(columns=["_trade_id"], inplace=True)
     return result
@@ -289,6 +287,9 @@ def _get_intermediate_snapshots(
         trades: Trade DataFrame with _trade_id and contract columns.
         contract_cols: Columns identifying a contract (symbol, type, exp, strike).
         entry_date_col: Column name for entry date in trades.
+        max_dates: Pre-computed max quote_date per contract group. When provided,
+            skips the internal groupby computation. Callers processing multiple
+            legs should pre-compute this once and pass it to each call.
 
     Returns:
         DataFrame with _trade_id, quote_date, and _mid (midpoint price)
@@ -415,7 +416,7 @@ def _replace_exits_single_leg(
     result: pd.DataFrame,
     triggered: pd.DataFrame,
     data: pd.DataFrame,
-    contract_cols: List[str],
+    side_value: int,
 ) -> pd.DataFrame:
     """Replace exit data for triggered single-leg trades.
 
@@ -432,14 +433,8 @@ def _replace_exits_single_leg(
     result_cols = ["_trade_id", "underlying_symbol", "expiration", "strike", "entry"]
     if "option_type" in result.columns:
         result_cols.append("option_type")
-    if "exit" in result.columns:
-        result_cols.append("exit")
-    if "pct_change" in result.columns:
-        result_cols.append("pct_change")
 
-    lookup = trig_trades.merge(
-        result[result_cols], on="_trade_id", how="inner", suffixes=("", "_orig")
-    )
+    lookup = trig_trades.merge(result[result_cols], on="_trade_id", how="inner")
 
     # Merge with data to get bid/ask at exit date
     data_merge_cols = ["underlying_symbol", "expiration", "strike"]
@@ -456,27 +451,12 @@ def _replace_exits_single_leg(
     if lookup.empty:
         return result
 
-    # Compute new exit prices and pct_change
+    # Compute new exit prices and pct_change using known side_value
     lookup["_new_exit"] = (lookup["bid"] + lookup["ask"]) / 2
-
-    # Infer side from original pct_change: pct = side * (exit - entry) / |entry|
     entry_price = lookup["entry"]
-    old_exit = lookup.get(
-        "exit_orig", lookup.get("exit", pd.Series(0, index=lookup.index))
-    )
-    old_pct = lookup.get(
-        "pct_change_orig", lookup.get("pct_change", pd.Series(0, index=lookup.index))
-    )
-
-    price_diff = old_exit - entry_price
-    inferred_side = np.where(
-        (entry_price.abs() > 0) & (price_diff.abs() > 1e-10) & (~np.isnan(old_pct)),
-        np.sign(old_pct * entry_price.abs() / price_diff),
-        1.0,
-    )
     lookup["_new_pct"] = np.where(
         entry_price.abs() > 0,
-        inferred_side * (lookup["_new_exit"] - entry_price) / entry_price.abs(),
+        side_value * (lookup["_new_exit"] - entry_price) / entry_price.abs(),
         np.nan,
     )
 
@@ -513,7 +493,6 @@ def _replace_exits_multi_leg(
     triggered: pd.DataFrame,
     data: pd.DataFrame,
     leg_def: List[Tuple],
-    contract_cols: List[str],
 ) -> pd.DataFrame:
     """Replace exit data for triggered multi-leg trades."""
     n_legs = len(leg_def)
@@ -610,9 +589,6 @@ def _replace_exits_multi_leg(
             .copy()
         )
         leg_updates[leg_idx]["_multiplier"] = multiplier
-
-        # Restore column name for next iteration
-        lookup = lookup.copy()
 
     if not valid_ids:
         return result
