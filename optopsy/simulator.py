@@ -69,6 +69,7 @@ _TRADE_LOG_COLUMNS = [
     "cumulative_pnl",
     "equity",
     "description",
+    "exit_type",
 ]
 
 
@@ -111,7 +112,7 @@ def _normalise_trades(
 
     Returns a DataFrame with columns:
         entry_date, exit_date, expiration, underlying_symbol,
-        entry_cost, exit_proceeds, pct_change, description
+        entry_cost, exit_proceeds, pct_change, description, exit_type
 
     After normalisation, ``entry_cost`` and ``exit_proceeds`` are *signed cash
     flows* using Optopsy's convention: negative values are credits received
@@ -120,7 +121,8 @@ def _normalise_trades(
     single-leg short strategies, the unsigned option prices are negated.
 
     When *exit_dte* > 0, exit_date is set to ``expiration - exit_dte`` days
-    instead of expiration itself.
+    instead of expiration itself.  When an early exit (stop-loss/take-profit)
+    triggers before that date, the early exit date takes priority.
     """
     cols = raw.columns
 
@@ -132,8 +134,24 @@ def _normalise_trades(
         # Multi-leg (spreads, butterflies, condors, straddles, strangles)
         df = _normalise_multi_leg(raw)
 
+    # Propagate exit_type from strategy output (set by early exit logic)
+    if "exit_type" in raw.columns:
+        df["exit_type"] = raw["exit_type"].values
+    else:
+        df["exit_type"] = "expiration"
+
     if exit_dte > 0:
-        df["exit_date"] = df["expiration"] - pd.Timedelta(days=exit_dte)
+        dte_based = df["expiration"] - pd.Timedelta(days=exit_dte)
+        if "_early_exit_date" in raw.columns:
+            early = pd.to_datetime(raw["_early_exit_date"].values)
+            has_early = pd.notna(early)
+            df["exit_date"] = np.where(has_early, early, dte_based.values)
+        else:
+            df["exit_date"] = dte_based
+    elif "_early_exit_date" in raw.columns:
+        early = pd.to_datetime(raw["_early_exit_date"].values)
+        has_early = pd.notna(early)
+        df["exit_date"] = np.where(has_early, early, np.asarray(df["exit_date"]))
 
     return df
 
@@ -563,6 +581,9 @@ def _build_trade_log(
             "multiplier": multiplier,
             "pct_change": trades["pct_change"].values,
             "description": trades["description"].values,
+            "exit_type": trades["exit_type"].values
+            if "exit_type" in trades.columns
+            else "expiration",
         }
     )
 

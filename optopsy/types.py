@@ -94,6 +94,10 @@ class StrategyParamsDict(TypedDict, total=False):
     # Commission
     commission: Optional[Union["Commission", float]]
 
+    # Early exit thresholds (P&L-based)
+    stop_loss: float
+    take_profit: float
+
     # Output control
     raw: bool
     drop_nan: bool
@@ -156,6 +160,10 @@ class StrategyParams(BaseModel):
     # Commission
     commission: Optional[Union[Commission, float]] = None
 
+    # Early exit thresholds (P&L-based)
+    stop_loss: Optional[float] = Field(None, lt=0)
+    take_profit: Optional[float] = Field(None, gt=0)
+
     # Output control — strict bool (rejects int)
     raw: StrictBool = False
     drop_nan: StrictBool = True
@@ -179,6 +187,15 @@ class StrategyParams(BaseModel):
         if v is not None and not isinstance(v, float):
             raise ValueError(
                 f"Invalid setting for {info.field_name}, must be positive float type"
+            )
+        return v
+
+    @field_validator("stop_loss", "take_profit", mode="before")
+    @classmethod
+    def validate_exit_threshold(cls, v, info):
+        if v is not None and not isinstance(v, float):
+            raise ValueError(
+                f"Invalid setting for {info.field_name}, must be a float or None"
             )
         return v
 
