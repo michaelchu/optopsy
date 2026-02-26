@@ -214,7 +214,8 @@ results = op.long_calls(data, slippage='liquidity')
 |------|-------------|----------|-----------|----------|
 | `'mid'` | Mid-price between bid/ask | (bid+ask)/2 | (bid+ask)/2 | Ideal/optimistic |
 | `'spread'` | Worst-case spread | Ask | Bid | Conservative |
-| `'liquidity'` | Volume-based dynamic | Dynamic | Dynamic | Realistic |
+| `'liquidity'` | Volume-based dynamic | Dynamic | Dynamic | Realistic (volume) |
+| `'per_leg'` | Scales with leg count | Dynamic | Dynamic | Realistic (complexity) |
 
 ---
 
@@ -257,6 +258,30 @@ results = op.short_strangles(
 - `5000+` - Highly liquid (SPX, SPY, QQQ)
 
 **Note:** Requires `volume` or `open_interest` column in your data.
+
+---
+
+#### `per_leg_slippage` (Per-Leg Mode Only)
+**Type:** `float` | **Default:** `0.073`
+
+Additive penalty per additional leg beyond the first. The effective fill ratio
+increases with strategy complexity:
+`effective_ratio = min(fill_ratio + per_leg_slippage * (num_legs - 1), 1.0)`
+
+```python
+results = op.iron_condor(
+    data,
+    slippage='per_leg',
+    fill_ratio=0.25,          # 1-leg base: 75% edge retained
+    per_leg_slippage=0.073,   # penalty per extra leg
+)
+# 1-leg: ratio=0.25 (75% edge), 2-leg: 0.32 (68%), 3-leg: 0.40 (60%), 4-leg: 0.47 (53%)
+```
+
+**Notes:**
+- All legs in a strategy receive the same effective ratio (package pricing).
+- The ratio is clamped to 1.0 (equivalent to `'spread'` mode).
+- Does not require a `volume` column.
 
 ---
 
@@ -353,6 +378,7 @@ default_kwargs = {
     "slippage": "mid",
     "fill_ratio": 0.5,
     "reference_volume": 1000,
+    "per_leg_slippage": 0.073,
 }
 ```
 
@@ -374,6 +400,7 @@ calendar_default_kwargs = {
     "slippage": "mid",
     "fill_ratio": 0.5,
     "reference_volume": 1000,
+    "per_leg_slippage": 0.073,
 }
 ```
 
