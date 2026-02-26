@@ -71,6 +71,8 @@ from optopsy.signals import (
     roc_below,
     rsi_above,
     rsi_below,
+    sma_above,
+    sma_below,
     smi_cross_above,
     smi_cross_below,
     squeeze_off,
@@ -178,6 +180,8 @@ _SIGNALS_WITH_FIXTURE = [
     (rsi_above, "price_data_100bars"),
     (rsi_below, "price_data_100bars"),
     # --- Overlap ---
+    (sma_above, "price_data_100bars"),
+    (sma_below, "price_data_100bars"),
     (ema_cross_above, "cross_price_data"),
     (ema_cross_below, "cross_price_data"),
     (dema_cross_above, "cross_price_data"),
@@ -286,6 +290,7 @@ _EXCLUSIVE_PAIRS = [
     (kst_cross_above, kst_cross_below, "price_data_100bars"),
     (fisher_cross_above, fisher_cross_below, "price_data_100bars"),
     # Overlap
+    (sma_above, sma_below, "price_data_100bars"),
     (ema_cross_above, ema_cross_below, "cross_price_data"),
     (dema_cross_above, dema_cross_below, "cross_price_data"),
     # Volume
