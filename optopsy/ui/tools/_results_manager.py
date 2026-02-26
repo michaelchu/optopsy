@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..providers.cache import ParquetCache
 from ..providers.result_store import ResultStore
-from ._executor import _register
+from ._executor import _fmt_pf, _register
 from ._helpers import _df_to_markdown, _select_results
 
 
@@ -557,16 +557,19 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
         ds_lines_llm: list[str] = []
         ds_lines_display: list[str] = []
         for name, df in datasets.items():
+            # Default to unknown; only compute a range when we have valid dates
+            date_range = "unknown date range"
             date_col = next(
                 (c for c in ("quote_date", "date") if c in df.columns), None
             )
-            if date_col:
+            if date_col and not df.empty:
                 dates = pd.to_datetime(df[date_col])
-                date_range = (
-                    f"{dates.min().date()} to {dates.max().date()}"
-                )
-            else:
-                date_range = "unknown date range"
+                valid_dates = dates.dropna()
+                if not valid_dates.empty:
+                    date_min = valid_dates.min()
+                    date_max = valid_dates.max()
+                    if pd.notna(date_min) and pd.notna(date_max):
+                        date_range = f"{date_min.date()} to {date_max.date()}"
             ds_lines_llm.append(
                 f"  {name}: {len(df):,} rows, {date_range}"
             )
@@ -599,18 +602,42 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
                 "max_entry_dte": entry.get("max_entry_dte", "?"),
                 "exit_dte": entry.get("exit_dte", "?"),
                 "count": entry.get("count", 0),
-                "mean_return": f"{mr:.4f}" if mr is not None else "—",
-                "win_rate": f"{wr:.2%}" if wr is not None else "—",
-                "profit_factor": f"{pf:.2f}" if pf is not None else "—",
+                # Keep raw numeric values for proper sorting
+                "mean_return": mr,
+                "win_rate": wr,
+                "profit_factor": pf,
             })
         bt_df = pd.DataFrame(bt_rows)
-        bt_table = _df_to_markdown(bt_df, max_rows=100)
+        # Sort by mean_return descending (best first), consistent with
+        # list_results and compare_results.
+        if "mean_return" in bt_df.columns and bt_df["mean_return"].notna().any():
+            bt_df = bt_df.sort_values(
+                "mean_return", ascending=False, na_position="last"
+            )
+        bt_df = bt_df.reset_index(drop=True)
+
+        # Build a formatted display copy
+        bt_display_df = bt_df.copy()
+        if "mean_return" in bt_display_df.columns:
+            bt_display_df["mean_return"] = bt_display_df["mean_return"].apply(
+                lambda v: f"{v:.4f}" if pd.notna(v) else "—"
+            )
+        if "win_rate" in bt_display_df.columns:
+            bt_display_df["win_rate"] = bt_display_df["win_rate"].apply(
+                lambda v: f"{v:.2%}" if pd.notna(v) else "—"
+            )
+        if "profit_factor" in bt_display_df.columns:
+            bt_display_df["profit_factor"] = bt_display_df["profit_factor"].apply(
+                lambda v: _fmt_pf(v) if v is not None else "—"
+            )
+
+        bt_table = _df_to_markdown(bt_display_df, max_rows=100)
         sections_llm.append(
             f"Strategy backtests ({len(backtest_results)}):\n"
             + "\n".join(
                 f"  {r['key']}: strategy={r['strategy']}, "
                 f"mean={r['mean_return']}, wr={r['win_rate']}"
-                for r in bt_rows
+                for _, r in bt_display_df.iterrows()
             )
         )
         sections_display.append(
@@ -628,17 +655,26 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
         sim_lines_display: list[str] = []
         for key, entry in sim_results.items():
             s = entry.get("summary", {})
+            total_trades = s.get("total_trades")
+            total_return = s.get("total_return")
+            win_rate = s.get("win_rate")
+            profit_factor = s.get("profit_factor")
+            trades_str = f"{int(total_trades):,}" if total_trades is not None else "?"
+            return_str = f"{total_return:.2%}" if total_return is not None else "?"
+            wr_str = f"{win_rate:.1%}" if win_rate is not None else "?"
+            pf_str = _fmt_pf(profit_factor) if profit_factor is not None else "?"
             sim_lines_llm.append(
                 f"  {key}: strategy={entry.get('strategy', '?')}, "
-                f"trades={s.get('total_trades', '?')}, "
-                f"return={s.get('total_return', '?')}, "
-                f"win_rate={s.get('win_rate', '?')}"
+                f"trades={trades_str}, "
+                f"return={return_str}, "
+                f"win_rate={wr_str}"
             )
             sim_lines_display.append(
                 f"- **{key}**: strategy={entry.get('strategy', '?')}, "
-                f"trades={s.get('total_trades', '?')}, "
-                f"total return={s.get('total_return', '?')}, "
-                f"win rate={s.get('win_rate', '?')}"
+                f"trades={trades_str}, "
+                f"total return={return_str}, "
+                f"win rate={wr_str}, "
+                f"profit factor={pf_str}"
             )
         sections_llm.append(
             f"Simulations ({len(sim_results)}):\n" + "\n".join(sim_lines_llm)
