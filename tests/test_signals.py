@@ -9,26 +9,96 @@ import pytest
 from optopsy.signals import (
     Signal,
     _compute_rsi,
+    ad_cross_above_sma,
+    ad_cross_below_sma,
+    adx_above,
+    adx_below,
+    alma_cross_above,
+    alma_cross_below,
     and_signals,
+    ao_above,
+    ao_below,
     apply_signal,
+    aroon_cross_above,
+    aroon_cross_below,
     atr_above,
     atr_below,
     bb_above_upper,
     bb_below_lower,
+    cci_above,
+    cci_below,
+    chop_above,
+    chop_below,
+    cmf_above,
+    cmf_below,
+    cmo_above,
+    cmo_below,
     custom_signal,
     day_of_week,
+    dema_cross_above,
+    dema_cross_below,
+    donchian_above_upper,
+    donchian_below_lower,
     ema_cross_above,
     ema_cross_below,
+    fisher_cross_above,
+    fisher_cross_below,
+    hma_cross_above,
+    hma_cross_below,
     iv_rank_above,
+    kama_cross_above,
+    kama_cross_below,
+    kc_above_upper,
+    kc_below_lower,
+    kst_cross_above,
+    kst_cross_below,
     macd_cross_above,
     macd_cross_below,
+    massi_above,
+    massi_below,
+    mfi_above,
+    mfi_below,
+    natr_above,
+    natr_below,
+    obv_cross_above_sma,
+    obv_cross_below_sma,
     or_signals,
+    ppo_cross_above,
+    ppo_cross_below,
+    psar_buy,
+    psar_sell,
+    roc_above,
+    roc_below,
     rsi_above,
     rsi_below,
     signal,
     sma_above,
     sma_below,
+    smi_cross_above,
+    smi_cross_below,
+    squeeze_off,
+    squeeze_on,
+    stoch_above,
+    stoch_below,
+    stochrsi_above,
+    stochrsi_below,
+    supertrend_buy,
+    supertrend_sell,
     sustained,
+    tema_cross_above,
+    tema_cross_below,
+    tsi_cross_above,
+    tsi_cross_below,
+    uo_above,
+    uo_below,
+    vhf_above,
+    vhf_below,
+    willr_above,
+    willr_below,
+    wma_cross_above,
+    wma_cross_below,
+    zlma_cross_above,
+    zlma_cross_below,
 )
 from optopsy.strategies import long_calls, short_puts
 
@@ -2083,3 +2153,1478 @@ class TestCustomSignal:
 
         assert hasattr(op, "custom_signal")
         assert callable(op.custom_signal)
+
+
+# ============================================================================
+# Fixtures for new signal tests
+# ============================================================================
+
+
+@pytest.fixture
+def ohlcv_60bars():
+    """60 bars of OHLCV data with gradual uptrend, suitable for most new signals."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    close = [100.0 + i * 0.5 for i in range(60)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_with_volume_60bars():
+    """60 bars of OHLCV+volume data for volume-based signals."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    close = [100.0 + i * 0.5 for i in range(60)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+            "volume": [1_000_000 + i * 5000 for i in range(60)],
+        }
+    )
+
+
+@pytest.fixture
+def price_data_100bars():
+    """100 bars of price data: declining then recovering, for signals needing many bars."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    prices = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": prices,
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_100bars():
+    """100 bars of OHLCV data: declining then recovering."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    close = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_with_volume_100bars():
+    """100 bars of OHLCV+volume data: declining then recovering."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    close = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+            "volume": [1_000_000 + i * 3000 for i in range(100)],
+        }
+    )
+
+
+# ============================================================================
+# Stochastic signal tests
+# ============================================================================
+
+
+class TestStochSignals:
+    def test_stoch_below_returns_bool_series(self, ohlcv_60bars):
+        result = stoch_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_stoch_above_returns_bool_series(self, ohlcv_60bars):
+        result = stoch_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_stoch_below_length_matches_input(self, ohlcv_60bars):
+        assert len(stoch_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_stoch_above_length_matches_input(self, ohlcv_60bars):
+        assert len(stoch_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_stoch_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 99.0, 98.0],
+            }
+        )
+        assert not stoch_below()(data).any()
+        assert not stoch_above()(data).any()
+
+    def test_stoch_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (stoch_above()(ohlcv_60bars) & stoch_below()(ohlcv_60bars)).any()
+
+    def test_stoch_below_with_downtrend_fires(self):
+        dates = pd.date_range("2018-01-01", periods=40, freq="B")
+        close = [100.0 - i * 2 for i in range(40)]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 0.5 for c in close],
+                "low": [c - 0.5 for c in close],
+            }
+        )
+        assert stoch_below(threshold=20)(data).any()
+
+
+# ============================================================================
+# StochRSI signal tests
+# ============================================================================
+
+
+class TestStochRSISignals:
+    def test_stochrsi_below_returns_bool_series(self, price_data_100bars):
+        result = stochrsi_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_stochrsi_above_returns_bool_series(self, price_data_100bars):
+        result = stochrsi_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_stochrsi_below_length_matches_input(self, price_data_100bars):
+        assert len(stochrsi_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_stochrsi_above_length_matches_input(self, price_data_100bars):
+        assert len(stochrsi_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_stochrsi_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 99.0, 98.0, 97.0, 96.0],
+            }
+        )
+        assert not stochrsi_below()(data).any()
+        assert not stochrsi_above()(data).any()
+
+    def test_stochrsi_custom_smoothing_params(self, price_data_100bars):
+        result = stochrsi_below(period=14, rsi_period=14, k_smooth=3, d_smooth=3)(
+            price_data_100bars
+        )
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+
+# ============================================================================
+# Williams %R signal tests
+# ============================================================================
+
+
+class TestWillRSignals:
+    def test_willr_below_returns_bool_series(self, ohlcv_60bars):
+        result = willr_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_willr_above_returns_bool_series(self, ohlcv_60bars):
+        result = willr_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_willr_below_length_matches_input(self, ohlcv_60bars):
+        assert len(willr_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_willr_above_length_matches_input(self, ohlcv_60bars):
+        assert len(willr_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_willr_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 99.0, 98.0],
+            }
+        )
+        assert not willr_below()(data).any()
+        assert not willr_above()(data).any()
+
+    def test_willr_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (willr_above()(ohlcv_60bars) & willr_below()(ohlcv_60bars)).any()
+
+    def test_willr_below_fires_on_downtrend(self):
+        dates = pd.date_range("2018-01-01", periods=30, freq="B")
+        close = [100.0 - i * 3 for i in range(30)]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 0.5 for c in close],
+                "low": [c - 0.5 for c in close],
+            }
+        )
+        assert willr_below(threshold=-80)(data).any()
+
+    def test_willr_above_fires_on_uptrend(self):
+        dates = pd.date_range("2018-01-01", periods=30, freq="B")
+        close = [100.0 + i * 3 for i in range(30)]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 0.5 for c in close],
+                "low": [c - 0.5 for c in close],
+            }
+        )
+        assert willr_above(threshold=-20)(data).any()
+
+
+# ============================================================================
+# CCI signal tests
+# ============================================================================
+
+
+class TestCCISignals:
+    def test_cci_below_returns_bool_series(self, ohlcv_60bars):
+        result = cci_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cci_above_returns_bool_series(self, ohlcv_60bars):
+        result = cci_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cci_below_length_matches_input(self, ohlcv_60bars):
+        assert len(cci_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_cci_above_length_matches_input(self, ohlcv_60bars):
+        assert len(cci_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_cci_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not cci_below()(data).any()
+        assert not cci_above()(data).any()
+
+    def test_cci_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (cci_above()(ohlcv_60bars) & cci_below()(ohlcv_60bars)).any()
+
+
+# ============================================================================
+# ROC signal tests
+# ============================================================================
+
+
+class TestROCSignals:
+    def test_roc_above_returns_bool_series(self, price_data_100bars):
+        result = roc_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_roc_below_returns_bool_series(self, price_data_100bars):
+        result = roc_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_roc_above_length_matches_input(self, price_data_100bars):
+        assert len(roc_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_roc_below_length_matches_input(self, price_data_100bars):
+        assert len(roc_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_roc_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not roc_above()(data).any()
+        assert not roc_below()(data).any()
+
+    def test_roc_above_fires_on_rapid_uptrend(self):
+        dates = pd.date_range("2018-01-01", periods=20, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0 + i * 2 for i in range(20)],
+            }
+        )
+        assert roc_above(threshold=0)(data).any()
+
+    def test_roc_below_fires_on_rapid_downtrend(self):
+        dates = pd.date_range("2018-01-01", periods=20, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0 - i * 2 for i in range(20)],
+            }
+        )
+        assert roc_below(threshold=0)(data).any()
+
+
+# ============================================================================
+# PPO crossover signal tests
+# ============================================================================
+
+
+class TestPPOSignals:
+    def test_ppo_cross_above_returns_bool_series(self, price_data_100bars):
+        result = ppo_cross_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ppo_cross_below_returns_bool_series(self, price_data_100bars):
+        result = ppo_cross_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ppo_cross_above_length_matches_input(self, price_data_100bars):
+        assert len(ppo_cross_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_ppo_cross_below_length_matches_input(self, price_data_100bars):
+        assert len(ppo_cross_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_ppo_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not ppo_cross_above()(data).any()
+        assert not ppo_cross_below()(data).any()
+
+    def test_ppo_above_below_mutually_exclusive(self, price_data_100bars):
+        assert not (
+            ppo_cross_above()(price_data_100bars)
+            & ppo_cross_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# TSI crossover signal tests
+# ============================================================================
+
+
+class TestTSISignals:
+    def test_tsi_cross_above_returns_bool_series(self, price_data_100bars):
+        result = tsi_cross_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_tsi_cross_below_returns_bool_series(self, price_data_100bars):
+        result = tsi_cross_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_tsi_cross_above_length_matches_input(self, price_data_100bars):
+        assert len(tsi_cross_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_tsi_cross_below_length_matches_input(self, price_data_100bars):
+        assert len(tsi_cross_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_tsi_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not tsi_cross_above()(data).any()
+        assert not tsi_cross_below()(data).any()
+
+    def test_tsi_above_below_mutually_exclusive(self, price_data_100bars):
+        assert not (
+            tsi_cross_above()(price_data_100bars)
+            & tsi_cross_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# CMO signal tests
+# ============================================================================
+
+
+class TestCMOSignals:
+    def test_cmo_above_returns_bool_series(self, price_data_100bars):
+        result = cmo_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cmo_below_returns_bool_series(self, price_data_100bars):
+        result = cmo_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cmo_above_length_matches_input(self, price_data_100bars):
+        assert len(cmo_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_cmo_below_length_matches_input(self, price_data_100bars):
+        assert len(cmo_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_cmo_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not cmo_above()(data).any()
+        assert not cmo_below()(data).any()
+
+    def test_cmo_above_below_not_simultaneously_true(self, price_data_100bars):
+        assert not (
+            cmo_above()(price_data_100bars) & cmo_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# UO signal tests
+# ============================================================================
+
+
+class TestUOSignals:
+    def test_uo_above_returns_bool_series(self, ohlcv_60bars):
+        result = uo_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_uo_below_returns_bool_series(self, ohlcv_60bars):
+        result = uo_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_uo_above_length_matches_input(self, ohlcv_60bars):
+        assert len(uo_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_uo_below_length_matches_input(self, ohlcv_60bars):
+        assert len(uo_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_uo_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 99.0, 98.0],
+            }
+        )
+        assert not uo_above()(data).any()
+        assert not uo_below()(data).any()
+
+    def test_uo_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (uo_above()(ohlcv_60bars) & uo_below()(ohlcv_60bars)).any()
+
+
+# ============================================================================
+# Squeeze signal tests
+# ============================================================================
+
+
+class TestSqueezeSignals:
+    def test_squeeze_on_returns_bool_series(self, ohlcv_60bars):
+        result = squeeze_on()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_squeeze_off_returns_bool_series(self, ohlcv_60bars):
+        result = squeeze_off()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_squeeze_on_length_matches_input(self, ohlcv_60bars):
+        assert len(squeeze_on()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_squeeze_off_length_matches_input(self, ohlcv_60bars):
+        assert len(squeeze_off()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_squeeze_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not squeeze_on()(data).any()
+        assert not squeeze_off()(data).any()
+
+
+# ============================================================================
+# AO signal tests
+# ============================================================================
+
+
+class TestAOSignals:
+    def test_ao_above_returns_bool_series(self, ohlcv_60bars):
+        result = ao_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ao_below_returns_bool_series(self, ohlcv_60bars):
+        result = ao_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ao_above_length_matches_input(self, ohlcv_60bars):
+        assert len(ao_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_ao_below_length_matches_input(self, ohlcv_60bars):
+        assert len(ao_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_ao_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not ao_above()(data).any()
+        assert not ao_below()(data).any()
+
+    def test_ao_above_fires_on_rising_trend(self, ohlcv_60bars):
+        assert ao_above(threshold=0)(ohlcv_60bars).any()
+
+
+# ============================================================================
+# SMI crossover signal tests
+# ============================================================================
+
+
+class TestSMISignals:
+    def test_smi_cross_above_returns_bool_series(self, price_data_100bars):
+        result = smi_cross_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_smi_cross_below_returns_bool_series(self, price_data_100bars):
+        result = smi_cross_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_smi_cross_above_length_matches_input(self, price_data_100bars):
+        assert len(smi_cross_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_smi_cross_below_length_matches_input(self, price_data_100bars):
+        assert len(smi_cross_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_smi_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not smi_cross_above()(data).any()
+        assert not smi_cross_below()(data).any()
+
+    def test_smi_above_below_mutually_exclusive(self, price_data_100bars):
+        assert not (
+            smi_cross_above()(price_data_100bars)
+            & smi_cross_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# KST crossover signal tests
+# ============================================================================
+
+
+class TestKSTSignals:
+    def test_kst_cross_above_returns_bool_series(self, price_data_100bars):
+        result = kst_cross_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_kst_cross_below_returns_bool_series(self, price_data_100bars):
+        result = kst_cross_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_kst_cross_above_length_matches_input(self, price_data_100bars):
+        assert len(kst_cross_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_kst_cross_below_length_matches_input(self, price_data_100bars):
+        assert len(kst_cross_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_kst_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not kst_cross_above()(data).any()
+        assert not kst_cross_below()(data).any()
+
+    def test_kst_above_below_mutually_exclusive(self, price_data_100bars):
+        assert not (
+            kst_cross_above()(price_data_100bars)
+            & kst_cross_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# Fisher Transform crossover signal tests
+# ============================================================================
+
+
+class TestFisherSignals:
+    def test_fisher_cross_above_returns_bool_series(self, price_data_100bars):
+        result = fisher_cross_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_fisher_cross_below_returns_bool_series(self, price_data_100bars):
+        result = fisher_cross_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_fisher_cross_above_length_matches_input(self, price_data_100bars):
+        assert len(fisher_cross_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_fisher_cross_below_length_matches_input(self, price_data_100bars):
+        assert len(fisher_cross_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_fisher_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not fisher_cross_above()(data).any()
+        assert not fisher_cross_below()(data).any()
+
+    def test_fisher_above_below_mutually_exclusive(self, price_data_100bars):
+        assert not (
+            fisher_cross_above()(price_data_100bars)
+            & fisher_cross_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# DEMA / TEMA / HMA / KAMA / WMA / ZLMA / ALMA crossover tests
+# ============================================================================
+
+
+@pytest.fixture
+def cross_price_data():
+    """60 bars: flat then sharply rising to force fast MA above slow MA."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    prices = [100.0] * 30 + [100.0 + i * 2 for i in range(30)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": prices,
+        }
+    )
+
+
+class TestOverlapMASignals:
+    def test_dema_cross_above_returns_bool_series(self, cross_price_data):
+        assert dema_cross_above()(cross_price_data).dtype == bool
+
+    def test_dema_cross_below_returns_bool_series(self, cross_price_data):
+        assert dema_cross_below()(cross_price_data).dtype == bool
+
+    def test_dema_cross_length_matches_input(self, cross_price_data):
+        assert len(dema_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(dema_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_dema_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not dema_cross_above()(data).any()
+        assert not dema_cross_below()(data).any()
+
+    def test_dema_above_below_mutually_exclusive(self, cross_price_data):
+        assert not (
+            dema_cross_above()(cross_price_data) & dema_cross_below()(cross_price_data)
+        ).any()
+
+    def test_tema_cross_above_returns_bool_series(self, cross_price_data):
+        assert tema_cross_above()(cross_price_data).dtype == bool
+
+    def test_tema_cross_below_returns_bool_series(self, cross_price_data):
+        assert tema_cross_below()(cross_price_data).dtype == bool
+
+    def test_tema_cross_length_matches_input(self, cross_price_data):
+        assert len(tema_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(tema_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_tema_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not tema_cross_above()(data).any()
+        assert not tema_cross_below()(data).any()
+
+    def test_hma_cross_above_returns_bool_series(self, cross_price_data):
+        assert hma_cross_above()(cross_price_data).dtype == bool
+
+    def test_hma_cross_below_returns_bool_series(self, cross_price_data):
+        assert hma_cross_below()(cross_price_data).dtype == bool
+
+    def test_hma_cross_length_matches_input(self, cross_price_data):
+        assert len(hma_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(hma_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_hma_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0] * 5,
+            }
+        )
+        assert not hma_cross_above()(data).any()
+        assert not hma_cross_below()(data).any()
+
+    def test_kama_cross_above_returns_bool_series(self, cross_price_data):
+        assert kama_cross_above()(cross_price_data).dtype == bool
+
+    def test_kama_cross_below_returns_bool_series(self, cross_price_data):
+        assert kama_cross_below()(cross_price_data).dtype == bool
+
+    def test_kama_cross_length_matches_input(self, cross_price_data):
+        assert len(kama_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(kama_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_kama_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not kama_cross_above()(data).any()
+        assert not kama_cross_below()(data).any()
+
+    def test_wma_cross_above_returns_bool_series(self, cross_price_data):
+        assert wma_cross_above()(cross_price_data).dtype == bool
+
+    def test_wma_cross_below_returns_bool_series(self, cross_price_data):
+        assert wma_cross_below()(cross_price_data).dtype == bool
+
+    def test_wma_cross_length_matches_input(self, cross_price_data):
+        assert len(wma_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(wma_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_wma_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not wma_cross_above()(data).any()
+        assert not wma_cross_below()(data).any()
+
+    def test_zlma_cross_above_returns_bool_series(self, cross_price_data):
+        assert zlma_cross_above()(cross_price_data).dtype == bool
+
+    def test_zlma_cross_below_returns_bool_series(self, cross_price_data):
+        assert zlma_cross_below()(cross_price_data).dtype == bool
+
+    def test_zlma_cross_length_matches_input(self, cross_price_data):
+        assert len(zlma_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(zlma_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_zlma_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not zlma_cross_above()(data).any()
+        assert not zlma_cross_below()(data).any()
+
+    def test_alma_cross_above_returns_bool_series(self, cross_price_data):
+        assert alma_cross_above()(cross_price_data).dtype == bool
+
+    def test_alma_cross_below_returns_bool_series(self, cross_price_data):
+        assert alma_cross_below()(cross_price_data).dtype == bool
+
+    def test_alma_cross_length_matches_input(self, cross_price_data):
+        assert len(alma_cross_above()(cross_price_data)) == len(cross_price_data)
+        assert len(alma_cross_below()(cross_price_data)) == len(cross_price_data)
+
+    def test_alma_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not alma_cross_above()(data).any()
+        assert not alma_cross_below()(data).any()
+
+    def test_ma_crossovers_fire_on_rising_trend(self, cross_price_data):
+        for fn in [
+            dema_cross_above,
+            tema_cross_above,
+            hma_cross_above,
+            wma_cross_above,
+        ]:
+            result = fn(fast=5, slow=20)(cross_price_data)
+            assert result.any(), f"{fn.__name__} should fire on rising trend"
+
+
+# ============================================================================
+# ADX signal tests
+# ============================================================================
+
+
+class TestADXSignals:
+    def test_adx_above_returns_bool_series(self, ohlcv_60bars):
+        result = adx_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_adx_below_returns_bool_series(self, ohlcv_60bars):
+        result = adx_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_adx_above_length_matches_input(self, ohlcv_60bars):
+        assert len(adx_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_adx_below_length_matches_input(self, ohlcv_60bars):
+        assert len(adx_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_adx_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not adx_above()(data).any()
+        assert not adx_below()(data).any()
+
+    def test_adx_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (
+            adx_above(threshold=25)(ohlcv_60bars)
+            & adx_below(threshold=25)(ohlcv_60bars)
+        ).any()
+
+    def test_adx_below_very_high_threshold_fires(self, ohlcv_100bars):
+        assert adx_below(threshold=100)(ohlcv_100bars).any()
+
+    def test_adx_above_fires_on_strong_trend(self):
+        dates = pd.date_range("2018-01-01", periods=60, freq="B")
+        close = [100.0 + i * 5 for i in range(60)]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 1.0 for c in close],
+                "low": [c - 1.0 for c in close],
+            }
+        )
+        assert adx_above(threshold=1)(data).any()
+
+
+# ============================================================================
+# Aroon crossover signal tests
+# ============================================================================
+
+
+class TestAroonSignals:
+    def test_aroon_cross_above_returns_bool_series(self, ohlcv_60bars):
+        result = aroon_cross_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_aroon_cross_below_returns_bool_series(self, ohlcv_60bars):
+        result = aroon_cross_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_aroon_cross_above_length_matches_input(self, ohlcv_60bars):
+        assert len(aroon_cross_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_aroon_cross_below_length_matches_input(self, ohlcv_60bars):
+        assert len(aroon_cross_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_aroon_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not aroon_cross_above()(data).any()
+        assert not aroon_cross_below()(data).any()
+
+    def test_aroon_above_below_mutually_exclusive(self, ohlcv_100bars):
+        assert not (
+            aroon_cross_above()(ohlcv_100bars) & aroon_cross_below()(ohlcv_100bars)
+        ).any()
+
+
+# ============================================================================
+# Supertrend signal tests
+# ============================================================================
+
+
+class TestSupertrendSignals:
+    def test_supertrend_buy_returns_bool_series(self, ohlcv_60bars):
+        result = supertrend_buy()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_supertrend_sell_returns_bool_series(self, ohlcv_60bars):
+        result = supertrend_sell()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_supertrend_buy_length_matches_input(self, ohlcv_60bars):
+        assert len(supertrend_buy()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_supertrend_sell_length_matches_input(self, ohlcv_60bars):
+        assert len(supertrend_sell()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_supertrend_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 99.0, 98.0],
+            }
+        )
+        assert not supertrend_buy()(data).any()
+        assert not supertrend_sell()(data).any()
+
+    def test_supertrend_buy_sell_mutually_exclusive(self, ohlcv_100bars):
+        assert not (
+            supertrend_buy()(ohlcv_100bars) & supertrend_sell()(ohlcv_100bars)
+        ).any()
+
+
+# ============================================================================
+# PSAR signal tests
+# ============================================================================
+
+
+class TestPSARSignals:
+    def test_psar_buy_returns_bool_series(self, ohlcv_60bars):
+        result = psar_buy()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_psar_sell_returns_bool_series(self, ohlcv_60bars):
+        result = psar_sell()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_psar_buy_length_matches_input(self, ohlcv_60bars):
+        assert len(psar_buy()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_psar_sell_length_matches_input(self, ohlcv_60bars):
+        assert len(psar_sell()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_psar_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=1, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0],
+            }
+        )
+        assert not psar_buy()(data).any()
+        assert not psar_sell()(data).any()
+
+    def test_psar_buy_sell_mutually_exclusive(self, ohlcv_100bars):
+        assert not (psar_buy()(ohlcv_100bars) & psar_sell()(ohlcv_100bars)).any()
+
+    def test_psar_fires_on_v_shaped_data(self):
+        dates = pd.date_range("2018-01-01", periods=60, freq="B")
+        close = [100.0 - i * 0.5 for i in range(30)] + [
+            85.0 + i * 0.8 for i in range(30)
+        ]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 1.0 for c in close],
+                "low": [c - 1.0 for c in close],
+            }
+        )
+        assert psar_buy()(data).any() or psar_sell()(data).any()
+
+
+# ============================================================================
+# Choppiness Index signal tests
+# ============================================================================
+
+
+class TestChopSignals:
+    def test_chop_above_returns_bool_series(self, ohlcv_60bars):
+        result = chop_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_chop_below_returns_bool_series(self, ohlcv_60bars):
+        result = chop_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_chop_above_length_matches_input(self, ohlcv_60bars):
+        assert len(chop_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_chop_below_length_matches_input(self, ohlcv_60bars):
+        assert len(chop_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_chop_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 100.0],
+            }
+        )
+        assert not chop_above()(data).any()
+        assert not chop_below()(data).any()
+
+    def test_chop_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (chop_above()(ohlcv_60bars) & chop_below()(ohlcv_60bars)).any()
+
+
+# ============================================================================
+# VHF signal tests
+# ============================================================================
+
+
+class TestVHFSignals:
+    def test_vhf_above_returns_bool_series(self, price_data_100bars):
+        result = vhf_above()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_vhf_below_returns_bool_series(self, price_data_100bars):
+        result = vhf_below()(price_data_100bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_vhf_above_length_matches_input(self, price_data_100bars):
+        assert len(vhf_above()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_vhf_below_length_matches_input(self, price_data_100bars):
+        assert len(vhf_below()(price_data_100bars)) == len(price_data_100bars)
+
+    def test_vhf_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not vhf_above()(data).any()
+        assert not vhf_below()(data).any()
+
+    def test_vhf_above_below_not_simultaneously_true(self, price_data_100bars):
+        assert not (
+            vhf_above()(price_data_100bars) & vhf_below()(price_data_100bars)
+        ).any()
+
+
+# ============================================================================
+# Keltner Channel signal tests
+# ============================================================================
+
+
+class TestKeltnerChannelSignals:
+    def test_kc_above_upper_returns_bool_series(self, ohlcv_60bars):
+        result = kc_above_upper()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_kc_below_lower_returns_bool_series(self, ohlcv_60bars):
+        result = kc_below_lower()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_kc_above_upper_length_matches_input(self, ohlcv_60bars):
+        assert len(kc_above_upper()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_kc_below_lower_length_matches_input(self, ohlcv_60bars):
+        assert len(kc_below_lower()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_kc_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not kc_above_upper()(data).any()
+        assert not kc_below_lower()(data).any()
+
+    def test_kc_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (
+            kc_above_upper()(ohlcv_60bars) & kc_below_lower()(ohlcv_60bars)
+        ).any()
+
+    def test_kc_above_upper_fires_on_extreme_spike(self):
+        dates = pd.date_range("2018-01-01", periods=30, freq="B")
+        close = [100.0] * 25 + [300.0, 301.0, 302.0, 303.0, 304.0]
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": close,
+                "high": [c + 1.0 for c in close],
+                "low": [c - 1.0 for c in close],
+            }
+        )
+        assert kc_above_upper()(data).any()
+
+
+# ============================================================================
+# Donchian Channel signal tests
+# ============================================================================
+
+
+class TestDonchianChannelSignals:
+    def test_donchian_above_upper_returns_bool_series(self, ohlcv_60bars):
+        result = donchian_above_upper()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_donchian_below_lower_returns_bool_series(self, ohlcv_60bars):
+        result = donchian_below_lower()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_donchian_above_upper_length_matches_input(self, ohlcv_60bars):
+        assert len(donchian_above_upper()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_donchian_below_lower_length_matches_input(self, ohlcv_60bars):
+        assert len(donchian_below_lower()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_donchian_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not donchian_above_upper()(data).any()
+        assert not donchian_below_lower()(data).any()
+
+    def test_donchian_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (
+            donchian_above_upper()(ohlcv_60bars) & donchian_below_lower()(ohlcv_60bars)
+        ).any()
+
+
+# ============================================================================
+# NATR signal tests
+# ============================================================================
+
+
+class TestNATRSignals:
+    def test_natr_above_returns_bool_series(self, ohlcv_60bars):
+        result = natr_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_natr_below_returns_bool_series(self, ohlcv_60bars):
+        result = natr_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_natr_above_length_matches_input(self, ohlcv_60bars):
+        assert len(natr_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_natr_below_length_matches_input(self, ohlcv_60bars):
+        assert len(natr_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_natr_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+            }
+        )
+        assert not natr_above()(data).any()
+        assert not natr_below()(data).any()
+
+    def test_natr_above_below_not_simultaneously_true(self, ohlcv_60bars):
+        assert not (
+            natr_above(threshold=2.0)(ohlcv_60bars)
+            & natr_below(threshold=2.0)(ohlcv_60bars)
+        ).any()
+
+    def test_natr_below_high_threshold_fires(self, ohlcv_60bars):
+        assert natr_below(threshold=100)(ohlcv_60bars).any()
+
+
+# ============================================================================
+# Mass Index signal tests
+# ============================================================================
+
+
+class TestMassIndexSignals:
+    def test_massi_above_returns_bool_series(self, ohlcv_60bars):
+        result = massi_above()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_massi_below_returns_bool_series(self, ohlcv_60bars):
+        result = massi_below()(ohlcv_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_massi_above_length_matches_input(self, ohlcv_60bars):
+        assert len(massi_above()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_massi_below_length_matches_input(self, ohlcv_60bars):
+        assert len(massi_below()(ohlcv_60bars)) == len(ohlcv_60bars)
+
+    def test_massi_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0, 101.0, 100.0],
+            }
+        )
+        assert not massi_above()(data).any()
+        assert not massi_below()(data).any()
+
+    def test_massi_below_very_high_threshold_fires(self, ohlcv_60bars):
+        assert massi_below(threshold=1000)(ohlcv_60bars).any()
+
+
+# ============================================================================
+# MFI signal tests
+# ============================================================================
+
+
+class TestMFISignals:
+    def test_mfi_above_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = mfi_above()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_mfi_below_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = mfi_below()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_mfi_above_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(mfi_above()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_mfi_below_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(mfi_below()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_mfi_no_volume_returns_all_false(self, ohlcv_60bars):
+        assert not mfi_above()(ohlcv_60bars).any()
+        assert not mfi_below()(ohlcv_60bars).any()
+
+    def test_mfi_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+                "high": [101.0, 102.0, 103.0],
+                "low": [99.0, 100.0, 101.0],
+                "volume": [1000, 1100, 1200],
+            }
+        )
+        assert not mfi_above()(data).any()
+        assert not mfi_below()(data).any()
+
+    def test_mfi_above_below_not_simultaneously_true(self, ohlcv_with_volume_60bars):
+        assert not (
+            mfi_above()(ohlcv_with_volume_60bars)
+            & mfi_below()(ohlcv_with_volume_60bars)
+        ).any()
+
+
+# ============================================================================
+# OBV crossover signal tests
+# ============================================================================
+
+
+class TestOBVSignals:
+    def test_obv_cross_above_sma_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = obv_cross_above_sma()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_obv_cross_below_sma_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = obv_cross_below_sma()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_obv_cross_above_sma_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(obv_cross_above_sma()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_obv_cross_below_sma_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(obv_cross_below_sma()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_obv_no_volume_returns_all_false(self, ohlcv_60bars):
+        assert not obv_cross_above_sma()(ohlcv_60bars).any()
+        assert not obv_cross_below_sma()(ohlcv_60bars).any()
+
+    def test_obv_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+                "volume": [1000, 1100, 1200],
+            }
+        )
+        assert not obv_cross_above_sma()(data).any()
+        assert not obv_cross_below_sma()(data).any()
+
+    def test_obv_above_below_mutually_exclusive(self, ohlcv_with_volume_100bars):
+        assert not (
+            obv_cross_above_sma()(ohlcv_with_volume_100bars)
+            & obv_cross_below_sma()(ohlcv_with_volume_100bars)
+        ).any()
+
+
+# ============================================================================
+# CMF signal tests
+# ============================================================================
+
+
+class TestCMFSignals:
+    def test_cmf_above_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = cmf_above()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cmf_below_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = cmf_below()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_cmf_above_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(cmf_above()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_cmf_below_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(cmf_below()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_cmf_no_volume_returns_all_false(self, ohlcv_60bars):
+        assert not cmf_above()(ohlcv_60bars).any()
+        assert not cmf_below()(ohlcv_60bars).any()
+
+    def test_cmf_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+                "high": [101.0, 102.0, 103.0],
+                "low": [99.0, 100.0, 101.0],
+                "volume": [1000, 1100, 1200],
+            }
+        )
+        assert not cmf_above()(data).any()
+        assert not cmf_below()(data).any()
+
+
+# ============================================================================
+# AD crossover signal tests
+# ============================================================================
+
+
+class TestADSignals:
+    def test_ad_cross_above_sma_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = ad_cross_above_sma()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ad_cross_below_sma_returns_bool_series(self, ohlcv_with_volume_60bars):
+        result = ad_cross_below_sma()(ohlcv_with_volume_60bars)
+        assert isinstance(result, pd.Series) and result.dtype == bool
+
+    def test_ad_cross_above_sma_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(ad_cross_above_sma()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_ad_cross_below_sma_length_matches_input(self, ohlcv_with_volume_60bars):
+        assert len(ad_cross_below_sma()(ohlcv_with_volume_60bars)) == len(
+            ohlcv_with_volume_60bars
+        )
+
+    def test_ad_no_volume_returns_all_false(self, ohlcv_60bars):
+        assert not ad_cross_above_sma()(ohlcv_60bars).any()
+        assert not ad_cross_below_sma()(ohlcv_60bars).any()
+
+    def test_ad_insufficient_data_returns_all_false(self):
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "underlying_price": [100.0, 101.0, 102.0],
+                "high": [101.0, 102.0, 103.0],
+                "low": [99.0, 100.0, 101.0],
+                "volume": [1000, 1100, 1200],
+            }
+        )
+        assert not ad_cross_above_sma()(data).any()
+        assert not ad_cross_below_sma()(data).any()
+
+    def test_ad_above_below_mutually_exclusive(self, ohlcv_with_volume_100bars):
+        assert not (
+            ad_cross_above_sma()(ohlcv_with_volume_100bars)
+            & ad_cross_below_sma()(ohlcv_with_volume_100bars)
+        ).any()
