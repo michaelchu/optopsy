@@ -13,7 +13,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ._schemas import SIGNAL_NAMES, STRATEGY_NAMES
 
@@ -107,6 +107,8 @@ class CombineMode(str, Enum):
 class DeltaTarget(BaseModel):
     """Per-leg delta target with min/max range. All values are unsigned (0-1)."""
 
+    model_config = {"extra": "forbid"}
+
     target: float = Field(
         ..., gt=0, le=1, description="Target absolute delta (e.g. 0.30)"
     )
@@ -116,6 +118,14 @@ class DeltaTarget(BaseModel):
     max: float = Field(
         ..., gt=0, le=1, description="Maximum absolute delta (e.g. 0.40)"
     )
+
+    @model_validator(mode="after")
+    def _check_range_order(self) -> DeltaTarget:
+        if self.min > self.target:
+            raise ValueError(f"min ({self.min}) must be <= target ({self.target})")
+        if self.target > self.max:
+            raise ValueError(f"target ({self.target}) must be <= max ({self.max})")
+        return self
 
 
 class StrategyParamsMixin(BaseModel):
@@ -165,6 +175,8 @@ class StrategyParamsMixin(BaseModel):
     )
     delta_interval: float | None = Field(
         None,
+        gt=0,
+        le=1,
         description=(
             "Interval size for delta grouping in aggregated stats (default: 0.05). "
             "Controls the width of delta_range buckets in output."
@@ -172,6 +184,7 @@ class StrategyParamsMixin(BaseModel):
     )
     stop_loss: float | None = Field(
         None,
+        lt=0,
         description=(
             "Early exit stop-loss threshold as a negative decimal "
             "(e.g. -0.5 = exit if trade loses 50%). Omit for no stop-loss."
@@ -179,6 +192,7 @@ class StrategyParamsMixin(BaseModel):
     )
     take_profit: float | None = Field(
         None,
+        gt=0,
         description=(
             "Early exit take-profit threshold as a positive decimal "
             "(e.g. 0.5 = exit if trade gains 50%). Omit for no take-profit."
@@ -186,6 +200,7 @@ class StrategyParamsMixin(BaseModel):
     )
     max_hold_days: int | None = Field(
         None,
+        gt=0,
         description=(
             "Maximum holding period in calendar days. Exit after this many days "
             "regardless of DTE or P&L. Omit for no time-based exit."
@@ -193,6 +208,7 @@ class StrategyParamsMixin(BaseModel):
     )
     commission: float | None = Field(
         None,
+        ge=0,
         description=(
             "Commission per contract in dollars (e.g. 0.65). "
             "Applied to each leg at entry and exit. Omit for no commissions."
