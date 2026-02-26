@@ -273,8 +273,12 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             commission,
         )
 
-    # Apply early exits (stop-loss / take-profit) if configured
-    if params.get("stop_loss") is not None or params.get("take_profit") is not None:
+    # Apply early exits (stop-loss / take-profit / max-hold-days) if configured
+    if (
+        params.get("stop_loss") is not None
+        or params.get("take_profit") is not None
+        or params.get("max_hold_days") is not None
+    ):
         result = _apply_early_exits(result, data, leg_def, params)
 
     return _format_output(
@@ -405,8 +409,12 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         cal_commission,
     )
 
-    # Apply early exits (stop-loss / take-profit) if configured
-    if params.get("stop_loss") is not None or params.get("take_profit") is not None:
+    # Apply early exits (stop-loss / take-profit / max-hold-days) if configured
+    if (
+        params.get("stop_loss") is not None
+        or params.get("take_profit") is not None
+        or params.get("max_hold_days") is not None
+    ):
         merged = _apply_early_exits(merged, data, leg_def, params)
 
     return _fmt(merged)

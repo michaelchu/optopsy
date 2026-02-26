@@ -1,12 +1,13 @@
-"""P&L-based early exit logic (stop-loss and take-profit).
+"""Early exit logic (stop-loss, take-profit, and max-hold-days).
 
 This module provides vectorized early exit detection for options strategies.
 It scans intermediate quote dates between each trade's entry and planned exit
 to find the first date where unrealized P&L crosses a stop-loss or take-profit
-threshold.
+threshold, or the position has been held for ``max_hold_days`` calendar days.
 
 The main entry point is ``_apply_early_exits()``, called from
-``core._process_strategy()`` when ``stop_loss`` or ``take_profit`` is set.
+``core._process_strategy()`` when ``stop_loss``, ``take_profit``, or
+``max_hold_days`` is set.
 """
 
 from typing import Any, Dict, List, Optional, Tuple, cast
@@ -42,8 +43,9 @@ def _apply_early_exits(
     """
     stop_loss = params.get("stop_loss")
     take_profit = params.get("take_profit")
+    max_hold_days = params.get("max_hold_days")
 
-    if stop_loss is None and take_profit is None:
+    if stop_loss is None and take_profit is None and max_hold_days is None:
         return result
 
     if result.empty:
@@ -53,9 +55,13 @@ def _apply_early_exits(
     result = result.copy()
 
     if len(leg_def) == 1:
-        return _apply_single_leg_exits(result, data, leg_def, stop_loss, take_profit)
+        return _apply_single_leg_exits(
+            result, data, leg_def, stop_loss, take_profit, max_hold_days
+        )
     else:
-        return _apply_multi_leg_exits(result, data, leg_def, stop_loss, take_profit)
+        return _apply_multi_leg_exits(
+            result, data, leg_def, stop_loss, take_profit, max_hold_days
+        )
 
 
 def _apply_single_leg_exits(
@@ -64,6 +70,7 @@ def _apply_single_leg_exits(
     leg_def: List[Tuple],
     stop_loss: Optional[float],
     take_profit: Optional[float],
+    max_hold_days: Optional[int] = None,
 ) -> pd.DataFrame:
     """Apply early exits for single-leg strategies.
 
@@ -87,9 +94,9 @@ def _apply_single_leg_exits(
         result.drop(columns=["_trade_id"], inplace=True)
         return result
 
-    # Merge entry price onto intermediates to compute unrealized P&L
-    trade_entry = result[["_trade_id", "entry"]].rename(
-        columns={"entry": "_entry_price"}
+    # Merge entry price and entry date onto intermediates
+    trade_entry = result[["_trade_id", "entry", "quote_date_entry"]].rename(
+        columns={"entry": "_entry_price", "quote_date_entry": "_entry_date"}
     )
     intermediates = intermediates.merge(trade_entry, on="_trade_id")
 
@@ -104,7 +111,9 @@ def _apply_single_leg_exits(
     )
 
     # Find first threshold crossing per trade
-    triggered = _find_first_threshold_crossing(intermediates, stop_loss, take_profit)
+    triggered = _find_first_threshold_crossing(
+        intermediates, stop_loss, take_profit, max_hold_days
+    )
 
     if not triggered.empty:
         result = _replace_exits_single_leg(result, triggered, data, contract_cols)
@@ -119,6 +128,7 @@ def _apply_multi_leg_exits(
     leg_def: List[Tuple],
     stop_loss: Optional[float],
     take_profit: Optional[float],
+    max_hold_days: Optional[int] = None,
 ) -> pd.DataFrame:
     """Apply early exits for multi-leg strategies.
 
@@ -207,6 +217,23 @@ def _apply_multi_leg_exits(
         result.drop(columns=["_trade_id"], inplace=True)
         return result
 
+    # Merge entry date for max_hold_days calculation
+    # Calendar strategies use plain "quote_date" as the entry date column
+    entry_date_col = None
+    for col in [
+        "quote_date_entry",
+        "quote_date_entry_leg1",
+        "quote_date",
+    ]:
+        if col in result.columns:
+            entry_date_col = col
+            break
+    if entry_date_col is not None:
+        trade_dates = result[["_trade_id", entry_date_col]].rename(
+            columns={entry_date_col: "_entry_date"}
+        )
+        combined = combined.merge(trade_dates, on="_trade_id")
+
     # Compute total unrealized P&L
     entry_cols = [f"_leg_entry_{i}" for i in range(1, n_legs + 1)]
     exit_cols = [f"_leg_exit_{i}" for i in range(1, n_legs + 1)]
@@ -222,7 +249,9 @@ def _apply_multi_leg_exits(
     )
 
     # Find first threshold crossing
-    triggered = _find_first_threshold_crossing(combined, stop_loss, take_profit)
+    triggered = _find_first_threshold_crossing(
+        combined, stop_loss, take_profit, max_hold_days
+    )
 
     if not triggered.empty:
         result = _replace_exits_multi_leg(
@@ -306,13 +335,21 @@ def _find_first_threshold_crossing(
     intermediates: pd.DataFrame,
     stop_loss: Optional[float],
     take_profit: Optional[float],
+    max_hold_days: Optional[int] = None,
 ) -> pd.DataFrame:
-    """Find the first date per trade where unrealized P&L crosses a threshold.
+    """Find the first date per trade where an early-exit condition is met.
+
+    Conditions checked (priority when multiple trigger on same date):
+    1. stop_loss — unrealized P&L <= threshold
+    2. take_profit — unrealized P&L >= threshold
+    3. max_hold — calendar days held >= max_hold_days
 
     Args:
-        intermediates: DataFrame with _trade_id, quote_date, _unrealized_pct.
+        intermediates: DataFrame with _trade_id, quote_date, _unrealized_pct,
+            and optionally _entry_date (required when max_hold_days is set).
         stop_loss: Negative float threshold (e.g., -0.50).
         take_profit: Positive float threshold (e.g., 0.50).
+        max_hold_days: Maximum calendar days to hold a position.
 
     Returns:
         DataFrame with _trade_id, quote_date, _exit_type for triggered trades.
@@ -324,6 +361,11 @@ def _find_first_threshold_crossing(
         mask = mask | (intermediates["_unrealized_pct"] <= stop_loss)
     if take_profit is not None:
         mask = mask | (intermediates["_unrealized_pct"] >= take_profit)
+    if max_hold_days is not None and "_entry_date" in intermediates.columns:
+        hold_duration = (
+            intermediates["quote_date"] - intermediates["_entry_date"]
+        ).dt.days
+        mask = mask | (hold_duration >= max_hold_days)
 
     crossed = intermediates[mask].copy()
 
@@ -334,13 +376,19 @@ def _find_first_threshold_crossing(
     crossed = crossed.sort_values(["_trade_id", "quote_date"])
     first_per_trade = crossed.drop_duplicates(subset=["_trade_id"], keep="first")
 
-    # Determine exit type — if both thresholds could trigger, check which one
-    # When both trigger on the same date, stop_loss takes priority (conservative)
+    # Determine exit type — priority: stop_loss > take_profit > max_hold
     def _classify(row):
         pct = row["_unrealized_pct"]
         if stop_loss is not None and pct <= stop_loss:
             return "stop_loss"
-        return "take_profit"
+        if take_profit is not None and pct >= take_profit:
+            return "take_profit"
+        if max_hold_days is not None:
+            return "max_hold"
+        raise ValueError(
+            "Unable to classify early exit: trade did not hit stop_loss or "
+            "take_profit, and max_hold_days was not configured."
+        )
 
     first_per_trade["_exit_type"] = first_per_trade.apply(_classify, axis=1)
 
