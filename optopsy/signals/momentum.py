@@ -124,14 +124,20 @@ def stoch_above(
 
 
 def stochrsi_below(
-    period: int = 14, rsi_period: int = 14, threshold: float = 20
+    period: int = 14,
+    rsi_period: int = 14,
+    k_smooth: int = 3,
+    d_smooth: int = 3,
+    threshold: float = 20,
 ) -> SignalFunc:
     """True when StochRSI %K is below threshold (oversold)."""
-    col = f"STOCHRSIk_{period}_{rsi_period}_{3}_{3}"
+    col = f"STOCHRSIk_{period}_{rsi_period}_{k_smooth}_{d_smooth}"
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
-        result = ta.stochrsi(close, length=period, rsi_length=rsi_period)
+        result = ta.stochrsi(
+            close, length=period, rsi_length=rsi_period, k=k_smooth, d=d_smooth
+        )
         if result is None or col not in result.columns:
             return None
         return result[col]
@@ -140,14 +146,20 @@ def stochrsi_below(
 
 
 def stochrsi_above(
-    period: int = 14, rsi_period: int = 14, threshold: float = 80
+    period: int = 14,
+    rsi_period: int = 14,
+    k_smooth: int = 3,
+    d_smooth: int = 3,
+    threshold: float = 80,
 ) -> SignalFunc:
     """True when StochRSI %K is above threshold (overbought)."""
-    col = f"STOCHRSIk_{period}_{rsi_period}_{3}_{3}"
+    col = f"STOCHRSIk_{period}_{rsi_period}_{k_smooth}_{d_smooth}"
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
-        result = ta.stochrsi(close, length=period, rsi_length=rsi_period)
+        result = ta.stochrsi(
+            close, length=period, rsi_length=rsi_period, k=k_smooth, d=d_smooth
+        )
         if result is None or col not in result.columns:
             return None
         return result[col]

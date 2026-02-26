@@ -25,6 +25,8 @@ from ._helpers import (
 from ._schemas import (
     _DATE_ONLY_SIGNALS,
     _IV_SIGNALS,
+    _OHLC_SIGNALS,
+    _VOLUME_SIGNALS,
     SIGNAL_NAMES,
     SIGNAL_REGISTRY,
 )
@@ -93,6 +95,37 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
                 "TA signals require stock price data but yfinance is not "
                 "installed or the fetch failed. Install yfinance "
                 "(`pip install yfinance`) and try again.",
+            )
+        # Validate that volume signals have access to a volume column.
+        has_volume_signal = any(
+            s.get("name") in _VOLUME_SIGNALS for s in signal_specs
+        )
+        if has_volume_signal and "volume" not in signal_data.columns:
+            vol_names = [
+                s.get("name")
+                for s in signal_specs
+                if s.get("name") in _VOLUME_SIGNALS
+            ]
+            return _result(
+                f"Volume signals ({', '.join(vol_names)}) require a 'volume' "
+                f"column in the stock data, but it was not found. "
+                f"Ensure the stock data source provides volume information.",
+            )
+        # Validate that OHLC signals have access to high/low/close columns.
+        has_ohlc_signal = any(s.get("name") in _OHLC_SIGNALS for s in signal_specs)
+        _ohlc_cols = ("high", "low", "close")
+        missing_ohlc = [c for c in _ohlc_cols if c not in signal_data.columns]
+        if has_ohlc_signal and missing_ohlc:
+            ohlc_names = [
+                s.get("name")
+                for s in signal_specs
+                if s.get("name") in _OHLC_SIGNALS
+            ]
+            return _result(
+                f"OHLC signals ({', '.join(ohlc_names)}) require "
+                f"'high', 'low', and 'close' columns in the stock data, "
+                f"but {', '.join(missing_ohlc)} were not found. "
+                f"Ensure the stock data source provides OHLCV information.",
             )
 
     # Fallback for date-only signals
