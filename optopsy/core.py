@@ -239,12 +239,8 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
         for idx in range(1, len(leg_def) + 1):
             external_cols.append(f"delta_range_leg{idx}")
 
-    # Extract commission config (Commission model -> dict)
+    # Commission is already a plain dict after _run_checks() -> model_dump()
     commission = params.get("commission")
-    if commission is not None:
-        commission = (
-            commission.model_dump() if hasattr(commission, "model_dump") else commission
-        )
 
     # For single-leg, use _strategy_engine directly
     if len(leg_def) == 1:
@@ -391,14 +387,8 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     if merged.empty:
         return _fmt(merged)
 
-    # Extract commission config
+    # Commission is already a plain dict after _run_calendar_checks() -> model_dump()
     cal_commission = params.get("commission")
-    if cal_commission is not None:
-        cal_commission = (
-            cal_commission.model_dump()
-            if hasattr(cal_commission, "model_dump")
-            else cal_commission
-        )
 
     # Calculate P&L
     merged = _calculate_calendar_pnl(
