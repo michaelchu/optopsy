@@ -82,7 +82,7 @@ def _cmd_download(args: argparse.Namespace) -> None:
         level=level,
     )
 
-    if args.stocks:
+    if getattr(args, "stocks", False):
         for symbol in args.symbols:
             _download_stocks_with_rich(symbol.upper())
         return
