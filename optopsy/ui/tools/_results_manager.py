@@ -545,3 +545,131 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
     )
     user_display = f"### Query: {result_key}\n\n{table}"
     return _result(llm_summary, user_display=user_display)
+
+
+@_register("summarize_session")
+def _handle_summarize_session(arguments, dataset, signals, datasets, results, _result):
+    sections_llm: list[str] = ["summarize_session:"]
+    sections_display: list[str] = ["## Session Summary"]
+
+    # --- Datasets ---
+    if datasets:
+        ds_lines_llm: list[str] = []
+        ds_lines_display: list[str] = []
+        for name, df in datasets.items():
+            date_col = next(
+                (c for c in ("quote_date", "date") if c in df.columns), None
+            )
+            if date_col:
+                dates = pd.to_datetime(df[date_col])
+                date_range = (
+                    f"{dates.min().date()} to {dates.max().date()}"
+                )
+            else:
+                date_range = "unknown date range"
+            ds_lines_llm.append(
+                f"  {name}: {len(df):,} rows, {date_range}"
+            )
+            ds_lines_display.append(
+                f"- **{name}**: {len(df):,} rows, {date_range}"
+            )
+        sections_llm.append(
+            f"Datasets loaded ({len(datasets)}):\n" + "\n".join(ds_lines_llm)
+        )
+        sections_display.append(
+            f"### Datasets Loaded ({len(datasets)})\n\n" + "\n".join(ds_lines_display)
+        )
+    else:
+        sections_llm.append("Datasets loaded: none")
+        sections_display.append("### Datasets Loaded\n\n*No datasets loaded.*")
+
+    # --- Strategy runs ---
+    backtest_results = {k: v for k, v in results.items() if v.get("type") != "simulation"}
+    sim_results = {k: v for k, v in results.items() if v.get("type") == "simulation"}
+
+    if backtest_results:
+        bt_rows = []
+        for key, entry in backtest_results.items():
+            mr = entry.get("mean_return")
+            wr = entry.get("win_rate")
+            pf = entry.get("profit_factor")
+            bt_rows.append({
+                "key": key,
+                "strategy": entry.get("strategy", "?"),
+                "max_entry_dte": entry.get("max_entry_dte", "?"),
+                "exit_dte": entry.get("exit_dte", "?"),
+                "count": entry.get("count", 0),
+                "mean_return": f"{mr:.4f}" if mr is not None else "—",
+                "win_rate": f"{wr:.2%}" if wr is not None else "—",
+                "profit_factor": f"{pf:.2f}" if pf is not None else "—",
+            })
+        bt_df = pd.DataFrame(bt_rows)
+        bt_table = _df_to_markdown(bt_df, max_rows=100)
+        sections_llm.append(
+            f"Strategy backtests ({len(backtest_results)}):\n"
+            + "\n".join(
+                f"  {r['key']}: strategy={r['strategy']}, "
+                f"mean={r['mean_return']}, wr={r['win_rate']}"
+                for r in bt_rows
+            )
+        )
+        sections_display.append(
+            f"### Strategy Backtests ({len(backtest_results)})\n\n{bt_table}"
+        )
+    else:
+        sections_llm.append("Strategy backtests: none")
+        sections_display.append(
+            "### Strategy Backtests\n\n*No strategy backtests run.*"
+        )
+
+    # --- Simulations ---
+    if sim_results:
+        sim_lines_llm: list[str] = []
+        sim_lines_display: list[str] = []
+        for key, entry in sim_results.items():
+            s = entry.get("summary", {})
+            sim_lines_llm.append(
+                f"  {key}: strategy={entry.get('strategy', '?')}, "
+                f"trades={s.get('total_trades', '?')}, "
+                f"return={s.get('total_return', '?')}, "
+                f"win_rate={s.get('win_rate', '?')}"
+            )
+            sim_lines_display.append(
+                f"- **{key}**: strategy={entry.get('strategy', '?')}, "
+                f"trades={s.get('total_trades', '?')}, "
+                f"total return={s.get('total_return', '?')}, "
+                f"win rate={s.get('win_rate', '?')}"
+            )
+        sections_llm.append(
+            f"Simulations ({len(sim_results)}):\n" + "\n".join(sim_lines_llm)
+        )
+        sections_display.append(
+            f"### Simulations ({len(sim_results)})\n\n"
+            + "\n".join(sim_lines_display)
+        )
+    else:
+        sections_llm.append("Simulations: none")
+        sections_display.append("### Simulations\n\n*No simulations run.*")
+
+    # --- Signals ---
+    if signals:
+        sig_lines_llm: list[str] = []
+        sig_lines_display: list[str] = []
+        for slot, sig_df in signals.items():
+            n_dates = len(sig_df) if sig_df is not None else 0
+            sig_lines_llm.append(f"  {slot}: {n_dates} valid dates")
+            sig_lines_display.append(f"- **{slot}**: {n_dates} valid dates")
+        sections_llm.append(
+            f"Signals built ({len(signals)}):\n" + "\n".join(sig_lines_llm)
+        )
+        sections_display.append(
+            f"### Signals Built ({len(signals)})\n\n"
+            + "\n".join(sig_lines_display)
+        )
+    else:
+        sections_llm.append("Signals built: none")
+        sections_display.append("### Signals Built\n\n*No signals built.*")
+
+    llm_summary = "\n".join(sections_llm)
+    user_display = "\n\n".join(sections_display)
+    return _result(llm_summary, user_display=user_display)
