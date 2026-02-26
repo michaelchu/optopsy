@@ -570,12 +570,8 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
                     date_max = valid_dates.max()
                     if pd.notna(date_min) and pd.notna(date_max):
                         date_range = f"{date_min.date()} to {date_max.date()}"
-            ds_lines_llm.append(
-                f"  {name}: {len(df):,} rows, {date_range}"
-            )
-            ds_lines_display.append(
-                f"- **{name}**: {len(df):,} rows, {date_range}"
-            )
+            ds_lines_llm.append(f"  {name}: {len(df):,} rows, {date_range}")
+            ds_lines_display.append(f"- **{name}**: {len(df):,} rows, {date_range}")
         sections_llm.append(
             f"Datasets loaded ({len(datasets)}):\n" + "\n".join(ds_lines_llm)
         )
@@ -587,7 +583,9 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
         sections_display.append("### Datasets Loaded\n\n*No datasets loaded.*")
 
     # --- Strategy runs ---
-    backtest_results = {k: v for k, v in results.items() if v.get("type") != "simulation"}
+    backtest_results = {
+        k: v for k, v in results.items() if v.get("type") != "simulation"
+    }
     sim_results = {k: v for k, v in results.items() if v.get("type") == "simulation"}
 
     if backtest_results:
@@ -596,17 +594,19 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             mr = entry.get("mean_return")
             wr = entry.get("win_rate")
             pf = entry.get("profit_factor")
-            bt_rows.append({
-                "key": key,
-                "strategy": entry.get("strategy", "?"),
-                "max_entry_dte": entry.get("max_entry_dte", "?"),
-                "exit_dte": entry.get("exit_dte", "?"),
-                "count": entry.get("count", 0),
-                # Keep raw numeric values for proper sorting
-                "mean_return": mr,
-                "win_rate": wr,
-                "profit_factor": pf,
-            })
+            bt_rows.append(
+                {
+                    "key": key,
+                    "strategy": entry.get("strategy", "?"),
+                    "max_entry_dte": entry.get("max_entry_dte", "?"),
+                    "exit_dte": entry.get("exit_dte", "?"),
+                    "count": entry.get("count", 0),
+                    # Keep raw numeric values for proper sorting
+                    "mean_return": mr,
+                    "win_rate": wr,
+                    "profit_factor": pf,
+                }
+            )
         bt_df = pd.DataFrame(bt_rows)
         # Sort by mean_return descending (best first), consistent with
         # list_results and compare_results.
@@ -680,8 +680,7 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             f"Simulations ({len(sim_results)}):\n" + "\n".join(sim_lines_llm)
         )
         sections_display.append(
-            f"### Simulations ({len(sim_results)})\n\n"
-            + "\n".join(sim_lines_display)
+            f"### Simulations ({len(sim_results)})\n\n" + "\n".join(sim_lines_display)
         )
     else:
         sections_llm.append("Simulations: none")
@@ -699,8 +698,7 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             f"Signals built ({len(signals)}):\n" + "\n".join(sig_lines_llm)
         )
         sections_display.append(
-            f"### Signals Built ({len(signals)})\n\n"
-            + "\n".join(sig_lines_display)
+            f"### Signals Built ({len(signals)})\n\n" + "\n".join(sig_lines_display)
         )
     else:
         sections_llm.append("Signals built: none")
