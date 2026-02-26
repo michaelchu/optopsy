@@ -16,12 +16,8 @@ from typing import List, Optional, Tuple, Unpack
 import numpy as np
 import pandas as pd
 
-from ..core import _process_calendar_strategy, _process_strategy
 from ..checks import _run_checks
-from ..evaluation import _evaluate_all_options
-from ..output import _format_output
-from ..pricing import _calculate_commission
-from ..timestamps import normalize_dates
+from ..core import _process_calendar_strategy, _process_strategy
 from ..definitions import (
     calendar_spread_external_cols,
     calendar_spread_internal_cols,
@@ -34,6 +30,9 @@ from ..definitions import (
     straddle_internal_cols,
     triple_strike_internal_cols,
 )
+from ..evaluation import _evaluate_all_options
+from ..output import _format_output
+from ..pricing import _calculate_commission
 from ..rules import (
     _rule_butterfly_strikes,
     _rule_expiration_ordering,
@@ -41,6 +40,7 @@ from ..rules import (
     _rule_iron_condor_strikes,
     _rule_non_overlapping_strike,
 )
+from ..timestamps import normalize_dates
 from ..types import CalendarStrategyParamsDict, StrategyParamsDict
 
 
