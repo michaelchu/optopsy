@@ -1,6 +1,6 @@
 # Entry Signals
 
-Filter strategy entries using technical analysis signals powered by [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
+Filter strategy entries using 80+ technical analysis signals powered by [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic). Use `apply_signal` to compute valid dates, then pass them as `entry_dates` or `exit_dates` to any strategy.
 
 ```python
 from optopsy import long_calls, apply_signal, rsi_below, sustained, signal, day_of_week
@@ -21,17 +21,93 @@ results = long_calls(data, entry_dates=entry_dates)
 
 ## Available Signals
 
-| Category | Signals | Default Parameters |
-|----------|---------|-------------------|
-| **RSI** | `rsi_below`, `rsi_above` | `period=14`, `threshold=30` / `70` |
-| **SMA** | `sma_below`, `sma_above` | `period=20` |
-| **MACD** | `macd_cross_above`, `macd_cross_below` | `fast=12`, `slow=26`, `signal_period=9` |
-| **Bollinger Bands** | `bb_above_upper`, `bb_below_lower` | `length=20`, `std=2.0` |
-| **EMA Crossover** | `ema_cross_above`, `ema_cross_below` | `fast=10`, `slow=50` |
-| **ATR Volatility** | `atr_above`, `atr_below` | `period=14`, `multiplier=1.5` / `0.75` |
-| **IV Rank** | `iv_rank_above`, `iv_rank_below` | `threshold=0.5`, `window=252` |
-| **Calendar** | `day_of_week` | Days: `0`=Mon ... `4`=Fri |
-| **Custom** | `custom_signal` | `flag_col='signal'` |
+### Momentum
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `rsi_below`, `rsi_above` | RSI threshold (oversold / overbought) | `period=14`, `threshold=30` / `70` |
+| `macd_cross_above`, `macd_cross_below` | MACD / signal line crossover | `fast=12`, `slow=26`, `signal_period=9` |
+| `stoch_below`, `stoch_above` | Stochastic %K threshold | `k_period=14`, `d_period=3`, `threshold=20` / `80` |
+| `stochrsi_below`, `stochrsi_above` | Stochastic RSI %K threshold | `period=14`, `rsi_period=14`, `k_smooth=3`, `d_smooth=3`, `threshold=20` / `80` |
+| `willr_below`, `willr_above` | Williams %R threshold | `period=14`, `threshold=-80` / `-20` |
+| `cci_below`, `cci_above` | Commodity Channel Index threshold | `period=20`, `threshold=-100` / `100` |
+| `roc_above`, `roc_below` | Rate of Change threshold | `period=10`, `threshold=0` |
+| `ppo_cross_above`, `ppo_cross_below` | Percentage Price Oscillator crossover | `fast=12`, `slow=26`, `signal_period=9` |
+| `tsi_cross_above`, `tsi_cross_below` | True Strength Index crossover | `long=25`, `short=13`, `signal_period=13` |
+| `cmo_above`, `cmo_below` | Chande Momentum Oscillator threshold | `period=14`, `threshold=50` / `-50` |
+| `uo_above`, `uo_below` | Ultimate Oscillator threshold | `fast=7`, `medium=14`, `slow=28`, `threshold=70` / `30` |
+| `squeeze_on`, `squeeze_off` | Squeeze (BB inside/outside KC) | `bb_length=20`, `bb_std=2.0`, `kc_length=20`, `kc_scalar=1.5` |
+| `ao_above`, `ao_below` | Awesome Oscillator threshold | `fast=5`, `slow=34`, `threshold=0` |
+| `smi_cross_above`, `smi_cross_below` | Stochastic Momentum Index crossover | `fast=5`, `slow=20`, `signal_period=5` |
+| `kst_cross_above`, `kst_cross_below` | Know Sure Thing crossover | *(uses pandas-ta defaults)* |
+| `fisher_cross_above`, `fisher_cross_below` | Fisher Transform crossover | `period=9` |
+
+### Overlap (Moving Averages)
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `sma_above`, `sma_below` | Price vs. Simple Moving Average | `period=20` |
+| `ema_cross_above`, `ema_cross_below` | EMA fast/slow crossover | `fast=10`, `slow=50` |
+| `dema_cross_above`, `dema_cross_below` | Double EMA crossover | `fast=10`, `slow=50` |
+| `tema_cross_above`, `tema_cross_below` | Triple EMA crossover | `fast=10`, `slow=50` |
+| `hma_cross_above`, `hma_cross_below` | Hull MA crossover | `fast=10`, `slow=50` |
+| `kama_cross_above`, `kama_cross_below` | Kaufman Adaptive MA crossover | `fast=10`, `slow=50` |
+| `wma_cross_above`, `wma_cross_below` | Weighted MA crossover | `fast=10`, `slow=50` |
+| `zlma_cross_above`, `zlma_cross_below` | Zero-Lag MA crossover | `fast=10`, `slow=50` |
+| `alma_cross_above`, `alma_cross_below` | Arnaud Legoux MA crossover | `fast=10`, `slow=50` |
+
+### Volatility
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `atr_above`, `atr_below` | ATR vs. median ATR regime | `period=14`, `multiplier=1.0` |
+| `bb_above_upper`, `bb_below_lower` | Price vs. Bollinger Bands | `length=20`, `std=2.0` |
+| `kc_above_upper`, `kc_below_lower` | Price vs. Keltner Channel | `length=20`, `scalar=1.5` |
+| `donchian_above_upper`, `donchian_below_lower` | Price vs. Donchian Channel | `lower_length=20`, `upper_length=20` |
+| `natr_above`, `natr_below` | Normalized ATR threshold (% of price) | `period=14`, `threshold=2.0` / `1.0` |
+| `massi_above`, `massi_below` | Mass Index threshold (reversal signal) | `fast=9`, `slow=25`, `threshold=27` / `26.5` |
+
+### Trend
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `adx_above`, `adx_below` | Average Directional Index threshold | `period=14`, `threshold=25` / `20` |
+| `aroon_cross_above`, `aroon_cross_below` | Aroon Up/Down crossover | `period=25` |
+| `supertrend_buy`, `supertrend_sell` | Supertrend direction flip | `period=7`, `multiplier=3.0` |
+| `psar_buy`, `psar_sell` | Parabolic SAR direction flip | `af0=0.02`, `af=0.02`, `max_af=0.2` |
+| `chop_above`, `chop_below` | Choppiness Index threshold | `period=14`, `threshold=61.8` / `38.2` |
+| `vhf_above`, `vhf_below` | Vertical Horizontal Filter threshold | `period=28`, `threshold=0.4` |
+
+### Volume
+
+Require OHLCV data with a `volume` column.
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `mfi_above`, `mfi_below` | Money Flow Index threshold | `period=14`, `threshold=80` / `20` |
+| `obv_cross_above_sma`, `obv_cross_below_sma` | OBV vs. its SMA crossover | `sma_period=20` |
+| `cmf_above`, `cmf_below` | Chaikin Money Flow threshold | `period=20`, `threshold=0.05` / `-0.05` |
+| `ad_cross_above_sma`, `ad_cross_below_sma` | A/D Line vs. its SMA crossover | `sma_period=20` |
+
+### IV Rank
+
+Require options data with an `implied_volatility` column.
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `iv_rank_above`, `iv_rank_below` | IV rank percentile threshold | `threshold=0.5`, `window=252` |
+
+### Calendar
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `day_of_week` | Restrict to specific weekdays | Days: `0`=Mon ... `4`=Fri |
+
+### Custom
+
+| Signal | Description | Default Parameters |
+|--------|-------------|-------------------|
+| `custom_signal` | Boolean flag from a DataFrame column | `flag_col='signal'` |
 
 ## Combinators
 
@@ -75,6 +151,15 @@ entry_dates = apply_signal(data, macd_cross_above(fast=12, slow=26, signal_perio
 results = op.long_call_spread(data, entry_dates=entry_dates)
 ```
 
+### Stochastic - oversold entry
+
+```python
+from optopsy import apply_signal, stoch_below
+
+entry_dates = apply_signal(data, stoch_below(k_period=14, d_period=3, threshold=20))
+results = op.long_calls(data, entry_dates=entry_dates)
+```
+
 ### Bollinger Bands - mean reversion
 
 Enter when price dips below the lower band:
@@ -97,6 +182,29 @@ entry_dates = apply_signal(data, ema_cross_above(fast=10, slow=50))
 results = op.long_calls(data, entry_dates=entry_dates)
 ```
 
+### ADX - trend strength filter
+
+Only enter trend-following strategies when ADX confirms a strong trend:
+
+```python
+from optopsy import apply_signal, adx_above, signal, ema_cross_above
+
+entry = signal(adx_above(period=14, threshold=25)) & signal(ema_cross_above(10, 50))
+entry_dates = apply_signal(data, entry)
+results = op.long_calls(data, entry_dates=entry_dates)
+```
+
+### Supertrend - trend direction
+
+Enter when Supertrend flips bullish:
+
+```python
+from optopsy import apply_signal, supertrend_buy
+
+entry_dates = apply_signal(data, supertrend_buy(period=7, multiplier=3.0))
+results = op.long_call_spread(data, entry_dates=entry_dates)
+```
+
 ### ATR - low-volatility regime filter
 
 Only sell premium in low-volatility regimes:
@@ -106,6 +214,39 @@ from optopsy import apply_signal, atr_below
 
 entry_dates = apply_signal(data, atr_below(period=14, multiplier=0.75))
 results = op.iron_condor(data, entry_dates=entry_dates)
+```
+
+### Keltner Channel - breakout entry
+
+Enter when price breaks above the upper Keltner Channel:
+
+```python
+from optopsy import apply_signal, kc_above_upper
+
+entry_dates = apply_signal(data, kc_above_upper(length=20, scalar=1.5))
+results = op.long_calls(data, entry_dates=entry_dates)
+```
+
+### Squeeze - volatility compression
+
+Enter when the squeeze releases (Bollinger Bands expand outside Keltner Channels):
+
+```python
+from optopsy import apply_signal, squeeze_off
+
+entry_dates = apply_signal(data, squeeze_off())
+results = op.long_straddles(data, entry_dates=entry_dates)
+```
+
+### Volume - MFI oversold
+
+Enter when Money Flow Index indicates oversold conditions:
+
+```python
+from optopsy import apply_signal, mfi_below
+
+entry_dates = apply_signal(stock_df, mfi_below(period=14, threshold=20))
+results = op.long_calls(data, entry_dates=entry_dates)
 ```
 
 ### Calendar - restrict entries to specific days
@@ -161,24 +302,27 @@ results = op.long_puts(data, entry_dates=entry_dates)
 
 ## Using Stock OHLCV Data
 
-By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially ATR, which benefits from real high/low data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
+By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially those needing high/low/volume data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
 
 ```python
 import pandas as pd
 import optopsy as op
-from optopsy import apply_signal, atr_above, ema_cross_above, signal
+from optopsy import apply_signal, adx_above, supertrend_buy, signal
 
 # Load OHLCV stock data (must have: underlying_symbol, quote_date, close;
 # optional: open, high, low, volume)
 stock_df = pd.read_csv("SPX_daily_ohlcv.csv", parse_dates=["quote_date"])
 
-# Compute entry dates from stock data using real high/low for ATR
-entry = signal(atr_above(period=14, multiplier=1.5)) & signal(ema_cross_above(10, 50))
+# Compute entry dates from stock data using real high/low for trend signals
+entry = signal(adx_above(period=14, threshold=25)) & signal(supertrend_buy())
 entry_dates = apply_signal(stock_df, entry)
 
 # Pass pre-computed dates to the strategy
 results = op.long_straddles(data, entry_dates=entry_dates)
 ```
+
+!!! tip
+    Signals that use high/low data (Stochastic, Williams %R, CCI, ATR, Keltner, Donchian, ADX, Aroon, Supertrend, PSAR, Choppiness, MFI, OBV, CMF, A/D) will fall back to using `underlying_price` as a proxy if `high` and `low` columns are not present. For best accuracy, provide real OHLCV data.
 
 ## IV Rank - volatility regime filter
 

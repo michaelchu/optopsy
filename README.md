@@ -21,7 +21,7 @@ Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
 - **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
 - **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
-- **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR) via pandas-ta-classic
+- **80+ Entry Signals** - Filter entries with technical indicators across momentum, overlap, volatility, trend, and volume categories via [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic)
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
 
 ## AI Chat UI (Beta)
@@ -90,7 +90,7 @@ optopsy-chat run --debug             # enable debug logging
 - **Load & preview CSV data** — drag-and-drop a CSV into the chat or point to a file on disk; inspect shape, columns, date ranges, and sample rows
 - **Scan & compare strategies** — run up to 50 strategy/parameter combinations in one call and get a ranked leaderboard
 - **Suggest parameters** — analyze your dataset's DTE and OTM% distributions and recommend sensible starting ranges
-- **Build entry/exit signals** — compose technical analysis signals (RSI, MACD, Bollinger Bands, EMA crossovers, SMA, ATR, day-of-week) with AND/OR logic
+- **Build entry/exit signals** — compose 80+ technical analysis signals (momentum, overlap, volatility, trend, volume, IV rank, calendar) with AND/OR logic
 - **Simulate trades** — run chronological simulations with starting capital, position limits, and a full equity curve with metrics (win rate, profit factor, max drawdown, etc.)
 - **Create interactive charts** — generate Plotly charts (line, bar, scatter, histogram, heatmap, candlestick with indicator overlays) from results, simulations, or raw data
 - **Multi-dataset sessions** — load multiple symbols, run the same strategy across each, and compare side-by-side
