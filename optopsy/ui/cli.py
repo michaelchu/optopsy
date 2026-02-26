@@ -223,30 +223,39 @@ def _cmd_symbols(args: argparse.Namespace) -> None:
     from optopsy.ui.providers import get_available_providers
 
     console = Console()
+    search = getattr(args, "search", None)
+    use_pager = not search and console.is_terminal
     found = False
 
-    for provider in get_available_providers():
-        if not provider.is_available():
-            continue
-        symbols = provider.list_available_symbols()
-        if symbols is None:
-            continue
-        found = True
+    def _render() -> None:
+        nonlocal found
+        for provider in get_available_providers():
+            if not provider.is_available():
+                continue
+            symbols = provider.list_available_symbols()
+            if symbols is None:
+                continue
+            found = True
 
-        search = getattr(args, "search", None)
-        if search:
-            term = search.upper()
-            symbols = [s for s in symbols if term in s]
+            if search:
+                term = search.upper()
+                symbols = [s for s in symbols if term in s]
 
-        if not symbols:
-            console.print(
-                f"[yellow]No symbols matching '{search}' from {provider.name}.[/yellow]"
-            )
-            continue
+            if not symbols:
+                console.print(
+                    f"[yellow]No symbols matching '{search}' from {provider.name}.[/yellow]"
+                )
+                continue
 
-        console.rule(f"{provider.name} — {len(symbols):,} symbols")
-        console.print(Columns(symbols, padding=(0, 2), column_first=True))
-        console.print()
+            console.rule(f"{provider.name} — {len(symbols):,} symbols")
+            console.print(Columns(symbols, padding=(0, 2), column_first=True))
+            console.print()
+
+    if use_pager:
+        with console.pager(styles=True):
+            _render()
+    else:
+        _render()
 
     if not found:
         console.print(
