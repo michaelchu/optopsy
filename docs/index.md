@@ -1,10 +1,10 @@
 # Optopsy
 
-A fast, flexible backtesting library for options strategies in Python.
+An AI-powered research and backtesting tool for options strategies.
 
 ## What is Optopsy?
 
-Optopsy helps you answer questions like *"How do iron condors perform on SPX?"* or *"What delta range produces the best results for covered calls?"* by generating comprehensive performance statistics from historical options data.
+Optopsy combines a Python backtesting engine with a conversational AI interface that fetches data from online or local sources, runs strategies, and interprets results — so you can go from *"How do iron condors perform on SPX?"* to detailed performance statistics in seconds, not spreadsheets.
 
 ## Key Features
 
