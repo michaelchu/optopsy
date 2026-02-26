@@ -324,7 +324,7 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = group["underlying_price"]
-            bb = ta.bbands(prices, length=length, std=std)  # type: ignore[arg-type]
+            bb = ta.bbands(prices, length=length, std=std)
             if bb is None:
                 return pd.Series(False, index=group.index)
             band = bb[band_col].fillna(fill_val)

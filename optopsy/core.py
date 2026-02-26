@@ -38,6 +38,7 @@ from .calendar import (
 )
 from .checks import _run_calendar_checks, _run_checks
 from .evaluation import _evaluate_all_options
+from .exits import _apply_early_exits
 from .filters import _apply_signal_filter, _assign_dte
 from .output import _format_calendar_output, _format_output
 from .pricing import _assign_profit, _calculate_fill_price
@@ -251,6 +252,10 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             params["reference_volume"],
         )
 
+    # Apply early exits (stop-loss / take-profit) if configured
+    if params.get("stop_loss") is not None or params.get("take_profit") is not None:
+        result = _apply_early_exits(result, data, leg_def, params)
+
     return _format_output(
         result,
         params,
@@ -374,5 +379,9 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params["fill_ratio"],
         params["reference_volume"],
     )
+
+    # Apply early exits (stop-loss / take-profit) if configured
+    if params.get("stop_loss") is not None or params.get("take_profit") is not None:
+        merged = _apply_early_exits(merged, data, leg_def, params)
 
     return _fmt(merged)
