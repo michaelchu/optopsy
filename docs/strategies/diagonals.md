@@ -104,7 +104,8 @@ results = op.long_call_diagonal(
     front_dte_max=40,
     back_dte_min=50,
     back_dte_max=90,
-    max_otm_pct=0.30  # Wider range for strike selection
+    leg1_delta={"target": 0.30, "min": 0.20, "max": 0.40},  # Front leg delta
+    leg2_delta={"target": 0.30, "min": 0.20, "max": 0.40},  # Back leg delta
 )
 ```
 

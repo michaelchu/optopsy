@@ -25,7 +25,8 @@ results = op.iron_condor(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.25,
+    leg2_delta={"target": 0.25, "min": 0.20, "max": 0.30},  # short strikes
+    leg3_delta={"target": 0.25, "min": 0.20, "max": 0.30},
     min_bid_ask=0.10
 )
 
@@ -36,7 +37,7 @@ print(best_dte)
 
 ## Advanced Examples
 
-#### Delta-Neutral Iron Condors
+#### Delta-Targeted Iron Condors
 
 Target specific delta ranges for short strikes:
 
@@ -45,8 +46,8 @@ results = op.iron_condor(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    delta_min=0.15,  # Target 15-20 delta
-    delta_max=0.20,
+    leg2_delta={"target": 0.16, "min": 0.15, "max": 0.20},
+    leg3_delta={"target": 0.16, "min": 0.15, "max": 0.20},
     delta_interval=0.05,
     min_bid_ask=0.10
 )
@@ -75,12 +76,12 @@ for date in pd.to_datetime(earnings_dates):
 
 earnings_df = pd.concat(earnings_data)
 
-# Backtest straddles
+# Backtest ATM straddles
 results = op.long_straddles(
     earnings_df,
     max_entry_dte=7,  # Enter 1 week before
     exit_dte=0,       # Hold through earnings
-    max_otm_pct=0.05  # ATM straddles
+    leg1_delta={"target": 0.50, "min": 0.45, "max": 0.55},  # ATM
 )
 
 print(results)
@@ -99,7 +100,6 @@ for exit_dte in exit_times:
         data,
         max_entry_dte=45,
         exit_dte=exit_dte,
-        max_otm_pct=0.30
     )
     results_by_exit[exit_dte] = results['mean'].mean()
 
@@ -134,6 +134,70 @@ for mode in slippage_modes:
 print("Slippage Model Comparison:")
 for mode, avg_return in results_comparison.items():
     print(f"{mode}: {avg_return:.2%}")
+```
+
+## Early Exit Examples
+
+#### Stop Loss and Take Profit
+
+Close positions early based on P&L thresholds:
+
+```python
+# Short puts with early exit rules
+trades = op.short_puts(
+    data,
+    max_entry_dte=45,
+    exit_dte=0,
+    stop_loss=-1.0,      # Close if losing 100%+
+    take_profit=0.50,     # Close if gaining 50%+
+    raw=True
+)
+
+# Analyze exit types
+print(trades['exit_type'].value_counts())
+
+# Compare returns by exit type
+print(trades.groupby('exit_type')['pct_change'].describe())
+```
+
+#### Maximum Holding Period
+
+Limit how long positions are held:
+
+```python
+trades = op.iron_condor(
+    data,
+    max_entry_dte=45,
+    max_hold_days=21,     # Exit after 21 calendar days
+    take_profit=0.50,     # Or take profit at 50%
+    raw=True
+)
+
+print(f"Average days held: {trades['days_held'].mean():.0f}")
+```
+
+## Commission Examples
+
+#### Per-Contract Commission
+
+```python
+# Simple per-contract fee
+results = op.short_puts(data, commission=0.65, raw=True)
+```
+
+#### Full Fee Structure
+
+```python
+from optopsy import Commission
+
+results = op.iron_condor(
+    data,
+    commission=Commission(
+        per_contract=0.65,
+        base_fee=4.95,
+    ),
+    raw=True
+)
 ```
 
 ## Data Analysis Examples
@@ -192,20 +256,19 @@ print(monthly_perf)
 
 #### Strike Selection Analysis
 
-Analyze performance by OTM percentage:
+Analyze performance by delta range:
 
 ```python
 results = op.short_puts(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.50,
-    otm_pct_interval=0.05
+    delta_interval=0.05,
 )
 
-# Find optimal OTM range
+# Find optimal delta range
 optimal = results.loc[results['mean'].idxmax()]
-print(f"Optimal OTM Range: {optimal['otm_pct_range']}")
+print(f"Optimal Delta Range: {optimal['delta_range']}")
 print(f"Mean Return: {optimal['mean']:.2%}")
 print(f"Count: {optimal['count']:.0f}")
 ```
@@ -243,38 +306,47 @@ print(df_comparison)
 
 ## Portfolio Simulation
 
-Simulate a portfolio of multiple strategies:
+Simulate a weighted portfolio across multiple strategies using `simulate_portfolio()`:
 
 ```python
-# Define portfolio allocation
-portfolio = {
-    'iron_condor': 0.50,
-    'short_strangles': 0.30,
-    'long_call_spread': 0.20
-}
+import optopsy as op
 
-# Get raw trades for each strategy
-trades = {}
-trades['iron_condor'] = op.iron_condor(data, raw=True)
-trades['short_strangles'] = op.short_strangles(data, raw=True)
-trades['long_call_spread'] = op.long_call_spread(data, raw=True)
+spy = op.csv_data('SPY_2023.csv')
+qqq = op.csv_data('QQQ_2023.csv')
 
-# Weight returns by allocation
-for strategy, weight in portfolio.items():
-    trades[strategy]['weighted_return'] = trades[strategy]['pct_change'] * weight
+result = op.simulate_portfolio(
+    legs=[
+        {
+            "data": spy,
+            "strategy": op.short_puts,
+            "weight": 0.6,
+            "max_entry_dte": 45,
+            "exit_dte": 14,
+        },
+        {
+            "data": qqq,
+            "strategy": op.iron_condor,
+            "weight": 0.4,
+            "max_entry_dte": 30,
+            "exit_dte": 7,
+        },
+    ],
+    capital=100_000,
+)
 
-# Combine all trades
-all_trades = pd.concat([
-    trades[s][['quote_date', 'weighted_return']]
-    for s in portfolio.keys()
-])
+# Portfolio-level summary
+print(result.summary)
 
-# Aggregate by date
-portfolio_returns = all_trades.groupby('quote_date')['weighted_return'].sum()
+# Combined trade log (includes a 'leg' column)
+print(result.trade_log)
 
-print(f"Portfolio Mean Return: {portfolio_returns.mean():.2%}")
-print(f"Portfolio Std Dev: {portfolio_returns.std():.2%}")
-print(f"Sharpe Ratio (annualized): {(portfolio_returns.mean() / portfolio_returns.std()) * (252**0.5):.2f}")
+# Portfolio equity curve
+print(result.equity_curve)
+
+# Access individual leg results
+for name, leg_result in result.leg_results.items():
+    print(f"\n{name}:")
+    print(leg_result.summary)
 ```
 
 ## Strategy Simulation
@@ -449,8 +521,9 @@ results = op.iron_condor(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    min_bid_ask=0.10,  # Ensure liquidity
-    max_otm_pct=0.30
+    min_bid_ask=0.10,
+    leg2_delta={"target": 0.20, "min": 0.15, "max": 0.25},
+    leg3_delta={"target": 0.20, "min": 0.15, "max": 0.25},
 )
 ```
 
@@ -461,7 +534,6 @@ results = op.iron_condor(
 params = {
     'max_entry_dte': 45,
     'exit_dte': 21,
-    'max_otm_pct': 0.25
 }
 
 ic_results = op.iron_condor(data, **params)

@@ -34,16 +34,19 @@ Optopsy requires historical options chain data with the following columns:
 | `strike` | Strike price | 4500 |
 | `bid` | Bid price | 10.50 |
 | `ask` | Ask price | 11.00 |
+| `delta` | Option delta | 0.30 |
 
-### Optional Columns for Greeks Filtering
+!!! warning "Delta is required"
+    The `delta` column is **required** for all strategies. Optopsy uses per-leg delta targeting to select strikes — without delta values in your data, no strategies can run.
+
+### Optional Columns
 
 | Column | Description |
 |--------|-------------|
-| `delta` | Option delta |
 | `gamma` | Option gamma |
 | `theta` | Option theta |
 | `vega` | Option vega |
-| `volume` | Trading volume |
+| `volume` | Trading volume (required for `slippage='liquidity'`) |
 | `open_interest` | Open interest |
 
 ## Loading Data
@@ -92,7 +95,8 @@ df = df.rename(columns={
     'QuoteDate': 'quote_date',
     'Strike': 'strike',
     'Bid': 'bid',
-    'Ask': 'ask'
+    'Ask': 'ask',
+    'Delta': 'delta'
 })
 
 # Now you can use it directly
@@ -127,8 +131,7 @@ results = op.long_calls(
     max_entry_dte=60,        # Enter with 60 days to expiration
     exit_dte=30,             # Exit at 30 DTE
     dte_interval=7,          # Group results by 7-day intervals
-    max_otm_pct=0.20,        # Maximum 20% out-of-the-money
-    otm_pct_interval=0.05,   # Group by 5% OTM intervals
+    leg1_delta={"target": 0.30, "min": 0.20, "max": 0.40},  # Target 30-delta
     min_bid_ask=0.10         # Minimum $0.10 bid-ask spread
 )
 
@@ -139,20 +142,20 @@ print(results.head())
 
 ### Aggregated Results (Default)
 
-By default, strategies return aggregated statistics grouped by DTE and OTM% ranges:
+By default, strategies return aggregated statistics grouped by DTE and delta ranges:
 
 ```python
 results = op.long_calls(data)
 print(results.columns)
-# ['dte_range', 'otm_pct_range', 'count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']
+# ['dte_range', 'delta_range', 'count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max']
 ```
 
 Example output:
 
-| dte_range | otm_pct_range | count | mean | std | min | 50% | max |
-|-----------|---------------|-------|------|-----|-----|-----|-----|
-| (0, 7] | (0.0, 0.05] | 1250 | 0.23 | 0.45 | -1.0 | 0.15 | 2.8 |
-| (0, 7] | (0.05, 0.10] | 980 | 0.18 | 0.52 | -1.0 | 0.10 | 3.2 |
+| dte_range | delta_range | count | mean | std | min | 50% | max |
+|-----------|-------------|-------|------|-----|-----|-----|-----|
+| (0, 7] | (0.2, 0.3] | 1250 | 0.23 | 0.45 | -1.0 | 0.15 | 2.8 |
+| (0, 7] | (0.3, 0.4] | 980 | 0.18 | 0.52 | -1.0 | 0.10 | 3.2 |
 
 ### Raw Trade Data
 
@@ -173,7 +176,7 @@ This gives you every individual trade for custom analysis.
 - Run full simulations with `simulate()` for equity curves and risk metrics — see [Examples](examples.md#strategy-simulation)
 - Filter entries with [technical analysis signals](entry-signals.md) including IV Rank and custom DataFrame signals
 - Try the [AI Chat UI](chat-ui.md) for natural language backtesting
-- See more [examples](examples.md) with Greeks filtering, slippage, and risk metrics
+- See more [examples](examples.md) with delta targeting, slippage, and risk metrics
 - Read the [API Reference](api-reference.md) for detailed function documentation
 
 ## Common Issues
@@ -197,6 +200,7 @@ If you see a "KeyError" for a column, check that:
 ### Empty Results
 
 If your backtest returns no results:
-- Check your parameter ranges (DTE, OTM%, etc.)
+- Check that your data includes a `delta` column with valid values
+- Verify your `leg1_delta` range isn't too narrow for the available data
 - Verify your data covers the time period you're testing
 - Ensure bid/ask spreads meet the `min_bid_ask` threshold

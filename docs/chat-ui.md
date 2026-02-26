@@ -34,6 +34,8 @@ EODHD_API_KEY=...
 | `OPENAI_API_KEY` | Alternative LLM provider |
 | `OPTOPSY_MODEL` | Override model (LiteLLM format, default: `anthropic/claude-haiku-4-5-20251001`) |
 | `EODHD_API_KEY` | Enable EODHD data provider for live options/stock data |
+| `OPTOPSY_DATA_DIR` | Override base data directory (default: `~/.optopsy`). Cache, results, and database are stored here. |
+| `DATABASE_URL` | PostgreSQL connection URL for conversation persistence (default: local SQLite) |
 
 ### Model Selection
 
@@ -82,8 +84,20 @@ Persistent parameter controls are available via the settings gear icon. Changes 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `max_entry_dte` | Maximum DTE at entry | 90 |
-| `max_otm_pct` | Maximum OTM percentage | 0.50 |
+| `leg1_delta` | Target delta for primary leg | 0.30 |
 | Slippage model | mid, spread, or liquidity | mid |
+
+## Authentication
+
+The Chat UI supports pluggable authentication via the [plugin system](plugins.md). Three auth types are available:
+
+| Type | Description |
+|------|-------------|
+| `password` | Username/password login form |
+| `oauth` | OAuth2 provider (Google, GitHub, etc.) |
+| `header` | Header-based auth (reverse proxy, SSO) |
+
+By default (no auth plugin), a local header-based auto-auth is used for single-user local access.
 
 ## Action Buttons
 

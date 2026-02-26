@@ -6,7 +6,7 @@ All Optopsy strategies accept a common set of parameters for filtering, grouping
     Parameters are validated at runtime using Pydantic. This means:
 
     - **Boolean parameters** (`raw`, `drop_nan`) must be actual `bool` values. `raw=1` or `raw=0` will raise a validation error — use `raw=True` or `raw=False`.
-    - **Float parameters** (`max_otm_pct`, `otm_pct_interval`, `min_bid_ask`) must be `float` type. `max_otm_pct=5` will be rejected — use `max_otm_pct=5.0`.
+    - **Float parameters** (`min_bid_ask`, `delta_interval`) must be `float` type. `min_bid_ask=5` will be rejected — use `min_bid_ask=5.0`.
     - **Integer parameters** (`max_entry_dte`, `exit_dte`, etc.) reject `float` and `bool` values.
     - **Calendar/diagonal cross-field rules** are enforced: `front_dte_min` must be &le; `front_dte_max`, `back_dte_min` must be &le; `back_dte_max`, and `front_dte_max` must be &lt; `back_dte_min`.
 
@@ -50,28 +50,6 @@ results = op.long_calls(data, max_entry_dte=60, exit_dte=30)  # Exit at 30 DTE
 
 #### Filtering Parameters
 
-#### `max_otm_pct`
-**Type:** `float` | **Default:** `0.5`
-
-Maximum out-of-the-money percentage for option selection.
-
-```python
-results = op.short_puts(data, max_otm_pct=0.20)  # Max 20% OTM
-```
-
-**Examples:**
-- `0.05` - Near ATM options (5% OTM max)
-- `0.20` - Moderately OTM (20% OTM max)
-- `0.50` - Wide range (50% OTM max)
-
-**Calculation:**
-```python
-# For calls: (strike - underlying_price) / underlying_price
-# For puts: (underlying_price - strike) / underlying_price
-```
-
----
-
 #### `min_bid_ask`
 **Type:** `float` | **Default:** `0.05`
 
@@ -106,18 +84,17 @@ results = op.long_calls(data, dte_interval=14)  # Group by 14-day buckets
 
 ---
 
-#### `otm_pct_interval`
+#### `delta_interval`
 **Type:** `float` | **Default:** `0.05`
 
-Interval for grouping results by OTM percentage ranges.
+Interval for grouping results by delta ranges in aggregated output.
 
 ```python
-results = op.short_strangles(data, otm_pct_interval=0.10)  # 10% OTM buckets
+results = op.iron_condor(
+    data,
+    delta_interval=0.10  # Group by: (0.0,0.1], (0.1,0.2], etc.
+)
 ```
-
-**Examples:**
-- `0.05` - Fine-grained: (0.0, 0.05], (0.05, 0.10], ...
-- `0.10` - Coarse buckets: (0.0, 0.10], (0.10, 0.20], ...
 
 ---
 
@@ -131,7 +108,7 @@ Return raw trade data instead of aggregated statistics.
 ```python
 # Aggregated statistics (default)
 results = op.iron_condor(data, raw=False)
-# Output: ['dte_range', 'otm_pct_range', 'count', 'mean', 'std', ...]
+# Output: ['dte_range', 'delta_range', 'count', 'mean', 'std', ...]
 
 # Raw trade data
 trades = op.iron_condor(data, raw=True)
@@ -155,45 +132,183 @@ results = op.long_calls(data, drop_nan=False)  # Keep NaN values
 
 ---
 
-## Greeks Parameters
+## Per-Leg Delta Targeting
 
-#### Delta Filtering
+Optopsy uses per-leg delta targeting to select option strikes. Each leg of a strategy has its own delta parameter (`leg1_delta`, `leg2_delta`, etc.) that takes a `TargetRange` value specifying the ideal delta and an acceptable range.
 
-#### `delta_min` / `delta_max`
-**Type:** `float` | **Default:** `None`
+#### `TargetRange`
 
-Filter options by delta range.
+A `TargetRange` has three fields:
+
+| Field | Description |
+|-------|-------------|
+| `target` | Ideal delta value (the engine picks the strike closest to this) |
+| `min` | Minimum acceptable delta (options below this are excluded) |
+| `max` | Maximum acceptable delta (options above this are excluded) |
+
+All values are unsigned (0–1 for delta). The ordering constraint `min <= target <= max` is enforced.
 
 ```python
-# Target 30-delta options
+from optopsy import TargetRange
+
+# Target 30-delta options, accepting anything between 20 and 40
+delta = TargetRange(target=0.30, min=0.20, max=0.40)
+```
+
+You can also pass a plain dict:
+
+```python
 results = op.short_puts(
     data,
-    delta_min=0.25,
-    delta_max=0.35
+    leg1_delta={"target": 0.30, "min": 0.20, "max": 0.40}
 )
 ```
 
-**Common Delta Ranges:**
-- `0.15-0.20` - 1 standard deviation OTM (~15-20% probability ITM)
-- `0.25-0.35` - Popular for credit spreads
-- `0.40-0.50` - Near-the-money options
-- `0.50+` - In-the-money options
+#### `leg1_delta` / `leg2_delta` / `leg3_delta` / `leg4_delta`
+**Type:** `TargetRange | dict | None` | **Default:** strategy-dependent
 
-**Note:** Requires `delta` column in your data.
+Per-leg delta targeting. The number of legs depends on the strategy:
+
+| Strategy Type | Legs Used |
+|---------------|-----------|
+| Single-leg (calls, puts) | `leg1_delta` |
+| Straddles, strangles, vertical spreads | `leg1_delta`, `leg2_delta` |
+| Butterflies | `leg1_delta`, `leg2_delta`, `leg3_delta` |
+| Iron condors, iron butterflies | `leg1_delta`, `leg2_delta`, `leg3_delta`, `leg4_delta` |
+| Covered strategies | `leg1_delta` (stock), `leg2_delta` (option) |
+
+Each strategy has sensible defaults. For example:
+
+| Role | Default Delta |
+|------|--------------|
+| Standard OTM leg | `target=0.30, min=0.20, max=0.40` |
+| ATM leg | `target=0.50, min=0.40, max=0.60` |
+| OTM wing | `target=0.10, min=0.05, max=0.20` |
+| Deep ITM (stock proxy) | `target=0.80, min=0.60, max=0.95` |
+
+**Examples:**
+
+```python
+# Single-leg: target 20-delta puts
+results = op.short_puts(
+    data,
+    leg1_delta={"target": 0.20, "min": 0.15, "max": 0.25}
+)
+
+# Iron condor: customize short strike deltas
+results = op.iron_condor(
+    data,
+    leg2_delta={"target": 0.30, "min": 0.25, "max": 0.35},  # short put
+    leg3_delta={"target": 0.30, "min": 0.25, "max": 0.35},  # short call
+)
+```
+
+!!! note "Delta column required"
+    Your data must include a `delta` column. This is a **required** column in Optopsy.
 
 ---
 
-#### `delta_interval`
-**Type:** `float` | **Default:** `None`
+## Early Exit Parameters
 
-Group results by delta ranges.
+Early exits let you close positions before the scheduled `exit_dte` based on P&L thresholds or a maximum holding period. When an early exit triggers, the `exit_type` column in raw output indicates which condition fired.
+
+#### `stop_loss`
+**Type:** `float | None` | **Default:** `None`
+
+Close the position early if unrealized P&L drops to or below this threshold. Must be a **negative** float.
+
+```python
+results = op.short_puts(
+    data,
+    stop_loss=-0.50,  # Close if losing 50% or more
+    raw=True
+)
+```
+
+---
+
+#### `take_profit`
+**Type:** `float | None` | **Default:** `None`
+
+Close the position early if unrealized P&L reaches or exceeds this threshold. Must be a **positive** float.
 
 ```python
 results = op.iron_condor(
     data,
-    delta_interval=0.10  # Group by: (0.0,0.1], (0.1,0.2], etc.
+    take_profit=0.50,  # Close if gaining 50% or more
+    raw=True
 )
 ```
+
+---
+
+#### `max_hold_days`
+**Type:** `int | None` | **Default:** `None`
+
+Close the position after holding for this many calendar days, regardless of P&L. Must be a positive integer.
+
+```python
+results = op.short_puts(
+    data,
+    max_hold_days=21,  # Exit after 21 calendar days
+    raw=True
+)
+```
+
+---
+
+#### `exit_type` Column Values
+
+When early exits are enabled and `raw=True`, the output includes an `exit_type` column:
+
+| Value | Meaning |
+|-------|---------|
+| `stop_loss` | Position hit the stop-loss threshold |
+| `take_profit` | Position hit the take-profit threshold |
+| `max_hold` | Position reached the maximum holding period |
+| `expiration` | Position exited at scheduled `exit_dte` (no early exit triggered) |
+
+**Priority:** If multiple conditions trigger on the same day, priority is: `stop_loss` > `take_profit` > `max_hold`.
+
+---
+
+## Commission Parameters
+
+#### `commission`
+**Type:** `Commission | float | None` | **Default:** `None`
+
+Commission fee structure applied to entry and exit trades. Accepts three forms:
+
+**Float shorthand** — interpreted as per-contract fee:
+
+```python
+results = op.short_puts(data, commission=0.65)  # $0.65 per contract
+```
+
+**Commission object** — full fee structure:
+
+```python
+from optopsy import Commission
+
+results = op.iron_condor(
+    data,
+    commission=Commission(
+        per_contract=0.65,  # Per option contract
+        base_fee=9.99,      # Flat fee per trade
+    )
+)
+```
+
+**Commission fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `per_contract` | `float` | `0.0` | Fee per option contract |
+| `per_share` | `float` | `0.0` | Fee per share (for stock legs in covered strategies) |
+| `base_fee` | `float` | `0.0` | Flat fee per trade |
+| `min_fee` | `float` | `0.0` | Minimum fee per trade |
+
+When set, commission costs are subtracted from P&L in the output.
 
 ---
 
@@ -334,21 +449,28 @@ results = op.iron_condor(
     max_entry_dte=45,
     exit_dte=21,
 
+    # Per-leg delta targeting
+    leg2_delta={"target": 0.20, "min": 0.15, "max": 0.25},
+    leg3_delta={"target": 0.20, "min": 0.15, "max": 0.25},
+
     # Filtering
-    max_otm_pct=0.30,
     min_bid_ask=0.15,
-    delta_min=0.15,
-    delta_max=0.20,
 
     # Grouping
     dte_interval=7,
-    otm_pct_interval=0.05,
     delta_interval=0.05,
 
     # Slippage
     slippage='liquidity',
     fill_ratio=0.5,
     reference_volume=5000,
+
+    # Early exits
+    stop_loss=-1.0,
+    take_profit=0.50,
+
+    # Commission
+    commission=0.65,
 
     # Output
     raw=False,
@@ -363,38 +485,41 @@ print(results.head())
 #### Standard Strategies
 
 ```python
-default_kwargs = {
+default_params = {
     "dte_interval": 7,
     "max_entry_dte": 90,
     "exit_dte": 0,
-    "otm_pct_interval": 0.05,
-    "max_otm_pct": 0.5,
     "min_bid_ask": 0.05,
+    "delta_interval": 0.05,
+    "leg1_delta": None,   # strategy-specific defaults applied by helpers
+    "leg2_delta": None,
+    "leg3_delta": None,
+    "leg4_delta": None,
     "drop_nan": True,
     "raw": False,
-    "delta_min": None,
-    "delta_max": None,
-    "delta_interval": None,
     "slippage": "mid",
     "fill_ratio": 0.5,
     "reference_volume": 1000,
     "per_leg_slippage": 0.073,
+    "stop_loss": None,
+    "take_profit": None,
+    "max_hold_days": None,
+    "commission": None,
 }
 ```
 
 #### Calendar & Diagonal Strategies
 
 ```python
-calendar_default_kwargs = {
+calendar_default_params = {
     "front_dte_min": 20,
     "front_dte_max": 40,
     "back_dte_min": 50,
     "back_dte_max": 90,
     "exit_dte": 7,
     "dte_interval": 7,
-    "otm_pct_interval": 0.05,
-    "max_otm_pct": 0.5,
     "min_bid_ask": 0.05,
+    "delta_interval": 0.05,
     "drop_nan": True,
     "raw": False,
     "slippage": "mid",

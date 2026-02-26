@@ -139,8 +139,8 @@ All strategies accept these common parameters:
 - `max_entry_dte` - Maximum days to expiration at entry
 - `exit_dte` - Days to expiration at exit
 - `dte_interval` - Grouping interval for results
-- `max_otm_pct` - Maximum out-of-the-money percentage
-- `otm_pct_interval` - Grouping interval for OTM%
+- `leg1_delta`–`leg4_delta` - Per-leg delta targeting via `TargetRange`
+- `delta_interval` - Grouping interval for delta ranges
 - `min_bid_ask` - Minimum bid-ask spread filter
 - `raw` - Return raw trade data (default: aggregated stats)
 

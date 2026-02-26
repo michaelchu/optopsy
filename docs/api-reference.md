@@ -3,7 +3,7 @@
 Complete API documentation for Optopsy functions.
 
 !!! info "Common Parameters"
-    All strategy functions share common parameters. See the [Common Parameters](#common-parameters) section below for detailed documentation of `max_entry_dte`, `exit_dte`, `max_otm_pct`, `min_bid_ask`, slippage settings, and more.
+    All strategy functions share common parameters. See the [Common Parameters](#common-parameters) section below for detailed documentation of `max_entry_dte`, `exit_dte`, `leg1_delta`–`leg4_delta`, `min_bid_ask`, slippage settings, and more.
 
 ## Data Loading
 
@@ -203,15 +203,27 @@ All strategy functions accept these common parameters:
 
 #### Filtering Parameters
 
-- **max_otm_pct** (float, default=0.5): Maximum out-of-the-money percentage
-- **otm_pct_interval** (float, default=0.05): Grouping interval for OTM ranges
 - **min_bid_ask** (float, default=0.05): Minimum bid-ask spread filter
+- **delta_interval** (float, default=0.05): Grouping interval for delta ranges
 
-#### Greeks Parameters
+#### Per-Leg Delta Targeting
 
-- **delta_min** (float, optional): Minimum delta filter
-- **delta_max** (float, optional): Maximum delta filter
-- **delta_interval** (float, optional): Grouping interval for delta ranges
+- **leg1_delta** (TargetRange, optional): Delta target for leg 1
+- **leg2_delta** (TargetRange, optional): Delta target for leg 2
+- **leg3_delta** (TargetRange, optional): Delta target for leg 3
+- **leg4_delta** (TargetRange, optional): Delta target for leg 4
+
+Each `TargetRange` has `target`, `min`, and `max` fields. Can be passed as a dict: `{"target": 0.30, "min": 0.20, "max": 0.40}`. Strategy helpers apply sensible defaults when not specified.
+
+#### Early Exit Parameters
+
+- **stop_loss** (float, optional): Close early if unrealized P&L &le; this value (must be negative, e.g. `-0.50`)
+- **take_profit** (float, optional): Close early if unrealized P&L &ge; this value (must be positive, e.g. `0.50`)
+- **max_hold_days** (int, optional): Close after this many calendar days regardless of P&L
+
+#### Commission Parameters
+
+- **commission** (Commission | float, optional): Commission fees. Pass a float for per-contract fee, or a `Commission(per_contract=..., base_fee=..., min_fee=..., per_share=...)` for full fee structure.
 
 #### Slippage Parameters
 
@@ -243,7 +255,7 @@ When `raw=False` (default), strategies return aggregated statistics:
 
 **Columns:**
 - `dte_range`: DTE interval group
-- `otm_pct_range`: OTM percentage interval group
+- `delta_range`: Delta interval group
 - `count`: Number of trades in group
 - `mean`: Mean return
 - `std`: Standard deviation of returns
@@ -265,6 +277,7 @@ When `raw=True`, strategies return individual trade details:
 - `entry`: Entry price/cost
 - `exit`: Exit price/proceeds
 - `pct_change`: Percentage return
+- `exit_type`: How the trade was closed (when early exits are enabled): `stop_loss`, `take_profit`, `max_hold`, or `expiration`
 - Additional strategy-specific columns
 
 ---
@@ -302,6 +315,14 @@ Run chronological strategy simulations with capital tracking, position limits, a
 #### SimulationResult
 
 ::: optopsy.simulator.SimulationResult
+
+#### simulate_portfolio
+
+::: optopsy.simulator.simulate_portfolio
+
+#### PortfolioResult
+
+::: optopsy.simulator.PortfolioResult
 
 ---
 
@@ -380,6 +401,10 @@ def long_calls(data: pd.DataFrame, **kwargs: Unpack[StrategyParamsDict]) -> pd.D
 | `StrategyParams` | Pydantic model for runtime validation of standard strategy parameters |
 | `CalendarStrategyParamsDict` | TypedDict for `Unpack[]` annotations on calendar/diagonal strategies |
 | `CalendarStrategyParams` | Pydantic model for calendar/diagonal parameters with cross-field validation |
+| `TargetRange` | Per-leg delta target with `target`, `min`, `max` fields |
+| `Commission` | Commission fee structure with `per_contract`, `per_share`, `base_fee`, `min_fee` fields |
+| `SimulationResult` | Dataclass with `trade_log`, `equity_curve`, and `summary` |
+| `PortfolioResult` | Dataclass with combined portfolio results and per-leg `SimulationResult` |
 
 ### Using Type Hints
 
@@ -400,4 +425,4 @@ results = op.iron_condor(
 ```
 
 !!! warning "Strict Type Validation"
-    Parameters are now validated with Pydantic. Boolean parameters like `raw` must be actual `bool` values — `raw=1` will be rejected. Use `raw=True` instead. Similarly, float parameters like `max_otm_pct` must be `float` — `max_otm_pct=5` will be rejected, use `max_otm_pct=5.0`.
+    Parameters are now validated with Pydantic. Boolean parameters like `raw` must be actual `bool` values — `raw=1` will be rejected. Use `raw=True` instead. Similarly, float parameters like `min_bid_ask` must be `float` — `min_bid_ask=5` will be rejected, use `min_bid_ask=5.0`.

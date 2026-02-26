@@ -102,8 +102,7 @@ calendar_default_kwargs = {
     "back_dte_max": 90,       # Max DTE for back leg
     "exit_dte": 7,            # Exit 7 days before front expiration
     "dte_interval": 7,
-    "otm_pct_interval": 0.05,
-    "max_otm_pct": 0.5,
+    "delta_interval": 0.05,
 }
 ```
 

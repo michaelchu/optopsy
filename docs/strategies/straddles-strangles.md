@@ -33,7 +33,7 @@ results = op.long_straddles(
     data,
     max_entry_dte=30,
     exit_dte=0,  # Hold to expiration
-    max_otm_pct=0.05  # Near ATM
+    leg1_delta={"target": 0.50, "min": 0.45, "max": 0.55},  # Near ATM
 )
 
 print(results)
@@ -73,7 +73,7 @@ results = op.short_straddles(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.05,  # ATM straddles
+    leg1_delta={"target": 0.50, "min": 0.45, "max": 0.55},  # ATM straddles
     min_bid_ask=0.20    # Ensure liquid options
 )
 ```
@@ -115,7 +115,7 @@ results = op.long_strangles(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.20  # Wider strikes for lower cost
+    leg1_delta={"target": 0.30, "min": 0.20, "max": 0.40},  # OTM strikes for lower cost
 )
 ```
 
@@ -153,7 +153,7 @@ results = op.short_strangles(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.30,  # Wide strikes for safer range
+    leg1_delta={"target": 0.20, "min": 0.15, "max": 0.30},  # Wide strikes for safer range
     min_bid_ask=0.15
 )
 ```
@@ -200,7 +200,7 @@ results = op.short_strangles(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.25,
+    leg1_delta={"target": 0.20, "min": 0.15, "max": 0.30},
     # Filter for liquid, high IV options
     min_bid_ask=0.15,
     slippage='liquidity'

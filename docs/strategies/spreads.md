@@ -30,7 +30,7 @@ A bearish credit strategy profiting when the underlying stays below the short st
 
 #### Example
 ```python
-results = op.short_call_spread(data, max_entry_dte=45, exit_dte=21, max_otm_pct=0.20)
+results = op.short_call_spread(data, max_entry_dte=45, exit_dte=21)
 ```
 
 ---
@@ -62,7 +62,7 @@ A bullish credit strategy profiting when the underlying stays above the short st
 
 #### Example
 ```python
-results = op.short_put_spread(data, max_entry_dte=45, exit_dte=21, max_otm_pct=0.25)
+results = op.short_put_spread(data, max_entry_dte=45, exit_dte=21)
 ```
 
 ---

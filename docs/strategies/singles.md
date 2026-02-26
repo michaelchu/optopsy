@@ -28,7 +28,7 @@ results = op.long_calls(
     data,
     max_entry_dte=60,
     exit_dte=30,
-    max_otm_pct=0.10  # Slightly OTM calls
+    leg1_delta={"target": 0.40, "min": 0.30, "max": 0.50},  # Slightly OTM calls
 )
 
 print(results)
@@ -63,7 +63,7 @@ results = op.short_calls(
     data,
     max_entry_dte=45,
     exit_dte=0,  # Hold to expiration
-    max_otm_pct=0.30  # Sell OTM calls for income
+    leg1_delta={"target": 0.20, "min": 0.10, "max": 0.30},  # Sell OTM calls for income
 )
 ```
 
@@ -98,7 +98,7 @@ results = op.long_puts(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.15  # Moderately OTM puts
+    leg1_delta={"target": 0.30, "min": 0.20, "max": 0.40},  # Moderately OTM puts
 )
 ```
 
@@ -131,7 +131,7 @@ results = op.short_puts(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.20,  # 20% OTM for safer premium
+    leg1_delta={"target": 0.20, "min": 0.15, "max": 0.25},  # ~20 delta for safer premium
     min_bid_ask=0.10
 )
 ```
@@ -152,11 +152,10 @@ If the option is in-the-money at expiration, you'll be obligated to buy shares a
 All single-leg strategies support delta filtering to target specific probability ranges:
 
 ```python
-# Target 0.30 delta options (roughly 30% probability ITM)
+# Target 30-delta options (roughly 30% probability ITM)
 results = op.long_calls(
     data,
-    delta_min=0.25,
-    delta_max=0.35,
+    leg1_delta={"target": 0.30, "min": 0.25, "max": 0.35},
     delta_interval=0.05  # Group results by delta ranges
 )
 ```

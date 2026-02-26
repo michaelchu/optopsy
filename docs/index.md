@@ -9,15 +9,19 @@ Optopsy combines a Python backtesting engine with a conversational AI interface 
 ## Key Features
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
+- **Per-Leg Delta Targeting** - Select strikes by delta with `TargetRange(target, min, max)` per leg
 - **Strategy Simulation** - Chronological simulation with capital tracking, position limits, and equity curves via `simulate()`
+- **Portfolio Simulation** - Weighted multi-strategy portfolio backtesting via `simulate_portfolio()`
+- **Early Exits** - Stop-loss, take-profit, and max-hold-days rules for automatic position management
+- **Commissions** - Model broker fees with per-contract, base fee, and min fee structures
 - **Risk Metrics** - Sharpe, Sortino, VaR, CVaR, Calmar, Omega, tail ratio, and more via `compute_risk_metrics()`
 - **Entry Signals** - Filter entries with TA indicators (RSI, MACD, Bollinger Bands, EMA, ATR, IV Rank) via [pandas-ta-classic](https://github.com/xgboosted/pandas-ta-classic)
 - **Custom Signals** - Use `custom_signal()` to drive entries from any DataFrame with a boolean flag column
-- **Greeks Filtering** - Filter options by delta to target specific probability ranges
 - **Slippage Modeling** - Realistic fills with mid, spread, or liquidity-based slippage
-- **Flexible Grouping** - Analyze results by DTE, OTM%, and delta intervals
+- **Flexible Grouping** - Analyze results by DTE and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
+- **Plugin System** - Extend with custom strategies, signals, data providers, and auth via entry points
 - **AI Chat UI** - Interactive [AI-powered chat interface](chat-ui.md) with conversation starters, settings panel, and result caching
 
 ## Quick Example
@@ -33,7 +37,8 @@ results = op.iron_condor(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.25
+    leg2_delta={"target": 0.20, "min": 0.15, "max": 0.25},
+    leg3_delta={"target": 0.20, "min": 0.15, "max": 0.25},
 )
 
 print(results)
@@ -58,6 +63,7 @@ pip install optopsy[ui]
 - Review [Parameters](parameters.md) for configuration options
 - Learn about [Entry Signals](entry-signals.md) for TA-based entry filtering
 - Try the [AI Chat UI](chat-ui.md) for natural language backtesting
+- Extend with [Plugins](plugins.md) for custom strategies, signals, and providers
 - See [Examples](examples.md) for common use cases
 - View the [API Reference](api-reference.md) for complete function documentation
 

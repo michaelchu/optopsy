@@ -37,7 +37,8 @@ results = op.iron_condor(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.30,  # Wide wings for high probability
+    leg2_delta={"target": 0.20, "min": 0.15, "max": 0.25},  # Short put delta
+    leg3_delta={"target": 0.20, "min": 0.15, "max": 0.25},  # Short call delta
     min_bid_ask=0.10
 )
 
@@ -88,7 +89,7 @@ results = op.reverse_iron_condor(
     data,
     max_entry_dte=30,
     exit_dte=0,
-    max_otm_pct=0.25  # Setup for breakout moves
+    leg2_delta={"target": 0.25, "min": 0.20, "max": 0.30},  # Setup for breakout moves
 )
 ```
 
@@ -129,7 +130,7 @@ results = op.iron_butterfly(
     data,
     max_entry_dte=45,
     exit_dte=21,
-    max_otm_pct=0.05,  # ATM body for maximum credit
+    leg2_delta={"target": 0.50, "min": 0.45, "max": 0.55},  # ATM body for maximum credit
     min_bid_ask=0.15
 )
 ```
@@ -177,7 +178,7 @@ results = op.reverse_iron_butterfly(
     data,
     max_entry_dte=30,
     exit_dte=7,
-    max_otm_pct=0.10
+    leg2_delta={"target": 0.40, "min": 0.30, "max": 0.50},
 )
 ```
 
@@ -220,8 +221,8 @@ results = op.iron_condor(
     max_entry_dte=45,
     exit_dte=21,
     # Target specific delta for short strikes
-    delta_min=0.15,  # ~15-20 delta short strikes
-    delta_max=0.20,
+    leg2_delta={"target": 0.16, "min": 0.15, "max": 0.20},
+    leg3_delta={"target": 0.16, "min": 0.15, "max": 0.20},
     delta_interval=0.05,
     min_bid_ask=0.10,
     slippage='liquidity'
