@@ -332,11 +332,18 @@ def _handle_suggest_strategy_params(
         strategy_note = "Default delta target: 0.30 (range 0.20-0.40)."
 
     if not has_delta and strategy_name:
-        delta_warning = (
-            "WARNING: Dataset has no delta column. Delta-based strike selection "
-            "will not work. To use delta targeting, load data that includes "
-            "a 'delta' column."
-        )
+        if "delta" not in active_ds.columns:
+            delta_warning = (
+                "WARNING: Dataset has no delta column. Delta-based strike selection "
+                "will not work. To use delta targeting, load data that includes "
+                "a 'delta' column."
+            )
+        else:
+            delta_warning = (
+                "WARNING: Delta column exists but contains no usable (non-null) "
+                "values. Delta-based strike selection will not work. Verify that "
+                "your data source provides delta values."
+            )
         strategy_note = (
             f"{delta_warning} {strategy_note}" if strategy_note else delta_warning
         )

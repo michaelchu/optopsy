@@ -212,6 +212,20 @@ class TestDeltaTarget:
         with pytest.raises(ValidationError):
             DeltaTarget.model_validate({"target": 0.30})
 
+    def test_rejects_min_greater_than_target(self):
+        with pytest.raises(ValidationError, match="min.*must be <= target"):
+            DeltaTarget.model_validate({"target": 0.20, "min": 0.30, "max": 0.40})
+
+    def test_rejects_target_greater_than_max(self):
+        with pytest.raises(ValidationError, match="target.*must be <= max"):
+            DeltaTarget.model_validate({"target": 0.50, "min": 0.20, "max": 0.40})
+
+    def test_rejects_extra_fields(self):
+        with pytest.raises(ValidationError):
+            DeltaTarget.model_validate(
+                {"target": 0.30, "min": 0.20, "max": 0.40, "extra": 0.1}
+            )
+
     def test_dumps_to_dict(self):
         d = DeltaTarget.model_validate({"target": 0.30, "min": 0.20, "max": 0.40})
         dumped = d.model_dump()

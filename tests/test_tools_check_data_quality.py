@@ -16,7 +16,7 @@ from optopsy.ui.tools import execute_tool
 
 @pytest.fixture
 def clean_data():
-    """Minimal clean option dataset — all 8 required columns, no issues."""
+    """Minimal clean option dataset — all 9 required columns, no issues."""
     exp = datetime.datetime(2024, 3, 15)
     dates = pd.to_datetime(
         ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08"]
@@ -70,7 +70,7 @@ class TestCheckDataQualityBasic:
     def test_clean_data_pass(self, clean_data):
         result = execute_tool("check_data_quality", {}, clean_data)
         assert "PASS" in result.llm_summary
-        assert "all 8 required columns" in result.llm_summary
+        assert "all 9 required columns" in result.llm_summary
         assert result.user_display is not None
 
     def test_named_dataset(self, clean_data):
@@ -105,12 +105,12 @@ class TestRequiredColumns:
         assert "ask" in result.llm_summary
         assert "strike" in result.llm_summary
 
-    def test_underlying_price_not_required(self, clean_data):
-        """underlying_price is NOT a required column for check_data_quality."""
+    def test_underlying_price_required(self, clean_data):
+        """underlying_price is a required column (matches engine's expected_types)."""
         df = clean_data.drop(columns=["underlying_price"])
         result = execute_tool("check_data_quality", {}, df)
-        assert "FAIL" not in result.llm_summary
-        assert "PASS" in result.llm_summary
+        assert "FAIL" in result.llm_summary
+        assert "underlying_price" in result.llm_summary
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ class TestOptionalColumns:
 
     def test_delta_is_required(self, data_with_optionals):
         result = execute_tool("check_data_quality", {}, data_with_optionals)
-        assert "all 8 required columns" in result.llm_summary
+        assert "all 9 required columns" in result.llm_summary
 
     def test_no_optional_columns(self):
         """Dataset with only required columns (no optionals)."""
