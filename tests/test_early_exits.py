@@ -217,8 +217,9 @@ class TestNoEarlyExit:
         )
         if not result.empty:
             # pct_change should be the same (normal expiration exit)
-            base_cols = [c for c in base.columns if c != "exit_type"]
-            result_cols = [c for c in result.columns if c != "exit_type"]
+            _skip_cols = {"exit_type", "_early_exit_date"}
+            base_cols = [c for c in base.columns if c not in _skip_cols]
+            result_cols = [c for c in result.columns if c not in _skip_cols]
             pd.testing.assert_frame_equal(
                 base[base_cols].reset_index(drop=True),
                 result[result_cols].reset_index(drop=True),

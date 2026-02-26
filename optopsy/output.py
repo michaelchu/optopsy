@@ -87,7 +87,7 @@ def _format_output(
     if params["raw"]:
         cols = internal_cols.copy()
         # Conditionally include optional columns when present in data
-        for opt_col in ("implied_volatility_entry", "delta_entry", "exit_type"):
+        for opt_col in ("implied_volatility_entry", "delta_entry", "exit_type", "_early_exit_date"):
             if opt_col in data.columns and opt_col not in cols:
                 cols.append(opt_col)
         # Include per-leg delta columns from delta-targeted path
@@ -130,9 +130,10 @@ def _format_calendar_output(
     if params["raw"]:
         # Return only the columns that exist in the data
         available_cols = [c for c in internal_cols if c in data.columns]
-        # Conditionally include exit_type when present
-        if "exit_type" in data.columns and "exit_type" not in available_cols:
-            available_cols.append("exit_type")
+        # Conditionally include exit_type and early exit date when present
+        for opt_col in ("exit_type", "_early_exit_date"):
+            if opt_col in data.columns and opt_col not in available_cols:
+                available_cols.append(opt_col)
         return data[available_cols].reset_index(drop=True)
 
     # Work with a copy to avoid modifying input
