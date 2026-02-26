@@ -1,7 +1,5 @@
 """Tests for the summarize_session tool handler."""
 
-import math
-
 import pandas as pd
 import pytest
 
@@ -147,7 +145,11 @@ class TestBacktestResultsOnly:
         assert "N/A" in result.user_display
 
     def test_none_metrics_display_dash(self, execute):
-        results = {"lc": _make_backtest_entry(mean_return=None, win_rate=None, profit_factor=None)}
+        results = {
+            "lc": _make_backtest_entry(
+                mean_return=None, win_rate=None, profit_factor=None
+            )
+        }
         result = execute(results=results)
         assert "—" in result.user_display
 
@@ -171,7 +173,12 @@ class TestBacktestResultsOnly:
             "sim": {
                 "type": "simulation",
                 "strategy": "long_calls",
-                "summary": {"total_trades": 20, "total_return": 0.1, "win_rate": 0.6, "profit_factor": 1.5},
+                "summary": {
+                    "total_trades": 20,
+                    "total_return": 0.1,
+                    "win_rate": 0.6,
+                    "profit_factor": 1.5,
+                },
             },
         }
         result = execute(results=results)
@@ -227,7 +234,11 @@ class TestSimulationResultsOnly:
         assert "1,234" in result.user_display
 
     def test_none_metrics_display_question_mark(self, execute):
-        results = {"sim:lc": _make_sim_entry(total_return=None, win_rate=None, profit_factor=None)}
+        results = {
+            "sim:lc": _make_sim_entry(
+                total_return=None, win_rate=None, profit_factor=None
+            )
+        }
         result = execute(results=results)
         # None metrics fall back to "?"
         assert "?" in result.user_display
@@ -251,8 +262,12 @@ class TestSignalsOnly:
 
     def test_multiple_signals(self, execute):
         sigs = {
-            "rsi_slot": pd.DataFrame({"quote_date": pd.date_range("2023-01-01", periods=5)}),
-            "macd_slot": pd.DataFrame({"quote_date": pd.date_range("2023-06-01", periods=3)}),
+            "rsi_slot": pd.DataFrame(
+                {"quote_date": pd.date_range("2023-01-01", periods=5)}
+            ),
+            "macd_slot": pd.DataFrame(
+                {"quote_date": pd.date_range("2023-06-01", periods=3)}
+            ),
         }
         result = execute(signals=sigs)
         assert "rsi_slot" in result.user_display
@@ -279,7 +294,9 @@ class TestMixedSession:
             "bt": _make_backtest_entry(),
             "sim": _make_sim_entry(),
         }
-        sigs = {"rsi": pd.DataFrame({"quote_date": pd.date_range("2023-01-01", periods=3)})}
+        sigs = {
+            "rsi": pd.DataFrame({"quote_date": pd.date_range("2023-01-01", periods=3)})
+        }
         result = execute(datasets={"SPY": ds}, results=results, signals=sigs)
 
         assert "Datasets Loaded" in result.user_display
@@ -296,6 +313,8 @@ class TestMixedSession:
             "bt": _make_backtest_entry(),
             "sim": _make_sim_entry(),
         }
-        sigs = {"rsi": pd.DataFrame({"quote_date": pd.date_range("2023-01-01", periods=3)})}
+        sigs = {
+            "rsi": pd.DataFrame({"quote_date": pd.date_range("2023-01-01", periods=3)})
+        }
         result = execute(datasets={"SPY": ds}, results=results, signals=sigs)
         assert len(result.llm_summary) < _MAX_LLM_SUMMARY_LENGTH
