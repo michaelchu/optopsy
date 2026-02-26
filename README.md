@@ -1,4 +1,4 @@
-![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fmichaelchu%2Foptopsy&label=&icon=github&color=%236edff6&message=&style=flat&tz=Canada%2FEastern)
+![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fmichaelchu%2Foptopsy&label=Visitors&icon=suitcase-lg&color=%239ec5fe&message=&style=flat&tz=Canada%2FEastern)
 [![CI](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/optopsy.svg)](https://badge.fury.io/py/optopsy)
 [![Downloads](https://pepy.tech/badge/optopsy)](https://pepy.tech/project/optopsy)
