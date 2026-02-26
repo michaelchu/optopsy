@@ -104,6 +104,20 @@ class CombineMode(str, Enum):
 # ---------------------------------------------------------------------------
 
 
+class DeltaTarget(BaseModel):
+    """Per-leg delta target with min/max range. All values are unsigned (0-1)."""
+
+    target: float = Field(
+        ..., gt=0, le=1, description="Target absolute delta (e.g. 0.30)"
+    )
+    min: float = Field(
+        ..., gt=0, le=1, description="Minimum absolute delta (e.g. 0.20)"
+    )
+    max: float = Field(
+        ..., gt=0, le=1, description="Maximum absolute delta (e.g. 0.40)"
+    )
+
+
 class StrategyParamsMixin(BaseModel):
     max_entry_dte: int | None = Field(
         None, description="Maximum days to expiration for entry (default: 90)"
@@ -116,6 +130,73 @@ class StrategyParamsMixin(BaseModel):
     )
     min_bid_ask: float | None = Field(
         None, description="Minimum bid/ask price threshold (default: 0.05)"
+    )
+    leg1_delta: DeltaTarget | None = Field(
+        None,
+        description=(
+            "Delta target for leg 1: {target, min, max} with unsigned values 0-1. "
+            "Each strategy has sensible defaults. Singles: 0.30 (0.20-0.40). "
+            "Straddles: 0.50 (0.40-0.60). Spreads leg1: 0.50 (0.40-0.60). "
+            "Iron condor leg1: 0.10 (0.05-0.20). Butterfly leg1: 0.40 (0.30-0.50). "
+            "Covered call leg1: 0.80 (0.60-0.95)."
+        ),
+    )
+    leg2_delta: DeltaTarget | None = Field(
+        None,
+        description=(
+            "Delta target for leg 2 (multi-leg strategies only). "
+            "Spreads leg2: 0.10 (0.05-0.20). Strangles: 0.30 (0.20-0.40). "
+            "Iron condor leg2: 0.30 (0.20-0.40). Butterfly leg2: 0.50 (0.40-0.60)."
+        ),
+    )
+    leg3_delta: DeltaTarget | None = Field(
+        None,
+        description=(
+            "Delta target for leg 3 (3+ leg strategies only). "
+            "Butterfly leg3: 0.10 (0.05-0.20). Iron condor leg3: 0.30 (0.20-0.40)."
+        ),
+    )
+    leg4_delta: DeltaTarget | None = Field(
+        None,
+        description=(
+            "Delta target for leg 4 (4-leg strategies only). "
+            "Iron condor leg4: 0.10 (0.05-0.20). Iron butterfly leg4: 0.10 (0.05-0.20)."
+        ),
+    )
+    delta_interval: float | None = Field(
+        None,
+        description=(
+            "Interval size for delta grouping in aggregated stats (default: 0.05). "
+            "Controls the width of delta_range buckets in output."
+        ),
+    )
+    stop_loss: float | None = Field(
+        None,
+        description=(
+            "Early exit stop-loss threshold as a negative decimal "
+            "(e.g. -0.5 = exit if trade loses 50%%). Omit for no stop-loss."
+        ),
+    )
+    take_profit: float | None = Field(
+        None,
+        description=(
+            "Early exit take-profit threshold as a positive decimal "
+            "(e.g. 0.5 = exit if trade gains 50%%). Omit for no take-profit."
+        ),
+    )
+    max_hold_days: int | None = Field(
+        None,
+        description=(
+            "Maximum holding period in calendar days. Exit after this many days "
+            "regardless of DTE or P&L. Omit for no time-based exit."
+        ),
+    )
+    commission: float | None = Field(
+        None,
+        description=(
+            "Commission per contract in dollars (e.g. 0.65). "
+            "Applied to each leg at entry and exit. Omit for no commissions."
+        ),
     )
     raw: bool | None = Field(
         None,

@@ -649,7 +649,8 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "check_data_quality": (
         "Run an integrity check on a loaded dataset against the columns "
         "and data quality the backtesting engine requires. Reports "
-        "missing/mistyped required columns, optional column availability "
+        "missing/mistyped required columns (including delta, which is "
+        "required for strike selection), optional column availability "
         "(Greeks, volume, IV), null analysis on critical columns, bid/ask "
         "quality (zero bids, crossed markets, spread stats), date coverage "
         "and gaps, monthly row distribution, duplicate rows, and negative "
@@ -663,15 +664,21 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "suggest_strategy_params": (
         "Analyze a loaded dataset and suggest good starting parameters "
-        "(max_entry_dte, exit_dte) based on the actual DTE "
+        "(max_entry_dte, exit_dte, and per-leg delta targets) based on the actual DTE "
         "and delta distributions. Call this before running a strategy when "
         "the user has not specified explicit parameters, to avoid guessing "
-        "values the data can't satisfy. Returns percentile tables and a "
+        "values the data can't satisfy. Returns percentile tables, per-leg "
+        "delta target recommendations for the given strategy, and a "
         "JSON block of recommended parameter values ready to pass to "
         "run_strategy or scan_strategies."
     ),
     "run_strategy": (
         "Run an options strategy backtest on the loaded dataset. "
+        "Strikes are selected by per-leg delta targeting (leg1_delta, leg2_delta, etc.) — "
+        "each leg picks the option closest to the target |delta| within [min, max]. "
+        "All strategies have sensible delta defaults; only override when the user specifies "
+        "explicit delta values. Supports stop_loss, take_profit, max_hold_days for early exits "
+        "and commission for per-contract fees. "
         "Calendar/diagonal strategies also accept front_dte_min, "
         "front_dte_max, back_dte_min, back_dte_max."
     ),
