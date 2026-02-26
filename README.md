@@ -31,6 +31,18 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 - **Plugin System** - Extend with custom strategies, signals, and data providers via entry points
 - **AI Chat UI** - Interactive AI-powered chat interface with conversation starters, settings panel, and result caching
 
+## Installation
+
+```bash
+# Core library only (latest stable release)
+pip install optopsy
+
+# With AI Chat UI (beta — requires pre-release)
+pip install --pre optopsy[ui]
+```
+
+**Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
+
 ## AI Chat UI (Beta)
 
 An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
@@ -108,18 +120,6 @@ optopsy-chat run --debug             # enable debug logging
 EODHD is the built-in data provider for downloading historical options and stock data. The provider system is pluggable — you can build custom providers by subclassing `DataProvider` in `optopsy/ui/providers/` to integrate your own data sources.
 
 See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for more details.
-
-## Installation
-
-```bash
-# Core library only (latest stable release)
-pip install optopsy
-
-# With AI Chat UI (beta — requires pre-release)
-pip install --pre optopsy[ui]
-```
-
-**Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
 
 ## Core Library Quick Start
 
