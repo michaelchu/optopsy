@@ -17,7 +17,7 @@ Optopsy combines a Python backtesting engine with a conversational AI interface 
 ## Features
 
 - **28 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, calendars, and diagonals
-- **Per-Leg Delta Targeting** - Select strikes by delta with `TargetRange(target, min, max)` per leg
+- **Per-Leg Delta Targeting** - Select strikes by delta with `target, min, max` per leg
 - **Trade Simulator** - Chronological simulation with capital tracking, position limits, and equity curves via `simulate()`
 - **Portfolio Simulation** - Weighted multi-strategy portfolio backtesting via `simulate_portfolio()`
 - **Early Exits** - Stop-loss, take-profit, and max-hold-days rules for automatic position management
