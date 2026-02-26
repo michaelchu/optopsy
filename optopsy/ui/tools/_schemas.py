@@ -231,10 +231,18 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     ),
     # StochRSI — defaults: period=14, rsi_period=14
     "stochrsi_below": lambda **kw: _signals.stochrsi_below(
-        kw.get("period", 14), kw.get("rsi_period", 14), kw.get("threshold", 20)
+        period=kw.get("period", 14),
+        rsi_period=kw.get("rsi_period", 14),
+        k_smooth=kw.get("k_smooth", 3),
+        d_smooth=kw.get("d_smooth", 3),
+        threshold=kw.get("threshold", 20),
     ),
     "stochrsi_above": lambda **kw: _signals.stochrsi_above(
-        kw.get("period", 14), kw.get("rsi_period", 14), kw.get("threshold", 80)
+        period=kw.get("period", 14),
+        rsi_period=kw.get("rsi_period", 14),
+        k_smooth=kw.get("k_smooth", 3),
+        d_smooth=kw.get("d_smooth", 3),
+        threshold=kw.get("threshold", 80),
     ),
     # Williams %R — defaults: period=14
     "willr_below": lambda **kw: _signals.willr_below(
