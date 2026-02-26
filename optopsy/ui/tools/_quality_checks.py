@@ -33,6 +33,7 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
         "strike": ("int64", "float64"),
         "bid": ("int64", "float64"),
         "ask": ("int64", "float64"),
+        "delta": ("int64", "float64"),
     }
 
     df_types = df.dtypes.astype(str).to_dict()
@@ -55,16 +56,16 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
             f"**Required Columns** — dtype mismatches: {'; '.join(dtype_mismatches)}\n"
         )
     else:
-        findings.append("PASS: all 7 required columns present with correct dtypes")
+        findings.append("PASS: all 8 required columns present with correct dtypes")
         display_parts.append(
-            "**Required Columns** — all 7 present with correct dtypes\n"
+            "**Required Columns** — all 8 present with correct dtypes\n"
         )
 
     # ---------------------------------------------------------------
     # 2. Optional columns availability
     # ---------------------------------------------------------------
     _OPTIONAL_COLS = {
-        "greeks": ["delta", "gamma", "theta", "vega"],
+        "greeks": ["gamma", "theta", "vega"],
         "volatility": ["implied_volatility"],
         "liquidity": ["volume", "open_interest"],
         "price": ["underlying_price"],
@@ -76,8 +77,6 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
 
     if available_optional:
         features: list[str] = []
-        if "delta" in available_optional:
-            features.append("delta filtering supported")
         if "implied_volatility" in available_optional:
             features.append("IV surface/signals available")
         if "volume" in available_optional:

@@ -334,8 +334,8 @@ def _handle_suggest_strategy_params(
     if not has_delta and strategy_name:
         delta_warning = (
             "WARNING: Dataset has no delta column. Delta-based strike selection "
-            "will not work; the engine will fall back to OTM% filtering. "
-            "To use delta targeting, load data that includes a 'delta' column."
+            "will not work. To use delta targeting, load data that includes "
+            "a 'delta' column."
         )
         strategy_note = (
             f"{delta_warning} {strategy_note}" if strategy_note else delta_warning
