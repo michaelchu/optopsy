@@ -774,6 +774,12 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "5 buckets', 'filter to DTE > 30'). Omit result_key to list "
         "all available result keys."
     ),
+    "summarize_session": (
+        "Generate a full summary of the current session: datasets loaded, "
+        "strategy backtests run (with key metrics), signals built, and "
+        "simulations executed. Call this when the user asks for a recap, "
+        "summary, or overview of what has been done in the session."
+    ),
 }
 
 # Tools owned by data providers — excluded from core tool schema generation.

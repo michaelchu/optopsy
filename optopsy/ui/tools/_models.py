@@ -915,6 +915,10 @@ class IVTermStructureArgs(BaseModel):
     )
 
 
+class SummarizeSessionArgs(BaseModel):
+    """No arguments required — summarizes all session state."""
+
+
 # ---------------------------------------------------------------------------
 # Tool argument model registry
 # ---------------------------------------------------------------------------
@@ -943,6 +947,7 @@ TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
     "check_data_quality": CheckDataQualityArgs,
     "download_options_data": DownloadOptionsDataArgs,
     "fetch_options_data": FetchOptionsDataArgs,
+    "summarize_session": SummarizeSessionArgs,
 }
 
 

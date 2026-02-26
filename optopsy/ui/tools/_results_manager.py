@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..providers.cache import ParquetCache
 from ..providers.result_store import ResultStore
-from ._executor import _register
+from ._executor import _fmt_pf, _register
 from ._helpers import _df_to_markdown, _select_results
 
 
@@ -544,4 +544,176 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
         f"query_results({result_key}): {len(df)} rows, columns={list(df.columns)}"
     )
     user_display = f"### Query: {result_key}\n\n{table}"
+    return _result(llm_summary, user_display=user_display)
+
+
+@_register("summarize_session")
+def _handle_summarize_session(arguments, dataset, signals, datasets, results, _result):
+    sections_llm: list[str] = ["summarize_session:"]
+    sections_display: list[str] = ["## Session Summary"]
+
+    # --- Datasets ---
+    if datasets:
+        ds_lines_llm: list[str] = []
+        ds_lines_display: list[str] = []
+        for name, df in datasets.items():
+            # Default to unknown; only compute a range when we have valid dates
+            date_range = "unknown date range"
+            date_col = next(
+                (c for c in ("quote_date", "date") if c in df.columns), None
+            )
+            if date_col and not df.empty:
+                dates = pd.to_datetime(df[date_col])
+                valid_dates = dates.dropna()
+                if not valid_dates.empty:
+                    date_min = valid_dates.min()
+                    date_max = valid_dates.max()
+                    if pd.notna(date_min) and pd.notna(date_max):
+                        date_range = f"{date_min.date()} to {date_max.date()}"
+            ds_lines_llm.append(f"  {name}: {len(df):,} rows, {date_range}")
+            ds_lines_display.append(f"- **{name}**: {len(df):,} rows, {date_range}")
+        sections_llm.append(
+            f"Datasets loaded ({len(datasets)}):\n" + "\n".join(ds_lines_llm)
+        )
+        sections_display.append(
+            f"### Datasets Loaded ({len(datasets)})\n\n" + "\n".join(ds_lines_display)
+        )
+    else:
+        sections_llm.append("Datasets loaded: none")
+        sections_display.append("### Datasets Loaded\n\n*No datasets loaded.*")
+
+    # --- Strategy runs ---
+    backtest_results = {
+        k: v for k, v in results.items() if v.get("type") != "simulation"
+    }
+    sim_results = {k: v for k, v in results.items() if v.get("type") == "simulation"}
+
+    if backtest_results:
+        bt_rows = []
+        for key, entry in backtest_results.items():
+            mr = entry.get("mean_return")
+            wr = entry.get("win_rate")
+            pf = entry.get("profit_factor")
+            bt_rows.append(
+                {
+                    "key": key,
+                    "strategy": entry.get("strategy", "?"),
+                    "max_entry_dte": entry.get("max_entry_dte", "?"),
+                    "exit_dte": entry.get("exit_dte", "?"),
+                    "count": entry.get("count", 0),
+                    # Keep raw numeric values for proper sorting
+                    "mean_return": mr,
+                    "win_rate": wr,
+                    "profit_factor": pf,
+                }
+            )
+        bt_df = pd.DataFrame(bt_rows)
+        # Sort by mean_return descending (best first), consistent with
+        # list_results and compare_results.
+        if "mean_return" in bt_df.columns and bt_df["mean_return"].notna().any():
+            bt_df = bt_df.sort_values(
+                "mean_return", ascending=False, na_position="last"
+            )
+        bt_df = bt_df.reset_index(drop=True)
+
+        # Build a formatted display copy
+        bt_display_df = bt_df.copy()
+        if "mean_return" in bt_display_df.columns:
+            bt_display_df["mean_return"] = bt_display_df["mean_return"].apply(
+                lambda v: f"{v:.4f}" if pd.notna(v) else "—"
+            )
+        if "win_rate" in bt_display_df.columns:
+            bt_display_df["win_rate"] = bt_display_df["win_rate"].apply(
+                lambda v: f"{v:.2%}" if pd.notna(v) else "—"
+            )
+        if "profit_factor" in bt_display_df.columns:
+            bt_display_df["profit_factor"] = bt_display_df["profit_factor"].apply(
+                lambda v: _fmt_pf(v) if v is not None else "—"
+            )
+
+        bt_table = _df_to_markdown(bt_display_df, max_rows=100)
+        _LLM_BT_CAP = 10  # max backtest lines included in llm_summary
+        bt_lines_llm = [
+            f"  {r['key']}: strategy={r['strategy']}, "
+            f"mean={r['mean_return']}, wr={r['win_rate']}"
+            for _, r in bt_display_df.iterrows()
+        ]
+        llm_bt_lines = bt_lines_llm[:_LLM_BT_CAP]
+        omitted = len(bt_lines_llm) - len(llm_bt_lines)
+        if omitted:
+            llm_bt_lines.append(f"  … and {omitted} more (see display)")
+        sections_llm.append(
+            f"Strategy backtests ({len(backtest_results)}):\n" + "\n".join(llm_bt_lines)
+        )
+        sections_display.append(
+            f"### Strategy Backtests ({len(backtest_results)})\n\n{bt_table}"
+        )
+    else:
+        sections_llm.append("Strategy backtests: none")
+        sections_display.append(
+            "### Strategy Backtests\n\n*No strategy backtests run.*"
+        )
+
+    # --- Simulations ---
+    _LLM_SIM_CAP = 10  # max simulation lines included in llm_summary
+    if sim_results:
+        sim_lines_llm: list[str] = []
+        sim_lines_display: list[str] = []
+        for key, entry in sim_results.items():
+            s = entry.get("summary", {})
+            total_trades = s.get("total_trades")
+            total_return = s.get("total_return")
+            win_rate = s.get("win_rate")
+            profit_factor = s.get("profit_factor")
+            trades_str = f"{int(total_trades):,}" if total_trades is not None else "?"
+            return_str = f"{total_return:.2%}" if total_return is not None else "?"
+            wr_str = f"{win_rate:.1%}" if win_rate is not None else "?"
+            pf_str = _fmt_pf(profit_factor) if profit_factor is not None else "?"
+            sim_lines_llm.append(
+                f"  {key}: strategy={entry.get('strategy', '?')}, "
+                f"trades={trades_str}, "
+                f"return={return_str}, "
+                f"win_rate={wr_str}"
+            )
+            sim_lines_display.append(
+                f"- **{key}**: strategy={entry.get('strategy', '?')}, "
+                f"trades={trades_str}, "
+                f"total return={return_str}, "
+                f"win rate={wr_str}, "
+                f"profit factor={pf_str}"
+            )
+        llm_sim_lines = sim_lines_llm[:_LLM_SIM_CAP]
+        omitted = len(sim_lines_llm) - len(llm_sim_lines)
+        if omitted:
+            llm_sim_lines.append(f"  … and {omitted} more (see display)")
+        sections_llm.append(
+            f"Simulations ({len(sim_results)}):\n" + "\n".join(llm_sim_lines)
+        )
+        sections_display.append(
+            f"### Simulations ({len(sim_results)})\n\n" + "\n".join(sim_lines_display)
+        )
+    else:
+        sections_llm.append("Simulations: none")
+        sections_display.append("### Simulations\n\n*No simulations run.*")
+
+    # --- Signals ---
+    if signals:
+        sig_lines_llm: list[str] = []
+        sig_lines_display: list[str] = []
+        for slot, sig_df in signals.items():
+            n_dates = len(sig_df) if sig_df is not None else 0
+            sig_lines_llm.append(f"  {slot}: {n_dates} valid dates")
+            sig_lines_display.append(f"- **{slot}**: {n_dates} valid dates")
+        sections_llm.append(
+            f"Signals built ({len(signals)}):\n" + "\n".join(sig_lines_llm)
+        )
+        sections_display.append(
+            f"### Signals Built ({len(signals)})\n\n" + "\n".join(sig_lines_display)
+        )
+    else:
+        sections_llm.append("Signals built: none")
+        sections_display.append("### Signals Built\n\n*No signals built.*")
+
+    llm_summary = "\n".join(sections_llm)
+    user_display = "\n\n".join(sections_display)
     return _result(llm_summary, user_display=user_display)
