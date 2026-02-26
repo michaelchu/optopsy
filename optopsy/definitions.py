@@ -20,6 +20,7 @@ evaluated_cols: List[str] = [
     "option_type",
     "expiration",
     "quote_date_entry",
+    "quote_date_exit",
     "dte_entry",
     "strike",
     "underlying_price_entry",
