@@ -163,6 +163,26 @@ class EODHDProvider(DataProvider):
     def env_key(self) -> str:
         return "EODHD_API_KEY"
 
+    def list_available_symbols(self) -> list[str] | None:
+        """Fetch the list of symbols with options data from EODHD."""
+        api_key = self._get_api_key()
+        if not api_key:
+            return None
+        try:
+            resp = self._throttled_get(
+                f"{_BASE_URL}/options/underlying-symbols",
+                {"api_token": api_key},
+            )
+            error = _check_response(resp)
+            if error:
+                _log.warning("Failed to fetch available symbols: %s", error)
+                return None
+            _safe_raise_for_status(resp)
+            return resp.json().get("data", [])
+        except Exception as exc:
+            _log.warning("Failed to fetch available symbols: %s", exc)
+            return None
+
     def get_tool_schemas(self) -> list[dict[str, Any]]:
         return [self._download_schema(), self._options_schema()]
 
