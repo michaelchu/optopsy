@@ -87,7 +87,12 @@ def _format_output(
     if params["raw"]:
         cols = internal_cols.copy()
         # Conditionally include optional columns when present in data
-        for opt_col in ("implied_volatility_entry", "delta_entry", "exit_type", "_early_exit_date"):
+        for opt_col in (
+            "implied_volatility_entry",
+            "delta_entry",
+            "exit_type",
+            "_early_exit_date",
+        ):
             if opt_col in data.columns and opt_col not in cols:
                 cols.append(opt_col)
         # Include per-leg delta columns from delta-targeted path
