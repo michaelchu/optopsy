@@ -97,14 +97,10 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
                 "(`pip install yfinance`) and try again.",
             )
         # Validate that volume signals have access to a volume column.
-        has_volume_signal = any(
-            s.get("name") in _VOLUME_SIGNALS for s in signal_specs
-        )
+        has_volume_signal = any(s.get("name") in _VOLUME_SIGNALS for s in signal_specs)
         if has_volume_signal and "volume" not in signal_data.columns:
             vol_names = [
-                s.get("name")
-                for s in signal_specs
-                if s.get("name") in _VOLUME_SIGNALS
+                s.get("name") for s in signal_specs if s.get("name") in _VOLUME_SIGNALS
             ]
             return _result(
                 f"Volume signals ({', '.join(vol_names)}) require a 'volume' "
@@ -117,9 +113,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
         missing_ohlc = [c for c in _ohlc_cols if c not in signal_data.columns]
         if has_ohlc_signal and missing_ohlc:
             ohlc_names = [
-                s.get("name")
-                for s in signal_specs
-                if s.get("name") in _OHLC_SIGNALS
+                s.get("name") for s in signal_specs if s.get("name") in _OHLC_SIGNALS
             ]
             return _result(
                 f"OHLC signals ({', '.join(ohlc_names)}) require "
