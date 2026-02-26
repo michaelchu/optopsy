@@ -28,7 +28,7 @@ Optopsy combines a Python backtesting engine with a conversational AI interface 
 - **Slippage Modeling** - Realistic fills with mid, spread, liquidity-based, or per-leg slippage
 - **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
 - **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
-- **Plugin System** - Extend with custom strategies, signals, data providers, and auth via entry points
+- **Plugin System** - Extend with custom strategies, signals, and data providers via entry points
 - **AI Chat UI** - Interactive AI-powered chat interface with conversation starters, settings panel, and result caching
 
 ## AI Chat UI (Beta)
