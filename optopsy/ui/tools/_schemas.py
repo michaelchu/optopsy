@@ -121,6 +121,56 @@ STRATEGIES = {
         "Protective put — long stock + long put for downside protection",
         False,
     ),
+    "collar": (
+        op.collar,
+        "Collar — long stock + short OTM call + long OTM put for hedged income",
+        False,
+    ),
+    "cash_secured_put": (
+        op.cash_secured_put,
+        "Cash-secured put — sell put with cash reserve, bullish/neutral income",
+        False,
+    ),
+    "call_back_spread": (
+        op.call_back_spread,
+        "Call back spread — short 1 ITM call + long 2 OTM calls, bullish ratio",
+        False,
+    ),
+    "put_back_spread": (
+        op.put_back_spread,
+        "Put back spread — short 1 ITM put + long 2 OTM puts, bearish ratio",
+        False,
+    ),
+    "call_front_spread": (
+        op.call_front_spread,
+        "Call front spread — long 1 ITM call + short 2 OTM calls, neutral ratio",
+        False,
+    ),
+    "put_front_spread": (
+        op.put_front_spread,
+        "Put front spread — long 1 ITM put + short 2 OTM puts, neutral ratio",
+        False,
+    ),
+    "long_call_condor": (
+        op.long_call_condor,
+        "Long call condor — buy wings, sell body with all calls, neutral",
+        False,
+    ),
+    "short_call_condor": (
+        op.short_call_condor,
+        "Short call condor — sell wings, buy body with all calls, volatile",
+        False,
+    ),
+    "long_put_condor": (
+        op.long_put_condor,
+        "Long put condor — buy wings, sell body with all puts, neutral",
+        False,
+    ),
+    "short_put_condor": (
+        op.short_put_condor,
+        "Short put condor — sell wings, buy body with all puts, volatile",
+        False,
+    ),
     "long_call_calendar": (
         op.long_call_calendar,
         "Long call calendar — short front-month, long back-month call at same strike",
@@ -616,6 +666,16 @@ STRATEGY_OPTION_TYPE: dict[str, str | None] = {
     "iron_butterfly": None,
     "reverse_iron_butterfly": None,
     "protective_put": None,
+    "collar": None,
+    "cash_secured_put": "put",
+    "call_back_spread": "call",
+    "put_back_spread": "put",
+    "call_front_spread": "call",
+    "put_front_spread": "put",
+    "long_call_condor": "call",
+    "short_call_condor": "call",
+    "long_put_condor": "put",
+    "short_put_condor": "put",
 }
 
 # --- Plugin strategies ---

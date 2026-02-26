@@ -20,31 +20,41 @@ from optopsy.definitions import (
     triple_strike_internal_cols,
 )
 from optopsy.strategies import (
+    call_back_spread,
+    call_front_spread,
+    cash_secured_put,
+    collar,
     covered_call,
     iron_butterfly,
     iron_condor,
     long_call_butterfly,
     long_call_calendar,
+    long_call_condor,
     long_call_diagonal,
     long_call_spread,
     long_calls,
     long_put_butterfly,
     long_put_calendar,
+    long_put_condor,
     long_put_diagonal,
     long_put_spread,
     long_puts,
     long_straddles,
     long_strangles,
     protective_put,
+    put_back_spread,
+    put_front_spread,
     reverse_iron_butterfly,
     reverse_iron_condor,
     short_call_butterfly,
     short_call_calendar,
+    short_call_condor,
     short_call_diagonal,
     short_call_spread,
     short_calls,
     short_put_butterfly,
     short_put_calendar,
+    short_put_condor,
     short_put_diagonal,
     short_put_spread,
     short_puts,
@@ -2335,3 +2345,270 @@ def test_max_entry_dte_filters_far_expirations():
     # With max_entry_dte=160: both expirations should be included
     results_wide = long_calls(df, raw=True, max_entry_dte=160)
     assert len(results_wide) == 2
+
+
+# =============================================================================
+# Collar Strategy Tests
+# =============================================================================
+
+
+_COLLAR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.80, min=0.70, max=0.90),
+    leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+)
+
+
+def test_collar_raw(multi_strike_data):
+    """Test collar returns correct structure and calculated values."""
+    results = collar(multi_strike_data, raw=True, **_COLLAR_DELTAS)
+    assert list(results.columns) == triple_strike_internal_cols
+    assert not results.empty
+    # Leg 1 is deep ITM call (stock proxy), leg 2 is short call, leg 3 is long put
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["option_type_leg2"] == "call"
+    assert results.iloc[0]["option_type_leg3"] == "put"
+
+
+def test_collar(multi_strike_data):
+    """Test collar aggregated output."""
+    results = collar(multi_strike_data, **_COLLAR_DELTAS)
+    assert list(results.columns) == triple_strike_external_cols + describe_cols
+
+
+def test_collar_with_stock_raw(multi_strike_data, stock_data_multi_strike):
+    """Collar using actual stock data returns correct structure."""
+    results = collar(
+        multi_strike_data,
+        stock_data=stock_data_multi_strike,
+        raw=True,
+        leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+        leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    )
+    assert list(results.columns) == triple_strike_internal_cols
+    assert not results.empty
+    row = results.iloc[0]
+    # Leg 1 is stock, leg 2 is short call, leg 3 is long put
+    assert row["option_type_leg1"] == "stock"
+    assert row["option_type_leg2"] == "call"
+    assert row["option_type_leg3"] == "put"
+    assert row["delta_entry_leg1"] == 1.0
+    # Stock entry price is close at entry date
+    assert row["strike_leg1"] == 212.5
+
+
+def test_collar_with_stock_aggregated(multi_strike_data, stock_data_multi_strike):
+    """Collar with stock data returns valid aggregated output."""
+    results = collar(
+        multi_strike_data,
+        stock_data=stock_data_multi_strike,
+        leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+        leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    )
+    assert not results.empty
+    assert "dte_range" in results.columns
+
+
+# =============================================================================
+# Cash-Secured Put Tests
+# =============================================================================
+
+
+def test_cash_secured_put_raw(multi_strike_data):
+    """Cash-secured put should produce identical output to short_puts."""
+    csp_results = cash_secured_put(multi_strike_data, raw=True)
+    sp_results = short_puts(multi_strike_data, raw=True)
+    pd.testing.assert_frame_equal(csp_results, sp_results)
+
+
+def test_cash_secured_put(multi_strike_data):
+    """Cash-secured put aggregated output matches short_puts."""
+    csp_results = cash_secured_put(multi_strike_data)
+    sp_results = short_puts(multi_strike_data)
+    pd.testing.assert_frame_equal(csp_results, sp_results)
+
+
+# =============================================================================
+# Ratio Spread Tests (Back Spreads and Front Spreads)
+# =============================================================================
+
+_RATIO_CALL_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+    leg2_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+)
+_RATIO_PUT_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.30, min=0.20, max=0.40),
+    leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+)
+
+
+def test_call_back_spread_raw(data):
+    """Test call back spread returns correct structure."""
+    results = call_back_spread(data, raw=True, **_RATIO_CALL_DELTAS)
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    # Both legs should be calls
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["option_type_leg2"] == "call"
+
+
+def test_call_back_spread(multi_strike_data):
+    """Test call back spread aggregated output."""
+    results = call_back_spread(multi_strike_data, **_RATIO_CALL_DELTAS)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+def test_put_back_spread_raw(data):
+    """Test put back spread returns correct structure."""
+    results = put_back_spread(data, raw=True, **_RATIO_PUT_DELTAS)
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    # Both legs should be puts
+    assert results.iloc[0]["option_type_leg1"] == "put"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+
+
+def test_put_back_spread(multi_strike_data):
+    """Test put back spread aggregated output."""
+    results = put_back_spread(multi_strike_data, **_RATIO_PUT_DELTAS)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+def test_call_front_spread_raw(data):
+    """Test call front spread returns correct structure."""
+    results = call_front_spread(data, raw=True, **_RATIO_CALL_DELTAS)
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    # Both legs should be calls
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["option_type_leg2"] == "call"
+
+
+def test_call_front_spread(multi_strike_data):
+    """Test call front spread aggregated output."""
+    results = call_front_spread(multi_strike_data, **_RATIO_CALL_DELTAS)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+def test_put_front_spread_raw(data):
+    """Test put front spread returns correct structure."""
+    results = put_front_spread(data, raw=True, **_RATIO_PUT_DELTAS)
+    assert list(results.columns) == double_strike_internal_cols
+    assert not results.empty
+    # Both legs should be puts
+    assert results.iloc[0]["option_type_leg1"] == "put"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+
+
+def test_put_front_spread(multi_strike_data):
+    """Test put front spread aggregated output."""
+    results = put_front_spread(multi_strike_data, **_RATIO_PUT_DELTAS)
+    assert list(results.columns) == double_strike_external_cols + describe_cols
+
+
+# =============================================================================
+# Condor Strategy Tests (same option type)
+# =============================================================================
+
+_CALL_CONDOR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.80, min=0.60, max=0.90),
+    leg2_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg4_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+)
+_PUT_CONDOR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg3_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg4_delta=TargetRange(target=0.80, min=0.60, max=0.90),
+)
+
+
+def test_long_call_condor_raw(multi_strike_data):
+    """Test long call condor returns correct structure and option types."""
+    results = long_call_condor(multi_strike_data, raw=True, **_CALL_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    assert not results.empty
+    # All legs should be calls
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["option_type_leg2"] == "call"
+    assert results.iloc[0]["option_type_leg3"] == "call"
+    assert results.iloc[0]["option_type_leg4"] == "call"
+    # Strikes should be in ascending order
+    assert results.iloc[0]["strike_leg1"] < results.iloc[0]["strike_leg2"]
+    assert results.iloc[0]["strike_leg2"] < results.iloc[0]["strike_leg3"]
+    assert results.iloc[0]["strike_leg3"] < results.iloc[0]["strike_leg4"]
+
+
+def test_long_call_condor(multi_strike_data):
+    """Test long call condor aggregated output."""
+    results = long_call_condor(multi_strike_data, **_CALL_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_external_cols + describe_cols
+
+
+def test_short_call_condor_raw(multi_strike_data):
+    """Test short call condor returns correct structure."""
+    results = short_call_condor(multi_strike_data, raw=True, **_CALL_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    assert not results.empty
+    # All legs should be calls
+    assert results.iloc[0]["option_type_leg1"] == "call"
+    assert results.iloc[0]["option_type_leg2"] == "call"
+    assert results.iloc[0]["option_type_leg3"] == "call"
+    assert results.iloc[0]["option_type_leg4"] == "call"
+
+
+def test_long_put_condor_raw(multi_strike_data):
+    """Test long put condor returns correct structure and option types."""
+    results = long_put_condor(multi_strike_data, raw=True, **_PUT_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    assert not results.empty
+    # All legs should be puts
+    assert results.iloc[0]["option_type_leg1"] == "put"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+    assert results.iloc[0]["option_type_leg3"] == "put"
+    assert results.iloc[0]["option_type_leg4"] == "put"
+    # Strikes should be in ascending order
+    assert results.iloc[0]["strike_leg1"] < results.iloc[0]["strike_leg2"]
+    assert results.iloc[0]["strike_leg2"] < results.iloc[0]["strike_leg3"]
+    assert results.iloc[0]["strike_leg3"] < results.iloc[0]["strike_leg4"]
+
+
+def test_long_put_condor(multi_strike_data):
+    """Test long put condor aggregated output."""
+    results = long_put_condor(multi_strike_data, **_PUT_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_external_cols + describe_cols
+
+
+def test_short_put_condor_raw(multi_strike_data):
+    """Test short put condor returns correct structure."""
+    results = short_put_condor(multi_strike_data, raw=True, **_PUT_CONDOR_DELTAS)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    assert not results.empty
+    # All legs should be puts
+    assert results.iloc[0]["option_type_leg1"] == "put"
+    assert results.iloc[0]["option_type_leg2"] == "put"
+    assert results.iloc[0]["option_type_leg3"] == "put"
+    assert results.iloc[0]["option_type_leg4"] == "put"
+
+
+def test_long_call_condor_default_deltas(multi_strike_data):
+    """Test long call condor with default deltas returns valid results."""
+    results = long_call_condor(multi_strike_data, raw=True)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    if not results.empty:
+        row = results.iloc[0]
+        assert row["strike_leg1"] < row["strike_leg2"]
+        assert row["strike_leg2"] < row["strike_leg3"]
+        assert row["strike_leg3"] < row["strike_leg4"]
+
+
+def test_long_put_condor_default_deltas(multi_strike_data):
+    """Test long put condor with default deltas returns valid results."""
+    results = long_put_condor(multi_strike_data, raw=True)
+    assert list(results.columns) == quadruple_strike_internal_cols
+    if not results.empty:
+        row = results.iloc[0]
+        assert row["strike_leg1"] < row["strike_leg2"]
+        assert row["strike_leg2"] < row["strike_leg3"]
+        assert row["strike_leg3"] < row["strike_leg4"]

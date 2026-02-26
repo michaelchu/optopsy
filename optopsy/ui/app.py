@@ -448,7 +448,7 @@ async def on_chat_start():
             "**Getting started:**\n"
             "1. Fetch options data or drop a CSV file into the chat\n"
             "2. Preview the data\n"
-            "3. Run any of 28 options strategies — just describe what you want\n\n"
+            "3. Run any of 38 options strategies — just describe what you want\n\n"
             "Use the **settings panel** (gear icon) to adjust default parameters, "
             "or click a **starter prompt** above to jump right in.\n\n"
             "CSV format: `underlying_symbol, underlying_price, option_type, "

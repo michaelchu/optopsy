@@ -106,7 +106,7 @@ _CALENDAR_MARKER = "expiration_leg1"
 # Single-leg short strategies — raw output has unsigned option prices (same as
 # long), so we negate entry/exit during normalisation to convert to signed cash
 # flows: negative entry_cost = credit received, negative exit_proceeds = paid.
-_SHORT_SINGLE_LEG = frozenset({"short_calls", "short_puts"})
+_SHORT_SINGLE_LEG = frozenset({"short_calls", "short_puts", "cash_secured_put"})
 
 
 def _is_single_leg(columns: pd.Index) -> bool:

@@ -4,7 +4,7 @@ Optopsy - Options Backtesting Library
 Optopsy is a Python library for backtesting options trading strategies using
 historical options chain data. It provides:
 
-- 28 built-in options strategies (singles, spreads, butterflies, condors, calendars)
+- 38 built-in options strategies (singles, spreads, ratio spreads, butterflies, condors, collars, calendars)
 - Flexible filtering by DTE, delta targeting, bid-ask spread, and option Greeks
 - Configurable slippage models (mid, spread, liquidity-based)
 - Statistical analysis with aggregated performance metrics
@@ -131,6 +131,13 @@ from .signals import (
 )
 from .simulator import PortfolioResult, SimulationResult, simulate, simulate_portfolio
 from .strategies import (
+    # Ratio spreads
+    call_back_spread,
+    call_front_spread,
+    # Cash-secured put
+    cash_secured_put,
+    # Collar
+    collar,
     # Covered strategies
     covered_call,
     iron_butterfly,
@@ -140,27 +147,34 @@ from .strategies import (
     long_call_butterfly,
     # Calendar spread strategies
     long_call_calendar,
+    # Condor strategies
+    long_call_condor,
     # Diagonal spread strategies
     long_call_diagonal,
     long_call_spread,
     long_calls,
     long_put_butterfly,
     long_put_calendar,
+    long_put_condor,
     long_put_diagonal,
     long_put_spread,
     long_puts,
     long_straddles,
     long_strangles,
     protective_put,
+    put_back_spread,
+    put_front_spread,
     reverse_iron_butterfly,
     reverse_iron_condor,
     short_call_butterfly,
     short_call_calendar,
+    short_call_condor,
     short_call_diagonal,
     short_call_spread,
     short_calls,
     short_put_butterfly,
     short_put_calendar,
+    short_put_condor,
     short_put_diagonal,
     short_put_spread,
     short_puts,
@@ -201,9 +215,21 @@ __all__ = [
     "reverse_iron_condor",
     "iron_butterfly",
     "reverse_iron_butterfly",
-    # Covered strategies
+    # Condor strategies
+    "long_call_condor",
+    "short_call_condor",
+    "long_put_condor",
+    "short_put_condor",
+    # Covered, protective & collar
     "covered_call",
     "protective_put",
+    "collar",
+    "cash_secured_put",
+    # Ratio spreads
+    "call_back_spread",
+    "put_back_spread",
+    "call_front_spread",
+    "put_front_spread",
     # Calendar spread strategies
     "long_call_calendar",
     "short_call_calendar",

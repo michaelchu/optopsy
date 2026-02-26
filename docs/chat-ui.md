@@ -7,7 +7,7 @@ Optopsy includes an AI-powered chat interface that lets you fetch data, run back
 ## What it does
 
 - Fetches historical options data via the [EODHD US Stock Options Data API](https://eodhd.com/financial-apis/options-data-api) (API key required)
-- Runs any of the 28 built-in strategies via conversational prompts
+- Runs any of the 38 built-in strategies via conversational prompts
 - Explains results and compares strategies side by side
 - Works with any OpenAI-compatible LLM (GPT-4o, Claude, Llama, etc. via [LiteLLM](https://github.com/BerriAI/litellm))
 

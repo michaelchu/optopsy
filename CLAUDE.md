@@ -131,7 +131,7 @@ Environment variables (set in `.env` or shell):
 - **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run`, `download`, and `cache` subcommands. Lazy imports so non-`run` commands skip Chainlit startup.
 - **`app.py`** — Chainlit web app. Handlers for `on_chat_start`, `on_chat_resume`, `on_message`. Delegates to `OptopsyAgent`.
 - **`agent.py`** — `OptopsyAgent` class. Tool-calling loop over LiteLLM with streaming, message compaction (`_COMPACT_THRESHOLD = 300`), and max `_MAX_TOOL_ITERATIONS = 15`.
-- **`tools.py`** — Tool registry. Core tools: `load_csv_data`, `list_data_files`, `preview_data`, `run_strategy` (all 28 strategies). Provider tools registered dynamically.
+- **`tools.py`** — Tool registry. Core tools: `load_csv_data`, `list_data_files`, `preview_data`, `run_strategy` (all 38 strategies). Provider tools registered dynamically.
 
 ### Data Providers (`optopsy/ui/providers/`)
 

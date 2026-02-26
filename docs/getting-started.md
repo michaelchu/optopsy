@@ -171,7 +171,7 @@ This gives you every individual trade for custom analysis.
 
 ## Next Steps
 
-- Explore [all 28 strategies](strategies.md)
+- Explore [all 38 strategies](strategies.md)
 - Learn about [strategy parameters](parameters.md)
 - Run full simulations with `simulate()` for equity curves and risk metrics — see [Examples](examples.md#strategy-simulation)
 - Filter entries with [technical analysis signals](entry-signals.md) including IV Rank and custom DataFrame signals
