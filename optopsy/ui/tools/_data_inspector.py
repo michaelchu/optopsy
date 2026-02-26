@@ -10,7 +10,6 @@ from optopsy.strategies._helpers import (
     _DEFAULT_DELTA,
     _DEFAULT_ITM_WING_DELTA,
     _DEFAULT_OTM_DELTA,
-    _DEFAULT_OTM_WING_DELTA,
 )
 
 from ._executor import _register, _require_dataset
@@ -301,7 +300,7 @@ def _handle_suggest_strategy_params(
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_ITM_WING_DELTA
             recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
-            recommended["leg3_delta"] = _DEFAULT_OTM_WING_DELTA
+            recommended["leg3_delta"] = _DEFAULT_OTM_DELTA
             strategy_note = (
                 "Butterfly — ITM wing at 0.40, body at 0.50 (ATM), OTM wing at 0.10."
             )

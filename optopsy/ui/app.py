@@ -50,6 +50,25 @@ from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
 from optopsy.ui.paths import DB_PATH, STORAGE_DIR
 from optopsy.ui.providers import get_provider_names
 from optopsy.ui.storage import STORAGE_ROUTE_PREFIX, LocalStorageClient
+from optopsy.ui.tools._helpers import _df_to_markdown
+
+_DEFAULT_MODEL = "anthropic/claude-haiku-4-5-20251001"
+
+_RESULT_TOOLS = frozenset({"run_strategy", "scan_strategies"})
+
+
+def _create_agent() -> OptopsyAgent:
+    """Create an OptopsyAgent with the configured model."""
+    model = os.environ.get("OPTOPSY_MODEL", _DEFAULT_MODEL)
+    return OptopsyAgent(model=model)
+
+
+async def _dispatch_as_user_message(prompt: str):
+    """Send a prompt as a user message and process it through the message handler."""
+    await cl.Message(content=prompt, author="user").send()
+    msg = cl.Message(content=prompt)
+    await on_message(msg)
+
 
 # ---------------------------------------------------------------------------
 # Plotly binary-array patch
@@ -402,8 +421,8 @@ async def set_starters():
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
-    agent = OptopsyAgent(model=model)
+    model = os.environ.get("OPTOPSY_MODEL", _DEFAULT_MODEL)
+    agent = _create_agent()
     cl.user_session.set("agent", agent)
     cl.user_session.set("messages", [])
 
@@ -470,8 +489,7 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
     across sessions.  We inject a system-level note into the history so the LLM
     knows it must reload any data before running strategies.
     """
-    model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
-    agent = OptopsyAgent(model=model)
+    agent = _create_agent()
 
     # Rebuild message history from the persisted thread, including tool calls.
     # Chainlit step types:
@@ -690,11 +708,7 @@ async def on_rerun_strategy(action: cl.Action):
     else:
         prompt = f"Re-run {strategy}"
 
-    # Send as a user message to trigger the normal flow
-    await cl.Message(content=prompt, author="user").send()
-    # Process through the message handler
-    msg = cl.Message(content=prompt)
-    await on_message(msg)
+    await _dispatch_as_user_message(prompt)
 
 
 @cl.action_callback("download_csv_action")
@@ -726,9 +740,7 @@ async def on_create_chart(action: cl.Action):
     """Handle chart creation action button."""
     strategy = action.payload.get("strategy", "")
     prompt = f"Create a bar chart comparing the results of {strategy} by DTE range"
-    await cl.Message(content=prompt, author="user").send()
-    msg = cl.Message(content=prompt)
-    await on_message(msg)
+    await _dispatch_as_user_message(prompt)
 
 
 @cl.on_message
@@ -739,8 +751,7 @@ async def on_message(message: cl.Message):
     # Guard: session state is missing (e.g. user deleted the thread then typed).
     # Re-initialize in-place rather than redirecting so the message isn't lost.
     if agent is None or messages is None:
-        model = os.environ.get("OPTOPSY_MODEL", "anthropic/claude-haiku-4-5-20251001")
-        agent = OptopsyAgent(model=model)
+        agent = _create_agent()
         messages = []
         cl.user_session.set("agent", agent)
         cl.user_session.set("messages", messages)
@@ -770,7 +781,7 @@ async def on_message(message: cl.Message):
                     f"Loaded **{label}** — "
                     f"{len(df):,} rows, {len(df.columns)} columns\n"
                     f"{date_range}"
-                    f"```\n{df.head().to_string()}\n```"
+                    f"{_df_to_markdown(df, max_rows=5)}"
                 )
             ).send()
         except Exception as e:
@@ -836,9 +847,7 @@ async def on_message(message: cl.Message):
             # Clear previous elements so only the last strategy call's results
             # are shown (prevents duplicate side-by-side tables when the LLM
             # re-runs a strategy in the same turn).
-            if tool_name in ("run_strategy", "scan_strategies") and hasattr(
-                result, "_result_df"
-            ):
+            if tool_name in _RESULT_TOOLS and hasattr(result, "_result_df"):
                 df_elements.clear()
                 _attach_result_elements(result, tool_name, df_elements)
             if tool_call_id:

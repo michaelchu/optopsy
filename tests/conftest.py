@@ -721,3 +721,79 @@ def price_data_100bars():
             "underlying_price": prices,
         }
     )
+
+
+@pytest.fixture
+def ohlcv_100bars():
+    """100 bars of OHLCV data: declining then recovering."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    close = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_with_volume_60bars():
+    """60 bars of OHLCV+volume data for volume-based signals."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    close = [100.0 + i * 0.5 for i in range(60)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+            "volume": [1_000_000 + i * 5000 for i in range(60)],
+        }
+    )
+
+
+@pytest.fixture
+def ohlcv_with_volume_100bars():
+    """100 bars of OHLCV+volume data: declining then recovering."""
+    dates = pd.date_range("2018-01-01", periods=100, freq="B")
+    close = [100.0 - i * 0.3 for i in range(50)] + [85.0 + i * 0.4 for i in range(50)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": close,
+            "high": [c + 2.0 for c in close],
+            "low": [c - 2.0 for c in close],
+            "volume": [1_000_000 + i * 3000 for i in range(100)],
+        }
+    )
+
+
+@pytest.fixture
+def cross_price_data():
+    """60 bars: flat then sharply rising to force fast MA above slow MA."""
+    dates = pd.date_range("2018-01-01", periods=60, freq="B")
+    prices = [100.0] * 30 + [100.0 + i * 2 for i in range(30)]
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": prices,
+        }
+    )
+
+
+def make_insufficient_data(periods=3):
+    """Create a small DataFrame for testing insufficient-data behaviour."""
+    dates = pd.date_range("2018-01-01", periods=periods, freq="B")
+    return pd.DataFrame(
+        {
+            "underlying_symbol": "SPX",
+            "quote_date": dates,
+            "underlying_price": [100.0 + i for i in range(periods)],
+        }
+    )
