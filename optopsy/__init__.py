@@ -129,7 +129,7 @@ from .signals import (
     zlma_cross_above,
     zlma_cross_below,
 )
-from .simulator import SimulationResult, simulate
+from .simulator import PortfolioResult, SimulationResult, simulate, simulate_portfolio
 from .strategies import (
     # Covered strategies
     covered_call,
@@ -324,7 +324,9 @@ __all__ = [
     "day_of_week",
     # Simulation
     "simulate",
+    "simulate_portfolio",
     "SimulationResult",
+    "PortfolioResult",
     # Risk metrics
     "compute_risk_metrics",
     "sharpe_ratio",

@@ -47,6 +47,23 @@ class SimulationResult:
     summary: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class PortfolioResult:
+    """Container for multi-leg portfolio simulation output.
+
+    Attributes:
+        trade_log: Combined trade log across all legs, with a ``leg`` column.
+        equity_curve: Daily portfolio equity (sum of per-leg equity curves).
+        summary: Portfolio-level performance metrics (same keys as single sim).
+        leg_results: Per-leg :class:`SimulationResult` keyed by leg name.
+    """
+
+    trade_log: pd.DataFrame
+    equity_curve: pd.Series
+    summary: dict[str, Any]
+    leg_results: dict[str, SimulationResult]
+
+
 # ---------------------------------------------------------------------------
 # Trade log schema
 # ---------------------------------------------------------------------------
@@ -733,3 +750,150 @@ def simulate(
         equity_curve=equity_curve,
         summary=summary,
     )
+
+
+# ---------------------------------------------------------------------------
+# Portfolio simulation
+# ---------------------------------------------------------------------------
+
+_PORTFOLIO_RESERVED_KEYS = frozenset({"data", "strategy", "weight", "name"})
+
+
+def simulate_portfolio(
+    legs: list[dict],
+    capital: float = 100_000.0,
+) -> PortfolioResult:
+    """Run a weighted portfolio simulation across multiple strategy legs.
+
+    Each leg runs independently via :func:`simulate` with its share of capital.
+    Results are combined into a single portfolio equity curve and trade log.
+
+    Args:
+        legs: List of leg dicts.  Each must contain ``data`` (DataFrame),
+            ``strategy`` (callable), and ``weight`` (float, 0-1).  Optional
+            ``name`` (str) labels the leg (defaults to strategy function name).
+            All other keys are forwarded to :func:`simulate` and the strategy.
+        capital: Total starting capital in dollars.
+
+    Returns:
+        A :class:`PortfolioResult` with combined and per-leg results.
+
+    Example::
+
+        result = op.simulate_portfolio(
+            legs=[
+                {"data": spy, "strategy": op.short_puts, "weight": 0.6,
+                 "max_entry_dte": 45, "exit_dte": 14},
+                {"data": qqq, "strategy": op.iron_condor, "weight": 0.4,
+                 "max_entry_dte": 30, "exit_dte": 7},
+            ],
+            capital=100_000,
+        )
+    """
+    if not legs:
+        raise ValueError("legs must be a non-empty list")
+
+    # Validate each leg has required keys
+    for i, leg in enumerate(legs):
+        for key in ("data", "strategy", "weight"):
+            if key not in leg:
+                raise ValueError(f"leg[{i}] missing required key '{key}'")
+        w = leg["weight"]
+        if not isinstance(w, (int, float)) or isinstance(w, bool) or w <= 0 or w > 1:
+            raise ValueError(f"leg[{i}] weight must be a number in (0, 1], got {w!r}")
+        if not callable(leg["strategy"]):
+            raise ValueError(f"leg[{i}] strategy must be callable")
+
+    # Validate weights sum to ~1.0
+    total_weight = sum(leg["weight"] for leg in legs)
+    if abs(total_weight - 1.0) > 0.01:
+        raise ValueError(f"weights must sum to 1.0 (got {total_weight:.4f})")
+
+    # Run each leg
+    leg_results: dict[str, SimulationResult] = {}
+    leg_capitals: dict[str, float] = {}
+    seen_names: set[str] = set()
+
+    for i, leg in enumerate(legs):
+        data = leg["data"]
+        strategy = leg["strategy"]
+        weight = leg["weight"]
+        name = leg.get("name") or getattr(strategy, "__name__", f"leg{i}")
+
+        # Deduplicate names
+        if name in seen_names:
+            name = f"{name}_{i}"
+        seen_names.add(name)
+
+        leg_capital = capital * weight
+        leg_capitals[name] = leg_capital
+
+        # Build kwargs for simulate(): everything except reserved keys
+        sim_kwargs: dict[str, Any] = {
+            k: v for k, v in leg.items() if k not in _PORTFOLIO_RESERVED_KEYS
+        }
+        sim_kwargs["capital"] = leg_capital
+
+        leg_results[name] = simulate(data, strategy, **sim_kwargs)
+
+    # Combine trade logs
+    combined_log = _combine_trade_logs(leg_results, capital)
+
+    # Combine equity curves
+    combined_curve = _combine_equity_curves(leg_results)
+
+    # Compute portfolio summary from combined trade log
+    summary = _compute_summary(combined_log, capital)
+
+    return PortfolioResult(
+        trade_log=combined_log,
+        equity_curve=combined_curve,
+        summary=summary,
+        leg_results=leg_results,
+    )
+
+
+def _combine_trade_logs(
+    leg_results: dict[str, SimulationResult], capital: float
+) -> pd.DataFrame:
+    """Merge per-leg trade logs into a single portfolio trade log."""
+    all_logs = []
+    for name, result in leg_results.items():
+        if result.trade_log.empty:
+            continue
+        log = result.trade_log.copy()
+        log["leg"] = name
+        all_logs.append(log)
+
+    if not all_logs:
+        cols = _TRADE_LOG_COLUMNS + ["leg"]
+        return pd.DataFrame(columns=cols)
+
+    combined = pd.concat(all_logs, ignore_index=True)
+    combined = combined.sort_values("entry_date").reset_index(drop=True)
+    combined["trade_id"] = np.arange(1, len(combined) + 1)
+    combined["cumulative_pnl"] = combined["realized_pnl"].cumsum()
+    combined["equity"] = capital + combined["cumulative_pnl"]
+    return combined
+
+
+def _combine_equity_curves(
+    leg_results: dict[str, SimulationResult],
+) -> pd.Series:
+    """Sum per-leg daily equity curves into a portfolio equity curve."""
+    daily_curves: dict[str, pd.Series] = {}
+    for name, result in leg_results.items():
+        if result.equity_curve.empty:
+            continue
+        curve = result.equity_curve.copy()
+        curve.index = pd.to_datetime(curve.index)
+        # Resample to daily; use last value per day, forward-fill gaps
+        daily = curve.resample("D").last().ffill()
+        daily_curves[name] = daily
+
+    if not daily_curves:
+        return pd.Series(dtype=float, name="equity")
+
+    combined = pd.DataFrame(daily_curves).ffill().sum(axis=1)
+    combined.name = "equity"
+    return combined
