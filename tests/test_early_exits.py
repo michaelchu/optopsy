@@ -1,4 +1,4 @@
-"""Tests for P&L-based early exits (stop-loss and take-profit)."""
+"""Tests for early exits (stop-loss, take-profit, and max-hold-days)."""
 
 import datetime
 
@@ -351,4 +351,143 @@ class TestParameterValidation:
                 multi_date_data,
                 leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
                 take_profit=1,  # Must be float
+            )
+
+
+class TestMaxHoldDaysSingleLeg:
+    """Test max_hold_days for single-leg strategies."""
+
+    def test_max_hold_days_triggers(self, multi_date_data):
+        """Position should exit when held for >= max_hold_days calendar days."""
+        # Entry is day 0 (Jan 1), max_hold_days=10 should trigger at Jan 11 (day 10)
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            max_hold_days=10,
+            raw=True,
+        )
+        assert not result.empty
+        assert "exit_type" in result.columns
+        assert result["exit_type"].iloc[0] == "max_hold"
+        # Exit at day 10: mid=3.00, entry mid=6.00 → pct = (3.00-6.00)/6.00 = -0.50
+        assert result["pct_change"].iloc[0] == pytest.approx(-0.50, abs=0.01)
+
+    def test_max_hold_days_not_triggered(self, multi_date_data):
+        """No early exit when max_hold_days exceeds actual hold period."""
+        # Hold period is 30 days (Jan 1 → Jan 31), setting max_hold_days=60
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            max_hold_days=60,
+            raw=True,
+        )
+        assert not result.empty
+        assert "exit_type" in result.columns
+        assert result["exit_type"].iloc[0] == "expiration"
+
+    def test_max_hold_days_triggers_at_first_eligible_date(self, multi_date_data):
+        """max_hold_days=5 should exit at the first date >= 5 days after entry."""
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            max_hold_days=5,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "max_hold"
+        # Day 5 (Jan 6): mid=4.50, entry=6.00 → pct = (4.50-6.00)/6.00 = -0.25
+        assert result["pct_change"].iloc[0] == pytest.approx(-0.25, abs=0.02)
+
+
+class TestMaxHoldDaysMultiLeg:
+    """Test max_hold_days for multi-leg strategies."""
+
+    def test_spread_max_hold_days(self, multi_date_spread_data):
+        """Multi-leg strategy should exit at max_hold_days."""
+        result = op.long_call_spread(
+            multi_date_spread_data,
+            leg1_delta={"target": 0.50, "min": 0.40, "max": 0.60},
+            leg2_delta={"target": 0.30, "min": 0.10, "max": 0.40},
+            max_hold_days=10,
+            raw=True,
+        )
+        assert not result.empty
+        assert "exit_type" in result.columns
+        triggered = result[result["exit_type"] == "max_hold"]
+        assert not triggered.empty
+
+
+class TestMaxHoldDaysCombined:
+    """Test max_hold_days combined with P&L-based exits."""
+
+    def test_stop_loss_fires_before_max_hold(self, multi_date_data):
+        """When stop-loss fires before max_hold_days, stop_loss wins."""
+        # stop_loss=-0.25 fires at day 5, max_hold_days=15 fires at day 15
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            stop_loss=-0.25,
+            max_hold_days=15,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "stop_loss"
+
+    def test_max_hold_fires_before_stop_loss(self, multi_date_data):
+        """When max_hold_days fires before stop-loss, max_hold wins."""
+        # max_hold_days=5 fires at day 5, stop_loss=-0.50 fires at day 10
+        result = op.long_calls(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+            stop_loss=-0.50,
+            max_hold_days=5,
+            raw=True,
+        )
+        assert not result.empty
+        # Day 5 unrealized is -25%, stop_loss=-0.50 not hit yet, so max_hold fires
+        assert result["exit_type"].iloc[0] == "max_hold"
+
+    def test_take_profit_fires_before_max_hold(self, multi_date_data):
+        """When take-profit fires before max_hold_days, take_profit wins."""
+        # Long put: day 5 unrealized=+25%, take_profit=0.25 fires at day 5
+        # max_hold_days=15 would fire at day 15
+        result = op.long_puts(
+            multi_date_data,
+            leg1_delta={"target": 0.30, "min": 0.15, "max": 0.70},
+            take_profit=0.25,
+            max_hold_days=15,
+            raw=True,
+        )
+        assert not result.empty
+        assert result["exit_type"].iloc[0] == "take_profit"
+
+
+class TestMaxHoldDaysValidation:
+    """Test validation of max_hold_days parameter."""
+
+    def test_max_hold_days_must_be_positive(self, multi_date_data):
+        """max_hold_days must be > 0."""
+        with pytest.raises(Exception):
+            op.long_calls(
+                multi_date_data,
+                leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+                max_hold_days=0,
+            )
+
+    def test_max_hold_days_must_be_int(self, multi_date_data):
+        """max_hold_days must be an int, not float."""
+        with pytest.raises(Exception):
+            op.long_calls(
+                multi_date_data,
+                leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+                max_hold_days=5.0,
+            )
+
+    def test_max_hold_days_rejects_negative(self, multi_date_data):
+        """max_hold_days must be > 0."""
+        with pytest.raises(Exception):
+            op.long_calls(
+                multi_date_data,
+                leg1_delta={"target": 0.30, "min": 0.15, "max": 0.40},
+                max_hold_days=-5,
             )

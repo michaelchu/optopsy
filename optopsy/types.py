@@ -98,6 +98,9 @@ class StrategyParamsDict(TypedDict, total=False):
     stop_loss: float
     take_profit: float
 
+    # Time-based early exit
+    max_hold_days: int
+
     # Output control
     raw: bool
     drop_nan: bool
@@ -163,6 +166,9 @@ class StrategyParams(BaseModel):
     # Early exit thresholds (P&L-based)
     stop_loss: Optional[float] = Field(None, lt=0)
     take_profit: Optional[float] = Field(None, gt=0)
+
+    # Time-based early exit
+    max_hold_days: Optional[int] = Field(None, gt=0, strict=True)
 
     # Output control — strict bool (rejects int)
     raw: StrictBool = False
