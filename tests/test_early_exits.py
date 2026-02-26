@@ -492,8 +492,8 @@ class TestMaxHoldDaysCombined:
     def test_all_three_triggers_priority(self, multi_date_data):
         """When all three conditions could trigger, priority order holds."""
         # Long call: day 5 unrealized=-25%
-        # stop_loss=-0.25 triggers at day 5, take_profit=0.01 (not hit for calls
-        # going down), max_hold_days=5 triggers at day 5
+        # stop_loss=-0.25 triggers at day 5, take_profit=5.0 (very high, not hit
+        # for calls going down), max_hold_days=5 triggers at day 5
         # stop_loss should win
         result = op.long_calls(
             multi_date_data,
