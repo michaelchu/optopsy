@@ -240,6 +240,9 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
         for idx in range(1, len(leg_def) + 1):
             external_cols.append(f"delta_range_leg{idx}")
 
+    # Commission is already a plain dict after _run_checks() -> model_dump()
+    commission = params.get("commission")
+
     # For single-leg, use _strategy_engine directly
     if len(leg_def) == 1:
         result = _strategy_engine(
@@ -248,7 +251,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             slippage=params["slippage"],
             fill_ratio=params["fill_ratio"],
             reference_volume=params["reference_volume"],
-            commission=params.get("commission"),
+            commission=commission,
         )
     else:
         if not join_on:
@@ -267,7 +270,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             params["slippage"],
             params["fill_ratio"],
             params["reference_volume"],
-            params.get("commission"),
+            commission,
         )
 
     # Apply early exits (stop-loss / take-profit) if configured
@@ -389,6 +392,9 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
     if merged.empty:
         return _fmt(merged)
 
+    # Commission is already a plain dict after _run_calendar_checks() -> model_dump()
+    cal_commission = params.get("commission")
+
     # Calculate P&L
     merged = _calculate_calendar_pnl(
         merged,
@@ -396,7 +402,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params["slippage"],
         params["fill_ratio"],
         params["reference_volume"],
-        params.get("commission"),
+        cal_commission,
     )
 
     # Apply early exits (stop-loss / take-profit) if configured
