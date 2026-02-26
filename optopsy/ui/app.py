@@ -502,7 +502,11 @@ async def on_chat_resume(thread: cl.types.ThreadDict):
             messages.append(msg)
         elif step_type == "tool":
             meta = _parse_meta(step)
-            tool_call_id = meta.get("tool_call_id", step.get("id", ""))
+            # Skip grouping-only parent steps (they have no tool_call_id
+            # and exist purely as UI containers for nested utility tools).
+            if not meta.get("tool_call_id"):
+                continue
+            tool_call_id = meta["tool_call_id"]
             messages.append(
                 {
                     "role": "tool",
@@ -791,9 +795,33 @@ async def on_message(message: cl.Message):
     df_elements: list[cl.ElementBased] = []
     # Track the last strategy run for action buttons.
     last_strategy_info: dict[str, Any] = {}
+    # State for grouping all tool steps under a single collapsible parent.
+    tools_parent_step: cl.Step | None = None
+    tool_step_count: int = 0
 
     async def on_tool_call(tool_name, arguments, result, tool_call_id=""):
-        async with cl.Step(name=tool_name, type="tool") as step:
+        nonlocal tools_parent_step, tool_step_count
+
+        if tools_parent_step is None:
+            tools_parent_step = cl.Step(
+                name="Preparing…", type="tool", show_input=False
+            )
+            await tools_parent_step.send()
+
+        tool_step_count += 1
+        # Chainlit prefixes tool steps with "Used", so avoid repeating it.
+        if tool_step_count == 1:
+            tools_parent_step.name = tool_name
+        else:
+            tools_parent_step.name = f"{tool_step_count} tools"
+        await tools_parent_step.update()
+
+        async with cl.Step(
+            name=tool_name,
+            type="tool",
+            parent_id=tools_parent_step.id,
+            show_input=False,
+        ) as step:
             step.input = str(arguments)
             step.output = result.user_display
             if result.chart_figure is not None:
@@ -855,6 +883,10 @@ async def on_message(message: cl.Message):
             on_thinking_token=on_thinking_token,
             on_assistant_tool_calls=on_assistant_tool_calls,
         )
+        # Finalize the tools parent step (close it so the spinner stops).
+        if tools_parent_step is not None:
+            await tools_parent_step.update()
+
         # Build action buttons if a strategy was run
         actions = _build_strategy_actions(last_strategy_info)
 
