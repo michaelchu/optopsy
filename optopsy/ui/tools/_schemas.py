@@ -670,7 +670,7 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "values the data can't satisfy. Returns percentile tables, per-leg "
         "delta target recommendations for the given strategy, and a "
         "JSON block of recommended parameter values ready to pass to "
-        "run_strategy or scan_strategies."
+        "run_strategy; the DTE-related values can also be reused with scan_strategies."
     ),
     "run_strategy": (
         "Run an options strategy backtest on the loaded dataset. "

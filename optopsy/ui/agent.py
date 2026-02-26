@@ -145,6 +145,7 @@ built-in defaults. Only pass leg*_delta parameters when the user explicitly requ
 | Iron condor / reverse | 0.10 (0.05-0.20) | 0.30 (0.20-0.40) | 0.30 (0.20-0.40) | 0.10 (0.05-0.20) |
 | Iron butterfly / reverse | 0.10 (0.05-0.20) | 0.50 (0.40-0.60) | 0.50 (0.40-0.60) | 0.10 (0.05-0.20) |
 | Covered call | 0.80 (0.60-0.95) | 0.30 (0.20-0.40) | — | — |
+| Protective put | 0.80 (0.60-0.95) | 0.30 (0.20-0.40) | — | — |
 
 When a user says e.g. "sell 16-delta strangles", translate to: \
 `leg1_delta: {"target": 0.16, "min": 0.10, "max": 0.22}`, \

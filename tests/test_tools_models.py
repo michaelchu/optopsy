@@ -208,6 +208,11 @@ class TestDeltaTarget:
         with pytest.raises(ValidationError):
             DeltaTarget.model_validate({"target": 1.5, "min": 0.20, "max": 1.5})
 
+    def test_accepts_boundary_value_one(self):
+        d = DeltaTarget.model_validate({"target": 1.0, "min": 0.95, "max": 1.0})
+        assert d.target == 1.0
+        assert d.max == 1.0
+
     def test_rejects_missing_fields(self):
         with pytest.raises(ValidationError):
             DeltaTarget.model_validate({"target": 0.30})
