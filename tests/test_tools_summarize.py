@@ -3,6 +3,8 @@
 import pandas as pd
 import pytest
 
+pytest.importorskip("pyarrow", reason="UI extras not installed")
+
 
 @pytest.fixture()
 def execute():
