@@ -8,7 +8,7 @@ expirations, exit-price lookup keyed on the front-leg expiration, and
 calendar-specific P&L calculation.
 """
 
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -252,6 +252,7 @@ def _calculate_calendar_pnl(
     slippage: str = "mid",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
+    commission: Optional[Dict[str, Any]] = None,
 ) -> pd.DataFrame:
     """
     Calculate P&L for calendar/diagonal spread positions.
@@ -328,13 +329,21 @@ def _calculate_calendar_pnl(
     merged["total_entry_cost"] = merged["entry_leg1"] + merged["entry_leg2"]
     merged["total_exit_proceeds"] = merged["exit_leg1"] + merged["exit_leg2"]
 
+    net_pnl = merged["total_exit_proceeds"] - merged["total_entry_cost"]
+
+    if commission is not None:
+        from .pricing import _calculate_commission
+
+        comm_per_side = _calculate_commission(leg_def, commission)
+        merged["total_commission"] = comm_per_side * 2
+        net_pnl = net_pnl - merged["total_commission"]
+
     # Calculate percentage change.
     # Use a minimum threshold to avoid misleading percentages from near-zero entries.
     min_entry_threshold = 0.01
     merged["pct_change"] = np.where(
         merged["total_entry_cost"].abs() >= min_entry_threshold,
-        (merged["total_exit_proceeds"] - merged["total_entry_cost"])
-        / merged["total_entry_cost"].abs(),
+        net_pnl / merged["total_entry_cost"].abs(),
         np.nan,
     )
 
