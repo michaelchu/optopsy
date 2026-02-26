@@ -144,7 +144,7 @@ class TestSuggestStrategyParams:
         assert reco["front_dte_min"] == 10
 
     def test_iron_condor_caps_dte(self, wide_dte_data):
-        """Iron condor caps max_entry_dte at 45.
+        """Iron condor caps max_entry_dte at 45 and recommends per-leg deltas.
 
         Uses wide_dte_data where p75 DTE=90, above the cap.
         """
@@ -157,8 +157,19 @@ class TestSuggestStrategyParams:
         assert reco is not None
         # p75 DTE is 90 but cap is 45 → must be exactly 45
         assert reco["max_entry_dte"] == 45
-        # Multi-leg note should be present
-        assert "multi-leg" in result.llm_summary.lower()
+        # Iron condor note should be present
+        assert "iron condor" in result.llm_summary.lower()
+        # Should recommend per-leg delta targets
+        assert "leg1_delta" in reco
+        assert "leg2_delta" in reco
+        assert "leg3_delta" in reco
+        assert "leg4_delta" in reco
+        # Outer wings at 0.10 delta
+        assert reco["leg1_delta"]["target"] == 0.10
+        assert reco["leg4_delta"]["target"] == 0.10
+        # Inner legs at 0.30 delta
+        assert reco["leg2_delta"]["target"] == 0.30
+        assert reco["leg3_delta"]["target"] == 0.30
 
     def test_spread_strategy_note(self, wide_dte_data):
         """Spread strategy includes strategy note."""
@@ -203,6 +214,114 @@ class TestSuggestStrategyParams:
         """Delta distribution values are shown when delta column exists."""
         result = execute_tool("suggest_strategy_params", {}, option_data)
         assert "delta" in result.llm_summary.lower()
+
+    def test_iron_butterfly_recommends_atm_body(self, wide_dte_data):
+        """Iron butterfly recommends ATM deltas for inner legs."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "iron_butterfly"},
+            wide_dte_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["max_entry_dte"] == 45
+        assert "iron butterfly" in result.llm_summary.lower()
+        # Inner legs at ATM (0.50)
+        assert reco["leg2_delta"]["target"] == 0.50
+        assert reco["leg3_delta"]["target"] == 0.50
+        # Outer wings at OTM (0.10)
+        assert reco["leg1_delta"]["target"] == 0.10
+        assert reco["leg4_delta"]["target"] == 0.10
+
+    def test_butterfly_recommends_three_legs(self, option_data):
+        """Butterfly strategy recommends 3-leg delta targets."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_call_butterfly"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert "leg1_delta" in reco
+        assert "leg2_delta" in reco
+        assert "leg3_delta" in reco
+        assert "leg4_delta" not in reco
+        # ITM wing, ATM body, OTM wing
+        assert reco["leg1_delta"]["target"] == 0.40
+        assert reco["leg2_delta"]["target"] == 0.50
+        assert reco["leg3_delta"]["target"] == 0.10
+
+    def test_straddle_recommends_atm(self, option_data):
+        """Straddle recommends ATM delta for both legs."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_straddles"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.50
+        assert reco["leg2_delta"]["target"] == 0.50
+
+    def test_strangle_recommends_otm(self, option_data):
+        """Strangle recommends 0.30 delta for both legs."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_strangles"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.30
+        assert reco["leg2_delta"]["target"] == 0.30
+
+    def test_spread_recommends_two_legs(self, option_data):
+        """Spread recommends ATM leg1 and OTM leg2."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_call_spread"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.50
+        assert reco["leg2_delta"]["target"] == 0.10
+
+    def test_covered_call_recommends_deep_itm_plus_otm(self, option_data):
+        """Covered call recommends deep ITM leg1 and 0.30 delta leg2."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "covered_call"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.80
+        assert reco["leg2_delta"]["target"] == 0.30
+
+    def test_single_leg_strategy_recommends_default_delta(self, option_data):
+        """Single-leg strategy recommends default 0.30 delta."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_calls"},
+            option_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.30
+        assert "leg2_delta" not in reco
+
+    def test_reverse_iron_condor_same_as_iron_condor(self, wide_dte_data):
+        """Reverse iron condor shares iron condor delta recommendations."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "reverse_iron_condor"},
+            wide_dte_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.10
+        assert reco["leg2_delta"]["target"] == 0.30
 
     def test_empty_dataframe_raises_value_error(self):
         """Empty DataFrame raises ValueError from NaN quantile conversion."""

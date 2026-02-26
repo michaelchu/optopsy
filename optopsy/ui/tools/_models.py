@@ -174,14 +174,14 @@ class StrategyParamsMixin(BaseModel):
         None,
         description=(
             "Early exit stop-loss threshold as a negative decimal "
-            "(e.g. -0.5 = exit if trade loses 50%%). Omit for no stop-loss."
+            "(e.g. -0.5 = exit if trade loses 50%). Omit for no stop-loss."
         ),
     )
     take_profit: float | None = Field(
         None,
         description=(
             "Early exit take-profit threshold as a positive decimal "
-            "(e.g. 0.5 = exit if trade gains 50%%). Omit for no take-profit."
+            "(e.g. 0.5 = exit if trade gains 50%). Omit for no take-profit."
         ),
     )
     max_hold_days: int | None = Field(
