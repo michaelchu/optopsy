@@ -171,6 +171,7 @@ from .timestamps import normalize_dates
 from .types import (
     CalendarStrategyParams,
     CalendarStrategyParamsDict,
+    Commission,
     StrategyParams,
     StrategyParamsDict,
     TargetRange,
@@ -215,6 +216,7 @@ __all__ = [
     "short_put_diagonal",
     "csv_data",
     # Type definitions
+    "Commission",
     "StrategyParams",
     "StrategyParamsDict",
     "CalendarStrategyParams",
