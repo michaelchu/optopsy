@@ -351,11 +351,13 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             df, params, internal_cols, external_cols, same_strike
         )
 
-    # Work with a copy and normalize dates/option_type once at the root
-    data = data.copy()
-    data["quote_date"] = normalize_dates(data["quote_date"])
-    data["expiration"] = normalize_dates(data["expiration"])
-    data["option_type"] = data["option_type"].str.lower()
+    # Normalize dates/option_type once at the root; _assign_dte returns a new
+    # DataFrame via .assign(), so no explicit .copy() needed.
+    data = data.assign(
+        quote_date=normalize_dates(data["quote_date"]),
+        expiration=normalize_dates(data["expiration"]),
+        option_type=data["option_type"].str.lower(),
+    )
     data = _assign_dte(data)
 
     # Get front and back leg options with delta targeting
