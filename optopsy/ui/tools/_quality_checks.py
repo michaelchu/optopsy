@@ -96,7 +96,14 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     # ---------------------------------------------------------------
     # 3. Null analysis on critical columns
     # ---------------------------------------------------------------
-    _NULL_CHECK_COLS = ["bid", "ask", "volume", "open_interest"]
+    _NULL_CHECK_COLS = [
+        "delta",
+        "underlying_price",
+        "bid",
+        "ask",
+        "volume",
+        "open_interest",
+    ]
     null_rows: list[str] = []
     null_display_rows: list[str] = []
     n_rows = len(df)

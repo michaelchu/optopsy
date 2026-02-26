@@ -105,18 +105,27 @@ class CombineMode(str, Enum):
 
 
 class DeltaTarget(BaseModel):
-    """Per-leg delta target with min/max range. All values are unsigned (0-1)."""
+    """Per-leg delta target with min/max range. All values are in the (0, 1] range."""
 
     model_config = {"extra": "forbid"}
 
     target: float = Field(
-        ..., gt=0, le=1, description="Target absolute delta (e.g. 0.30)"
+        ...,
+        gt=0,
+        le=1,
+        description="Target absolute delta in the (0, 1] range (e.g. 0.30)",
     )
     min: float = Field(
-        ..., gt=0, le=1, description="Minimum absolute delta (e.g. 0.20)"
+        ...,
+        gt=0,
+        le=1,
+        description="Minimum absolute delta in the (0, 1] range (e.g. 0.20)",
     )
     max: float = Field(
-        ..., gt=0, le=1, description="Maximum absolute delta (e.g. 0.40)"
+        ...,
+        gt=0,
+        le=1,
+        description="Maximum absolute delta in the (0, 1] range (e.g. 0.40)",
     )
 
     @model_validator(mode="after")
