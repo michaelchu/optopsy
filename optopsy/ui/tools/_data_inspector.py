@@ -273,10 +273,12 @@ def _handle_suggest_strategy_params(
             recommended["leg2_delta"] = _DEFAULT_DELTA
             recommended["leg3_delta"] = _DEFAULT_DELTA
             recommended["leg4_delta"] = _DEFAULT_OTM_DELTA
-        strategy_note = (
-            "Iron condor — outer legs at 0.10 delta (wings), inner legs at 0.30 delta. "
-            "Typically works best in the 20-45 DTE range."
-        )
+            strategy_note = (
+                "Iron condor — outer legs at 0.10 delta (wings), inner legs at 0.30 delta. "
+                "Typically works best in the 20-45 DTE range."
+            )
+        else:
+            strategy_note = "Iron condor — typically works best in the 20-45 DTE range."
     elif strategy_name in {
         "iron_butterfly",
         "reverse_iron_butterfly",
@@ -287,54 +289,74 @@ def _handle_suggest_strategy_params(
             recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
             recommended["leg3_delta"] = _DEFAULT_ATM_DELTA
             recommended["leg4_delta"] = _DEFAULT_OTM_DELTA
-        strategy_note = (
-            "Iron butterfly — outer legs at 0.10 delta, inner legs at 0.50 (ATM). "
-            "Typically works best in the 20-45 DTE range."
-        )
+            strategy_note = (
+                "Iron butterfly — outer legs at 0.10 delta, inner legs at 0.50 (ATM). "
+                "Typically works best in the 20-45 DTE range."
+            )
+        else:
+            strategy_note = (
+                "Iron butterfly — typically works best in the 20-45 DTE range."
+            )
     elif strategy_name and "butterfly" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_ITM_WING_DELTA
             recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
             recommended["leg3_delta"] = _DEFAULT_OTM_WING_DELTA
-        strategy_note = (
-            "Butterfly — ITM wing at 0.40, body at 0.50 (ATM), OTM wing at 0.10."
-        )
+            strategy_note = (
+                "Butterfly — ITM wing at 0.40, body at 0.50 (ATM), OTM wing at 0.10."
+            )
+        else:
+            strategy_note = (
+                "Butterfly strategy — uses OTM% filtering without delta data."
+            )
     elif strategy_name and "spread" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_ATM_DELTA
             recommended["leg2_delta"] = _DEFAULT_OTM_DELTA
-        strategy_note = (
-            "Vertical spread — long leg at 0.50 (ATM), short leg at 0.10 (OTM)."
-        )
+            strategy_note = (
+                "Vertical spread — long leg at 0.50 (ATM), short leg at 0.10 (OTM)."
+            )
+        else:
+            strategy_note = "Vertical spread — uses OTM% filtering without delta data."
     elif strategy_name and "straddle" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_ATM_DELTA
             recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
-        strategy_note = "Straddle — both legs at 0.50 delta (ATM)."
+            strategy_note = "Straddle — both legs at 0.50 delta (ATM)."
+        else:
+            strategy_note = "Straddle — uses OTM% filtering without delta data."
     elif strategy_name and "strangle" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_DELTA
             recommended["leg2_delta"] = _DEFAULT_DELTA
-        strategy_note = "Strangle — both legs at 0.30 delta."
+            strategy_note = "Strangle — both legs at 0.30 delta."
+        else:
+            strategy_note = "Strangle — uses OTM% filtering without delta data."
     elif strategy_name and "covered_call" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_DEEP_ITM_DELTA
             recommended["leg2_delta"] = _DEFAULT_DELTA
-        strategy_note = (
-            "Covered call — deep ITM call (0.80 delta) + 0.30 delta short call."
-        )
+            strategy_note = (
+                "Covered call — deep ITM call (0.80 delta) + 0.30 delta short call."
+            )
+        else:
+            strategy_note = "Covered call — uses OTM% filtering without delta data."
     elif strategy_name and "protective_put" in strategy_name:
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_DEEP_ITM_DELTA
             recommended["leg2_delta"] = _DEFAULT_DELTA
-        strategy_note = (
-            "Protective put — deep ITM put (0.80 delta) + 0.30 delta long put."
-        )
+            strategy_note = (
+                "Protective put — deep ITM put (0.80 delta) + 0.30 delta long put."
+            )
+        else:
+            strategy_note = "Protective put — uses OTM% filtering without delta data."
     elif strategy_name:
         # Single-leg strategies
         if has_delta:
             recommended["leg1_delta"] = _DEFAULT_DELTA
-        strategy_note = "Default delta target: 0.30 (range 0.20-0.40)."
+            strategy_note = "Default delta target: 0.30 (range 0.20-0.40)."
+        else:
+            strategy_note = "Uses OTM% filtering without delta data."
 
     if not has_delta and strategy_name:
         if "delta" not in active_ds.columns:

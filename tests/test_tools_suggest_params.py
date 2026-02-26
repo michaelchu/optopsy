@@ -337,6 +337,65 @@ class TestSuggestStrategyParams:
         assert reco["leg1_delta"]["target"] == 0.80
         assert reco["leg2_delta"]["target"] == 0.30
 
+    def test_reverse_iron_butterfly_same_as_iron_butterfly(self, wide_dte_data):
+        """Reverse iron butterfly shares iron butterfly delta recommendations."""
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "reverse_iron_butterfly"},
+            wide_dte_data,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert reco["leg1_delta"]["target"] == 0.10
+        assert reco["leg2_delta"]["target"] == 0.50
+        assert reco["leg3_delta"]["target"] == 0.50
+        assert reco["leg4_delta"]["target"] == 0.10
+
+    def test_no_delta_column_omits_delta_recommendations(self, option_data):
+        """When delta column is missing, no leg*_delta keys in recommendations."""
+        df = option_data.drop(columns=["delta"])
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "iron_condor"},
+            df,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert "leg1_delta" not in reco
+        assert "leg2_delta" not in reco
+        assert "WARNING" in result.llm_summary
+        assert "no delta column" in result.llm_summary.lower()
+
+    def test_all_null_delta_omits_delta_recommendations(self, option_data):
+        """When delta column is all-null, no leg*_delta keys in recommendations."""
+        df = option_data.copy()
+        df["delta"] = float("nan")
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_calls"},
+            df,
+        )
+        reco = _extract_recommended_json(result.user_display)
+        assert reco is not None
+        assert "leg1_delta" not in reco
+        assert "WARNING" in result.llm_summary
+        assert "no usable" in result.llm_summary.lower()
+
+    def test_no_delta_strategy_note_omits_delta_values(self, option_data):
+        """Strategy note should not mention delta values when delta is unavailable."""
+        df = option_data.drop(columns=["delta"])
+        result = execute_tool(
+            "suggest_strategy_params",
+            {"strategy_name": "long_call_spread"},
+            df,
+        )
+        # The note should not mention specific delta numbers like "0.50" or "0.10"
+        # after the WARNING prefix
+        assert (
+            "OTM%" in result.llm_summary
+            or "without delta" in result.llm_summary.lower()
+        )
+
     def test_empty_dataframe_raises_value_error(self):
         """Empty DataFrame raises ValueError from NaN quantile conversion."""
         cols = [
