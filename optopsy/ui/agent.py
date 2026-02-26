@@ -119,9 +119,54 @@ into a multi-row DataFrame with columns like `strategy`, `mean_return`, `win_rat
 - exit_dte: DTE at exit (default 0, i.e. hold to expiration)
 - min_bid_ask: Min bid/ask threshold (default 0.05)
 - raw: Set true for individual trades, false for aggregated stats (default false)
-- slippage: "mid", "spread", or "liquidity" (default "mid")
+- slippage: "mid", "spread", "liquidity", or "per_leg" (default "mid")
 
 Calendar/diagonal strategies also accept: front_dte_min, front_dte_max, back_dte_min, back_dte_max.
+
+## Delta Targeting (per-leg strike selection)
+
+Options are selected by **delta** — each leg independently picks the option whose |delta| is closest \
+to the target within a [min, max] range. This replaces OTM% filtering.
+
+**Parameters:** `leg1_delta`, `leg2_delta`, `leg3_delta`, `leg4_delta` — each is an object with \
+`{"target": float, "min": float, "max": float}` where values are unsigned 0-1.
+
+**IMPORTANT — use defaults unless the user asks for specific deltas.** Each strategy has sensible \
+built-in defaults. Only pass leg*_delta parameters when the user explicitly requests specific delta values \
+(e.g. "use 30 delta puts", "sell the 16 delta call"). The defaults are:
+
+| Strategy | Leg 1 | Leg 2 | Leg 3 | Leg 4 |
+|---|---|---|---|---|
+| Singles (long_calls, short_puts, etc.) | 0.30 (0.20-0.40) | — | — | — |
+| Straddles | 0.50 (0.40-0.60) | 0.50 (0.40-0.60) | — | — |
+| Strangles | 0.30 (0.20-0.40) | 0.30 (0.20-0.40) | — | — |
+| Spreads (long_call_spread, etc.) | 0.50 (0.40-0.60) | 0.10 (0.05-0.20) | — | — |
+| Butterflies | 0.40 (0.30-0.50) | 0.50 (0.40-0.60) | 0.10 (0.05-0.20) | — |
+| Iron condor / reverse | 0.10 (0.05-0.20) | 0.30 (0.20-0.40) | 0.30 (0.20-0.40) | 0.10 (0.05-0.20) |
+| Iron butterfly / reverse | 0.10 (0.05-0.20) | 0.50 (0.40-0.60) | 0.50 (0.40-0.60) | 0.10 (0.05-0.20) |
+| Covered call | 0.80 (0.60-0.95) | 0.30 (0.20-0.40) | — | — |
+| Protective put | 0.80 (0.60-0.95) | 0.30 (0.20-0.40) | — | — |
+
+When a user says e.g. "sell 16-delta strangles", translate to: \
+`leg1_delta: {"target": 0.16, "min": 0.10, "max": 0.22}`, \
+`leg2_delta: {"target": 0.16, "min": 0.10, "max": 0.22}`.
+
+`delta_interval` (default 0.05) controls the width of delta_range buckets in aggregated output.
+
+**Data requirement:** The dataset MUST have a `delta` column. Use `check_data_quality` to verify. \
+If the data has no delta column, delta targeting will fail.
+
+## Early Exits (P&L-based and time-based)
+
+- `stop_loss`: Negative decimal (e.g. -0.5 = exit if trade loses 50%). Omit for no stop-loss.
+- `take_profit`: Positive decimal (e.g. 0.5 = exit if trade gains 50%). Omit for no take-profit.
+- `max_hold_days`: Exit after N calendar days regardless of DTE or P&L.
+
+These can be combined (e.g. stop_loss=-1.0 with take_profit=0.5 exits on whichever hits first).
+
+## Commissions
+
+- `commission`: Per-contract fee in dollars (e.g. 0.65). Applied to each leg at entry and exit.
 
 **IMPORTANT:** Only run a strategy once per request — default to aggregated mode (raw=false). \
 Do NOT run the same strategy twice to show both aggregated and raw results. \
@@ -129,16 +174,19 @@ The UI provides an action button for the user to toggle between views.
 
 ## CSV Format
 The CSV should have columns (in order): underlying_symbol, underlying_price, option_type, \
-expiration, quote_date, strike, bid, ask. Optional: delta, gamma, theta, vega, volume.
+expiration, quote_date, strike, bid, ask, delta. The `delta` column is **required** for \
+delta-based strike selection. Optional: gamma, theta, vega, volume, implied_volatility.
 Column order can be remapped but the defaults assume this order.
 
 ## Understanding Output
 
 ### Aggregated mode (default, raw=false)
-Results are grouped by DTE range and delta range, then `pct_change` is summarized \
+Results are grouped by DTE range and delta range (per-leg), then `pct_change` is summarized \
 with descriptive statistics. Columns:
 - **dte_range**: The DTE bucket at entry (e.g. "(7, 14]" means 8-14 DTE)
-- **delta_range** (or delta_range_leg1/leg2/...): Delta bucket for each leg
+- **delta_range** (single-leg) or **delta_range_leg1/leg2/...** (multi-leg): The absolute delta \
+bucket for each leg at entry. Controlled by `delta_interval` (default 0.05). \
+E.g. "(0.25, 0.30]" means options with |delta| between 0.25 and 0.30.
 - **count**: Number of trades in this bucket
 - **mean**: Average percentage return (positive = profitable on average)
 - **std**: Standard deviation of returns (volatility of outcomes)
@@ -328,7 +376,8 @@ Retry up to 10 times, changing one or two parameters each attempt. Explain your 
 time. After 10 failed attempts, report what you tried and suggest the user try a different strategy, date \
 range, or expiration type. Never re-fetch data just because a strategy was empty.
 - When interpreting aggregated results, focus on: which DTE/delta buckets are most profitable (highest mean), \
-which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std).
+which have enough trades to be statistically meaningful (count > 10), and risk-adjusted performance (mean/std). \
+Delta buckets show which strike selections (by delta) performed best — useful for fine-tuning delta targets.
 - For comparisons, run both strategies and compare mean returns, win rates (% of buckets with positive mean), \
 and consistency (lower std is better).
 - Be concise but helpful. The tool results are already formatted as markdown tables.

@@ -8,7 +8,7 @@ specified by integer index, allowing the library to work with any CSV layout.
 The module also handles:
 - Date column inference (``_infer_date_cols``)
 - Optional date-range filtering (``_trim_dates``)
-- Optional Greek and liquidity columns (delta, gamma, volume, etc.)
+- Optional Greek and liquidity columns (gamma, theta, vega, volume, etc.); delta is required
 """
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,8 +28,8 @@ default_kwargs: Dict[str, Any] = {
     "strike": 5,
     "bid": 6,
     "ask": 7,
+    "delta": 8,
     # Optional Greek columns (set to column index to include)
-    "delta": None,
     "gamma": None,
     "theta": None,
     "vega": None,
@@ -167,10 +167,11 @@ def csv_data(
         (params["strike"], "strike"),
         (params["bid"], "bid"),
         (params["ask"], "ask"),
+        (params["delta"], "delta"),
     ]
 
     # Add optional Greek columns if specified
-    for greek in ["delta", "gamma", "theta", "vega", "implied_volatility"]:
+    for greek in ["gamma", "theta", "vega", "implied_volatility"]:
         col_idx = params.get(greek)
         if col_idx is not None:
             column_mapping.append((int(col_idx), greek))

@@ -16,7 +16,7 @@ from optopsy.ui.tools import execute_tool
 
 @pytest.fixture
 def clean_data():
-    """Minimal clean option dataset — all 7 required columns, no issues."""
+    """Minimal clean option dataset — all 9 required columns, no issues."""
     exp = datetime.datetime(2024, 3, 15)
     dates = pd.to_datetime(
         ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08"]
@@ -25,8 +25,8 @@ def clean_data():
     for qd in dates:
         rows.extend(
             [
-                ["SPY", 480.0, "call", exp, qd, 480.0, 5.0, 5.10],
-                ["SPY", 480.0, "put", exp, qd, 480.0, 4.8, 4.90],
+                ["SPY", 480.0, "call", exp, qd, 480.0, 5.0, 5.10, 0.50],
+                ["SPY", 480.0, "put", exp, qd, 480.0, 4.8, 4.90, -0.50],
             ]
         )
     cols = [
@@ -38,15 +38,15 @@ def clean_data():
         "strike",
         "bid",
         "ask",
+        "delta",
     ]
     return pd.DataFrame(rows, columns=cols)
 
 
 @pytest.fixture
 def data_with_optionals(clean_data):
-    """Clean data plus optional columns (delta, volume, implied_volatility)."""
+    """Clean data plus optional columns (volume, implied_volatility, etc.)."""
     df = clean_data.copy()
-    df["delta"] = 0.5
     df["gamma"] = 0.02
     df["volume"] = 100
     df["open_interest"] = 5000
@@ -70,7 +70,7 @@ class TestCheckDataQualityBasic:
     def test_clean_data_pass(self, clean_data):
         result = execute_tool("check_data_quality", {}, clean_data)
         assert "PASS" in result.llm_summary
-        assert "all 7 required columns" in result.llm_summary
+        assert "all 9 required columns" in result.llm_summary
         assert result.user_display is not None
 
     def test_named_dataset(self, clean_data):
@@ -105,12 +105,12 @@ class TestRequiredColumns:
         assert "ask" in result.llm_summary
         assert "strike" in result.llm_summary
 
-    def test_underlying_price_not_required(self, clean_data):
-        """underlying_price is NOT a required column for check_data_quality."""
+    def test_underlying_price_required(self, clean_data):
+        """underlying_price is a required column (matches engine's expected_types)."""
         df = clean_data.drop(columns=["underlying_price"])
         result = execute_tool("check_data_quality", {}, df)
-        assert "FAIL" not in result.llm_summary
-        assert "PASS" in result.llm_summary
+        assert "FAIL" in result.llm_summary
+        assert "underlying_price" in result.llm_summary
 
 
 # ---------------------------------------------------------------------------
@@ -121,25 +121,26 @@ class TestRequiredColumns:
 class TestOptionalColumns:
     def test_optional_columns_detected(self, data_with_optionals):
         result = execute_tool("check_data_quality", {}, data_with_optionals)
-        assert "delta" in result.llm_summary
         assert "implied_volatility" in result.llm_summary
         assert "volume" in result.llm_summary
 
-    def test_delta_filtering_noted(self, data_with_optionals):
+    def test_delta_is_required(self, data_with_optionals):
         result = execute_tool("check_data_quality", {}, data_with_optionals)
-        assert "delta filtering" in result.llm_summary.lower()
+        assert "all 9 required columns" in result.llm_summary
 
     def test_no_optional_columns(self):
         """Dataset with only required columns (no optionals)."""
         df = pd.DataFrame(
             {
                 "underlying_symbol": ["SPY"],
+                "underlying_price": [480.0],
                 "option_type": ["call"],
                 "expiration": pd.to_datetime(["2024-03-15"]),
                 "quote_date": pd.to_datetime(["2024-01-02"]),
                 "strike": [480.0],
                 "bid": [5.0],
                 "ask": [5.10],
+                "delta": [0.50],
             }
         )
         result = execute_tool("check_data_quality", {}, df)

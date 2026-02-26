@@ -4,6 +4,15 @@ import json as _json
 
 import pandas as pd
 
+from optopsy.strategies._helpers import (
+    _DEFAULT_ATM_DELTA,
+    _DEFAULT_DEEP_ITM_DELTA,
+    _DEFAULT_DELTA,
+    _DEFAULT_ITM_WING_DELTA,
+    _DEFAULT_OTM_DELTA,
+    _DEFAULT_OTM_WING_DELTA,
+)
+
 from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
@@ -228,6 +237,8 @@ def _handle_suggest_strategy_params(
     else:
         delta_stats = {}
 
+    has_delta = bool(delta_stats)
+
     # Base recommendations
     recommended: dict = {
         "max_entry_dte": dte_stats["p75"],
@@ -235,7 +246,7 @@ def _handle_suggest_strategy_params(
     }
     strategy_note = ""
 
-    # Strategy-specific overrides
+    # Strategy-specific overrides (DTE + delta targets)
     if strategy_name in CALENDAR_STRATEGIES:
         recommended = {
             "front_dte_min": max(10, dte_stats["p10"]),
@@ -243,21 +254,126 @@ def _handle_suggest_strategy_params(
             "back_dte_min": min(50, dte_stats["p75"]),
             "back_dte_max": min(120, dte_stats["p90"]),
         }
-        strategy_note = (
-            "Calendar strategy — use front/back DTE instead of max_entry_dte."
-        )
+        if has_delta:
+            strategy_note = (
+                "Calendar strategy — use front/back DTE instead of max_entry_dte. "
+                "Delta defaults apply per-leg automatically."
+            )
+        else:
+            strategy_note = (
+                "Calendar strategy — use front/back DTE instead of max_entry_dte."
+            )
     elif strategy_name in {
         "iron_condor",
         "reverse_iron_condor",
+    }:
+        recommended["max_entry_dte"] = min(45, dte_stats["p75"])
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_OTM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_DELTA
+            recommended["leg3_delta"] = _DEFAULT_DELTA
+            recommended["leg4_delta"] = _DEFAULT_OTM_DELTA
+            strategy_note = (
+                "Iron condor — outer legs at 0.10 delta (wings), inner legs at 0.30 delta. "
+                "Typically works best in the 20-45 DTE range."
+            )
+        else:
+            strategy_note = "Iron condor — typically works best in the 20-45 DTE range."
+    elif strategy_name in {
         "iron_butterfly",
         "reverse_iron_butterfly",
     }:
         recommended["max_entry_dte"] = min(45, dte_stats["p75"])
-        strategy_note = (
-            "Multi-leg strategies typically work best in the 20-45 DTE range."
-        )
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_OTM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
+            recommended["leg3_delta"] = _DEFAULT_ATM_DELTA
+            recommended["leg4_delta"] = _DEFAULT_OTM_DELTA
+            strategy_note = (
+                "Iron butterfly — outer legs at 0.10 delta, inner legs at 0.50 (ATM). "
+                "Typically works best in the 20-45 DTE range."
+            )
+        else:
+            strategy_note = (
+                "Iron butterfly — typically works best in the 20-45 DTE range."
+            )
+    elif strategy_name and "butterfly" in strategy_name:
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_ITM_WING_DELTA
+            recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
+            recommended["leg3_delta"] = _DEFAULT_OTM_WING_DELTA
+            strategy_note = (
+                "Butterfly — ITM wing at 0.40, body at 0.50 (ATM), OTM wing at 0.10."
+            )
+        else:
+            strategy_note = (
+                "Butterfly strategy — uses OTM% filtering without delta data."
+            )
     elif strategy_name and "spread" in strategy_name:
-        strategy_note = "Spreads often work best with tighter delta targets."
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_ATM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_OTM_DELTA
+            strategy_note = (
+                "Vertical spread — long leg at 0.50 (ATM), short leg at 0.10 (OTM)."
+            )
+        else:
+            strategy_note = "Vertical spread — uses OTM% filtering without delta data."
+    elif strategy_name and "straddle" in strategy_name:
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_ATM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_ATM_DELTA
+            strategy_note = "Straddle — both legs at 0.50 delta (ATM)."
+        else:
+            strategy_note = "Straddle — uses OTM% filtering without delta data."
+    elif strategy_name and "strangle" in strategy_name:
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_DELTA
+            recommended["leg2_delta"] = _DEFAULT_DELTA
+            strategy_note = "Strangle — both legs at 0.30 delta."
+        else:
+            strategy_note = "Strangle — uses OTM% filtering without delta data."
+    elif strategy_name and "covered_call" in strategy_name:
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_DEEP_ITM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_DELTA
+            strategy_note = (
+                "Covered call — deep ITM call (0.80 delta) + 0.30 delta short call."
+            )
+        else:
+            strategy_note = "Covered call — uses OTM% filtering without delta data."
+    elif strategy_name and "protective_put" in strategy_name:
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_DEEP_ITM_DELTA
+            recommended["leg2_delta"] = _DEFAULT_DELTA
+            strategy_note = (
+                "Protective put — deep ITM put (0.80 delta) + 0.30 delta long put."
+            )
+        else:
+            strategy_note = "Protective put — uses OTM% filtering without delta data."
+    elif strategy_name:
+        # Single-leg strategies
+        if has_delta:
+            recommended["leg1_delta"] = _DEFAULT_DELTA
+            strategy_note = "Default delta target: 0.30 (range 0.20-0.40)."
+        else:
+            strategy_note = "Uses OTM% filtering without delta data."
+
+    if not has_delta and strategy_name:
+        if "delta" not in active_ds.columns:
+            delta_warning = (
+                "WARNING: Dataset has no delta column. Delta-based strike selection "
+                "will not work. To use delta targeting, load data that includes "
+                "a 'delta' column."
+            )
+        else:
+            delta_warning = (
+                "WARNING: Delta column exists but contains no usable (non-null) "
+                "values. Delta-based strike selection will not work. Verify that "
+                "your data source provides delta values."
+            )
+        strategy_note = (
+            f"{delta_warning} {strategy_note}" if strategy_note else delta_warning
+        )
 
     reco_json = _json.dumps(recommended, indent=2)
     label = f" for `{strategy_name}`" if strategy_name else ""

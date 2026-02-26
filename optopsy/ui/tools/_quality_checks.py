@@ -27,12 +27,14 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     # ---------------------------------------------------------------
     _CORE_REQUIRED_COLS: dict[str, tuple[str, ...]] = {
         "underlying_symbol": ("object", "str"),
+        "underlying_price": ("int64", "float64"),
         "option_type": ("object", "str"),
         "expiration": ("datetime64[ns]", "datetime64[us]"),
         "quote_date": ("datetime64[ns]", "datetime64[us]"),
         "strike": ("int64", "float64"),
         "bid": ("int64", "float64"),
         "ask": ("int64", "float64"),
+        "delta": ("int64", "float64"),
     }
 
     df_types = df.dtypes.astype(str).to_dict()
@@ -55,19 +57,18 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
             f"**Required Columns** — dtype mismatches: {'; '.join(dtype_mismatches)}\n"
         )
     else:
-        findings.append("PASS: all 7 required columns present with correct dtypes")
+        findings.append("PASS: all 9 required columns present with correct dtypes")
         display_parts.append(
-            "**Required Columns** — all 7 present with correct dtypes\n"
+            "**Required Columns** — all 9 present with correct dtypes\n"
         )
 
     # ---------------------------------------------------------------
     # 2. Optional columns availability
     # ---------------------------------------------------------------
     _OPTIONAL_COLS = {
-        "greeks": ["delta", "gamma", "theta", "vega"],
+        "greeks": ["gamma", "theta", "vega"],
         "volatility": ["implied_volatility"],
         "liquidity": ["volume", "open_interest"],
-        "price": ["underlying_price"],
     }
     available_optional: list[str] = []
     for _group, cols in _OPTIONAL_COLS.items():
@@ -76,14 +77,10 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
 
     if available_optional:
         features: list[str] = []
-        if "delta" in available_optional:
-            features.append("delta filtering supported")
         if "implied_volatility" in available_optional:
             features.append("IV surface/signals available")
         if "volume" in available_optional:
             features.append("liquidity slippage available")
-        if "underlying_price" in available_optional:
-            features.append("underlying_price present")
         feat_str = "; ".join(features) if features else ""
         findings.append(
             f"INFO: optional columns available: {', '.join(available_optional)}"
@@ -99,7 +96,14 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     # ---------------------------------------------------------------
     # 3. Null analysis on critical columns
     # ---------------------------------------------------------------
-    _NULL_CHECK_COLS = ["bid", "ask", "volume", "open_interest"]
+    _NULL_CHECK_COLS = [
+        "delta",
+        "underlying_price",
+        "bid",
+        "ask",
+        "volume",
+        "open_interest",
+    ]
     null_rows: list[str] = []
     null_display_rows: list[str] = []
     n_rows = len(df)

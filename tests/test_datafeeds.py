@@ -37,6 +37,7 @@ def test_import_csv_file():
         strike=5,
         bid=6,
         ask=7,
+        delta=8,
     )
 
     expected_columns = [

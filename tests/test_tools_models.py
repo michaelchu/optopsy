@@ -10,6 +10,7 @@ from optopsy.ui.tools._models import (  # noqa: E402
     BuildSignalArgs,
     ClearCacheArgs,
     CreateChartArgs,
+    DeltaTarget,
     DescribeDataArgs,
     FetchOptionsDataArgs,
     FetchStockDataArgs,
@@ -185,6 +186,174 @@ class TestValidationHappyPath:
     def test_list_results(self):
         m = ListResultsArgs.model_validate({"strategy_name": "long_calls"})
         assert m.strategy_name == "long_calls"
+
+
+# ---------------------------------------------------------------------------
+# DeltaTarget model
+# ---------------------------------------------------------------------------
+
+
+class TestDeltaTarget:
+    def test_valid_delta_target(self):
+        d = DeltaTarget.model_validate({"target": 0.30, "min": 0.20, "max": 0.40})
+        assert d.target == 0.30
+        assert d.min == 0.20
+        assert d.max == 0.40
+
+    def test_rejects_zero_target(self):
+        with pytest.raises(ValidationError):
+            DeltaTarget.model_validate({"target": 0.0, "min": 0.0, "max": 0.40})
+
+    def test_rejects_target_above_one(self):
+        with pytest.raises(ValidationError):
+            DeltaTarget.model_validate({"target": 1.5, "min": 0.20, "max": 1.5})
+
+    def test_accepts_boundary_value_one(self):
+        d = DeltaTarget.model_validate({"target": 1.0, "min": 0.95, "max": 1.0})
+        assert d.target == 1.0
+        assert d.max == 1.0
+
+    def test_rejects_missing_fields(self):
+        with pytest.raises(ValidationError):
+            DeltaTarget.model_validate({"target": 0.30})
+
+    def test_rejects_min_greater_than_target(self):
+        with pytest.raises(ValidationError, match="min.*must be <= target"):
+            DeltaTarget.model_validate({"target": 0.20, "min": 0.30, "max": 0.40})
+
+    def test_rejects_target_greater_than_max(self):
+        with pytest.raises(ValidationError, match="target.*must be <= max"):
+            DeltaTarget.model_validate({"target": 0.50, "min": 0.20, "max": 0.40})
+
+    def test_rejects_extra_fields(self):
+        with pytest.raises(ValidationError):
+            DeltaTarget.model_validate(
+                {"target": 0.30, "min": 0.20, "max": 0.40, "extra": 0.1}
+            )
+
+    def test_dumps_to_dict(self):
+        d = DeltaTarget.model_validate({"target": 0.30, "min": 0.20, "max": 0.40})
+        dumped = d.model_dump()
+        assert isinstance(dumped, dict)
+        assert dumped == {"target": 0.30, "min": 0.20, "max": 0.40}
+
+
+# ---------------------------------------------------------------------------
+# Delta targeting in strategy args
+# ---------------------------------------------------------------------------
+
+
+class TestDeltaTargetingArgs:
+    def test_run_strategy_with_delta_targets(self):
+        m = RunStrategyArgs.model_validate(
+            {
+                "strategy_name": "iron_condor",
+                "leg1_delta": {"target": 0.10, "min": 0.05, "max": 0.20},
+                "leg2_delta": {"target": 0.30, "min": 0.20, "max": 0.40},
+                "leg3_delta": {"target": 0.30, "min": 0.20, "max": 0.40},
+                "leg4_delta": {"target": 0.10, "min": 0.05, "max": 0.20},
+            }
+        )
+        assert m.leg1_delta.target == 0.10
+        assert m.leg4_delta.max == 0.20
+
+    def test_run_strategy_delta_defaults_to_none(self):
+        m = RunStrategyArgs.model_validate({"strategy_name": "long_calls"})
+        assert m.leg1_delta is None
+        assert m.leg2_delta is None
+        assert m.leg3_delta is None
+        assert m.leg4_delta is None
+
+    def test_delta_interval(self):
+        m = RunStrategyArgs.model_validate(
+            {"strategy_name": "long_calls", "delta_interval": 0.10}
+        )
+        assert m.delta_interval == 0.10
+
+    def test_simulate_with_delta_targets(self):
+        m = SimulateArgs.model_validate(
+            {
+                "strategy_name": "short_puts",
+                "leg1_delta": {"target": 0.16, "min": 0.10, "max": 0.22},
+            }
+        )
+        assert m.leg1_delta.target == 0.16
+
+    def test_model_dump_delta_is_dict(self):
+        m = RunStrategyArgs.model_validate(
+            {
+                "strategy_name": "long_calls",
+                "leg1_delta": {"target": 0.30, "min": 0.20, "max": 0.40},
+            }
+        )
+        d = m.model_dump(exclude_none=True)
+        assert isinstance(d["leg1_delta"], dict)
+        assert d["leg1_delta"]["target"] == 0.30
+
+
+# ---------------------------------------------------------------------------
+# Early exit and commission args
+# ---------------------------------------------------------------------------
+
+
+class TestEarlyExitAndCommissionArgs:
+    def test_stop_loss(self):
+        m = RunStrategyArgs.model_validate(
+            {"strategy_name": "long_calls", "stop_loss": -0.5}
+        )
+        assert m.stop_loss == -0.5
+
+    def test_take_profit(self):
+        m = RunStrategyArgs.model_validate(
+            {"strategy_name": "long_calls", "take_profit": 1.0}
+        )
+        assert m.take_profit == 1.0
+
+    def test_max_hold_days(self):
+        m = RunStrategyArgs.model_validate(
+            {"strategy_name": "long_calls", "max_hold_days": 30}
+        )
+        assert m.max_hold_days == 30
+
+    def test_commission(self):
+        m = RunStrategyArgs.model_validate(
+            {"strategy_name": "long_calls", "commission": 0.65}
+        )
+        assert m.commission == 0.65
+
+    def test_combined_exit_params(self):
+        m = RunStrategyArgs.model_validate(
+            {
+                "strategy_name": "short_puts",
+                "stop_loss": -1.0,
+                "take_profit": 0.5,
+                "max_hold_days": 45,
+                "commission": 0.65,
+            }
+        )
+        assert m.stop_loss == -1.0
+        assert m.take_profit == 0.5
+        assert m.max_hold_days == 45
+        assert m.commission == 0.65
+
+    def test_simulate_has_exit_params(self):
+        m = SimulateArgs.model_validate(
+            {
+                "strategy_name": "long_calls",
+                "stop_loss": -0.5,
+                "take_profit": 1.0,
+                "commission": 0.65,
+            }
+        )
+        assert m.stop_loss == -0.5
+        assert m.commission == 0.65
+
+    def test_defaults_are_none(self):
+        m = RunStrategyArgs.model_validate({"strategy_name": "long_calls"})
+        assert m.stop_loss is None
+        assert m.take_profit is None
+        assert m.max_hold_days is None
+        assert m.commission is None
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +560,34 @@ class TestSchemaGeneration:
         # Should have simulation-specific params
         assert "capital" in props
         assert "selector" in props
+
+    def test_pydantic_to_openai_params_delta_targeting(self):
+        """run_strategy schema exposes leg*_delta as nested objects."""
+        params = pydantic_to_openai_params(RunStrategyArgs)
+        props = params["properties"]
+        for key in ("leg1_delta", "leg2_delta", "leg3_delta", "leg4_delta"):
+            assert key in props, f"{key} not in schema"
+        # leg1_delta should have anyOf with an object type containing target/min/max
+        leg1 = props["leg1_delta"]
+        # Find the object variant in anyOf
+        obj_schema = None
+        for variant in leg1.get("anyOf", []):
+            if variant.get("type") == "object":
+                obj_schema = variant
+                break
+        assert obj_schema is not None, "leg1_delta has no object variant"
+        assert "target" in obj_schema["properties"]
+        assert "min" in obj_schema["properties"]
+        assert "max" in obj_schema["properties"]
+
+    def test_pydantic_to_openai_params_early_exit(self):
+        """run_strategy schema exposes stop_loss, take_profit, max_hold_days."""
+        params = pydantic_to_openai_params(RunStrategyArgs)
+        props = params["properties"]
+        assert "stop_loss" in props
+        assert "take_profit" in props
+        assert "max_hold_days" in props
+        assert "commission" in props
 
 
 # ---------------------------------------------------------------------------
