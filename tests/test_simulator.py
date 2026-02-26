@@ -343,12 +343,32 @@ _BF_PUT_DELTAS = dict(
     leg2_delta=TargetRange(target=0.50, min=0.40, max=0.60),
     leg3_delta=TargetRange(target=0.65, min=0.55, max=0.75),
 )
+# Collar deltas: deep ITM call (stock proxy) + short OTM call + long OTM put
+_COLLAR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.80, min=0.60, max=0.90),
+    leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+)
+# Condor deltas: need 4 distinct strikes in ascending order
+_CALL_CONDOR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.80, min=0.60, max=0.90),
+    leg2_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg4_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+)
+_PUT_CONDOR_DELTAS = dict(
+    leg1_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+    leg3_delta=TargetRange(target=0.65, min=0.55, max=0.75),
+    leg4_delta=TargetRange(target=0.80, min=0.60, max=0.90),
+)
 
 _STANDARD_SPECS = [
     _Spec(op.long_calls, "debit"),
     _Spec(op.long_puts, "debit"),
     _Spec(op.short_calls, "credit"),
     _Spec(op.short_puts, "credit"),
+    _Spec(op.cash_secured_put, "credit"),
     _Spec(op.long_straddles, "debit"),
     _Spec(op.short_straddles, "credit"),
     _Spec(op.long_strangles, "debit"),
@@ -359,6 +379,10 @@ _STANDARD_SPECS = [
     _Spec(op.short_call_spread, "credit", _CALL_SPREAD_DELTAS),
     _Spec(op.long_put_spread, "debit", _PUT_SPREAD_DELTAS),
     _Spec(op.short_put_spread, "credit", _PUT_SPREAD_DELTAS),
+    _Spec(op.call_back_spread, "debit", _CALL_SPREAD_DELTAS),
+    _Spec(op.put_back_spread, "debit", _PUT_SPREAD_DELTAS),
+    _Spec(op.call_front_spread, "credit", _CALL_SPREAD_DELTAS),
+    _Spec(op.put_front_spread, "credit", _PUT_SPREAD_DELTAS),
 ]
 
 _MULTI_STRIKE_SPECS = [
@@ -370,6 +394,11 @@ _MULTI_STRIKE_SPECS = [
     _Spec(op.iron_butterfly, "credit"),
     _Spec(op.reverse_iron_condor, "debit"),
     _Spec(op.reverse_iron_butterfly, "debit"),
+    _Spec(op.collar, "debit", _COLLAR_DELTAS),
+    _Spec(op.long_call_condor, "debit", _CALL_CONDOR_DELTAS),
+    _Spec(op.short_call_condor, "credit", _CALL_CONDOR_DELTAS),
+    _Spec(op.long_put_condor, "debit", _PUT_CONDOR_DELTAS),
+    _Spec(op.short_put_condor, "credit", _PUT_CONDOR_DELTAS),
 ]
 
 _CALL_CALENDAR_SPECS = [
