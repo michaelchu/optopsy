@@ -632,13 +632,18 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             )
 
         bt_table = _df_to_markdown(bt_display_df, max_rows=100)
+        _LLM_BT_CAP = 10  # max backtest lines included in llm_summary
+        bt_lines_llm = [
+            f"  {r['key']}: strategy={r['strategy']}, "
+            f"mean={r['mean_return']}, wr={r['win_rate']}"
+            for _, r in bt_display_df.iterrows()
+        ]
+        llm_bt_lines = bt_lines_llm[:_LLM_BT_CAP]
+        omitted = len(bt_lines_llm) - len(llm_bt_lines)
+        if omitted:
+            llm_bt_lines.append(f"  … and {omitted} more (see display)")
         sections_llm.append(
-            f"Strategy backtests ({len(backtest_results)}):\n"
-            + "\n".join(
-                f"  {r['key']}: strategy={r['strategy']}, "
-                f"mean={r['mean_return']}, wr={r['win_rate']}"
-                for _, r in bt_display_df.iterrows()
-            )
+            f"Strategy backtests ({len(backtest_results)}):\n" + "\n".join(llm_bt_lines)
         )
         sections_display.append(
             f"### Strategy Backtests ({len(backtest_results)})\n\n{bt_table}"
