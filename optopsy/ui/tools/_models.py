@@ -47,6 +47,7 @@ class SlippageModel(str, Enum):
     mid = "mid"
     spread = "spread"
     liquidity = "liquidity"
+    per_leg = "per_leg"
 
 
 class ChartType(str, Enum):
@@ -128,7 +129,13 @@ class StrategyParamsMixin(BaseModel):
         None,
         description=(
             "Slippage model: 'mid' (midpoint), 'spread' (full spread), "
-            "or 'liquidity' (volume-based). Default: 'mid'"
+            "'liquidity' (volume-based), or 'per_leg' (scales with leg count). Default: 'mid'"
+        ),
+    )
+    per_leg_slippage: float | None = Field(
+        None,
+        description=(
+            "Additive penalty per additional leg for per_leg slippage mode (default: 0.073)"
         ),
     )
 

@@ -21,6 +21,7 @@ class TestStrategyParamsDefaults:
         assert model.slippage == "mid"
         assert model.fill_ratio == 0.5
         assert model.reference_volume == 1000
+        assert model.per_leg_slippage == 0.073
         assert model.raw is False
         assert model.drop_nan is True
 
@@ -153,6 +154,34 @@ class TestStrategyParamsValidation:
     def test_fill_ratio_rejects_numeric_string(self):
         with pytest.raises(ValidationError):
             StrategyParams.model_validate({"fill_ratio": "0.5"})
+
+    def test_accepts_slippage_per_leg(self):
+        model = StrategyParams.model_validate({"slippage": "per_leg"})
+        assert model.slippage == "per_leg"
+
+    def test_per_leg_slippage_default(self):
+        model = StrategyParams.model_validate({})
+        assert model.per_leg_slippage == 0.073
+
+    def test_per_leg_slippage_accepts_zero(self):
+        model = StrategyParams.model_validate({"per_leg_slippage": 0})
+        assert model.per_leg_slippage == 0
+
+    def test_per_leg_slippage_accepts_one(self):
+        model = StrategyParams.model_validate({"per_leg_slippage": 1})
+        assert model.per_leg_slippage == 1
+
+    def test_per_leg_slippage_rejects_negative(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"per_leg_slippage": -0.1})
+
+    def test_per_leg_slippage_rejects_above_one(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"per_leg_slippage": 1.5})
+
+    def test_per_leg_slippage_rejects_string(self):
+        with pytest.raises(ValidationError):
+            StrategyParams.model_validate({"per_leg_slippage": "0.5"})
 
 
 class TestStrategyParamsCrossFieldValidation:

@@ -20,6 +20,8 @@ def _calculate_fill_price(
     fill_ratio: float = 0.5,
     volume: Optional[pd.Series] = None,
     reference_volume: int = 1000,
+    per_leg_slippage: float = 0.0,
+    num_legs: int = 1,
 ) -> pd.Series:
     """
     Calculate fill price based on slippage model.
@@ -28,10 +30,12 @@ def _calculate_fill_price(
         bid: Series of bid prices
         ask: Series of ask prices
         side_value: 1 for long (buying), -1 for short (selling)
-        slippage: Slippage mode - "mid", "spread", or "liquidity"
-        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        slippage: Slippage mode - "mid", "spread", "liquidity", or "per_leg"
+        fill_ratio: Base fill ratio (0.0-1.0)
         volume: Optional series of volume data for liquidity-based slippage
         reference_volume: Volume threshold for "liquid" option
+        per_leg_slippage: Additive penalty per additional leg (per_leg mode)
+        num_legs: Total number of legs in the strategy (per_leg mode)
 
     Returns:
         Series of fill prices adjusted for slippage
@@ -44,6 +48,8 @@ def _calculate_fill_price(
 
     if slippage == "spread":
         ratio = 1.0
+    elif slippage == "per_leg":
+        ratio = min(fill_ratio + per_leg_slippage * (num_legs - 1), 1.0)
     else:  # liquidity
         if volume is None:
             ratio = fill_ratio
@@ -69,6 +75,7 @@ def _apply_ratios(
     slippage: str = "mid",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
+    per_leg_slippage: float = 0.0,
 ) -> pd.DataFrame:
     """
     Apply position ratios (long/short multipliers) and quantities to entry and exit prices.
@@ -76,7 +83,8 @@ def _apply_ratios(
     When slippage is enabled, recalculates fill prices from bid/ask based on position side.
     """
     data = data.copy()
-    for idx in range(1, len(leg_def) + 1):
+    num_legs = len(leg_def)
+    for idx in range(1, num_legs + 1):
         entry_col = f"entry_leg{idx}"
         exit_col = f"exit_leg{idx}"
         bid_entry_col = f"bid_entry_leg{idx}"
@@ -99,7 +107,8 @@ def _apply_ratios(
             # using the midpoint.  Long entries fill closer to the ask (worse
             # price for buyer); short entries fill closer to the bid (worse
             # price for seller).  The degree depends on the slippage model:
-            # "spread" uses the full spread; "liquidity" scales by volume.
+            # "spread" uses the full spread; "liquidity" scales by volume;
+            # "per_leg" scales by the number of strategy legs.
             volume_entry = data.get(volume_col) if volume_col in data.columns else None
 
             # Entry: use side_value to determine buy/sell direction
@@ -111,6 +120,8 @@ def _apply_ratios(
                 fill_ratio,
                 volume_entry,
                 reference_volume,
+                per_leg_slippage,
+                num_legs,
             )
 
             # Exit: reverse the side (closing the position)
@@ -126,6 +137,8 @@ def _apply_ratios(
                 fill_ratio,
                 volume_exit,
                 reference_volume,
+                per_leg_slippage,
+                num_legs,
             )
 
             # Apply multiplier (includes quantity)
@@ -176,9 +189,12 @@ def _assign_profit(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[Dict[str, Any]] = None,
+    per_leg_slippage: float = 0.0,
 ) -> pd.DataFrame:
     """Calculate total profit/loss and percentage change for multi-leg strategies."""
-    data = _apply_ratios(data, leg_def, slippage, fill_ratio, reference_volume)
+    data = _apply_ratios(
+        data, leg_def, slippage, fill_ratio, reference_volume, per_leg_slippage
+    )
 
     # determine all entry and exit columns
     entry_cols = ["entry" + s for s in suffixes]

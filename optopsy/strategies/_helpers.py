@@ -392,6 +392,8 @@ def _covered_with_stock(
             params["fill_ratio"],
             volume_entry,
             params["reference_volume"],
+            params["per_leg_slippage"],
+            num_legs=1,
         )
         volume_exit = (
             result.get("volume_exit") if "volume_exit" in result.columns else None
@@ -404,6 +406,8 @@ def _covered_with_stock(
             params["fill_ratio"],
             volume_exit,
             params["reference_volume"],
+            params["per_leg_slippage"],
+            num_legs=1,
         )
 
     # --- compute combined P&L ---

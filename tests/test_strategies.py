@@ -1142,7 +1142,8 @@ def test_slippage_liquidity_requires_volume_column(data):
 def test_slippage_invalid_mode_raises(data):
     """Test that invalid slippage mode raises error."""
     with pytest.raises(
-        ValueError, match=r"slippage.*Input should be 'mid', 'spread' or 'liquidity'"
+        ValueError,
+        match=r"slippage.*Input should be 'mid', 'spread', 'liquidity' or 'per_leg'",
     ):
         long_calls(data, slippage="invalid")
 
@@ -1264,6 +1265,250 @@ def test_slippage_protective_put_with_stock(multi_strike_data, stock_data_multi_
     # Spread mode: long entry fills at ask=1.50
     # entry = stock(212.5) + ask(1.50) = 214.00
     assert round(row_spread["total_entry_cost"], 2) == 214.00
+
+
+def test_slippage_per_leg_single_leg(data):
+    """Per-leg mode on single-leg strategy uses base fill_ratio (num_legs=1)."""
+    results = long_calls(
+        data, raw=True, slippage="per_leg", fill_ratio=0.25, per_leg_slippage=0.073
+    )
+    # 1-leg: effective ratio = 0.25 + 0.073*(1-1) = 0.25
+    # 215.0 call: bid=6.00, ask=6.05, mid=6.025, half_spread=0.025
+    # entry = 6.025 + 0.025*0.25 = 6.03125
+    row = results[results["strike"] == 215.0].iloc[0]
+    assert round(row["entry"], 5) == 6.03125
+
+
+def test_slippage_per_leg_multi_leg_spread(multi_strike_data):
+    """Per-leg mode on 2-leg vertical spread applies 2-leg ratio to both legs."""
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_mid = long_call_spread(
+        multi_strike_data, raw=True, slippage="mid", **spread_deltas
+    )
+    results_per_leg = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+        **spread_deltas,
+    )
+
+    assert not results_mid.empty
+    assert not results_per_leg.empty
+
+    # Per-leg mode should have worse (higher) total entry cost than mid for debit spread
+    assert (
+        results_per_leg.iloc[0]["total_entry_cost"]
+        > results_mid.iloc[0]["total_entry_cost"]
+    )
+
+
+def test_slippage_per_leg_4_leg_iron_condor(multi_strike_data):
+    """Per-leg mode on 4-leg iron condor applies 4-leg ratio."""
+    ic_deltas = dict(
+        leg1_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+        leg2_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+        leg3_delta=TargetRange(target=0.35, min=0.25, max=0.45),
+        leg4_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_mid = iron_condor(multi_strike_data, raw=True, slippage="mid", **ic_deltas)
+    results_per_leg = iron_condor(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+        **ic_deltas,
+    )
+
+    assert not results_mid.empty
+    assert not results_per_leg.empty
+
+    # 4-leg: effective ratio = 0.25 + 0.073*3 = 0.469
+    # Per-leg should differ from mid
+    assert (
+        results_per_leg.iloc[0]["total_entry_cost"]
+        != results_mid.iloc[0]["total_entry_cost"]
+    )
+
+
+def test_slippage_per_leg_worse_with_more_legs(multi_strike_data):
+    """Per-leg slippage impact increases monotonically with more legs."""
+    per_leg_kwargs = dict(
+        raw=True, slippage="per_leg", fill_ratio=0.25, per_leg_slippage=0.1
+    )
+
+    # 2-leg spread: effective ratio = 0.25 + 0.1*1 = 0.35
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_2leg_mid = long_call_spread(
+        multi_strike_data, raw=True, slippage="mid", **spread_deltas
+    )
+    results_2leg_per = long_call_spread(
+        multi_strike_data, **per_leg_kwargs, **spread_deltas
+    )
+    assert not results_2leg_mid.empty
+    assert not results_2leg_per.empty
+
+    cost_diff_2leg = abs(
+        results_2leg_per.iloc[0]["total_entry_cost"]
+        - results_2leg_mid.iloc[0]["total_entry_cost"]
+    )
+    assert cost_diff_2leg > 0
+
+    # 4-leg iron condor: effective ratio = 0.25 + 0.1*3 = 0.55
+    ic_deltas = dict(
+        leg1_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+        leg2_delta=TargetRange(target=0.40, min=0.30, max=0.50),
+        leg3_delta=TargetRange(target=0.40, min=0.30, max=0.50),
+        leg4_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_4leg_mid = iron_condor(
+        multi_strike_data, raw=True, slippage="mid", **ic_deltas
+    )
+    results_4leg_per = iron_condor(multi_strike_data, **per_leg_kwargs, **ic_deltas)
+    assert not results_4leg_mid.empty
+    assert not results_4leg_per.empty
+
+    cost_diff_4leg = abs(
+        results_4leg_per.iloc[0]["total_entry_cost"]
+        - results_4leg_mid.iloc[0]["total_entry_cost"]
+    )
+    assert cost_diff_4leg > 0
+
+    # 4-leg slippage impact should exceed 2-leg
+    assert cost_diff_4leg > cost_diff_2leg
+
+
+def test_slippage_per_leg_calendar(calendar_data):
+    """Per-leg mode on calendar spreads (2 legs)."""
+    cal_kwargs = dict(
+        raw=True,
+        front_dte_min=20,
+        front_dte_max=40,
+        back_dte_min=50,
+        back_dte_max=70,
+        exit_dte=7,
+    )
+    results_mid = long_call_calendar(calendar_data, slippage="mid", **cal_kwargs)
+    results_per_leg = long_call_calendar(
+        calendar_data,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+        **cal_kwargs,
+    )
+
+    assert not results_mid.empty
+    assert not results_per_leg.empty
+
+    # Per-leg should differ from mid for calendar spreads
+    assert (
+        results_per_leg.iloc[0]["total_entry_cost"]
+        != results_mid.iloc[0]["total_entry_cost"]
+    )
+
+
+def test_slippage_per_leg_covered_with_stock(
+    multi_strike_data, stock_data_multi_strike
+):
+    """Per-leg mode on stock-backed covered call uses num_legs=1 for option leg."""
+    results_mid = covered_call(
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True, slippage="mid"
+    )
+    results_per_leg = covered_call(
+        multi_strike_data,
+        stock_data=stock_data_multi_strike,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+    )
+
+    assert not results_mid.empty
+    assert not results_per_leg.empty
+
+    # num_legs=1 for stock-backed: ratio = 0.25 + 0.073*(1-1) = 0.25
+    # Short call at 215.0: bid=1.50, ask=1.60, mid=1.55, half_spread=0.05
+    # Short entry: mid - half_spread*0.25 = 1.55 - 0.0125 = 1.5375
+    # entry = stock(212.5) - 1.5375 = 210.9625
+    row_mid = results_mid.iloc[0]
+    row_per = results_per_leg.iloc[0]
+
+    assert round(row_mid["total_entry_cost"], 2) == 210.95  # mid baseline
+    assert round(row_per["total_entry_cost"], 4) == 210.9625
+
+
+def test_slippage_per_leg_ratio_clamped(multi_strike_data):
+    """Per-leg ratio is clamped to 1.0 for multi-leg strategies (equivalent to spread mode)."""
+    # For a 2-leg spread, effective ratio is:
+    #   ratio = fill_ratio + per_leg_slippage * (num_legs - 1)
+    #         = 0.9 + 0.5 * (2 - 1) = 1.4 > 1.0
+    # This should be clamped to 1.0, making per-leg fills match spread-mode fills.
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    results_clamped = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.9,
+        per_leg_slippage=0.5,
+        **spread_deltas,
+    )
+    results_spread = long_call_spread(
+        multi_strike_data, raw=True, slippage="spread", **spread_deltas
+    )
+
+    assert not results_clamped.empty
+    assert not results_spread.empty
+
+    # With clamping to 1.0, per-leg and spread total entry costs should match
+    assert round(results_clamped.iloc[0]["total_entry_cost"], 6) == round(
+        results_spread.iloc[0]["total_entry_cost"], 6
+    )
+
+
+def test_slippage_per_leg_custom_penalty(multi_strike_data):
+    """Different per_leg_slippage values produce different fills on multi-leg strategies."""
+    spread_deltas = dict(
+        leg1_delta=TargetRange(target=0.50, min=0.40, max=0.60),
+        leg2_delta=TargetRange(target=0.20, min=0.10, max=0.30),
+    )
+    # 2-leg: effective ratio = 0.25 + 0.073*1 = 0.323
+    results_small = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.073,
+        **spread_deltas,
+    )
+    # 2-leg: effective ratio = 0.25 + 0.2*1 = 0.45
+    results_large = long_call_spread(
+        multi_strike_data,
+        raw=True,
+        slippage="per_leg",
+        fill_ratio=0.25,
+        per_leg_slippage=0.2,
+        **spread_deltas,
+    )
+
+    assert not results_small.empty
+    assert not results_large.empty
+
+    # Larger penalty should produce a different (worse) total entry cost
+    assert (
+        results_small.iloc[0]["total_entry_cost"]
+        != results_large.iloc[0]["total_entry_cost"]
+    )
 
 
 # =============================================================================

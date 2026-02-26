@@ -541,7 +541,12 @@ def _make_result_key(strategy_name: str, arguments: dict) -> str:
     dte = arguments.get("max_entry_dte", 90)
     exit_dte = arguments.get("exit_dte", 0)
     slippage = arguments.get("slippage", "mid")
-    return f"{strategy_name}:dte={dte},exit={exit_dte},slip={slippage}"
+    base = f"{strategy_name}:dte={dte},exit={exit_dte},slip={slippage}"
+    if slippage == "per_leg":
+        per_leg = arguments.get("per_leg_slippage")
+        effective_pls = 0.073 if per_leg is None else float(per_leg)
+        base += f",pls={effective_pls:.3f}"
+    return base
 
 
 def _make_result_summary(

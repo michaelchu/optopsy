@@ -64,6 +64,7 @@ def _merge_legs(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[dict] = None,
+    per_leg_slippage: float = 0.0,
 ) -> pd.DataFrame:
     """Merge pre-renamed leg DataFrames, apply rules, and calculate P&L."""
     suffixes = [f"_leg{idx}" for idx in range(1, len(leg_def) + 1)]
@@ -76,7 +77,14 @@ def _merge_legs(
         result = rules(result, leg_def)
 
     return _assign_profit(
-        result, leg_def, suffixes, slippage, fill_ratio, reference_volume, commission
+        result,
+        leg_def,
+        suffixes,
+        slippage,
+        fill_ratio,
+        reference_volume,
+        commission,
+        per_leg_slippage,
     )
 
 
@@ -89,6 +97,7 @@ def _strategy_engine(
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[dict] = None,
+    per_leg_slippage: float = 0.0,
 ) -> pd.DataFrame:
     """
     Core strategy execution engine that constructs single or multi-leg option strategies.
@@ -98,9 +107,10 @@ def _strategy_engine(
         leg_def: List of tuples defining strategy legs (side, filter_function)
         join_on: Columns to join on for multi-leg strategies
         rules: Optional filtering rules to apply after joining legs
-        slippage: Slippage mode - "mid", "spread", or "liquidity"
-        fill_ratio: Base fill ratio for liquidity mode (0.0-1.0)
+        slippage: Slippage mode - "mid", "spread", "liquidity", or "per_leg"
+        fill_ratio: Base fill ratio (0.0-1.0)
         reference_volume: Volume threshold for liquid options
+        per_leg_slippage: Additive penalty per additional leg (per_leg mode)
 
     Returns:
         DataFrame with constructed strategy and calculated profit/loss
@@ -124,6 +134,8 @@ def _strategy_engine(
                 fill_ratio,
                 volume_entry,
                 reference_volume,
+                per_leg_slippage,
+                num_legs=1,
             )
             # Exit: reverse the side (closing the position)
             volume_exit = (
@@ -137,6 +149,8 @@ def _strategy_engine(
                 fill_ratio,
                 volume_exit,
                 reference_volume,
+                per_leg_slippage,
+                num_legs=1,
             )
 
         net_pnl = side.value * (data["exit"] - data["entry"])
@@ -168,6 +182,7 @@ def _strategy_engine(
         fill_ratio,
         reference_volume,
         commission,
+        per_leg_slippage,
     )
 
 
@@ -252,6 +267,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             fill_ratio=params["fill_ratio"],
             reference_volume=params["reference_volume"],
             commission=commission,
+            per_leg_slippage=params["per_leg_slippage"],
         )
     else:
         if not join_on:
@@ -271,6 +287,7 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
             params["fill_ratio"],
             params["reference_volume"],
             commission,
+            params["per_leg_slippage"],
         )
 
     # Apply early exits (stop-loss / take-profit / max-hold-days) if configured
@@ -407,6 +424,7 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
         params["fill_ratio"],
         params["reference_volume"],
         cal_commission,
+        params["per_leg_slippage"],
     )
 
     # Apply early exits (stop-loss / take-profit / max-hold-days) if configured
