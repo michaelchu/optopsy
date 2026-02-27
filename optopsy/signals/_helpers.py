@@ -9,7 +9,8 @@ from typing import Callable
 import pandas as pd
 
 # Signal function type: takes a DataFrame with (underlying_symbol, quote_date,
-# close or underlying_price) and returns a boolean Series indicating valid entry/exit dates.
+# close or underlying_price) columns and returns a boolean Series indicating
+# valid entry/exit dates.
 SignalFunc = Callable[[pd.DataFrame], "pd.Series[bool]"]
 
 

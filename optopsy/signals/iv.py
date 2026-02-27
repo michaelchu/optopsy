@@ -14,8 +14,10 @@ from ._helpers import SignalFunc
 def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
     """Compute the ATM implied volatility per (symbol, quote_date).
 
-    For each quote_date, finds the option(s) with strike closest to the
-    underlying price and averages their implied volatility.
+    For each quote_date, finds the option(s) with strike closest to
+    the stock price (``close`` preferred, falls back to ``underlying_price``)
+    and averages their implied volatility.  Returns an empty DataFrame
+    when neither price column is present.
     """
     # Resolve the price column: prefer close, fall back to underlying_price
     if "close" in options_data.columns:
