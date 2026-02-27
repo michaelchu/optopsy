@@ -38,7 +38,6 @@ Optopsy requires historical options chain data with the following columns:
 | Column | Description | Example |
 |--------|-------------|---------|
 | `underlying_symbol` | Ticker symbol | SPX, SPY, QQQ |
-| `underlying_price` | Stock/index price | 4500.00 |
 | `option_type` | Call or Put | 'c', 'p', 'call', 'put' |
 | `expiration` | Option expiration date | 2023-01-20 |
 | `quote_date` | Date of the quote | 2023-01-01 |
@@ -54,6 +53,8 @@ Optopsy requires historical options chain data with the following columns:
 
 | Column | Description |
 |--------|-------------|
+| `underlying_price` | Stock/index price (used by some signals) |
+| `close` | Stock/index close price |
 | `gamma` | Option gamma |
 | `theta` | Option theta |
 | `vega` | Option vega |
@@ -73,14 +74,13 @@ import optopsy as op
 data = op.csv_data(
     'options_data.csv',
     underlying_symbol=0,      # Column index (0-based)
-    underlying_price=1,
-    option_type=2,
-    expiration=3,
-    quote_date=4,
-    strike=5,
-    bid=6,
-    ask=7,
-    delta=8
+    option_type=1,
+    expiration=2,
+    quote_date=3,
+    strike=4,
+    bid=5,
+    ask=6,
+    delta=7
 )
 ```
 
@@ -100,7 +100,6 @@ df = pd.read_csv('options_data.csv')
 # Rename columns to match Optopsy's expected format
 df = df.rename(columns={
     'Symbol': 'underlying_symbol',
-    'UnderlyingPrice': 'underlying_price',
     'Type': 'option_type',
     'Expiration': 'expiration',
     'QuoteDate': 'quote_date',

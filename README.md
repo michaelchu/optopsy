@@ -160,7 +160,6 @@ import optopsy as op
 data = op.csv_data(
     "options_data.csv",
     underlying_symbol=0,
-    close=1,
     option_type=2,
     expiration=3,
     quote_date=4,

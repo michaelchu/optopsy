@@ -302,7 +302,7 @@ results = op.long_puts(data, entry_dates=entry_dates)
 
 ## Using Stock OHLCV Data
 
-By default, signals compute indicators from the option chain's `underlying_price` column. For more accurate TA signals (especially those needing high/low/volume data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
+By default, signals compute indicators from the option chain's `close` column. For more accurate TA signals (especially those needing high/low/volume data), use `apply_signal` on a separate stock OHLCV DataFrame and pass the result as `entry_dates`:
 
 ```python
 import pandas as pd
@@ -322,7 +322,7 @@ results = op.long_straddles(data, entry_dates=entry_dates)
 ```
 
 !!! tip
-    Signals that use high/low data (Stochastic, Williams %R, CCI, ATR, Keltner, Donchian, ADX, Aroon, Supertrend, PSAR, Choppiness, MFI, OBV, CMF, A/D) will fall back to using `underlying_price` as a proxy if `high` and `low` columns are not present. For best accuracy, provide real OHLCV data.
+    Signals that use high/low data (Stochastic, Williams %R, CCI, ATR, Keltner, Donchian, ADX, Aroon, Supertrend, PSAR, Choppiness, MFI, OBV, CMF, A/D) will fall back to using `close` as a proxy if `high` and `low` columns are not present. For best accuracy, provide real OHLCV data.
 
 ## IV Rank - volatility regime filter
 
@@ -397,9 +397,9 @@ Any function matching the signature `(pd.DataFrame) -> pd.Series[bool]` can be u
 import optopsy as op
 from optopsy import apply_signal, signal, rsi_below
 
-# Custom: only enter when underlying price is above 4000
+# Custom: only enter when close price is above 4000
 def price_above_4000(data):
-    return data["underlying_price"] > 4000
+    return data["close"] > 4000
 
 entry_dates = apply_signal(data, price_above_4000)
 results = op.iron_condor(data, entry_dates=entry_dates)

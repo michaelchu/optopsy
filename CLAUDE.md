@@ -50,7 +50,7 @@ Optopsy is a backtesting library for options strategies. It processes historical
 
 ### Data Flow
 
-1. **Input**: CSV with option chain data (underlying_symbol, underlying_price, option_type, expiration, quote_date, strike, bid, ask)
+1. **Input**: CSV with option chain data (underlying_symbol, option_type, expiration, quote_date, strike, bid, ask, delta; optional: underlying_price, close)
 2. **Load**: `datafeeds.csv_data()` normalizes and imports the data
 3. **Process**: Strategy functions in `strategies.py` call `core._process_strategy()` which:
    - Filters options by DTE, OTM %, bid-ask spread

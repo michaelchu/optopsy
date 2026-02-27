@@ -486,27 +486,25 @@ print(metrics)
 data = op.csv_data(
     'cboe_spx.csv',
     underlying_symbol=0,
-    underlying_price=1,
-    option_type=2,
-    expiration=3,
-    quote_date=4,
-    strike=5,
-    bid=6,
-    ask=7,
-    delta=8
+    option_type=1,
+    expiration=2,
+    quote_date=3,
+    strike=4,
+    bid=5,
+    ask=6,
+    delta=7
 )
 
 # Format 2: Non-standard column ordering
 data = op.csv_data(
     'provider_data.csv',
     underlying_symbol=0,
-    underlying_price=3,
-    option_type=5,
-    expiration=6,
-    quote_date=7,
-    strike=8,
-    bid=9,
-    ask=10,
+    option_type=3,
+    expiration=4,
+    quote_date=5,
+    strike=6,
+    bid=7,
+    ask=8,
     delta=11
 )
 ```
