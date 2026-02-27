@@ -68,6 +68,9 @@ optopsy-chat cache clear         # clear all cached data
 optopsy-chat cache clear SPY     # clear a specific symbol
 ```
 
+!!! tip "Standalone Data CLI"
+    The download and cache commands are also available via the standalone `optopsy-data` CLI (no Chainlit dependency required). Install with `pip install optopsy[data]`. See [Data Management](data.md) for details.
+
 ## Conversation Starters
 
 New chats display clickable quick-start prompts so you can jump straight into common workflows:

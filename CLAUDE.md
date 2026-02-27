@@ -88,6 +88,49 @@ class Side(Enum):
 
 Leg definitions use tuples: `(Side.long, _calls, quantity)` where quantity defaults to 1.
 
+## Data Package (`optopsy/data/`)
+
+Standalone data management package — no Chainlit dependency. Provides CLI, providers, and caching.
+
+### CLI (`optopsy-data`)
+
+```bash
+# Install with data extras
+uv sync --extra data
+
+# Download historical options data (requires EODHD_API_KEY)
+uv run optopsy-data download SPY       # download single symbol
+uv run optopsy-data download SPY AAPL  # download multiple symbols
+uv run optopsy-data download SPY -s    # download stock prices
+uv run optopsy-data download SPY -v    # verbose/debug logging
+
+# List available symbols
+uv run optopsy-data symbols
+uv run optopsy-data symbols -q SPY
+
+# Cache management
+uv run optopsy-data cache size          # show disk usage
+uv run optopsy-data cache clear         # clear all cached data
+uv run optopsy-data cache clear SPY     # clear specific symbol
+```
+
+### Module Structure
+
+- **`cli.py`** — CLI entry point (`optopsy-data`). Argparse with `download`, `symbols`, and `cache` subcommands.
+- **`paths.py`** — Base data directory resolution (`~/.optopsy` or `OPTOPSY_DATA_DIR`).
+- **`_compat.py`** — Compatibility utilities.
+- **`_dataframe_utils.py`** — DataFrame helper functions.
+- **`_yf_helpers.py`** — Yahoo Finance data helpers.
+
+### Data Providers (`optopsy/data/providers/`)
+
+Pluggable provider system for fetching market data.
+
+- **`base.py`** — Abstract `DataProvider` interface. Requires `name`, `env_key`, `get_tool_schemas()`, `execute(tool_name, arguments)`.
+- **`eodhd.py`** — `EODHDProvider`. Fetches options chains and stock prices from EODHD API. Smart caching with gap detection.
+- **`cache.py`** — `ParquetCache`. File-based cache at `~/.optopsy/cache/{category}/{SYMBOL}.parquet`.
+- **`result_store.py`** — Strategy result storage.
+
 ## AI Chat UI (`optopsy/ui/`)
 
 An AI-powered chat interface for interactive options backtesting, built on Chainlit + LiteLLM.
@@ -103,16 +146,6 @@ uv run optopsy-chat
 
 # With options
 uv run optopsy-chat run --port 9000 --headless --debug
-
-# Download historical options data (requires EODHD_API_KEY)
-uv run optopsy-chat download SPY       # download single symbol
-uv run optopsy-chat download SPY AAPL  # download multiple symbols
-uv run optopsy-chat download SPY -v    # verbose/debug logging
-
-# Cache management
-uv run optopsy-chat cache size          # show disk usage
-uv run optopsy-chat cache clear         # clear all cached data
-uv run optopsy-chat cache clear SPY     # clear specific symbol
 ```
 
 ### Configuration
@@ -128,22 +161,14 @@ Environment variables (set in `.env` or shell):
 
 ### Module Structure
 
-- **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run`, `download`, and `cache` subcommands. Lazy imports so non-`run` commands skip Chainlit startup.
+- **`cli.py`** — CLI entry point (`optopsy-chat`). Argparse with `run` subcommand. Lazy imports so non-`run` commands skip Chainlit startup.
 - **`app.py`** — Chainlit web app. Handlers for `on_chat_start`, `on_chat_resume`, `on_message`. Delegates to `OptopsyAgent`.
 - **`agent.py`** — `OptopsyAgent` class. Tool-calling loop over LiteLLM with streaming, message compaction (`_COMPACT_THRESHOLD = 300`), and max `_MAX_TOOL_ITERATIONS = 15`.
 - **`tools.py`** — Tool registry. Core tools: `load_csv_data`, `list_data_files`, `preview_data`, `run_strategy` (all 38 strategies). Provider tools registered dynamically.
 
-### Data Providers (`optopsy/ui/providers/`)
-
-Pluggable provider system for fetching market data.
-
-- **`base.py`** — Abstract `DataProvider` interface. Requires `name`, `env_key`, `get_tool_schemas()`, `execute(tool_name, arguments)`.
-- **`eodhd.py`** — `EODHDProvider`. Fetches options chains and stock prices from EODHD API. Smart caching with gap detection (re-fetches only missing date ranges, interior gap threshold: 5 calendar days).
-- **`cache.py`** — `ParquetCache`. File-based cache at `~/.optopsy/cache/{category}/{SYMBOL}.parquet`. Methods: `read()`, `write()`, `merge_and_save()`, `clear()`, `size()`, `total_size_bytes()`. No TTL — historical data is immutable.
-
 ### Adding a New Data Provider
 
-1. Subclass `DataProvider` in `providers/`
+1. Subclass `DataProvider` in `optopsy/data/providers/`
 2. Implement `name`, `env_key`, `get_tool_schemas()`, `get_tool_names()`, `execute()`
 3. Register in `providers/__init__.py`
 4. Provider is auto-detected if its `env_key` is set

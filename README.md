@@ -37,7 +37,10 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 # Core library only (latest stable release)
 pip install optopsy
 
-# With AI Chat UI (beta — requires pre-release)
+# With Data CLI (download & cache market data, no Chainlit needed)
+pip install optopsy[data]
+
+# With AI Chat UI (beta — requires pre-release, includes data package)
 pip install --pre optopsy[ui]
 ```
 
@@ -117,9 +120,36 @@ optopsy-chat run --debug             # enable debug logging
 
 ### Data Providers
 
-EODHD is the built-in data provider for downloading historical options and stock data. The provider system is pluggable — you can build custom providers by subclassing `DataProvider` in `optopsy/ui/providers/` to integrate your own data sources.
+EODHD is the built-in data provider for downloading historical options and stock data. The provider system is pluggable — you can build custom providers by subclassing `DataProvider` in `optopsy/data/providers/` to integrate your own data sources.
+
+> **Note:** The download and cache commands are also available via the standalone `optopsy-data` CLI (`pip install optopsy[data]`) without the Chainlit dependency. See [Data Management](https://michaelchu.github.io/optopsy/data/) for details.
 
 See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for more details.
+
+## Data Management
+
+Optopsy includes a standalone data CLI for downloading and caching historical market data — no chat UI or Chainlit required.
+
+```bash
+pip install optopsy[data]
+
+# Download historical options data (requires EODHD_API_KEY)
+optopsy-data download SPY
+optopsy-data download SPY AAPL TSLA
+
+# Download stock price history
+optopsy-data download SPY --stocks
+
+# List available symbols
+optopsy-data symbols
+optopsy-data symbols -q SPY
+
+# Cache management
+optopsy-data cache size
+optopsy-data cache clear
+```
+
+Data is cached locally as Parquet files at `~/.optopsy/cache/`. Re-running download only fetches new data since your last download. See the [Data Management documentation](https://michaelchu.github.io/optopsy/data/) for full details.
 
 ## Core Library Quick Start
 
@@ -130,7 +160,7 @@ import optopsy as op
 data = op.csv_data(
     "options_data.csv",
     underlying_symbol=0,
-    underlying_price=1,
+    close=1,
     option_type=2,
     expiration=3,
     quote_date=4,
@@ -200,6 +230,7 @@ The simulator works with all 38 strategies. It selects one trade per entry date,
 - [Strategies](https://michaelchu.github.io/optopsy/strategies/) - All 38 strategies explained
 - [Parameters](https://michaelchu.github.io/optopsy/parameters/) - Configuration options reference
 - [Entry Signals](https://michaelchu.github.io/optopsy/entry-signals/) - Technical analysis signal filters
+- [Data Management](https://michaelchu.github.io/optopsy/data/) - Standalone data CLI and caching
 - [Chat UI](https://michaelchu.github.io/optopsy/chat-ui/) - AI-powered chat interface
 - [Examples](https://michaelchu.github.io/optopsy/examples/) - Common use cases and recipes
 - [API Reference](https://michaelchu.github.io/optopsy/api-reference/) - Complete function documentation

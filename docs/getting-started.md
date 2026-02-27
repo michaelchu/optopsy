@@ -7,10 +7,13 @@ This guide will walk you through setting up Optopsy and running your first backt
 Install Optopsy using pip:
 
 ```bash
-# Core library
+# Core library (strategies, signals, simulation, metrics)
 pip install optopsy
 
-# With AI Chat UI (optional)
+# With Data CLI (download & cache market data, no Chainlit needed)
+pip install optopsy[data]
+
+# With AI Chat UI (includes data package)
 pip install optopsy[ui]
 ```
 
@@ -19,6 +22,14 @@ pip install optopsy[ui]
 - Python 3.12-3.13
 - Pandas 2.0 or higher
 - NumPy 1.26 or higher
+
+### Package Architecture
+
+Optopsy is organized into three tiers:
+
+- **Core** (`optopsy`) — Strategies, entry signals, trade simulation, and risk metrics. No external data dependencies.
+- **Data** (`optopsy[data]`) — Standalone `optopsy-data` CLI for downloading historical options/stock data, provider system, and smart Parquet caching. See [Data Management](data.md).
+- **UI** (`optopsy[ui]`) — AI-powered chat interface for natural language backtesting. Includes the data package. See [AI Chat UI](chat-ui.md).
 
 ## Data Format
 

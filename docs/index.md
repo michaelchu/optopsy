@@ -21,6 +21,7 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 - **Flexible Grouping** - Analyze results by DTE and delta intervals
 - **Any Data Source** - Works with any options data in CSV or DataFrame format
 - **Pandas Native** - Returns DataFrames that integrate with your existing workflow
+- **Data CLI** - Standalone `optopsy-data` CLI for [downloading and caching](data.md) historical options/stock data (no Chainlit needed)
 - **Plugin System** - Extend with custom strategies, signals, data providers, and auth via entry points
 - **AI Chat UI** - Interactive [AI-powered chat interface](chat-ui.md) with conversation starters, settings panel, and result caching
 
@@ -47,10 +48,13 @@ print(results)
 ## Installation
 
 ```bash
-# Core library
+# Core library (strategies, signals, simulation, metrics)
 pip install optopsy
 
-# With AI Chat UI
+# With Data CLI (download & cache market data)
+pip install optopsy[data]
+
+# With AI Chat UI (includes data package)
 pip install optopsy[ui]
 ```
 
@@ -63,6 +67,7 @@ pip install optopsy[ui]
 - Review [Parameters](parameters.md) for configuration options
 - Learn about [Entry Signals](entry-signals.md) for TA-based entry filtering
 - Try the [AI Chat UI](chat-ui.md) for natural language backtesting
+- Download and cache market data with the [Data CLI](data.md)
 - Extend with [Plugins](plugins.md) for custom strategies, signals, and providers
 - See [Examples](examples.md) for common use cases
 - View the [API Reference](api-reference.md) for complete function documentation

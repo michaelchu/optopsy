@@ -73,7 +73,7 @@ The shape matches the internal `SIGNAL_REGISTRY` used by the Chat UI.
 Each entry point must resolve to a `DataProvider` subclass (the class itself, not an instance):
 
 ```python
-from optopsy.ui.providers.base import DataProvider
+from optopsy.data.providers.base import DataProvider
 
 class MyProvider(DataProvider):
     name = "my_provider"
