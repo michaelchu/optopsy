@@ -768,7 +768,8 @@ async def on_message(message: cl.Message):
     _upload_contexts: list[str] = []
     for el in csv_elements:
         try:
-            assert el.path is not None
+            if not el.path:
+                continue
             raw = pd.read_csv(el.path, nrows=5)
             label = el.name
             agent.uploaded_files[label] = el.path

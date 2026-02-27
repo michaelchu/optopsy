@@ -1,10 +1,12 @@
 """Data inspection tool handlers: load_csv_data, preview_data, describe_data, suggest_strategy_params."""
 
 import json as _json
+import os
 
 import pandas as pd
 
 import optopsy as op
+from optopsy.datafeeds import default_kwargs
 from optopsy.strategies._helpers import (
     _DEFAULT_ATM_DELTA,
     _DEFAULT_DEEP_ITM_DELTA,
@@ -17,6 +19,10 @@ from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
 
+# Column kwargs accepted by csv_data(), derived from default_kwargs to stay DRY.
+_CSV_COL_KEYS = tuple(k for k in default_kwargs if k not in ("start_date", "end_date"))
+_CSV_KWARG_KEYS = tuple(default_kwargs.keys())
+
 
 @_register("load_csv_data")
 def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _result):
@@ -24,27 +30,19 @@ def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _resul
     if not file_path:
         return _result("file_path is required.")
 
+    # Validate file_path against uploaded files to prevent path traversal.
+    allowed_paths = arguments.get("_uploaded_file_paths")
+    if allowed_paths is not None:
+        real_path = os.path.realpath(file_path)
+        allowed_real = {os.path.realpath(p) for p in allowed_paths}
+        if real_path not in allowed_real:
+            return _result(
+                f"Access denied: '{file_path}' is not a recognized uploaded file."
+            )
+
     # Build kwargs for csv_data() from the validated arguments.
     csv_kwargs = {}
-    for key in (
-        "start_date",
-        "end_date",
-        "underlying_symbol",
-        "underlying_price",
-        "option_type",
-        "expiration",
-        "quote_date",
-        "strike",
-        "bid",
-        "ask",
-        "delta",
-        "gamma",
-        "theta",
-        "vega",
-        "implied_volatility",
-        "volume",
-        "open_interest",
-    ):
+    for key in _CSV_KWARG_KEYS:
         val = arguments.get(key)
         if val is not None:
             csv_kwargs[key] = val
@@ -53,8 +51,6 @@ def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _resul
         df = op.csv_data(file_path, **csv_kwargs)
     except Exception as e:
         return _result(f"Failed to load CSV: {e}")
-
-    import os
 
     label = os.path.basename(file_path)
     updated_datasets = {**datasets, label: df}

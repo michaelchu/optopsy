@@ -701,6 +701,7 @@ class OptopsyAgent:
                         self.datasets,
                         self.results,
                         dataset_fingerprint=self._dataset_fingerprint,
+                        uploaded_files=self.uploaded_files,
                     ),
                 )
                 # Update dataset and recompute fingerprint.  Always

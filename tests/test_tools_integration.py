@@ -177,14 +177,37 @@ class TestLoadCsvData:
         )
         assert "Failed to load CSV" in r.llm_summary
 
-    def test_load_csv_missing_file(self):
+    def test_load_csv_missing_file(self, tmp_path):
         """Non-existent file returns an error."""
         r = execute_tool(
             "load_csv_data",
-            {"file_path": "/tmp/nonexistent_optopsy_test.csv"},
+            {"file_path": str(tmp_path / "nonexistent.csv")},
             None,
         )
         assert "Failed to load CSV" in r.llm_summary
+
+    def test_load_csv_rejects_non_uploaded_path(self):
+        """file_path not in uploaded_files is rejected when whitelist is present."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        r = execute_tool(
+            "load_csv_data",
+            {"file_path": csv_path},
+            None,
+            uploaded_files={"other.csv": "/tmp/other.csv"},
+        )
+        assert "Access denied" in r.llm_summary
+
+    def test_load_csv_allows_uploaded_path(self):
+        """file_path in uploaded_files is accepted."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        r = execute_tool(
+            "load_csv_data",
+            {"file_path": csv_path},
+            None,
+            uploaded_files={"data.csv": csv_path},
+        )
+        assert r.dataset is not None
+        assert "Access denied" not in r.llm_summary
 
     def test_load_then_preview(self):
         """Full flow: load_csv_data → preview_data on the loaded dataset."""
