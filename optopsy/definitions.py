@@ -23,8 +23,6 @@ evaluated_cols: List[str] = [
     "quote_date_exit",
     "dte_entry",
     "strike",
-    "underlying_price_entry",
-    "underlying_price_exit",
     "bid_entry",
     "ask_entry",
     "bid_exit",
@@ -36,7 +34,6 @@ evaluated_cols: List[str] = [
 # columns of dataframe after generating strategy
 single_strike_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry",
     "quote_date_entry",
     "option_type",
     "expiration",
@@ -51,7 +48,6 @@ single_strike_internal_cols: List[str] = [
 
 straddle_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry",
     "expiration",
     "dte_entry",
     "option_type_leg1",
@@ -67,7 +63,6 @@ straddle_internal_cols: List[str] = [
 
 double_strike_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
     "option_type_leg1",
@@ -83,7 +78,6 @@ double_strike_internal_cols: List[str] = [
 
 triple_strike_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
     "dte_range",
@@ -103,7 +97,6 @@ triple_strike_internal_cols: List[str] = [
 
 quadruple_strike_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry_leg1",
     "expiration",
     "dte_entry",
     "dte_range",
@@ -148,7 +141,6 @@ quadruple_strike_external_cols: List[str] = [
 # Calendar spread columns (same strike, different expirations)
 calendar_spread_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry",
     "option_type",
     "strike",
     "expiration_leg1",
@@ -173,7 +165,6 @@ calendar_spread_external_cols: List[str] = [
 # Diagonal spread columns (different strikes, different expirations)
 diagonal_spread_internal_cols: List[str] = [
     "underlying_symbol",
-    "underlying_price_entry",
     "option_type",
     "strike_leg1",
     "strike_leg2",

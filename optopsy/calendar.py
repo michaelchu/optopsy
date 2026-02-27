@@ -67,17 +67,17 @@ def _prepare_calendar_leg(
     strike_col = _get_strike_column(same_strike, leg_num)
     price_col = "underlying_price_entry" if leg_num == 1 else "underlying_price_back"
 
-    return options.rename(
-        columns={
-            "expiration": f"expiration_leg{leg_num}",
-            "dte": f"dte_entry_leg{leg_num}",
-            "strike": strike_col,
-            "bid": f"bid_leg{leg_num}",
-            "ask": f"ask_leg{leg_num}",
-            "delta": f"delta_leg{leg_num}",
-            "underlying_price": price_col,
-        }
-    )
+    rename_map = {
+        "expiration": f"expiration_leg{leg_num}",
+        "dte": f"dte_entry_leg{leg_num}",
+        "strike": strike_col,
+        "bid": f"bid_leg{leg_num}",
+        "ask": f"ask_leg{leg_num}",
+        "delta": f"delta_leg{leg_num}",
+    }
+    if "underlying_price" in options.columns:
+        rename_map["underlying_price"] = price_col
+    return options.rename(columns=rename_map)
 
 
 def _get_calendar_leg_columns(leg_num: int, same_strike: bool) -> List[str]:
@@ -93,8 +93,6 @@ def _get_calendar_leg_columns(leg_num: int, same_strike: bool) -> List[str]:
         f"ask_leg{leg_num}",
         f"delta_leg{leg_num}",
     ]
-    if leg_num == 1:
-        cols.append("underlying_price_entry")
     cols.append(strike_col)
     return cols
 

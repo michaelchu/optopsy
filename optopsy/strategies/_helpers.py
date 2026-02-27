@@ -91,7 +91,6 @@ def _straddles(
             "strike",
             "dte_entry",
             "dte_range",
-            "underlying_price_entry",
         ],
         params=kwargs,
     )

@@ -43,7 +43,6 @@ def _format_validation_error(e: ValidationError) -> str:
 # Required columns and their accepted dtypes for option chain DataFrames.
 expected_types: Dict[str, Tuple[str, ...]] = {
     "underlying_symbol": ("object", "str"),
-    "underlying_price": ("int64", "float64"),
     "option_type": ("object", "str"),
     "expiration": ("datetime64[ns]", "datetime64[us]"),
     "quote_date": ("datetime64[ns]", "datetime64[us]"),
