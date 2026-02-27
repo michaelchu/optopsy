@@ -358,6 +358,56 @@ class SignalMixin(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class LoadCsvDataArgs(BaseModel):
+    file_path: str = Field(
+        ...,
+        description="Path to the CSV file (provided in the upload context).",
+    )
+    underlying_symbol: int = Field(
+        0, ge=0, description="Column index for the underlying symbol."
+    )
+    underlying_price: int | None = Field(
+        None,
+        ge=0,
+        description="Column index for underlying price. Omit if the CSV does not have this column.",
+    )
+    option_type: int = Field(
+        1, ge=0, description="Column index for option type (call/put)."
+    )
+    expiration: int = Field(2, ge=0, description="Column index for expiration date.")
+    quote_date: int = Field(3, ge=0, description="Column index for quote date.")
+    strike: int = Field(4, ge=0, description="Column index for strike price.")
+    bid: int = Field(5, ge=0, description="Column index for bid price.")
+    ask: int = Field(6, ge=0, description="Column index for ask price.")
+    delta: int = Field(
+        7,
+        ge=0,
+        description="Column index for delta Greek. Required for all strategies.",
+    )
+    gamma: int | None = Field(
+        None, ge=0, description="Optional column index for gamma."
+    )
+    theta: int | None = Field(
+        None, ge=0, description="Optional column index for theta."
+    )
+    vega: int | None = Field(None, ge=0, description="Optional column index for vega.")
+    implied_volatility: int | None = Field(
+        None, ge=0, description="Optional column index for implied volatility."
+    )
+    volume: int | None = Field(
+        None, ge=0, description="Optional column index for trading volume."
+    )
+    open_interest: int | None = Field(
+        None, ge=0, description="Optional column index for open interest."
+    )
+    start_date: str | None = Field(
+        None, description="Optional start date filter (YYYY-MM-DD)."
+    )
+    end_date: str | None = Field(
+        None, description="Optional end date filter (YYYY-MM-DD)."
+    )
+
+
 class PreviewDataArgs(BaseModel):
     dataset_name: str | None = Field(
         None,
@@ -1030,6 +1080,7 @@ class SummarizeSessionArgs(BaseModel):
 # ---------------------------------------------------------------------------
 
 TOOL_ARG_MODELS: dict[str, type[BaseModel]] = {
+    "load_csv_data": LoadCsvDataArgs,
     "preview_data": PreviewDataArgs,
     "describe_data": DescribeDataArgs,
     "suggest_strategy_params": SuggestStrategyParamsArgs,

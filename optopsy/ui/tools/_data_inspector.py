@@ -1,9 +1,10 @@
-"""Data inspection tool handlers: preview_data, describe_data, suggest_strategy_params."""
+"""Data inspection tool handlers: load_csv_data, preview_data, describe_data, suggest_strategy_params."""
 
 import json as _json
 
 import pandas as pd
 
+import optopsy as op
 from optopsy.strategies._helpers import (
     _DEFAULT_ATM_DELTA,
     _DEFAULT_DEEP_ITM_DELTA,
@@ -15,6 +16,59 @@ from optopsy.strategies._helpers import (
 from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
+
+
+@_register("load_csv_data")
+def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _result):
+    file_path = arguments.get("file_path")
+    if not file_path:
+        return _result("file_path is required.")
+
+    # Build kwargs for csv_data() from the validated arguments.
+    csv_kwargs = {}
+    for key in (
+        "start_date",
+        "end_date",
+        "underlying_symbol",
+        "underlying_price",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+        "gamma",
+        "theta",
+        "vega",
+        "implied_volatility",
+        "volume",
+        "open_interest",
+    ):
+        val = arguments.get(key)
+        if val is not None:
+            csv_kwargs[key] = val
+
+    try:
+        df = op.csv_data(file_path, **csv_kwargs)
+    except Exception as e:
+        return _result(f"Failed to load CSV: {e}")
+
+    import os
+
+    label = os.path.basename(file_path)
+    updated_datasets = {**datasets, label: df}
+
+    summary = _df_summary(df, label)
+    display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
+
+    return _result(
+        summary,
+        ds=df,
+        user_display=display,
+        dss=updated_datasets,
+        active_name=label,
+    )
 
 
 @_register("preview_data")

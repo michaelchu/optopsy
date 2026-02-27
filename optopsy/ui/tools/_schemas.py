@@ -697,6 +697,15 @@ def get_required_option_type(strategy_name: str) -> str | None:
 
 
 _TOOL_DESCRIPTIONS: dict[str, str] = {
+    "load_csv_data": (
+        "Load a CSV file as an optopsy dataset with explicit column index "
+        "mapping. Use this to load user-uploaded CSV files. Inspect the "
+        "column headers provided in the upload context to determine the "
+        "correct index for each field. The defaults assume an 8-column "
+        "layout: underlying_symbol(0), option_type(1), expiration(2), "
+        "quote_date(3), strike(4), bid(5), ask(6), delta(7). "
+        "Pass underlying_price if the CSV includes that column."
+    ),
     "preview_data": (
         "Show shape, columns, date range, and sample rows of a dataset. "
         "Omit dataset_name to inspect the most-recently-loaded dataset."
