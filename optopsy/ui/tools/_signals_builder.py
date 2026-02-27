@@ -35,6 +35,26 @@ from ._schemas import (
 _log = logging.getLogger(__name__)
 
 
+def _remap_cross_symbol_dates(
+    signal_dates_df: pd.DataFrame,
+    dataset: pd.DataFrame,
+) -> pd.DataFrame:
+    """Replace the signal symbol with the options dataset symbol(s).
+
+    When ``signal_symbol`` is used, the signal fires on a different ticker
+    (e.g. VIX) than the options dataset (e.g. SPX).  This function copies
+    the signal dates once per options-dataset symbol so that the subsequent
+    intersection matches correctly.
+    """
+    options_symbols = dataset["underlying_symbol"].unique().tolist()
+    frames = []
+    for opt_sym in options_symbols:
+        mapped = signal_dates_df.copy()
+        mapped["underlying_symbol"] = opt_sym
+        frames.append(mapped)
+    return pd.concat(frames, ignore_index=True)
+
+
 @_register("build_signal")
 def _handle_build_signal(arguments, dataset, signals, datasets, results, _result):
     slot = arguments.get("slot", "").strip()
@@ -174,13 +194,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     # needs_stock was true).  IV and date-only signals already use the
     # options dataset's symbols, so remapping would duplicate rows.
     if signal_symbol and needs_stock and not raw_signal_dates.empty:
-        options_symbols = dataset["underlying_symbol"].unique().tolist()
-        frames = []
-        for opt_sym in options_symbols:
-            mapped = raw_signal_dates.copy()
-            mapped["underlying_symbol"] = opt_sym
-            frames.append(mapped)
-        raw_signal_dates = pd.concat(frames, ignore_index=True)
+        raw_signal_dates = _remap_cross_symbol_dates(raw_signal_dates, dataset)
 
     valid_dates = _intersect_with_options_dates(raw_signal_dates, dataset)
 
@@ -349,15 +363,11 @@ def _handle_build_custom_signal(
     else:
         combined = pd.concat(flagged_frames, ignore_index=True)
 
-    # Cross-symbol: remap signal symbol to options dataset symbol(s)
+    # Cross-symbol: remap signal symbol to options dataset symbol(s).
+    # build_custom_signal always fetches stock data, so signal_symbol
+    # always means the data came from a different ticker.
     if signal_symbol and not combined.empty:
-        options_symbols = dataset["underlying_symbol"].unique().tolist()
-        remap_frames = []
-        for opt_sym in options_symbols:
-            mapped = combined.copy()
-            mapped["underlying_symbol"] = opt_sym
-            remap_frames.append(mapped)
-        combined = pd.concat(remap_frames, ignore_index=True)
+        combined = _remap_cross_symbol_dates(combined, dataset)
 
     # Intersect with options dates
     valid_dates = _intersect_with_options_dates(combined, dataset)

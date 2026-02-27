@@ -51,6 +51,47 @@ _log = logging.getLogger(__name__)
 MAX_ROWS = 50
 
 
+_STOCK_COLS = [
+    "underlying_symbol",
+    "quote_date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+]
+
+
+def _fetch_single_symbol_stock(
+    symbol: str,
+    padded_start: "date",
+    date_max: "date",
+) -> pd.DataFrame | None:
+    """Fetch and slice OHLCV data for one symbol.
+
+    Reads from (or populates) the yfinance parquet cache, then slices to
+    ``[padded_start, date_max]``.  Returns a DataFrame with ``_STOCK_COLS``
+    or ``None`` on failure.
+    """
+    try:
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+        cached = _yf_fetch_and_cache(symbol, cached, date_max)
+
+        if cached is None or cached.empty:
+            return None
+
+        result = cached[
+            (pd.to_datetime(cached["date"]).dt.date >= padded_start)
+            & (pd.to_datetime(cached["date"]).dt.date <= date_max)
+        ].rename(columns={"date": "quote_date"})
+        if result.empty:
+            return None
+        return result[_STOCK_COLS]
+    except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+        _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        return None
+
+
 def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     """Fetch OHLCV stock data via yfinance for signal computation.
 
@@ -79,39 +120,13 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     symbols = dataset["underlying_symbol"].unique().tolist()
     date_min = pd.to_datetime(dataset["quote_date"].min()).date()
     date_max = pd.to_datetime(dataset["quote_date"].max()).date()
-    # Pad start by ~250 trading days for indicator warmup
     padded_start = date_min - timedelta(days=365)
 
     frames = []
     for symbol in symbols:
-        try:
-            cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-            cached = _yf_fetch_and_cache(symbol, cached, date_max)
-
-            if cached is None or cached.empty:
-                continue
-
-            # Phase 3: slice to [padded_start, date_max], rename date → quote_date
-            result = cached[
-                (pd.to_datetime(cached["date"]).dt.date >= padded_start)
-                & (pd.to_datetime(cached["date"]).dt.date <= date_max)
-            ].rename(columns={"date": "quote_date"})
-            if not result.empty:
-                frames.append(
-                    result[
-                        [
-                            "underlying_symbol",
-                            "quote_date",
-                            "open",
-                            "high",
-                            "low",
-                            "close",
-                            "volume",
-                        ]
-                    ]
-                )
-        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-            _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        result = _fetch_single_symbol_stock(symbol, padded_start, date_max)
+        if result is not None:
+            frames.append(result)
 
     if not frames:
         return None
@@ -141,33 +156,7 @@ def _fetch_stock_data_for_symbol(
     date_max = pd.to_datetime(dataset["quote_date"].max()).date()
     padded_start = date_min - timedelta(days=365)
 
-    try:
-        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-        cached = _yf_fetch_and_cache(symbol, cached, date_max)
-
-        if cached is None or cached.empty:
-            return None
-
-        result = cached[
-            (pd.to_datetime(cached["date"]).dt.date >= padded_start)
-            & (pd.to_datetime(cached["date"]).dt.date <= date_max)
-        ].rename(columns={"date": "quote_date"})
-        if result.empty:
-            return None
-        return result[
-            [
-                "underlying_symbol",
-                "quote_date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-            ]
-        ]
-    except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-        _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
-        return None
+    return _fetch_single_symbol_stock(symbol, padded_start, date_max)
 
 
 def _intersect_with_options_dates(
