@@ -68,7 +68,7 @@ def options_data_with_iv():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -90,7 +90,7 @@ def options_data_no_iv():
         rows.append(["SPX", 100.0, "c", exp_date, qd, 100.0, 3.0, 3.10])
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -119,7 +119,7 @@ def multi_symbol_options_iv():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -147,12 +147,12 @@ class TestComputeATMIV:
         assert "quote_date" in result.columns
 
     def test_selects_closest_strike(self):
-        """Should pick the strike closest to underlying_price."""
+        """Should pick the strike closest to close price."""
         data = pd.DataFrame(
             {
                 "underlying_symbol": ["SPX"] * 3,
                 "quote_date": [pd.Timestamp("2023-01-01")] * 3,
-                "underlying_price": [100.0] * 3,
+                "close": [100.0] * 3,
                 "strike": [95.0, 100.0, 105.0],
                 "option_type": ["c", "c", "c"],
                 "implied_volatility": [0.20, 0.25, 0.30],
@@ -168,7 +168,7 @@ class TestComputeATMIV:
             {
                 "underlying_symbol": ["SPX"] * 2,
                 "quote_date": [pd.Timestamp("2023-01-01")] * 2,
-                "underlying_price": [100.0] * 2,
+                "close": [100.0] * 2,
                 "strike": [100.0, 100.0],
                 "option_type": ["c", "p"],
                 "implied_volatility": [0.20, 0.30],
@@ -184,7 +184,7 @@ class TestComputeATMIV:
             {
                 "underlying_symbol": ["SPX"],
                 "quote_date": [pd.Timestamp("2023-01-01")],
-                "underlying_price": [100.0],
+                "close": [100.0],
                 "strike": [100.0],
                 "option_type": ["c"],
                 "implied_volatility": [float("nan")],
@@ -323,7 +323,7 @@ class TestIVRankEdgeCases:
             {
                 "underlying_symbol": ["SPX"] * 3,
                 "quote_date": dates,
-                "underlying_price": [100.0, 100.0, 100.0],
+                "close": [100.0, 100.0, 100.0],
                 "strike": [100.0, 100.0, 100.0],
                 "option_type": ["call", "call", "call"],
                 "expiration": dates,  # same as quote_date → DTE = 0
