@@ -406,6 +406,25 @@ class TestIvSignalDataCacheFallback:
         assert "close" in result.columns
         assert result["close"].notna().any()
 
+    def test_merges_close_with_tz_aware_quote_date(self, tmp_path):
+        """Tz-aware quote_date in options data still merges with tz-naive cache."""
+        dates = ["2025-01-02", "2025-01-03"]
+        dataset = _make_options_with_iv("SPY", dates)
+        dataset["quote_date"] = pd.to_datetime(dataset["quote_date"]).dt.tz_localize(
+            "UTC"
+        )
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 1, 5))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        assert result is not None
+        assert "close" in result.columns
+        assert result["close"].notna().any()
+        assert result["quote_date"].dt.tz is None
+
     def test_returns_none_when_cache_also_empty(self, tmp_path):
         """Returns None when no price in dataset and yf cache is also empty."""
         dates = ["2025-01-02", "2025-01-03"]
