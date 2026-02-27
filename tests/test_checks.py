@@ -21,7 +21,6 @@ def valid_data():
     return pd.DataFrame(
         {
             "underlying_symbol": ["SPY"],
-            "underlying_price": [450.0],
             "option_type": ["call"],
             "expiration": pd.to_datetime(["2024-03-15"]),
             "quote_date": pd.to_datetime(["2024-01-15"]),
@@ -39,7 +38,6 @@ def valid_data_no_delta():
     return pd.DataFrame(
         {
             "underlying_symbol": ["SPY"],
-            "underlying_price": [450.0],
             "option_type": ["call"],
             "expiration": pd.to_datetime(["2024-03-15"]),
             "quote_date": pd.to_datetime(["2024-01-15"]),
@@ -91,7 +89,6 @@ class TestRunChecks:
         bad_data = pd.DataFrame(
             {
                 "underlying_symbol": [123],  # wrong type
-                "underlying_price": [450.0],
                 "option_type": ["call"],
                 "expiration": pd.to_datetime(["2024-03-15"]),
                 "quote_date": pd.to_datetime(["2024-01-15"]),

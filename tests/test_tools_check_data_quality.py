@@ -25,13 +25,12 @@ def clean_data():
     for qd in dates:
         rows.extend(
             [
-                ["SPY", 480.0, "call", exp, qd, 480.0, 5.0, 5.10, 0.50],
-                ["SPY", 480.0, "put", exp, qd, 480.0, 4.8, 4.90, -0.50],
+                ["SPY", "call", exp, qd, 480.0, 5.0, 5.10, 0.50],
+                ["SPY", "put", exp, qd, 480.0, 4.8, 4.90, -0.50],
             ]
         )
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",

@@ -24,7 +24,6 @@ def _make_options(symbol="SPY"):
         rows.append(
             {
                 "underlying_symbol": symbol,
-                "underlying_price": 470.0,
                 "option_type": "c",
                 "expiration": pd.Timestamp("2024-02-16"),
                 "quote_date": pd.Timestamp(d),

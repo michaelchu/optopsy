@@ -19,7 +19,6 @@ from optopsy.simulator import (
 
 _CHAIN_COLS = [
     "underlying_symbol",
-    "underlying_price",
     "option_type",
     "expiration",
     "quote_date",
@@ -66,31 +65,31 @@ def _make_data(symbol, direction):
     exit_day = datetime.datetime(2018, 1, 31)
     rows = [
         # Entry — Calls
-        [symbol, 213.93, "call", exp_date, entry, 210.0, 8.50, 8.60, 0.65],
-        [symbol, 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
-        [symbol, 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
+        [symbol, "call", exp_date, entry, 210.0, 8.50, 8.60, 0.65],
+        [symbol, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
+        [symbol, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
         # Entry — Puts
-        [symbol, 213.93, "put", exp_date, entry, 210.0, 4.50, 4.60, -0.30],
-        [symbol, 213.93, "put", exp_date, entry, 212.5, 5.70, 5.80, -0.50],
-        [symbol, 213.93, "put", exp_date, entry, 215.0, 7.10, 7.20, -0.65],
+        [symbol, "put", exp_date, entry, 210.0, 4.50, 4.60, -0.30],
+        [symbol, "put", exp_date, entry, 212.5, 5.70, 5.80, -0.50],
+        [symbol, "put", exp_date, entry, 215.0, 7.10, 7.20, -0.65],
     ]
     if direction == "up":
         rows += [
-            [symbol, 220.0, "call", exp_date, exit_day, 210.0, 9.90, 10.0, 0.99],
-            [symbol, 220.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.95],
-            [symbol, 220.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.85],
-            [symbol, 220.0, "put", exp_date, exit_day, 210.0, 0.0, 0.0, -0.01],
-            [symbol, 220.0, "put", exp_date, exit_day, 212.5, 0.0, 0.0, -0.05],
-            [symbol, 220.0, "put", exp_date, exit_day, 215.0, 0.0, 0.0, -0.15],
+            [symbol, "call", exp_date, exit_day, 210.0, 9.90, 10.0, 0.99],
+            [symbol, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.95],
+            [symbol, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.85],
+            [symbol, "put", exp_date, exit_day, 210.0, 0.0, 0.0, -0.01],
+            [symbol, "put", exp_date, exit_day, 212.5, 0.0, 0.0, -0.05],
+            [symbol, "put", exp_date, exit_day, 215.0, 0.0, 0.0, -0.15],
         ]
     else:  # down
         rows += [
-            [symbol, 207.0, "call", exp_date, exit_day, 210.0, 0.50, 0.60, 0.15],
-            [symbol, 207.0, "call", exp_date, exit_day, 212.5, 0.10, 0.20, 0.05],
-            [symbol, 207.0, "call", exp_date, exit_day, 215.0, 0.02, 0.08, 0.01],
-            [symbol, 207.0, "put", exp_date, exit_day, 210.0, 2.80, 3.00, -0.85],
-            [symbol, 207.0, "put", exp_date, exit_day, 212.5, 5.30, 5.50, -0.95],
-            [symbol, 207.0, "put", exp_date, exit_day, 215.0, 7.80, 8.00, -0.99],
+            [symbol, "call", exp_date, exit_day, 210.0, 0.50, 0.60, 0.15],
+            [symbol, "call", exp_date, exit_day, 212.5, 0.10, 0.20, 0.05],
+            [symbol, "call", exp_date, exit_day, 215.0, 0.02, 0.08, 0.01],
+            [symbol, "put", exp_date, exit_day, 210.0, 2.80, 3.00, -0.85],
+            [symbol, "put", exp_date, exit_day, 212.5, 5.30, 5.50, -0.95],
+            [symbol, "put", exp_date, exit_day, 215.0, 7.80, 8.00, -0.99],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 

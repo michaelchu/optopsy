@@ -171,7 +171,6 @@ def options_dec_2025():
             rows.append(
                 {
                     "underlying_symbol": "SPY",
-                    "underlying_price": 585.0,
                     "option_type": "call",
                     "expiration": exp,
                     "quote_date": d,

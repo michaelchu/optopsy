@@ -439,7 +439,6 @@ def test_covered_call_with_stock_exit_dte_tolerance():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -450,9 +449,9 @@ def test_covered_call_with_stock_exit_dte_tolerance():
     ]
     rows = [
         # Entry day — call at strike 105 (OTM)
-        ["SPX", 100.0, "call", exp_date, entry_date, 105.0, 1.50, 1.60, 0.35],
+        ["SPX", "call", exp_date, entry_date, 105.0, 1.50, 1.60, 0.35],
         # Exit day — DTE=9, within tolerance of exit_dte=7±3
-        ["SPX", 103.0, "call", exp_date, actual_exit_date, 105.0, 0.40, 0.50, 0.25],
+        ["SPX", "call", exp_date, actual_exit_date, 105.0, 0.40, 0.50, 0.25],
     ]
     data = pd.DataFrame(data=rows, columns=cols)
 
@@ -1531,7 +1530,6 @@ def empty_option_data():
     """Empty DataFrame with correct columns and dtypes for options data."""
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -1541,7 +1539,6 @@ def empty_option_data():
         "delta",
     ]
     df = pd.DataFrame(columns=cols)
-    df["underlying_price"] = df["underlying_price"].astype("float64")
     df["strike"] = df["strike"].astype("float64")
     df["bid"] = df["bid"].astype("float64")
     df["ask"] = df["ask"].astype("float64")
@@ -1958,7 +1955,6 @@ def data_with_iv():
     quote_dates = [datetime(2018, 1, 1), datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -1971,7 +1967,6 @@ def data_with_iv():
     d = [
         [
             "SPX",
-            213.93,
             "call",
             exp_date,
             quote_dates[0],
@@ -1983,7 +1978,6 @@ def data_with_iv():
         ],
         [
             "SPX",
-            213.93,
             "call",
             exp_date,
             quote_dates[0],
@@ -1993,8 +1987,8 @@ def data_with_iv():
             0.30,
             0.22,
         ],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95, 0.18],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85, 0.19],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95, 0.18],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85, 0.19],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -2025,7 +2019,6 @@ def data_with_near_exit():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -2035,10 +2028,10 @@ def data_with_near_exit():
         "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.55],
-        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 6.00, 6.05, 0.30],
-        ["SPX", 220, "call", exp_date, exit_date, 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
+        ["SPX", "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.55],
+        ["SPX", "call", exp_date, entry_date, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "call", exp_date, exit_date, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -2274,7 +2267,6 @@ def test_min_bid_ask_filters_low_spread_options():
     exit_date = datetime.datetime(2018, 1, 31)
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -2285,9 +2277,9 @@ def test_min_bid_ask_filters_low_spread_options():
     ]
     d = [
         # Entry — one call with bid just below default min_bid_ask=0.05
-        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 0.04, 0.06, 0.30],
+        ["SPX", "call", exp_date, entry_date, 215.0, 0.04, 0.06, 0.30],
         # Exit
-        ["SPX", 220, "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
+        ["SPX", "call", exp_date, exit_date, 215.0, 4.96, 5.05, 0.85],
     ]
     df = pd.DataFrame(data=d, columns=cols)
 
@@ -2313,7 +2305,6 @@ def test_max_entry_dte_filters_far_expirations():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -2324,12 +2315,12 @@ def test_max_entry_dte_filters_far_expirations():
     ]
     d = [
         # Near expiration (89 DTE) — within default max_entry_dte=90
-        ["SPX", 213.93, "call", exp_near, entry_date, 212.5, 7.35, 7.45, 0.30],
+        ["SPX", "call", exp_near, entry_date, 212.5, 7.35, 7.45, 0.30],
         # Far expiration (150 DTE) — beyond default max_entry_dte=90
-        ["SPX", 213.93, "call", exp_far, entry_date, 212.5, 9.00, 9.10, 0.30],
+        ["SPX", "call", exp_far, entry_date, 212.5, 9.00, 9.10, 0.30],
         # Exits at expiration
-        ["SPX", 220, "call", exp_near, exp_near, 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp_far, exp_far, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp_near, exp_near, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp_far, exp_far, 212.5, 7.45, 7.55, 0.95],
     ]
     df = pd.DataFrame(data=d, columns=cols)
 
