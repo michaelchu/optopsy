@@ -27,7 +27,6 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     # ---------------------------------------------------------------
     _CORE_REQUIRED_COLS: dict[str, tuple[str, ...]] = {
         "underlying_symbol": ("object", "str"),
-        "underlying_price": ("int64", "float64"),
         "option_type": ("object", "str"),
         "expiration": ("datetime64[ns]", "datetime64[us]"),
         "quote_date": ("datetime64[ns]", "datetime64[us]"),
@@ -57,9 +56,9 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
             f"**Required Columns** — dtype mismatches: {'; '.join(dtype_mismatches)}\n"
         )
     else:
-        findings.append("PASS: all 9 required columns present with correct dtypes")
+        findings.append("PASS: all 8 required columns present with correct dtypes")
         display_parts.append(
-            "**Required Columns** — all 9 present with correct dtypes\n"
+            "**Required Columns** — all 8 present with correct dtypes\n"
         )
 
     # ---------------------------------------------------------------
@@ -98,7 +97,6 @@ def _handle_check_data_quality(arguments, dataset, signals, datasets, results, _
     # ---------------------------------------------------------------
     _NULL_CHECK_COLS = [
         "delta",
-        "underlying_price",
         "bid",
         "ask",
         "volume",
