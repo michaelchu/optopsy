@@ -11,7 +11,7 @@ pytest.importorskip("chainlit", reason="chainlit not installed (install ui extra
 
 from optopsy.ui.providers.cache import ParquetCache
 from optopsy.ui.tools import _YF_CACHE_CATEGORY, _fetch_stock_data_for_signals
-from optopsy.ui.tools._helpers import _yf_fetch_and_cache
+from optopsy.ui.tools._helpers import _iv_signal_data, _yf_fetch_and_cache
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -359,3 +359,134 @@ class TestYfFetchAndCache:
         assert len(on_disk) > len(cached_df)
         disk_max = pd.to_datetime(on_disk["date"]).dt.date.max()
         assert disk_max >= actual_cache_max
+
+
+# ---------------------------------------------------------------------------
+# Tests for _iv_signal_data yf cache fallback (PR #217 fix)
+# ---------------------------------------------------------------------------
+
+
+def _make_options_with_iv(symbol: str, dates: list[str]) -> pd.DataFrame:
+    """Options DataFrame with IV but WITHOUT underlying_price or close columns."""
+    rows = []
+    for d in dates:
+        ts = pd.Timestamp(d)
+        exp = ts + pd.Timedelta(days=30)
+        for strike_offset, opt_type in [(-5, "c"), (0, "c"), (5, "p")]:
+            rows.append(
+                {
+                    "underlying_symbol": symbol,
+                    "quote_date": ts,
+                    "strike": 100.0 + strike_offset,
+                    "option_type": opt_type,
+                    "implied_volatility": 0.25,
+                    "expiration": exp,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+class TestIvSignalDataCacheFallback:
+    """Tests for _iv_signal_data falling back to the yf stock price cache."""
+
+    def test_merges_close_from_yf_cache_when_no_price_col(self, tmp_path):
+        """When options data lacks price columns, close is merged from yf cache."""
+        dates = ["2025-01-02", "2025-01-03"]
+        dataset = _make_options_with_iv("SPY", dates)
+        cache = ParquetCache(str(tmp_path))
+
+        # Pre-populate the yf cache for SPY
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 1, 5))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        assert result is not None
+        assert "close" in result.columns
+        assert result["close"].notna().any()
+
+    def test_merges_close_with_tz_aware_quote_date(self, tmp_path):
+        """Tz-aware quote_date in options data still merges with tz-naive cache."""
+        dates = ["2025-01-02", "2025-01-03"]
+        dataset = _make_options_with_iv("SPY", dates)
+        dataset["quote_date"] = pd.to_datetime(dataset["quote_date"]).dt.tz_localize(
+            "UTC"
+        )
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 1, 5))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        assert result is not None
+        assert "close" in result.columns
+        assert result["close"].notna().any()
+        assert result["quote_date"].dt.tz is None
+
+    def test_returns_none_when_cache_also_empty(self, tmp_path):
+        """Returns None when no price in dataset and yf cache is also empty."""
+        dates = ["2025-01-02", "2025-01-03"]
+        dataset = _make_options_with_iv("SPY", dates)
+        cache = ParquetCache(str(tmp_path))  # empty cache
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        assert result is None
+
+    def test_uses_existing_price_col_without_cache_lookup(self, tmp_path):
+        """When underlying_price is already in the dataset, no cache read needed."""
+        dates = ["2025-01-02", "2025-01-03"]
+        dataset = _make_options_with_iv("SPY", dates)
+        dataset["underlying_price"] = 100.0
+        cache = ParquetCache(str(tmp_path))
+
+        with patch.object(cache, "read", wraps=cache.read) as spy_read:
+            with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+                result = _iv_signal_data(dataset)
+
+        assert result is not None
+        assert "underlying_price" in result.columns
+        spy_read.assert_not_called()
+
+    def test_returns_none_when_implied_volatility_missing(self, tmp_path):
+        """Returns None immediately when implied_volatility is absent."""
+        dataset = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"],
+                "quote_date": pd.to_datetime(["2025-01-02"]),
+                "strike": [100.0],
+                "option_type": ["c"],
+                "expiration": [pd.Timestamp("2025-02-02")],
+            }
+        )
+        cache = ParquetCache(str(tmp_path))
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        assert result is None
+
+    def test_partial_cache_leaves_unmatched_dates_as_nan(self, tmp_path):
+        """Dates not in cache remain NaN after the left-merge (not dropped)."""
+        dates = ["2025-01-02", "2025-01-10"]  # Jan 10 not in cache
+        dataset = _make_options_with_iv("SPY", dates)
+        cache = ParquetCache(str(tmp_path))
+
+        # Cache only covers Jan 1-3
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 1, 3))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+            result = _iv_signal_data(dataset)
+
+        # Result is returned (some close values present from Jan 2)
+        assert result is not None
+        assert "close" in result.columns
+        # Jan 2 rows should have close; Jan 10 rows should be NaN
+        jan2 = result[result["quote_date"].dt.date == date(2025, 1, 2)]
+        jan10 = result[result["quote_date"].dt.date == date(2025, 1, 10)]
+        assert jan2["close"].notna().all()
+        assert jan10["close"].isna().all()

@@ -31,6 +31,7 @@ from optopsy.data._yf_helpers import (  # noqa: F401
 from optopsy.metrics import profit_factor as _profit_factor
 from optopsy.metrics import win_rate as _win_rate
 from optopsy.signals import apply_signal
+from optopsy.timestamps import normalize_dates
 
 from .._dataframe_utils import stringify_interval_cols
 from ..providers.result_store import ResultStore
@@ -609,6 +610,12 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     Returns the dataset subset with required columns for IV rank computation,
     or None if the dataset lacks ``implied_volatility``, other required columns,
     or a price column (``close`` or ``underlying_price``) for ATM computation.
+
+    When neither ``close`` nor ``underlying_price`` is present in the options
+    dataset, attempts to merge ``close`` prices from the yfinance stock price
+    cache (``~/.optopsy/cache/yf_stocks/``), keyed by
+    ``(underlying_symbol, quote_date)``.  This handles EODHD-sourced options
+    data where ``underlying_price`` is no longer baked in (see PR #217).
     """
     if "implied_volatility" not in dataset.columns:
         return None
@@ -624,16 +631,44 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     if len(cols) < len(keep):
         return None
     # A price column is required for ATM strike computation in IV rank signals.
-    # Return None if neither is present so callers get a clear signal.
     price_col_found = False
     for price_col in ("close", "underlying_price"):
         if price_col in dataset.columns and price_col not in cols:
             cols.append(price_col)
             price_col_found = True
             break
+    result = dataset[cols].copy()
+    if not price_col_found:
+        # Fall back to the yfinance stock price cache keyed by symbol.
+        # Stock prices are cached separately during EODHD downloads via
+        # _yf_fetch_and_cache, so they may already be available locally.
+        symbols = result["underlying_symbol"].unique().tolist()
+        price_frames = []
+        for symbol in symbols:
+            try:
+                cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+                if cached is None or cached.empty:
+                    continue
+                price_df = cached[["underlying_symbol", "date", "close"]].rename(
+                    columns={"date": "quote_date"}
+                )
+                price_df["quote_date"] = normalize_dates(
+                    pd.to_datetime(price_df["quote_date"])
+                )
+                price_frames.append(price_df)
+            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+                _log.warning("yf cache read failed for %s: %s", symbol, exc)
+        if price_frames:
+            prices = pd.concat(price_frames, ignore_index=True)
+            result["quote_date"] = normalize_dates(pd.to_datetime(result["quote_date"]))
+            result = result.merge(
+                prices, on=["underlying_symbol", "quote_date"], how="left"
+            )
+            if result["close"].notna().any():
+                price_col_found = True
     if not price_col_found:
         return None
-    return dataset[cols].copy()
+    return result
 
 
 # ---------------------------------------------------------------------------
