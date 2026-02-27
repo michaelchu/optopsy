@@ -622,11 +622,16 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     cols = [c for c in keep if c in dataset.columns]
     if len(cols) < len(keep):
         return None
-    # Include price column for ATM computation if available
+    # A price column is required for ATM strike computation in IV rank signals.
+    # Return None if neither is present so callers get a clear signal.
+    price_col_found = False
     for price_col in ("close", "underlying_price"):
         if price_col in dataset.columns and price_col not in cols:
             cols.append(price_col)
+            price_col_found = True
             break
+    if not price_col_found:
+        return None
     return dataset[cols].copy()
 
 
