@@ -30,7 +30,6 @@ from optopsy.types import TargetRange
 
 _CHAIN_COLS = [
     "underlying_symbol",
-    "underlying_price",
     "option_type",
     "expiration",
     "quote_date",
@@ -53,40 +52,40 @@ def _make_standard_data(direction):
     exit_day = datetime.datetime(2018, 1, 31)
     rows = [
         # Entry — Calls (delta: 210→0.65, 212.5→0.50, 215→0.30)
-        ["SPX", 213.93, "call", exp_date, entry, 210.0, 8.50, 8.60, 0.65],
-        ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
-        ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "call", exp_date, entry, 210.0, 8.50, 8.60, 0.65],
+        ["SPX", "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
         # Entry — Puts (delta: 210→-0.30, 212.5→-0.50, 215→-0.65)
-        ["SPX", 213.93, "put", exp_date, entry, 210.0, 4.50, 4.60, -0.30],
-        ["SPX", 213.93, "put", exp_date, entry, 212.5, 5.70, 5.80, -0.50],
-        ["SPX", 213.93, "put", exp_date, entry, 215.0, 7.10, 7.20, -0.65],
+        ["SPX", "put", exp_date, entry, 210.0, 4.50, 4.60, -0.30],
+        ["SPX", "put", exp_date, entry, 212.5, 5.70, 5.80, -0.50],
+        ["SPX", "put", exp_date, entry, 215.0, 7.10, 7.20, -0.65],
     ]
     if direction == "up":
         rows += [
-            ["SPX", 220.0, "call", exp_date, exit_day, 210.0, 9.90, 10.0, 0.99],
-            ["SPX", 220.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.95],
-            ["SPX", 220.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.85],
-            ["SPX", 220.0, "put", exp_date, exit_day, 210.0, 0.0, 0.0, -0.01],
-            ["SPX", 220.0, "put", exp_date, exit_day, 212.5, 0.0, 0.0, -0.05],
-            ["SPX", 220.0, "put", exp_date, exit_day, 215.0, 0.0, 0.0, -0.15],
+            ["SPX", "call", exp_date, exit_day, 210.0, 9.90, 10.0, 0.99],
+            ["SPX", "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.95],
+            ["SPX", "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.85],
+            ["SPX", "put", exp_date, exit_day, 210.0, 0.0, 0.0, -0.01],
+            ["SPX", "put", exp_date, exit_day, 212.5, 0.0, 0.0, -0.05],
+            ["SPX", "put", exp_date, exit_day, 215.0, 0.0, 0.0, -0.15],
         ]
     elif direction == "down":
         rows += [
-            ["SPX", 207.0, "call", exp_date, exit_day, 210.0, 0.50, 0.60, 0.15],
-            ["SPX", 207.0, "call", exp_date, exit_day, 212.5, 0.10, 0.20, 0.05],
-            ["SPX", 207.0, "call", exp_date, exit_day, 215.0, 0.02, 0.08, 0.01],
-            ["SPX", 207.0, "put", exp_date, exit_day, 210.0, 2.80, 3.00, -0.85],
-            ["SPX", 207.0, "put", exp_date, exit_day, 212.5, 5.30, 5.50, -0.95],
-            ["SPX", 207.0, "put", exp_date, exit_day, 215.0, 7.80, 8.00, -0.99],
+            ["SPX", "call", exp_date, exit_day, 210.0, 0.50, 0.60, 0.15],
+            ["SPX", "call", exp_date, exit_day, 212.5, 0.10, 0.20, 0.05],
+            ["SPX", "call", exp_date, exit_day, 215.0, 0.02, 0.08, 0.01],
+            ["SPX", "put", exp_date, exit_day, 210.0, 2.80, 3.00, -0.85],
+            ["SPX", "put", exp_date, exit_day, 212.5, 5.30, 5.50, -0.95],
+            ["SPX", "put", exp_date, exit_day, 215.0, 7.80, 8.00, -0.99],
         ]
     else:  # sideways
         rows += [
-            ["SPX", 214.0, "call", exp_date, exit_day, 210.0, 4.40, 4.60, 0.70],
-            ["SPX", 214.0, "call", exp_date, exit_day, 212.5, 2.00, 2.20, 0.50],
-            ["SPX", 214.0, "call", exp_date, exit_day, 215.0, 0.50, 0.70, 0.25],
-            ["SPX", 214.0, "put", exp_date, exit_day, 210.0, 0.40, 0.60, -0.25],
-            ["SPX", 214.0, "put", exp_date, exit_day, 212.5, 1.00, 1.20, -0.50],
-            ["SPX", 214.0, "put", exp_date, exit_day, 215.0, 2.40, 2.60, -0.70],
+            ["SPX", "call", exp_date, exit_day, 210.0, 4.40, 4.60, 0.70],
+            ["SPX", "call", exp_date, exit_day, 212.5, 2.00, 2.20, 0.50],
+            ["SPX", "call", exp_date, exit_day, 215.0, 0.50, 0.70, 0.25],
+            ["SPX", "put", exp_date, exit_day, 210.0, 0.40, 0.60, -0.25],
+            ["SPX", "put", exp_date, exit_day, 212.5, 1.00, 1.20, -0.50],
+            ["SPX", "put", exp_date, exit_day, 215.0, 2.40, 2.60, -0.70],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -98,56 +97,56 @@ def _make_multi_strike_data(direction):
     exit_day = datetime.datetime(2018, 1, 31)
     rows = [
         # Entry — Calls (delta: 207.5→0.80, 210→0.65, 212.5→0.50, 215→0.35, 217.5→0.20)
-        ["SPX", 212.5, "call", exp_date, entry, 207.5, 6.90, 7.00, 0.80],
-        ["SPX", 212.5, "call", exp_date, entry, 210.0, 4.90, 5.00, 0.65],
-        ["SPX", 212.5, "call", exp_date, entry, 212.5, 3.00, 3.10, 0.50],
-        ["SPX", 212.5, "call", exp_date, entry, 215.0, 1.50, 1.60, 0.35],
-        ["SPX", 212.5, "call", exp_date, entry, 217.5, 0.60, 0.70, 0.20],
+        ["SPX", "call", exp_date, entry, 207.5, 6.90, 7.00, 0.80],
+        ["SPX", "call", exp_date, entry, 210.0, 4.90, 5.00, 0.65],
+        ["SPX", "call", exp_date, entry, 212.5, 3.00, 3.10, 0.50],
+        ["SPX", "call", exp_date, entry, 215.0, 1.50, 1.60, 0.35],
+        ["SPX", "call", exp_date, entry, 217.5, 0.60, 0.70, 0.20],
         # Entry — Puts (delta: 207.5→-0.20, 210→-0.35, 212.5→-0.50, 215→-0.65, 217.5→-0.80)
-        ["SPX", 212.5, "put", exp_date, entry, 207.5, 0.40, 0.50, -0.20],
-        ["SPX", 212.5, "put", exp_date, entry, 210.0, 1.40, 1.50, -0.35],
-        ["SPX", 212.5, "put", exp_date, entry, 212.5, 3.00, 3.10, -0.50],
-        ["SPX", 212.5, "put", exp_date, entry, 215.0, 5.00, 5.10, -0.65],
-        ["SPX", 212.5, "put", exp_date, entry, 217.5, 7.00, 7.10, -0.80],
+        ["SPX", "put", exp_date, entry, 207.5, 0.40, 0.50, -0.20],
+        ["SPX", "put", exp_date, entry, 210.0, 1.40, 1.50, -0.35],
+        ["SPX", "put", exp_date, entry, 212.5, 3.00, 3.10, -0.50],
+        ["SPX", "put", exp_date, entry, 215.0, 5.00, 5.10, -0.65],
+        ["SPX", "put", exp_date, entry, 217.5, 7.00, 7.10, -0.80],
     ]
     if direction == "up":
         rows += [
-            ["SPX", 215.0, "call", exp_date, exit_day, 207.5, 7.45, 7.55, 0.99],
-            ["SPX", 215.0, "call", exp_date, exit_day, 210.0, 4.95, 5.05, 0.95],
-            ["SPX", 215.0, "call", exp_date, exit_day, 212.5, 2.45, 2.55, 0.85],
-            ["SPX", 215.0, "call", exp_date, exit_day, 215.0, 0.0, 0.10, 0.50],
-            ["SPX", 215.0, "call", exp_date, exit_day, 217.5, 0.0, 0.05, 0.10],
-            ["SPX", 215.0, "put", exp_date, exit_day, 207.5, 0.0, 0.05, -0.01],
-            ["SPX", 215.0, "put", exp_date, exit_day, 210.0, 0.0, 0.05, -0.05],
-            ["SPX", 215.0, "put", exp_date, exit_day, 212.5, 0.0, 0.05, -0.15],
-            ["SPX", 215.0, "put", exp_date, exit_day, 215.0, 0.0, 0.05, -0.50],
-            ["SPX", 215.0, "put", exp_date, exit_day, 217.5, 2.45, 2.55, -0.90],
+            ["SPX", "call", exp_date, exit_day, 207.5, 7.45, 7.55, 0.99],
+            ["SPX", "call", exp_date, exit_day, 210.0, 4.95, 5.05, 0.95],
+            ["SPX", "call", exp_date, exit_day, 212.5, 2.45, 2.55, 0.85],
+            ["SPX", "call", exp_date, exit_day, 215.0, 0.0, 0.10, 0.50],
+            ["SPX", "call", exp_date, exit_day, 217.5, 0.0, 0.05, 0.10],
+            ["SPX", "put", exp_date, exit_day, 207.5, 0.0, 0.05, -0.01],
+            ["SPX", "put", exp_date, exit_day, 210.0, 0.0, 0.05, -0.05],
+            ["SPX", "put", exp_date, exit_day, 212.5, 0.0, 0.05, -0.15],
+            ["SPX", "put", exp_date, exit_day, 215.0, 0.0, 0.05, -0.50],
+            ["SPX", "put", exp_date, exit_day, 217.5, 2.45, 2.55, -0.90],
         ]
     elif direction == "down":
         rows += [
-            ["SPX", 208.0, "call", exp_date, exit_day, 207.5, 0.80, 0.90, 0.55],
-            ["SPX", 208.0, "call", exp_date, exit_day, 210.0, 0.10, 0.20, 0.15],
-            ["SPX", 208.0, "call", exp_date, exit_day, 212.5, 0.02, 0.08, 0.05],
-            ["SPX", 208.0, "call", exp_date, exit_day, 215.0, 0.01, 0.05, 0.01],
-            ["SPX", 208.0, "call", exp_date, exit_day, 217.5, 0.0, 0.04, 0.005],
-            ["SPX", 208.0, "put", exp_date, exit_day, 207.5, 0.30, 0.40, -0.45],
-            ["SPX", 208.0, "put", exp_date, exit_day, 210.0, 1.90, 2.10, -0.85],
-            ["SPX", 208.0, "put", exp_date, exit_day, 212.5, 4.40, 4.60, -0.95],
-            ["SPX", 208.0, "put", exp_date, exit_day, 215.0, 6.90, 7.10, -0.99],
-            ["SPX", 208.0, "put", exp_date, exit_day, 217.5, 9.40, 9.60, -1.0],
+            ["SPX", "call", exp_date, exit_day, 207.5, 0.80, 0.90, 0.55],
+            ["SPX", "call", exp_date, exit_day, 210.0, 0.10, 0.20, 0.15],
+            ["SPX", "call", exp_date, exit_day, 212.5, 0.02, 0.08, 0.05],
+            ["SPX", "call", exp_date, exit_day, 215.0, 0.01, 0.05, 0.01],
+            ["SPX", "call", exp_date, exit_day, 217.5, 0.0, 0.04, 0.005],
+            ["SPX", "put", exp_date, exit_day, 207.5, 0.30, 0.40, -0.45],
+            ["SPX", "put", exp_date, exit_day, 210.0, 1.90, 2.10, -0.85],
+            ["SPX", "put", exp_date, exit_day, 212.5, 4.40, 4.60, -0.95],
+            ["SPX", "put", exp_date, exit_day, 215.0, 6.90, 7.10, -0.99],
+            ["SPX", "put", exp_date, exit_day, 217.5, 9.40, 9.60, -1.0],
         ]
     else:  # sideways
         rows += [
-            ["SPX", 212.5, "call", exp_date, exit_day, 207.5, 5.40, 5.60, 0.80],
-            ["SPX", 212.5, "call", exp_date, exit_day, 210.0, 3.00, 3.20, 0.65],
-            ["SPX", 212.5, "call", exp_date, exit_day, 212.5, 1.00, 1.20, 0.50],
-            ["SPX", 212.5, "call", exp_date, exit_day, 215.0, 0.20, 0.40, 0.35],
-            ["SPX", 212.5, "call", exp_date, exit_day, 217.5, 0.05, 0.15, 0.20],
-            ["SPX", 212.5, "put", exp_date, exit_day, 207.5, 0.20, 0.30, -0.20],
-            ["SPX", 212.5, "put", exp_date, exit_day, 210.0, 0.80, 1.00, -0.35],
-            ["SPX", 212.5, "put", exp_date, exit_day, 212.5, 2.40, 2.60, -0.50],
-            ["SPX", 212.5, "put", exp_date, exit_day, 215.0, 4.80, 5.00, -0.65],
-            ["SPX", 212.5, "put", exp_date, exit_day, 217.5, 7.20, 7.40, -0.80],
+            ["SPX", "call", exp_date, exit_day, 207.5, 5.40, 5.60, 0.80],
+            ["SPX", "call", exp_date, exit_day, 210.0, 3.00, 3.20, 0.65],
+            ["SPX", "call", exp_date, exit_day, 212.5, 1.00, 1.20, 0.50],
+            ["SPX", "call", exp_date, exit_day, 215.0, 0.20, 0.40, 0.35],
+            ["SPX", "call", exp_date, exit_day, 217.5, 0.05, 0.15, 0.20],
+            ["SPX", "put", exp_date, exit_day, 207.5, 0.20, 0.30, -0.20],
+            ["SPX", "put", exp_date, exit_day, 210.0, 0.80, 1.00, -0.35],
+            ["SPX", "put", exp_date, exit_day, 212.5, 2.40, 2.60, -0.50],
+            ["SPX", "put", exp_date, exit_day, 215.0, 4.80, 5.00, -0.65],
+            ["SPX", "put", exp_date, exit_day, 217.5, 7.20, 7.40, -0.80],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -160,46 +159,46 @@ def _make_calendar_data(direction):
     exit_date = datetime.datetime(2018, 1, 24)
     rows = [
         # Entry — Front month calls
-        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50, 0.65],
-        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00, 0.50],
-        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80, 0.35],
+        ["SPX", "call", front_exp, entry_date, 210.0, 4.40, 4.50, 0.65],
+        ["SPX", "call", front_exp, entry_date, 212.5, 2.90, 3.00, 0.50],
+        ["SPX", "call", front_exp, entry_date, 215.0, 1.70, 1.80, 0.35],
         # Entry — Back month calls
-        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50, 0.60],
-        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00, 0.48],
-        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70, 0.35],
+        ["SPX", "call", back_exp, entry_date, 210.0, 6.40, 6.50, 0.60],
+        ["SPX", "call", back_exp, entry_date, 212.5, 4.90, 5.00, 0.48],
+        ["SPX", "call", back_exp, entry_date, 215.0, 3.60, 3.70, 0.35],
     ]
     if direction == "up":
         rows += [
             # Exit — Front month
-            ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50, 0.85],
-            ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10, 0.65],
-            ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90, 0.35],
+            ["SPX", "call", front_exp, exit_date, 210.0, 5.40, 5.50, 0.85],
+            ["SPX", "call", front_exp, exit_date, 212.5, 3.00, 3.10, 0.65],
+            ["SPX", "call", front_exp, exit_date, 215.0, 0.80, 0.90, 0.35],
             # Exit — Back month
-            ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00, 0.75],
-            ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10, 0.60],
-            ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40, 0.45],
+            ["SPX", "call", back_exp, exit_date, 210.0, 6.90, 7.00, 0.75],
+            ["SPX", "call", back_exp, exit_date, 212.5, 5.00, 5.10, 0.60],
+            ["SPX", "call", back_exp, exit_date, 215.0, 3.30, 3.40, 0.45],
         ]
     elif direction == "down":
         rows += [
             # Exit — Front month
-            ["SPX", 209.0, "call", front_exp, exit_date, 210.0, 1.00, 1.20, 0.30],
-            ["SPX", 209.0, "call", front_exp, exit_date, 212.5, 0.20, 0.40, 0.10],
-            ["SPX", 209.0, "call", front_exp, exit_date, 215.0, 0.05, 0.15, 0.03],
+            ["SPX", "call", front_exp, exit_date, 210.0, 1.00, 1.20, 0.30],
+            ["SPX", "call", front_exp, exit_date, 212.5, 0.20, 0.40, 0.10],
+            ["SPX", "call", front_exp, exit_date, 215.0, 0.05, 0.15, 0.03],
             # Exit — Back month (retains more time value)
-            ["SPX", 209.0, "call", back_exp, exit_date, 210.0, 3.00, 3.20, 0.40],
-            ["SPX", 209.0, "call", back_exp, exit_date, 212.5, 1.80, 2.00, 0.28],
-            ["SPX", 209.0, "call", back_exp, exit_date, 215.0, 0.90, 1.10, 0.15],
+            ["SPX", "call", back_exp, exit_date, 210.0, 3.00, 3.20, 0.40],
+            ["SPX", "call", back_exp, exit_date, 212.5, 1.80, 2.00, 0.28],
+            ["SPX", "call", back_exp, exit_date, 215.0, 0.90, 1.10, 0.15],
         ]
     else:  # sideways
         rows += [
             # Exit — Front month
-            ["SPX", 212.5, "call", front_exp, exit_date, 210.0, 3.20, 3.40, 0.65],
-            ["SPX", 212.5, "call", front_exp, exit_date, 212.5, 1.20, 1.40, 0.45],
-            ["SPX", 212.5, "call", front_exp, exit_date, 215.0, 0.30, 0.50, 0.20],
+            ["SPX", "call", front_exp, exit_date, 210.0, 3.20, 3.40, 0.65],
+            ["SPX", "call", front_exp, exit_date, 212.5, 1.20, 1.40, 0.45],
+            ["SPX", "call", front_exp, exit_date, 215.0, 0.30, 0.50, 0.20],
             # Exit — Back month (retains more time value)
-            ["SPX", 212.5, "call", back_exp, exit_date, 210.0, 5.20, 5.40, 0.60],
-            ["SPX", 212.5, "call", back_exp, exit_date, 212.5, 3.40, 3.60, 0.48],
-            ["SPX", 212.5, "call", back_exp, exit_date, 215.0, 2.00, 2.20, 0.35],
+            ["SPX", "call", back_exp, exit_date, 210.0, 5.20, 5.40, 0.60],
+            ["SPX", "call", back_exp, exit_date, 212.5, 3.40, 3.60, 0.48],
+            ["SPX", "call", back_exp, exit_date, 215.0, 2.00, 2.20, 0.35],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -212,46 +211,46 @@ def _make_calendar_put_data(direction):
     exit_date = datetime.datetime(2018, 1, 24)
     rows = [
         # Entry — Front month puts
-        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.40, 1.50, -0.35],
-        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 3.00, 3.10, -0.50],
-        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.40, 4.50, -0.65],
+        ["SPX", "put", front_exp, entry_date, 210.0, 1.40, 1.50, -0.35],
+        ["SPX", "put", front_exp, entry_date, 212.5, 3.00, 3.10, -0.50],
+        ["SPX", "put", front_exp, entry_date, 215.0, 4.40, 4.50, -0.65],
         # Entry — Back month puts
-        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50, -0.40],
-        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00, -0.48],
-        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.40, 6.50, -0.60],
+        ["SPX", "put", back_exp, entry_date, 210.0, 3.40, 3.50, -0.40],
+        ["SPX", "put", back_exp, entry_date, 212.5, 4.90, 5.00, -0.48],
+        ["SPX", "put", back_exp, entry_date, 215.0, 6.40, 6.50, -0.60],
     ]
     if direction == "up":
         rows += [
             # Exit — Front month
-            ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.20, 0.30, -0.10],
-            ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.40, 0.50, -0.25],
-            ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 1.40, 1.50, -0.55],
+            ["SPX", "put", front_exp, exit_date, 210.0, 0.20, 0.30, -0.10],
+            ["SPX", "put", front_exp, exit_date, 212.5, 0.40, 0.50, -0.25],
+            ["SPX", "put", front_exp, exit_date, 215.0, 1.40, 1.50, -0.55],
             # Exit — Back month
-            ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 2.40, 2.50, -0.25],
-            ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 3.90, 4.00, -0.40],
-            ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 5.40, 5.50, -0.55],
+            ["SPX", "put", back_exp, exit_date, 210.0, 2.40, 2.50, -0.25],
+            ["SPX", "put", back_exp, exit_date, 212.5, 3.90, 4.00, -0.40],
+            ["SPX", "put", back_exp, exit_date, 215.0, 5.40, 5.50, -0.55],
         ]
     elif direction == "down":
         rows += [
             # Exit — Front month
-            ["SPX", 209.0, "put", front_exp, exit_date, 210.0, 2.80, 3.00, -0.65],
-            ["SPX", 209.0, "put", front_exp, exit_date, 212.5, 4.80, 5.00, -0.85],
-            ["SPX", 209.0, "put", front_exp, exit_date, 215.0, 7.00, 7.20, -0.95],
+            ["SPX", "put", front_exp, exit_date, 210.0, 2.80, 3.00, -0.65],
+            ["SPX", "put", front_exp, exit_date, 212.5, 4.80, 5.00, -0.85],
+            ["SPX", "put", front_exp, exit_date, 215.0, 7.00, 7.20, -0.95],
             # Exit — Back month (retains more time value)
-            ["SPX", 209.0, "put", back_exp, exit_date, 210.0, 4.40, 4.60, -0.55],
-            ["SPX", 209.0, "put", back_exp, exit_date, 212.5, 6.20, 6.40, -0.72],
-            ["SPX", 209.0, "put", back_exp, exit_date, 215.0, 8.20, 8.40, -0.85],
+            ["SPX", "put", back_exp, exit_date, 210.0, 4.40, 4.60, -0.55],
+            ["SPX", "put", back_exp, exit_date, 212.5, 6.20, 6.40, -0.72],
+            ["SPX", "put", back_exp, exit_date, 215.0, 8.20, 8.40, -0.85],
         ]
     else:  # sideways
         rows += [
             # Exit — Front month
-            ["SPX", 212.5, "put", front_exp, exit_date, 210.0, 0.80, 1.00, -0.35],
-            ["SPX", 212.5, "put", front_exp, exit_date, 212.5, 2.00, 2.20, -0.50],
-            ["SPX", 212.5, "put", front_exp, exit_date, 215.0, 3.80, 4.00, -0.65],
+            ["SPX", "put", front_exp, exit_date, 210.0, 0.80, 1.00, -0.35],
+            ["SPX", "put", front_exp, exit_date, 212.5, 2.00, 2.20, -0.50],
+            ["SPX", "put", front_exp, exit_date, 215.0, 3.80, 4.00, -0.65],
             # Exit — Back month (retains more time value)
-            ["SPX", 212.5, "put", back_exp, exit_date, 210.0, 3.00, 3.20, -0.40],
-            ["SPX", 212.5, "put", back_exp, exit_date, 212.5, 4.60, 4.80, -0.48],
-            ["SPX", 212.5, "put", back_exp, exit_date, 215.0, 6.20, 6.40, -0.60],
+            ["SPX", "put", back_exp, exit_date, 210.0, 3.00, 3.20, -0.40],
+            ["SPX", "put", back_exp, exit_date, 212.5, 4.60, 4.80, -0.48],
+            ["SPX", "put", back_exp, exit_date, 215.0, 6.20, 6.40, -0.60],
         ]
     return pd.DataFrame(data=rows, columns=_CHAIN_COLS)
 
@@ -284,17 +283,17 @@ def multi_entry_data():
     exit2 = datetime.datetime(2018, 2, 28)
     d = [
         # Entry 1 — exp1
-        ["SPX", 213.93, "call", exp1, entry1, 212.5, 7.35, 7.45, 0.50],
-        ["SPX", 213.93, "call", exp1, entry1, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "call", exp1, entry1, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", "call", exp1, entry1, 215.0, 6.00, 6.05, 0.30],
         # Entry 2 — exp2
-        ["SPX", 215.0, "call", exp2, entry2, 212.5, 8.00, 8.10, 0.50],
-        ["SPX", 215.0, "call", exp2, entry2, 215.0, 5.50, 5.60, 0.30],
+        ["SPX", "call", exp2, entry2, 212.5, 8.00, 8.10, 0.50],
+        ["SPX", "call", exp2, entry2, 215.0, 5.50, 5.60, 0.30],
         # Exit 1
-        ["SPX", 220, "call", exp1, exit1, 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp1, exit1, 215.0, 4.96, 5.05, 0.85],
+        ["SPX", "call", exp1, exit1, 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp1, exit1, 215.0, 4.96, 5.05, 0.85],
         # Exit 2
-        ["SPX", 222, "call", exp2, exit2, 212.5, 9.50, 9.60, 0.95],
-        ["SPX", 222, "call", exp2, exit2, 215.0, 7.00, 7.10, 0.85],
+        ["SPX", "call", exp2, exit2, 212.5, 9.50, 9.60, 0.95],
+        ["SPX", "call", exp2, exit2, 215.0, 7.00, 7.10, 0.85],
     ]
     return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -848,10 +847,10 @@ class TestExitDte:
         # exit_dte=7 means exit 7 days before expiration → Jan 24
         exit_day = datetime.datetime(2018, 1, 24)
         d = [
-            ["SPX", 213.93, "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
-            ["SPX", 213.93, "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
-            ["SPX", 218.0, "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.85],
-            ["SPX", 218.0, "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.65],
+            ["SPX", "call", exp_date, entry, 212.5, 7.35, 7.45, 0.50],
+            ["SPX", "call", exp_date, entry, 215.0, 6.00, 6.05, 0.30],
+            ["SPX", "call", exp_date, exit_day, 212.5, 7.45, 7.55, 0.85],
+            ["SPX", "call", exp_date, exit_day, 215.0, 4.96, 5.05, 0.65],
         ]
         df = pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -1343,17 +1342,17 @@ def multi_entry_spread_data():
     exit2 = datetime.datetime(2018, 3, 2)
     d = [
         # Entry 1 — exp1
-        ["SPX", 213.93, "put", exp1, entry1, 212.5, 5.70, 5.80, -0.50],
-        ["SPX", 213.93, "put", exp1, entry1, 215.0, 7.10, 7.20, -0.65],
+        ["SPX", "put", exp1, entry1, 212.5, 5.70, 5.80, -0.50],
+        ["SPX", "put", exp1, entry1, 215.0, 7.10, 7.20, -0.65],
         # Exit 1
-        ["SPX", 220.0, "put", exp1, exit1, 212.5, 0.10, 0.20, -0.05],
-        ["SPX", 220.0, "put", exp1, exit1, 215.0, 0.05, 0.15, -0.10],
+        ["SPX", "put", exp1, exit1, 212.5, 0.10, 0.20, -0.05],
+        ["SPX", "put", exp1, exit1, 215.0, 0.05, 0.15, -0.10],
         # Entry 2 — exp2
-        ["SPX", 214.0, "put", exp2, entry2, 212.5, 4.80, 4.90, -0.50],
-        ["SPX", 214.0, "put", exp2, entry2, 215.0, 6.80, 6.90, -0.65],
+        ["SPX", "put", exp2, entry2, 212.5, 4.80, 4.90, -0.50],
+        ["SPX", "put", exp2, entry2, 215.0, 6.80, 6.90, -0.65],
         # Exit 2
-        ["SPX", 218.0, "put", exp2, exit2, 212.5, 0.20, 0.30, -0.10],
-        ["SPX", 218.0, "put", exp2, exit2, 215.0, 0.10, 0.20, -0.15],
+        ["SPX", "put", exp2, exit2, 212.5, 0.20, 0.30, -0.10],
+        ["SPX", "put", exp2, exit2, 215.0, 0.10, 0.20, -0.15],
     ]
     return pd.DataFrame(data=d, columns=_CHAIN_COLS)
 
@@ -1514,7 +1513,6 @@ def early_exit_sim_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -1524,10 +1522,10 @@ def early_exit_sim_data():
         "delta",
     ]
     d = [
-        ["SPX", 200, "call", exp_date, entry_date, 200.0, 5.90, 6.10, 0.30],
-        ["SPX", 196, "call", exp_date, day5, 200.0, 4.40, 4.60, 0.25],
-        ["SPX", 192, "call", exp_date, day10, 200.0, 2.90, 3.10, 0.18],
-        ["SPX", 210, "call", exp_date, exp_date, 200.0, 9.90, 10.10, 0.90],
+        ["SPX", "call", exp_date, entry_date, 200.0, 5.90, 6.10, 0.30],
+        ["SPX", "call", exp_date, day5, 200.0, 4.40, 4.60, 0.25],
+        ["SPX", "call", exp_date, day10, 200.0, 2.90, 3.10, 0.18],
+        ["SPX", "call", exp_date, exp_date, 200.0, 9.90, 10.10, 0.90],
     ]
     return pd.DataFrame(data=d, columns=cols)
 

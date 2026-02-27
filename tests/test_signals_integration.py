@@ -38,7 +38,6 @@ def sparse_exit_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -50,16 +49,16 @@ def sparse_exit_data():
 
     d = [
         # Entry day (DTE=28)
-        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.50],
-        ["SPX", 213.93, "call", exp_date, entry_date, 215.0, 6.00, 6.05, 0.30],
-        ["SPX", 213.93, "put", exp_date, entry_date, 212.5, 5.70, 5.80, -0.30],
-        ["SPX", 213.93, "put", exp_date, entry_date, 215.0, 7.10, 7.20, -0.50],
+        ["SPX", "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", "call", exp_date, entry_date, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "put", exp_date, entry_date, 212.5, 5.70, 5.80, -0.30],
+        ["SPX", "put", exp_date, entry_date, 215.0, 7.10, 7.20, -0.50],
         # Near-exit day (DTE=1, one day before expiration)
         # No DTE=0 data exists!
-        ["SPX", 219.50, "call", exp_date, near_exit_date, 212.5, 7.20, 7.30, 0.50],
-        ["SPX", 219.50, "call", exp_date, near_exit_date, 215.0, 4.80, 4.90, 0.30],
-        ["SPX", 219.50, "put", exp_date, near_exit_date, 212.5, 0.15, 0.25, -0.30],
-        ["SPX", 219.50, "put", exp_date, near_exit_date, 215.0, 0.30, 0.40, -0.50],
+        ["SPX", "call", exp_date, near_exit_date, 212.5, 7.20, 7.30, 0.50],
+        ["SPX", "call", exp_date, near_exit_date, 215.0, 4.80, 4.90, 0.30],
+        ["SPX", "put", exp_date, near_exit_date, 212.5, 0.15, 0.25, -0.30],
+        ["SPX", "put", exp_date, near_exit_date, 215.0, 0.30, 0.40, -0.50],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -80,7 +79,6 @@ def multi_exit_dte_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -92,14 +90,14 @@ def multi_exit_dte_data():
 
     d = [
         # Entry (DTE=28)
-        ["SPX", 213.93, "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.30],
-        ["SPX", 213.93, "put", exp_date, entry_date, 212.5, 5.70, 5.80, -0.30],
+        ["SPX", "call", exp_date, entry_date, 212.5, 7.35, 7.45, 0.30],
+        ["SPX", "put", exp_date, entry_date, 212.5, 5.70, 5.80, -0.30],
         # Exit at DTE=3
-        ["SPX", 218.00, "call", exp_date, exit_dte3, 212.5, 5.90, 6.00, 0.30],
-        ["SPX", 218.00, "put", exp_date, exit_dte3, 212.5, 0.40, 0.50, -0.30],
+        ["SPX", "call", exp_date, exit_dte3, 212.5, 5.90, 6.00, 0.30],
+        ["SPX", "put", exp_date, exit_dte3, 212.5, 0.40, 0.50, -0.30],
         # Exit at DTE=1 (closer to target of 0)
-        ["SPX", 219.50, "call", exp_date, exit_dte1, 212.5, 7.20, 7.30, 0.30],
-        ["SPX", 219.50, "put", exp_date, exit_dte1, 212.5, 0.15, 0.25, -0.30],
+        ["SPX", "call", exp_date, exit_dte1, 212.5, 7.20, 7.30, 0.30],
+        ["SPX", "put", exp_date, exit_dte1, 212.5, 0.15, 0.25, -0.30],
     ]
     return pd.DataFrame(data=d, columns=cols)
 

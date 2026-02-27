@@ -34,7 +34,6 @@ def multi_date_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -46,29 +45,29 @@ def multi_date_data():
 
     d = [
         # Day 0 (entry) - calls
-        ["SPX", 200, "call", exp_date, dates[0], 200.0, 5.90, 6.10, 0.30],
+        ["SPX", "call", exp_date, dates[0], 200.0, 5.90, 6.10, 0.30],
         # Day 5 - calls (price dropped)
-        ["SPX", 196, "call", exp_date, dates[1], 200.0, 4.40, 4.60, 0.25],
+        ["SPX", "call", exp_date, dates[1], 200.0, 4.40, 4.60, 0.25],
         # Day 10 - calls (price dropped more → -50% unrealized)
-        ["SPX", 192, "call", exp_date, dates[2], 200.0, 2.90, 3.10, 0.18],
+        ["SPX", "call", exp_date, dates[2], 200.0, 2.90, 3.10, 0.18],
         # Day 15 - calls (recovery)
-        ["SPX", 198, "call", exp_date, dates[3], 200.0, 4.90, 5.10, 0.28],
+        ["SPX", "call", exp_date, dates[3], 200.0, 4.90, 5.10, 0.28],
         # Day 20 - calls (up)
-        ["SPX", 205, "call", exp_date, dates[4], 200.0, 7.90, 8.10, 0.40],
+        ["SPX", "call", exp_date, dates[4], 200.0, 7.90, 8.10, 0.40],
         # Day 30 (expiration) - calls
-        ["SPX", 210, "call", exp_date, dates[5], 200.0, 9.90, 10.10, 0.90],
+        ["SPX", "call", exp_date, dates[5], 200.0, 9.90, 10.10, 0.90],
         # Day 0 (entry) - puts
-        ["SPX", 200, "put", exp_date, dates[0], 200.0, 5.90, 6.10, -0.30],
+        ["SPX", "put", exp_date, dates[0], 200.0, 5.90, 6.10, -0.30],
         # Day 5 - puts (price dropped → put value up)
-        ["SPX", 196, "put", exp_date, dates[1], 200.0, 7.40, 7.60, -0.40],
+        ["SPX", "put", exp_date, dates[1], 200.0, 7.40, 7.60, -0.40],
         # Day 10 - puts (price dropped more → put value up 50%)
-        ["SPX", 192, "put", exp_date, dates[2], 200.0, 8.90, 9.10, -0.55],
+        ["SPX", "put", exp_date, dates[2], 200.0, 8.90, 9.10, -0.55],
         # Day 15 - puts (recovery)
-        ["SPX", 198, "put", exp_date, dates[3], 200.0, 6.90, 7.10, -0.35],
+        ["SPX", "put", exp_date, dates[3], 200.0, 6.90, 7.10, -0.35],
         # Day 20 - puts (down)
-        ["SPX", 205, "put", exp_date, dates[4], 200.0, 3.90, 4.10, -0.15],
+        ["SPX", "put", exp_date, dates[4], 200.0, 3.90, 4.10, -0.15],
         # Day 30 (expiration) - puts
-        ["SPX", 210, "put", exp_date, dates[5], 200.0, 1.90, 2.10, -0.10],
+        ["SPX", "put", exp_date, dates[5], 200.0, 1.90, 2.10, -0.10],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -98,7 +97,6 @@ def multi_date_spread_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -110,26 +108,26 @@ def multi_date_spread_data():
 
     d = [
         # Day 0 - 200 strike call
-        ["SPX", 200, "call", exp_date, dates[0], 200.0, 5.90, 6.10, 0.50],
+        ["SPX", "call", exp_date, dates[0], 200.0, 5.90, 6.10, 0.50],
         # Day 0 - 205 strike call
-        ["SPX", 200, "call", exp_date, dates[0], 205.0, 2.90, 3.10, 0.30],
+        ["SPX", "call", exp_date, dates[0], 205.0, 2.90, 3.10, 0.30],
         # Day 5
-        ["SPX", 196, "call", exp_date, dates[1], 200.0, 4.40, 4.60, 0.40],
-        ["SPX", 196, "call", exp_date, dates[1], 205.0, 1.90, 2.10, 0.20],
+        ["SPX", "call", exp_date, dates[1], 200.0, 4.40, 4.60, 0.40],
+        ["SPX", "call", exp_date, dates[1], 205.0, 1.90, 2.10, 0.20],
         # Day 10
-        ["SPX", 192, "call", exp_date, dates[2], 200.0, 2.90, 3.10, 0.30],
-        ["SPX", 192, "call", exp_date, dates[2], 205.0, 0.90, 1.10, 0.12],
+        ["SPX", "call", exp_date, dates[2], 200.0, 2.90, 3.10, 0.30],
+        ["SPX", "call", exp_date, dates[2], 205.0, 0.90, 1.10, 0.12],
         # Day 15
-        ["SPX", 188, "call", exp_date, dates[3], 200.0, 1.40, 1.60, 0.18],
-        ["SPX", 188, "call", exp_date, dates[3], 205.0, 0.20, 0.30, 0.05],
+        ["SPX", "call", exp_date, dates[3], 200.0, 1.40, 1.60, 0.18],
+        ["SPX", "call", exp_date, dates[3], 205.0, 0.20, 0.30, 0.05],
         # Day 30 (expiration)
-        ["SPX", 210, "call", exp_date, dates[4], 200.0, 9.90, 10.10, 0.95],
-        ["SPX", 210, "call", exp_date, dates[4], 205.0, 5.40, 5.60, 0.85],
+        ["SPX", "call", exp_date, dates[4], 200.0, 9.90, 10.10, 0.95],
+        ["SPX", "call", exp_date, dates[4], 205.0, 5.40, 5.60, 0.85],
         # Puts (needed by pipeline for complete data but not used by call strategies)
-        ["SPX", 200, "put", exp_date, dates[0], 200.0, 5.90, 6.10, -0.50],
-        ["SPX", 200, "put", exp_date, dates[0], 205.0, 7.90, 8.10, -0.70],
-        ["SPX", 210, "put", exp_date, dates[4], 200.0, 0.0, 0.10, -0.05],
-        ["SPX", 210, "put", exp_date, dates[4], 205.0, 0.0, 0.10, -0.15],
+        ["SPX", "put", exp_date, dates[0], 200.0, 5.90, 6.10, -0.50],
+        ["SPX", "put", exp_date, dates[0], 205.0, 7.90, 8.10, -0.70],
+        ["SPX", "put", exp_date, dates[4], 200.0, 0.0, 0.10, -0.05],
+        ["SPX", "put", exp_date, dates[4], 205.0, 0.0, 0.10, -0.15],
     ]
     return pd.DataFrame(data=d, columns=cols)
 

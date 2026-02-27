@@ -84,7 +84,6 @@ def data():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -95,19 +94,19 @@ def data():
     ]
     d = [
         # Entry day - 3 strikes with deltas spanning DEFAULT [0.20,0.40] and ATM [0.40,0.60]
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 210.0, 8.00, 8.10, 0.65],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.50],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 210.0, 4.50, 4.60, -0.30],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.50],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.65],
+        ["SPX", "call", exp_date, quote_dates[0], 210.0, 8.00, 8.10, 0.65],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.50],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "put", exp_date, quote_dates[0], 210.0, 4.50, 4.60, -0.30],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.50],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.65],
         # Exit day
-        ["SPX", 220, "call", exp_date, quote_dates[1], 210.0, 9.95, 10.05, 0.99],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.0, -0.01],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.15],
+        ["SPX", "call", exp_date, quote_dates[1], 210.0, 9.95, 10.05, 0.99],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.85],
+        ["SPX", "put", exp_date, quote_dates[1], 210.0, 0.0, 0.0, -0.01],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.15],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -124,7 +123,6 @@ def multi_strike_data():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -138,29 +136,29 @@ def multi_strike_data():
     # Put prices increase as strike increases (OTM -> ITM)
     d = [
         # Entry day - Calls (delta positive, decreasing as strike increases)
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00, 0.80],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00, 0.65],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10, 0.50],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60, 0.35],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70, 0.20],
+        ["SPX", "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00, 0.80],
+        ["SPX", "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00, 0.65],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10, 0.50],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60, 0.35],
+        ["SPX", "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70, 0.20],
         # Entry day - Puts (delta negative, more negative as strike increases)
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50, -0.20],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50, -0.35],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10, -0.50],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10, -0.65],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10, -0.80],
+        ["SPX", "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50, -0.20],
+        ["SPX", "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50, -0.35],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10, -0.50],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10, -0.65],
+        ["SPX", "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10, -0.80],
         # Exit day (expiration) - underlying at 215.0
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55, 0.99],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05, 0.95],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55, 0.85],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 215.0, 0.0, 0.10, 0.50],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 217.5, 0.0, 0.05, 0.10],
+        ["SPX", "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55, 0.99],
+        ["SPX", "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05, 0.95],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55, 0.85],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 0.0, 0.10, 0.50],
+        ["SPX", "call", exp_date, quote_dates[1], 217.5, 0.0, 0.05, 0.10],
         # Exit day - Puts
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05, -0.01],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05, -0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.15],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.50],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55, -0.85],
+        ["SPX", "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05, -0.01],
+        ["SPX", "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05, -0.05],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.15],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.50],
+        ["SPX", "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55, -0.85],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -177,7 +175,6 @@ def multi_strike_data_with_delta():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -188,29 +185,29 @@ def multi_strike_data_with_delta():
     ]
     d = [
         # Entry day - Calls (delta positive, decreasing as strike increases / more OTM)
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00, 0.80],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00, 0.65],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10, 0.50],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60, 0.35],
-        ["SPX", 212.5, "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70, 0.20],
+        ["SPX", "call", exp_date, quote_dates[0], 207.5, 6.90, 7.00, 0.80],
+        ["SPX", "call", exp_date, quote_dates[0], 210.0, 4.90, 5.00, 0.65],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 3.00, 3.10, 0.50],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 1.50, 1.60, 0.35],
+        ["SPX", "call", exp_date, quote_dates[0], 217.5, 0.60, 0.70, 0.20],
         # Entry day - Puts (delta negative, more negative as strike increases / more ITM)
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50, -0.20],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50, -0.35],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10, -0.50],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10, -0.65],
-        ["SPX", 212.5, "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10, -0.80],
+        ["SPX", "put", exp_date, quote_dates[0], 207.5, 0.40, 0.50, -0.20],
+        ["SPX", "put", exp_date, quote_dates[0], 210.0, 1.40, 1.50, -0.35],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 3.00, 3.10, -0.50],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 5.00, 5.10, -0.65],
+        ["SPX", "put", exp_date, quote_dates[0], 217.5, 7.00, 7.10, -0.80],
         # Exit day - Calls (underlying at 215.0)
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55, 0.99],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05, 0.95],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55, 0.85],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 215.0, 0.10, 0.20, 0.50],
-        ["SPX", 215.0, "call", exp_date, quote_dates[1], 217.5, 0.0, 0.10, 0.10],
+        ["SPX", "call", exp_date, quote_dates[1], 207.5, 7.45, 7.55, 0.99],
+        ["SPX", "call", exp_date, quote_dates[1], 210.0, 4.95, 5.05, 0.95],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 2.45, 2.55, 0.85],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 0.10, 0.20, 0.50],
+        ["SPX", "call", exp_date, quote_dates[1], 217.5, 0.0, 0.10, 0.10],
         # Exit day - Puts
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05, -0.01],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05, -0.05],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.15],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.50],
-        ["SPX", 215.0, "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55, -0.85],
+        ["SPX", "put", exp_date, quote_dates[1], 207.5, 0.0, 0.05, -0.01],
+        ["SPX", "put", exp_date, quote_dates[1], 210.0, 0.0, 0.05, -0.05],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.15],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.50],
+        ["SPX", "put", exp_date, quote_dates[1], 217.5, 2.45, 2.55, -0.85],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -225,7 +222,6 @@ def data_with_delta():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -236,21 +232,21 @@ def data_with_delta():
     ]
     d = [
         # Entry day - Calls (delta positive, decreasing as strike increases)
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.60],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 217.5, 4.50, 4.60, 0.30],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.60],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.45],
+        ["SPX", "call", exp_date, quote_dates[0], 217.5, 4.50, 4.60, 0.30],
         # Entry day - Puts (delta negative, becoming more negative as strike increases)
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.40],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 217.5, 8.80, 8.90, -0.70],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.40],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
+        ["SPX", "put", exp_date, quote_dates[0], 217.5, 8.80, 8.90, -0.70],
         # Exit day - Calls (deltas move toward 1 or 0 at expiration)
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.90],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 217.5, 2.45, 2.55, 0.80],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.90],
+        ["SPX", "call", exp_date, quote_dates[1], 217.5, 2.45, 2.55, 0.80],
         # Exit day - Puts (deltas move toward -1 or 0 at expiration)
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.10],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 217.5, 0.0, 0.05, -0.20],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.05, -0.05],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.05, -0.10],
+        ["SPX", "put", exp_date, quote_dates[1], 217.5, 0.0, 0.05, -0.20],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -265,7 +261,6 @@ def data_with_volume():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -279,7 +274,6 @@ def data_with_volume():
         # Entry day - Calls with varying volume
         [
             "SPX",
-            213.93,
             "call",
             exp_date,
             quote_dates[0],
@@ -289,11 +283,10 @@ def data_with_volume():
             0.55,
             2000,
         ],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.10, 0.40, 100],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 6.00, 6.10, 0.40, 100],
         # Entry day - Puts with varying volume
         [
             "SPX",
-            213.93,
             "put",
             exp_date,
             quote_dates[0],
@@ -303,13 +296,13 @@ def data_with_volume():
             -0.45,
             1500,
         ],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.60, 50],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.60, 50],
         # Exit day - Calls
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95, 3000],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.06, 0.85, 200],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.95, 3000],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.06, 0.85, 200],
         # Exit day - Puts
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.10, -0.05, 1000],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.10, -0.15, 100],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.10, -0.05, 1000],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.10, -0.15, 100],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -330,7 +323,6 @@ def option_data_entry_exit():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -342,20 +334,20 @@ def option_data_entry_exit():
 
     d = [
         # Wednesday entry
-        ["SPX", 213.93, "call", exp_date, entry_wed, 212.5, 7.35, 7.45, 0.50],
-        ["SPX", 213.93, "call", exp_date, entry_wed, 215.0, 6.00, 6.05, 0.30],
-        ["SPX", 213.93, "put", exp_date, entry_wed, 212.5, 5.70, 5.80, -0.30],
-        ["SPX", 213.93, "put", exp_date, entry_wed, 215.0, 7.10, 7.20, -0.50],
+        ["SPX", "call", exp_date, entry_wed, 212.5, 7.35, 7.45, 0.50],
+        ["SPX", "call", exp_date, entry_wed, 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "put", exp_date, entry_wed, 212.5, 5.70, 5.80, -0.30],
+        ["SPX", "put", exp_date, entry_wed, 215.0, 7.10, 7.20, -0.50],
         # Thursday entry
-        ["SPX", 214.50, "call", exp_date, entry_thu, 212.5, 7.55, 7.65, 0.50],
-        ["SPX", 214.50, "call", exp_date, entry_thu, 215.0, 6.10, 6.20, 0.30],
-        ["SPX", 214.50, "put", exp_date, entry_thu, 212.5, 5.50, 5.60, -0.30],
-        ["SPX", 214.50, "put", exp_date, entry_thu, 215.0, 6.90, 7.00, -0.50],
+        ["SPX", "call", exp_date, entry_thu, 212.5, 7.55, 7.65, 0.50],
+        ["SPX", "call", exp_date, entry_thu, 215.0, 6.10, 6.20, 0.30],
+        ["SPX", "put", exp_date, entry_thu, 212.5, 5.50, 5.60, -0.30],
+        ["SPX", "put", exp_date, entry_thu, 215.0, 6.90, 7.00, -0.50],
         # Exit (expiration)
-        ["SPX", 220, "call", exp_date, exp_date, 212.5, 7.45, 7.55, 0.50],
-        ["SPX", 220, "call", exp_date, exp_date, 215.0, 4.96, 5.05, 0.30],
-        ["SPX", 220, "put", exp_date, exp_date, 212.5, 0.0, 0.05, -0.30],
-        ["SPX", 220, "put", exp_date, exp_date, 215.0, 0.0, 0.05, -0.50],
+        ["SPX", "call", exp_date, exp_date, 212.5, 7.45, 7.55, 0.50],
+        ["SPX", "call", exp_date, exp_date, 215.0, 4.96, 5.05, 0.30],
+        ["SPX", "put", exp_date, exp_date, 212.5, 0.0, 0.05, -0.30],
+        ["SPX", "put", exp_date, exp_date, 215.0, 0.0, 0.05, -0.50],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -412,7 +404,6 @@ def calendar_data():
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -425,38 +416,38 @@ def calendar_data():
     d = [
         # ===== ENTRY DATE (2018-01-01) =====
         # Front month calls (30 DTE) - lower premium due to less time value
-        ["SPX", 212.5, "call", front_exp, entry_date, 210.0, 4.40, 4.50, 0.65],
-        ["SPX", 212.5, "call", front_exp, entry_date, 212.5, 2.90, 3.00, 0.50],
-        ["SPX", 212.5, "call", front_exp, entry_date, 215.0, 1.70, 1.80, 0.35],
+        ["SPX", "call", front_exp, entry_date, 210.0, 4.40, 4.50, 0.65],
+        ["SPX", "call", front_exp, entry_date, 212.5, 2.90, 3.00, 0.50],
+        ["SPX", "call", front_exp, entry_date, 215.0, 1.70, 1.80, 0.35],
         # Front month puts (30 DTE)
-        ["SPX", 212.5, "put", front_exp, entry_date, 210.0, 1.90, 2.00, -0.35],
-        ["SPX", 212.5, "put", front_exp, entry_date, 212.5, 2.90, 3.00, -0.50],
-        ["SPX", 212.5, "put", front_exp, entry_date, 215.0, 4.20, 4.30, -0.65],
+        ["SPX", "put", front_exp, entry_date, 210.0, 1.90, 2.00, -0.35],
+        ["SPX", "put", front_exp, entry_date, 212.5, 2.90, 3.00, -0.50],
+        ["SPX", "put", front_exp, entry_date, 215.0, 4.20, 4.30, -0.65],
         # Back month calls (60 DTE) - higher premium due to more time value
-        ["SPX", 212.5, "call", back_exp, entry_date, 210.0, 6.40, 6.50, 0.62],
-        ["SPX", 212.5, "call", back_exp, entry_date, 212.5, 4.90, 5.00, 0.50],
-        ["SPX", 212.5, "call", back_exp, entry_date, 215.0, 3.60, 3.70, 0.38],
+        ["SPX", "call", back_exp, entry_date, 210.0, 6.40, 6.50, 0.62],
+        ["SPX", "call", back_exp, entry_date, 212.5, 4.90, 5.00, 0.50],
+        ["SPX", "call", back_exp, entry_date, 215.0, 3.60, 3.70, 0.38],
         # Back month puts (60 DTE)
-        ["SPX", 212.5, "put", back_exp, entry_date, 210.0, 3.40, 3.50, -0.38],
-        ["SPX", 212.5, "put", back_exp, entry_date, 212.5, 4.90, 5.00, -0.50],
-        ["SPX", 212.5, "put", back_exp, entry_date, 215.0, 6.60, 6.70, -0.62],
+        ["SPX", "put", back_exp, entry_date, 210.0, 3.40, 3.50, -0.38],
+        ["SPX", "put", back_exp, entry_date, 212.5, 4.90, 5.00, -0.50],
+        ["SPX", "put", back_exp, entry_date, 215.0, 6.60, 6.70, -0.62],
         # ===== EXIT DATE (2018-01-24) =====
         # Front month calls (7 DTE remaining) - time decay accelerated
-        ["SPX", 215.0, "call", front_exp, exit_date, 210.0, 5.40, 5.50, 0.90],
-        ["SPX", 215.0, "call", front_exp, exit_date, 212.5, 3.00, 3.10, 0.75],
-        ["SPX", 215.0, "call", front_exp, exit_date, 215.0, 0.80, 0.90, 0.45],
+        ["SPX", "call", front_exp, exit_date, 210.0, 5.40, 5.50, 0.90],
+        ["SPX", "call", front_exp, exit_date, 212.5, 3.00, 3.10, 0.75],
+        ["SPX", "call", front_exp, exit_date, 215.0, 0.80, 0.90, 0.45],
         # Front month puts (7 DTE remaining) - OTM, mostly decayed
-        ["SPX", 215.0, "put", front_exp, exit_date, 210.0, 0.10, 0.20, -0.10],
-        ["SPX", 215.0, "put", front_exp, exit_date, 212.5, 0.30, 0.40, -0.25],
-        ["SPX", 215.0, "put", front_exp, exit_date, 215.0, 0.90, 1.00, -0.55],
+        ["SPX", "put", front_exp, exit_date, 210.0, 0.10, 0.20, -0.10],
+        ["SPX", "put", front_exp, exit_date, 212.5, 0.30, 0.40, -0.25],
+        ["SPX", "put", front_exp, exit_date, 215.0, 0.90, 1.00, -0.55],
         # Back month calls (37 DTE remaining) - still has time value
-        ["SPX", 215.0, "call", back_exp, exit_date, 210.0, 6.90, 7.00, 0.70],
-        ["SPX", 215.0, "call", back_exp, exit_date, 212.5, 5.00, 5.10, 0.58],
-        ["SPX", 215.0, "call", back_exp, exit_date, 215.0, 3.30, 3.40, 0.45],
+        ["SPX", "call", back_exp, exit_date, 210.0, 6.90, 7.00, 0.70],
+        ["SPX", "call", back_exp, exit_date, 212.5, 5.00, 5.10, 0.58],
+        ["SPX", "call", back_exp, exit_date, 215.0, 3.30, 3.40, 0.45],
         # Back month puts (37 DTE remaining)
-        ["SPX", 215.0, "put", back_exp, exit_date, 210.0, 1.40, 1.50, -0.30],
-        ["SPX", 215.0, "put", back_exp, exit_date, 212.5, 2.50, 2.60, -0.42],
-        ["SPX", 215.0, "put", back_exp, exit_date, 215.0, 4.30, 4.40, -0.55],
+        ["SPX", "put", back_exp, exit_date, 210.0, 1.40, 1.50, -0.30],
+        ["SPX", "put", back_exp, exit_date, 212.5, 2.50, 2.60, -0.42],
+        ["SPX", "put", back_exp, exit_date, 215.0, 4.30, 4.40, -0.55],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -554,7 +545,6 @@ def option_data_with_stock(stock_data_long_history):
 
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -586,9 +576,7 @@ def option_data_with_stock(stock_data_long_history):
                     bid, ask, call_delta = 3.5, 3.60, 0.50
                 else:
                     bid, ask, call_delta = 1.0, 1.10, 0.20
-                rows.append(
-                    ["SPX", price, "call", exp_date, ed, strike, bid, ask, call_delta]
-                )
+                rows.append(["SPX", "call", exp_date, ed, strike, bid, ask, call_delta])
                 # Put premiums (reverse moneyness)
                 if moneyness > 3:
                     bid, ask, put_delta = 7.0, 7.10, -0.80
@@ -596,9 +584,7 @@ def option_data_with_stock(stock_data_long_history):
                     bid, ask, put_delta = 3.5, 3.60, -0.50
                 else:
                     bid, ask, put_delta = 1.0, 1.10, -0.20
-                rows.append(
-                    ["SPX", price, "put", exp_date, ed, strike, bid, ask, put_delta]
-                )
+                rows.append(["SPX", "put", exp_date, ed, strike, bid, ask, put_delta])
 
         # Single set of exit rows per expiration (no per-entry duplication)
         exit_price = price_map[exp_date]
@@ -608,7 +594,6 @@ def option_data_with_stock(stock_data_long_history):
             rows.append(
                 [
                     "SPX",
-                    exit_price,
                     "call",
                     exp_date,
                     exp_date,
@@ -623,7 +608,6 @@ def option_data_with_stock(stock_data_long_history):
             rows.append(
                 [
                     "SPX",
-                    exit_price,
                     "put",
                     exp_date,
                     exp_date,

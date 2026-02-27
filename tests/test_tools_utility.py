@@ -23,7 +23,6 @@ def option_data():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -32,14 +31,14 @@ def option_data():
         "ask",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
-        ["SPX", 220.0, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
-        ["SPX", 220.0, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
-        ["SPX", 220.0, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
-        ["SPX", 220.0, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
@@ -110,7 +109,7 @@ class TestDescribeData:
         result = execute_tool("describe_data", {}, option_data)
         summary = result.llm_summary
         assert "8 rows" in summary
-        assert "8 columns" in summary
+        assert "7 columns" in summary
         # Should mention numeric column stats
         assert "strike" in summary or "bid" in summary
 

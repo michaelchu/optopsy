@@ -31,7 +31,6 @@ def basic_dataset():
     quote_dates = [datetime.datetime(2018, 1, 1), datetime.datetime(2018, 1, 31)]
     cols = [
         "underlying_symbol",
-        "underlying_price",
         "option_type",
         "expiration",
         "quote_date",
@@ -41,14 +40,14 @@ def basic_dataset():
         "delta",
     ]
     d = [
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
-        ["SPX", 213.93, "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.30],
-        ["SPX", 213.93, "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.65],
-        ["SPX", 220, "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.30],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
-        ["SPX", 220, "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.05],
+        ["SPX", "call", exp_date, quote_dates[0], 212.5, 7.35, 7.45, 0.55],
+        ["SPX", "call", exp_date, quote_dates[0], 215.0, 6.00, 6.05, 0.30],
+        ["SPX", "put", exp_date, quote_dates[0], 212.5, 5.70, 5.80, -0.30],
+        ["SPX", "put", exp_date, quote_dates[0], 215.0, 7.10, 7.20, -0.55],
+        ["SPX", "call", exp_date, quote_dates[1], 212.5, 7.45, 7.55, 0.65],
+        ["SPX", "call", exp_date, quote_dates[1], 215.0, 4.96, 5.05, 0.30],
+        ["SPX", "put", exp_date, quote_dates[1], 212.5, 0.0, 0.0, -0.05],
+        ["SPX", "put", exp_date, quote_dates[1], 215.0, 0.0, 0.0, -0.05],
     ]
     return pd.DataFrame(data=d, columns=cols)
 
