@@ -429,6 +429,103 @@ class TestSignalEdgeCases:
         assert "close" in seen_columns[0]
         assert "underlying_price" not in seen_columns[0]
 
+    def test_apply_signal_stock_data_merges_close(self):
+        """apply_signal with stock_data should merge close into options data."""
+        dates = pd.date_range("2018-01-01", periods=60, freq="B")
+        options = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "strike": [100.0] * 60,
+                "option_type": ["c"] * 60,
+                "implied_volatility": [0.20 + i * 0.005 for i in range(60)],
+                "expiration": dates + pd.Timedelta(days=30),
+            }
+        )
+        stock = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "close": [100.0] * 60,
+            }
+        )
+        # Without stock_data, IV rank has no price column → all-False
+        from optopsy.signals import iv_rank_above
+
+        result_without = apply_signal(options, iv_rank_above(threshold=0.1, window=20))
+        assert result_without.empty
+
+        # With stock_data, close is merged → IV rank can compute
+        result_with = apply_signal(
+            options, iv_rank_above(threshold=0.1, window=20), stock_data=stock
+        )
+        assert not result_with.empty
+
+    def test_apply_signal_stock_data_ignored_when_close_exists(self):
+        """stock_data should be ignored when data already has close."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
+            }
+        )
+        # stock_data with different prices — should be ignored
+        stock = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "close": [999.0] * 5,
+            }
+        )
+        seen_prices: list = []
+
+        def capture_close(df):
+            seen_prices.append(df["close"].iloc[0])
+            return pd.Series(True, index=df.index)
+
+        apply_signal(data, capture_close, stock_data=stock)
+        assert seen_prices[0] == 100.0  # original close, not stock_data
+
+    def test_apply_signal_stock_data_accepts_yfinance_format(self):
+        """stock_data should accept yfinance-style DataFrames."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        options = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "strike": [100.0] * 5,
+            }
+        )
+        # yfinance style: DatetimeIndex, capitalized columns, no underlying_symbol
+        stock = pd.DataFrame(
+            {"Close": [100.0, 101.0, 102.0, 103.0, 104.0]},
+            index=dates,
+        )
+        stock.index.name = "Date"
+        seen_columns: list = []
+
+        def capture(df):
+            seen_columns.append(set(df.columns))
+            return pd.Series(True, index=df.index)
+
+        apply_signal(options, capture, stock_data=stock)
+        assert "close" in seen_columns[0]
+
+    def test_apply_signal_stock_data_none_is_noop(self):
+        """stock_data=None should behave like the original apply_signal."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
+            }
+        )
+        result = apply_signal(data, sma_below(period=3), stock_data=None)
+        assert isinstance(result, pd.DataFrame)
+
     def test_sustained_days_zero_raises(self):
         """sustained() with days < 1 should raise ValueError."""
         with pytest.raises(ValueError, match="days must be >= 1"):

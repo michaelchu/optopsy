@@ -144,12 +144,22 @@ def signal(func: SignalFunc) -> Signal:
 # ---------------------------------------------------------------------------
 
 
-def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
+def apply_signal(
+    data: pd.DataFrame,
+    signal_func: SignalFunc,
+    stock_data: "pd.DataFrame | None" = None,
+) -> pd.DataFrame:
     """Run a signal function on data and return valid (symbol, date) pairs.
 
     Args:
         data: DataFrame with at least ``underlying_symbol`` and ``quote_date``.
         signal_func: Callable that takes a DataFrame and returns a boolean Series.
+        stock_data: Optional OHLCV DataFrame with stock prices.  When provided
+            and *data* lacks a ``close`` column, the stock prices are merged in
+            by ``(underlying_symbol, quote_date)``.  This is useful for IV rank
+            signals that need a price column for ATM strike selection while the
+            options data itself has no stock price.  Accepts yfinance output
+            directly (DatetimeIndex, ``Close`` column, etc.).
 
     Returns:
         DataFrame with columns ``(underlying_symbol, quote_date)`` for
@@ -159,6 +169,15 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
     if "close" not in df.columns and "underlying_price" in df.columns:
         df = df.rename(columns={"underlying_price": "close"})
     df["quote_date"] = normalize_dates(df["quote_date"])
+    if "close" not in df.columns and stock_data is not None:
+        from ..strategies._helpers import _normalize_stock_data
+
+        stock = _normalize_stock_data(stock_data, df)
+        df = df.merge(
+            stock[["underlying_symbol", "quote_date", "close"]],
+            on=["underlying_symbol", "quote_date"],
+            how="left",
+        )
     requires_per_strike = getattr(signal_func, "requires_per_strike", False)
     if requires_per_strike:
         df = df.sort_values(["underlying_symbol", "quote_date"]).reset_index(drop=True)
