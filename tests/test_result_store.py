@@ -229,7 +229,7 @@ class TestQueryResults:
     def _patch_store_dir(self, store, monkeypatch):
         """Make the handler's ResultStore() use the tmp_path-backed store."""
         monkeypatch.setattr(
-            "optopsy.ui.providers.result_store._RESULTS_DIR", store._dir
+            "optopsy.data.providers.result_store._RESULTS_DIR", store._dir
         )
 
     @pytest.fixture

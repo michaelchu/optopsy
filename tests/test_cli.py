@@ -40,14 +40,14 @@ class TestCLIParsing:
     def test_cache_size(self):
         from optopsy.ui.cli import main
 
-        with patch("optopsy.ui.cli._cmd_cache_size") as mock_size:
+        with patch("optopsy.data.cli._cmd_cache_size") as mock_size:
             main(["cache", "size"])
             mock_size.assert_called_once()
 
     def test_cache_clear_all(self):
         from optopsy.ui.cli import main
 
-        with patch("optopsy.ui.cli._cmd_cache_clear") as mock_clear:
+        with patch("optopsy.data.cli._cmd_cache_clear") as mock_clear:
             main(["cache", "clear"])
             args = mock_clear.call_args[0][0]
             assert args.symbol is None
@@ -55,7 +55,7 @@ class TestCLIParsing:
     def test_cache_clear_symbol(self):
         from optopsy.ui.cli import main
 
-        with patch("optopsy.ui.cli._cmd_cache_clear") as mock_clear:
+        with patch("optopsy.data.cli._cmd_cache_clear") as mock_clear:
             main(["cache", "clear", "SPY"])
             args = mock_clear.call_args[0][0]
             assert args.symbol == "SPY"
@@ -63,32 +63,32 @@ class TestCLIParsing:
 
 class TestFormatBytes:
     def test_bytes(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(512) == "512.0 B"
 
     def test_kilobytes(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(2048) == "2.0 KB"
 
     def test_megabytes(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(1_500_000) == "1.4 MB"
 
     def test_gigabytes(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(2_147_483_648) == "2.0 GB"
 
     def test_terabytes(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(1_099_511_627_776) == "1.0 TB"
 
     def test_zero(self):
-        from optopsy.ui.cli import _format_bytes
+        from optopsy.data.cli import _format_bytes
 
         assert _format_bytes(0) == "0.0 B"
 
@@ -308,7 +308,7 @@ class TestCmdRun:
 class TestCmdCache:
     def test_cache_size_shows_entries(self, capsys):
         """_cmd_cache_size prints per-symbol sizes and total."""
-        from optopsy.ui.cli import _cmd_cache_size
+        from optopsy.data.cli import _cmd_cache_size
 
         mock_cache = MagicMock()
         mock_cache.size.return_value = {
@@ -321,10 +321,10 @@ class TestCmdCache:
 
         with (
             patch(
-                "optopsy.ui._compat.import_optional_dependency",
+                "optopsy.data._compat.import_optional_dependency",
             ),
             patch(
-                "optopsy.ui.providers.cache.ParquetCache",
+                "optopsy.data.providers.cache.ParquetCache",
                 return_value=mock_cache,
             ),
         ):
@@ -339,7 +339,7 @@ class TestCmdCache:
 
     def test_cache_size_empty(self, capsys):
         """_cmd_cache_size prints 'empty' when no cache entries."""
-        from optopsy.ui.cli import _cmd_cache_size
+        from optopsy.data.cli import _cmd_cache_size
 
         mock_cache = MagicMock()
         mock_cache.size.return_value = {}
@@ -348,10 +348,10 @@ class TestCmdCache:
 
         with (
             patch(
-                "optopsy.ui._compat.import_optional_dependency",
+                "optopsy.data._compat.import_optional_dependency",
             ),
             patch(
-                "optopsy.ui.providers.cache.ParquetCache",
+                "optopsy.data.providers.cache.ParquetCache",
                 return_value=mock_cache,
             ),
         ):
@@ -362,7 +362,7 @@ class TestCmdCache:
 
     def test_cache_clear_all(self, capsys):
         """_cmd_cache_clear clears all entries."""
-        from optopsy.ui.cli import _cmd_cache_clear
+        from optopsy.data.cli import _cmd_cache_clear
 
         mock_cache = MagicMock()
         mock_cache.clear.return_value = 5
@@ -371,10 +371,10 @@ class TestCmdCache:
 
         with (
             patch(
-                "optopsy.ui._compat.import_optional_dependency",
+                "optopsy.data._compat.import_optional_dependency",
             ),
             patch(
-                "optopsy.ui.providers.cache.ParquetCache",
+                "optopsy.data.providers.cache.ParquetCache",
                 return_value=mock_cache,
             ),
         ):
@@ -386,7 +386,7 @@ class TestCmdCache:
 
     def test_cache_clear_symbol(self, capsys):
         """_cmd_cache_clear with symbol clears only that symbol."""
-        from optopsy.ui.cli import _cmd_cache_clear
+        from optopsy.data.cli import _cmd_cache_clear
 
         mock_cache = MagicMock()
         mock_cache.clear.return_value = 2
@@ -395,10 +395,10 @@ class TestCmdCache:
 
         with (
             patch(
-                "optopsy.ui._compat.import_optional_dependency",
+                "optopsy.data._compat.import_optional_dependency",
             ),
             patch(
-                "optopsy.ui.providers.cache.ParquetCache",
+                "optopsy.data.providers.cache.ParquetCache",
                 return_value=mock_cache,
             ),
         ):
@@ -418,17 +418,17 @@ class TestCmdCache:
 class TestCmdDownload:
     def test_no_provider_prints_error(self, capsys):
         """_cmd_download prints error when no provider is configured."""
-        from optopsy.ui.cli import _cmd_download
+        from optopsy.data.cli import _cmd_download
 
         args = argparse.Namespace(symbols=["SPY"], verbose=False)
 
         with (
             patch(
-                "optopsy.ui._compat.import_optional_dependency",
+                "optopsy.data._compat.import_optional_dependency",
             ),
-            patch("optopsy.ui.cli._load_env"),
+            patch("optopsy.data.cli._load_env"),
             patch(
-                "optopsy.ui.providers.get_provider_for_tool",
+                "optopsy.data.providers.get_provider_for_tool",
                 return_value=None,
             ),
         ):
