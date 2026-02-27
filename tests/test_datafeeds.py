@@ -26,7 +26,6 @@ def filepath_no_underlying_price():
     return os.path.join(_TEST_DATA_DIR, "data_no_underlying_price.csv")
 
 
-
 def filepath_empty():
     return os.path.join(_TEST_DATA_DIR, "empty.csv")
 
