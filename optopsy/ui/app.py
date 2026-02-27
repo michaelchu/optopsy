@@ -39,6 +39,7 @@ _env_path = find_dotenv() or str(Path(__file__).resolve().parent.parent.parent /
 load_dotenv(_env_path, override=True)
 
 import chainlit as cl
+import pandas as pd
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 from chainlit.server import app as chainlit_app
 from fastapi import HTTPException
@@ -759,8 +760,6 @@ async def on_message(message: cl.Message):
     # Handle CSV file uploads via drag-and-drop.
     # We store the raw file path so the agent can inspect the headers and
     # call csv_data() with the correct column mapping.
-    import pandas as pd
-
     csv_elements = [
         el
         for el in (message.elements or [])

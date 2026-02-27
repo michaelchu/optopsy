@@ -5,6 +5,7 @@ correctly between sequential tool calls after Pydantic validation.
 """
 
 import datetime
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -95,6 +96,110 @@ class TestDatasetThreading:
         assert r.datasets is named
         assert "SPX_full" in r.datasets
         assert "SPX_partial" in r.datasets
+
+
+# ---------------------------------------------------------------------------
+# TestLoadCsvData — e2e from CSV file on disk through execute_tool
+# ---------------------------------------------------------------------------
+
+TEST_DATA_DIR = str(Path(__file__).parent / "test_data")
+
+
+class TestLoadCsvData:
+    """Verify load_csv_data loads CSVs with correct column mapping."""
+
+    def test_load_8col_csv_with_defaults(self):
+        """8-column CSV (no underlying_price) loads with default indices."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        r = execute_tool("load_csv_data", {"file_path": csv_path}, None)
+
+        assert isinstance(r, ToolResult)
+        assert r.dataset is not None
+        df = r.dataset
+        assert "underlying_symbol" in df.columns
+        assert "option_type" in df.columns
+        assert "strike" in df.columns
+        assert "bid" in df.columns
+        assert "ask" in df.columns
+        assert "delta" in df.columns
+        assert "underlying_price" not in df.columns
+        assert len(df) > 0
+
+    def test_load_9col_csv_with_explicit_mapping(self):
+        """9-column CSV (with underlying_price) loads when indices are explicit."""
+        csv_path = f"{TEST_DATA_DIR}/data.csv"
+        r = execute_tool(
+            "load_csv_data",
+            {
+                "file_path": csv_path,
+                "underlying_symbol": 0,
+                "underlying_price": 1,
+                "option_type": 2,
+                "expiration": 3,
+                "quote_date": 4,
+                "strike": 5,
+                "bid": 6,
+                "ask": 7,
+                "delta": 8,
+            },
+            None,
+        )
+
+        assert isinstance(r, ToolResult)
+        assert r.dataset is not None
+        df = r.dataset
+        assert "underlying_symbol" in df.columns
+        assert "underlying_price" in df.columns
+        assert "option_type" in df.columns
+        assert "delta" in df.columns
+        assert len(df) > 0
+        # Verify underlying_price is numeric (not a string like "call")
+        assert pd.api.types.is_numeric_dtype(df["underlying_price"])
+
+    def test_load_csv_sets_active_dataset_and_datasets_dict(self):
+        """load_csv_data populates both active dataset and named datasets."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        r = execute_tool("load_csv_data", {"file_path": csv_path}, None)
+
+        assert r.dataset is not None
+        assert r.datasets is not None
+        assert "data_no_underlying_price.csv" in r.datasets
+        assert r.datasets["data_no_underlying_price.csv"] is r.dataset
+
+    def test_load_csv_wrong_mapping_returns_error(self):
+        """Incorrect column index returns an error, not corrupted data."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        # delta=99 is out of range for an 8-column CSV
+        r = execute_tool(
+            "load_csv_data",
+            {"file_path": csv_path, "delta": 99},
+            None,
+        )
+        assert "Failed to load CSV" in r.llm_summary
+
+    def test_load_csv_missing_file(self):
+        """Non-existent file returns an error."""
+        r = execute_tool(
+            "load_csv_data",
+            {"file_path": "/tmp/nonexistent_optopsy_test.csv"},
+            None,
+        )
+        assert "Failed to load CSV" in r.llm_summary
+
+    def test_load_then_preview(self):
+        """Full flow: load_csv_data → preview_data on the loaded dataset."""
+        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+        r1 = execute_tool("load_csv_data", {"file_path": csv_path}, None)
+        assert r1.dataset is not None
+
+        r2 = execute_tool(
+            "preview_data",
+            {"rows": 3},
+            r1.dataset,
+            datasets=r1.datasets,
+        )
+        assert isinstance(r2, ToolResult)
+        assert "rows" in r2.llm_summary.lower() or "row" in r2.llm_summary.lower()
 
 
 # ---------------------------------------------------------------------------

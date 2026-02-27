@@ -79,13 +79,14 @@ def _make_session_and_agent(agent=None, messages=None):
 
 
 class TestOnMessageCSVUpload:
-    def test_valid_csv_stores_dataset(self, option_csv_data):
-        """CSV upload stores dataset on agent and sets active dataset."""
+    def test_valid_csv_stores_uploaded_file(self, option_csv_data):
+        """CSV upload stores file path on agent and shows column preview."""
 
         async def _run():
             from optopsy.ui.app import on_message
 
             session, store, agent = _make_session_and_agent()
+            agent.uploaded_files = {}
 
             mock_msg = MagicMock()
             mock_msg.content = "check this data"
@@ -103,8 +104,6 @@ class TestOnMessageCSVUpload:
 
             import chainlit as cl
 
-            import optopsy as op
-
             sent_contents = []
 
             def capture_message(**kwargs):
@@ -112,22 +111,33 @@ class TestOnMessageCSVUpload:
                 sent_contents.append(content)
                 return mock_cl_msg
 
+            # Mock pd.read_csv to return a small preview DataFrame
+            mock_preview = option_csv_data.head(5)
+
             with (
                 patch.object(cl, "user_session", session),
                 patch.object(cl, "Message", side_effect=capture_message),
                 patch.object(cl, "Step", return_value=mock_step),
-                patch.object(op, "csv_data", return_value=option_csv_data),
+                patch("optopsy.ui.app.pd.read_csv", return_value=mock_preview),
             ):
                 await on_message(mock_msg)
 
-            assert "SPX_2018.csv" in agent.datasets
-            assert agent.dataset is option_csv_data
-            # Verify the upload confirmation message includes row count
-            upload_msg = next(c for c in sent_contents if "SPX_2018.csv" in c)
-            assert "4" in upload_msg  # 4 rows
-            assert "Loaded" in upload_msg
-            # Verify the message was actually sent to the user
-            assert mock_cl_msg.send.called
+            # File path stored for the agent to load later
+            assert "SPX_2018.csv" in agent.uploaded_files
+            assert agent.uploaded_files["SPX_2018.csv"] == "/tmp/test.csv"
+            # Verify the preview message shows column headers
+            upload_msgs = [c for c in sent_contents if "SPX_2018.csv" in c]
+            assert len(upload_msgs) > 0
+            assert "Received" in upload_msgs[0]
+            assert "columns" in upload_msgs[0].lower()
+            # Upload context injected into user message for the agent
+            # agent.chat receives the messages list; check its call args
+            agent.chat.assert_called_once()
+            call_msgs = agent.chat.call_args[0][0]
+            user_msgs = [m for m in call_msgs if m["role"] == "user"]
+            assert len(user_msgs) > 0
+            assert "Uploaded CSV" in user_msgs[0]["content"]
+            assert "/tmp/test.csv" in user_msgs[0]["content"]
 
         asyncio.run(_run())
 
@@ -138,6 +148,7 @@ class TestOnMessageCSVUpload:
             from optopsy.ui.app import on_message
 
             session, store, agent = _make_session_and_agent()
+            agent.uploaded_files = {}
 
             mock_msg = MagicMock()
             mock_msg.content = ""
@@ -151,8 +162,6 @@ class TestOnMessageCSVUpload:
 
             import chainlit as cl
 
-            import optopsy as op
-
             def capture_message(**kwargs):
                 content = kwargs.get("content", "")
                 sent_contents.append(content)
@@ -161,7 +170,10 @@ class TestOnMessageCSVUpload:
             with (
                 patch.object(cl, "user_session", session),
                 patch.object(cl, "Message", side_effect=capture_message),
-                patch.object(op, "csv_data", side_effect=ValueError("bad CSV")),
+                patch(
+                    "optopsy.ui.app.pd.read_csv",
+                    side_effect=ValueError("bad CSV"),
+                ),
             ):
                 await on_message(mock_msg)
 
