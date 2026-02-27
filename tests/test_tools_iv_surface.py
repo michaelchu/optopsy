@@ -1,6 +1,7 @@
 """Tests for plot_vol_surface and iv_term_structure tools."""
 
 import datetime
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -339,3 +340,117 @@ class TestBuildSignalIncompatibleCombination:
         )
         # Should succeed (no incompatibility error)
         assert "Cannot combine" not in result.llm_summary
+
+
+# ---------------------------------------------------------------------------
+# iv_term_structure yf cache fallback tests
+# ---------------------------------------------------------------------------
+
+
+def _make_iv_dataset_no_price():
+    """Options data with IV but NO price column (no close, no underlying_price)."""
+    qd = datetime.datetime(2024, 1, 2)
+    exp1 = datetime.datetime(2024, 2, 16)
+    exp2 = datetime.datetime(2024, 3, 15)
+    rows = []
+    for exp in [exp1, exp2]:
+        for strike in [95.0, 100.0, 105.0]:
+            for ot in ["call", "put"]:
+                iv = 0.20 + abs(strike - 100.0) * 0.005
+                rows.append(["SPX", ot, exp, qd, strike, 3.0, 3.10, iv])
+    cols = [
+        "underlying_symbol",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "implied_volatility",
+    ]
+    return pd.DataFrame(data=rows, columns=cols)
+
+
+def _make_yf_cached_df(
+    symbol: str, quote_date: str, close_price: float
+) -> pd.DataFrame:
+    """Minimal yf cache DataFrame (uses 'date' column, as stored on disk)."""
+    return pd.DataFrame(
+        {
+            "underlying_symbol": [symbol],
+            "date": pd.to_datetime([quote_date]),
+            "open": [close_price],
+            "high": [close_price],
+            "low": [close_price],
+            "close": [close_price],
+            "volume": [1_000_000],
+        }
+    )
+
+
+class TestIVTermStructureYFCacheFallback:
+    """Tests for auto-merging stock prices from yf cache when price column is missing."""
+
+    def test_falls_back_to_yf_cache_and_returns_chart(self):
+        """When no price column exists, stock close from yf cache enables ATM computation."""
+        ds = _make_iv_dataset_no_price()
+        cached_df = _make_yf_cached_df("SPX", "2024-01-02", 100.0)
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                return_value=cached_df,
+            ),
+        ):
+            mock_cache.read.return_value = cached_df
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is not None
+        assert "IV term structure" in result.llm_summary
+
+    def test_returns_error_when_yf_cache_empty(self):
+        """When no price column and yf cache returns nothing, error is returned."""
+        ds = _make_iv_dataset_no_price()
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                return_value=None,
+            ),
+        ):
+            mock_cache.read.return_value = None
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is None
+        assert "No price column" in result.llm_summary
+
+    def test_yf_cache_fetch_failure_returns_error(self):
+        """When yf fetch raises OSError for all symbols, 'No price column' error is returned."""
+        ds = _make_iv_dataset_no_price()
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                side_effect=OSError("network error"),
+            ),
+        ):
+            mock_cache.read.return_value = None
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is None
+        assert "No price column" in result.llm_summary
