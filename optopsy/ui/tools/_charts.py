@@ -9,8 +9,10 @@ from ..providers.result_store import ResultStore
 from ._executor import _register, _require_dataset, _resolve_dataset
 from ._helpers import (
     _IV_COLUMN_MISSING_MSG,
+    _YF_CACHE_CATEGORY,
     _filter_by_quote_date,
     _select_results,
+    _yf_cache,
     resolve_price_column,
 )
 
