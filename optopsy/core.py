@@ -225,11 +225,19 @@ def _process_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFrame:
     # Build join_on from context
     join_on = context.get("join_on")
 
+    # Pre-filter only the option types actually needed by this strategy
+    from .evaluation import _calls, _puts
+
+    needed_filters = {leg[1] for leg in leg_def}
+    _prefiltered = {f: f(data) for f in needed_filters if f in (_calls, _puts)}
+
     # Evaluate each leg independently
     leg_results = []
     for leg, delta_target in zip(leg_def, leg_deltas[: len(leg_def)]):
         option_filter = leg[1]  # _calls or _puts
-        leg_data = option_filter(data)
+        leg_data = _prefiltered.get(option_filter)
+        if leg_data is None:
+            leg_data = option_filter(data)
 
         evaluated = _evaluate_all_options(
             leg_data,
@@ -344,11 +352,13 @@ def _process_calendar_strategy(data: pd.DataFrame, **context: Any) -> pd.DataFra
             df, params, internal_cols, external_cols, same_strike
         )
 
-    # Work with a copy and normalize dates/option_type once at the root
-    data = data.copy()
-    data["quote_date"] = normalize_dates(data["quote_date"])
-    data["expiration"] = normalize_dates(data["expiration"])
-    data["option_type"] = data["option_type"].str.lower()
+    # Normalize dates/option_type once at the root; _assign_dte returns a new
+    # DataFrame via .assign(), so no explicit .copy() needed.
+    data = data.assign(
+        quote_date=normalize_dates(data["quote_date"]),
+        expiration=normalize_dates(data["expiration"]),
+        option_type=data["option_type"].str.lower(),
+    )
     data = _assign_dte(data)
 
     # Get front and back leg options with delta targeting

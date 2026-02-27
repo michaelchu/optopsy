@@ -116,7 +116,7 @@ def _apply_single_leg_exits(
     )
 
     if not triggered.empty:
-        result = _replace_exits_single_leg(result, triggered, data, contract_cols)
+        result = _replace_exits_single_leg(result, triggered, data, side_value)
 
     result.drop(columns=["_trade_id"], inplace=True)
     return result
@@ -143,6 +143,15 @@ def _apply_multi_leg_exits(
 
     # For each leg, get intermediate snapshots and compute per-leg unrealized P&L
     contract_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
+
+    # Pre-compute max_dates once for all legs
+    available_cols = [c for c in contract_cols if c in data.columns]
+    precomputed_max_dates = (
+        data.groupby(available_cols, observed=True)["quote_date"]
+        .max()
+        .reset_index()
+        .rename(columns={"quote_date": "_max_date"})
+    )
 
     # Build per-leg intermediate DataFrames
     leg_intermediates = []
@@ -178,7 +187,11 @@ def _apply_multi_leg_exits(
             trades_lookup["strike"] = result["strike"]
 
         intermediates = _get_intermediate_snapshots(
-            data, trades_lookup, contract_cols, "quote_date_entry"
+            data,
+            trades_lookup,
+            contract_cols,
+            "quote_date_entry",
+            max_dates=precomputed_max_dates,
         )
 
         if intermediates.empty:
@@ -254,9 +267,7 @@ def _apply_multi_leg_exits(
     )
 
     if not triggered.empty:
-        result = _replace_exits_multi_leg(
-            result, triggered, data, leg_def, contract_cols
-        )
+        result = _replace_exits_multi_leg(result, triggered, data, leg_def)
 
     result.drop(columns=["_trade_id"], inplace=True)
     return result
@@ -267,6 +278,7 @@ def _get_intermediate_snapshots(
     trades: pd.DataFrame,
     contract_cols: List[str],
     entry_date_col: str,
+    max_dates: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """Extract intermediate quotes between entry and exit dates.
 
@@ -275,6 +287,9 @@ def _get_intermediate_snapshots(
         trades: Trade DataFrame with _trade_id and contract columns.
         contract_cols: Columns identifying a contract (symbol, type, exp, strike).
         entry_date_col: Column name for entry date in trades.
+        max_dates: Pre-computed max quote_date per contract group. When provided,
+            skips the internal groupby computation. Callers processing multiple
+            legs should pre-compute this once and pass it to each call.
 
     Returns:
         DataFrame with _trade_id, quote_date, and _mid (midpoint price)
@@ -312,12 +327,13 @@ def _get_intermediate_snapshots(
     # The planned exit is the quote date at exit_dte — we can get it from the
     # original result's exit info. But we don't have that here directly.
     # Instead, get max quote_date per contract from the data as the "end" boundary.
-    max_dates = (
-        data.groupby(available_cols, observed=True)["quote_date"]
-        .max()
-        .reset_index()
-        .rename(columns={"quote_date": "_max_date"})
-    )
+    if max_dates is None:
+        max_dates = (
+            data.groupby(available_cols, observed=True)["quote_date"]
+            .max()
+            .reset_index()
+            .rename(columns={"quote_date": "_max_date"})
+        )
     merged = merged.merge(max_dates, on=available_cols, how="left")
     # Only keep dates strictly before the planned exit
     merged = merged[merged["quote_date"] < merged["_max_date"]]
@@ -377,20 +393,19 @@ def _find_first_threshold_crossing(
     first_per_trade = crossed.drop_duplicates(subset=["_trade_id"], keep="first")
 
     # Determine exit type — priority: stop_loss > take_profit > max_hold
-    def _classify(row):
-        pct = row["_unrealized_pct"]
-        if stop_loss is not None and pct <= stop_loss:
-            return "stop_loss"
-        if take_profit is not None and pct >= take_profit:
-            return "take_profit"
-        if max_hold_days is not None:
-            return "max_hold"
-        raise ValueError(
-            "Unable to classify early exit: trade did not hit stop_loss or "
-            "take_profit, and max_hold_days was not configured."
-        )
+    conditions = []
+    choices = []
+    if stop_loss is not None:
+        conditions.append(first_per_trade["_unrealized_pct"] <= stop_loss)
+        choices.append("stop_loss")
+    if take_profit is not None:
+        conditions.append(first_per_trade["_unrealized_pct"] >= take_profit)
+        choices.append("take_profit")
+    if max_hold_days is not None:
+        conditions.append(pd.Series(True, index=first_per_trade.index))
+        choices.append("max_hold")
 
-    first_per_trade["_exit_type"] = first_per_trade.apply(_classify, axis=1)
+    first_per_trade["_exit_type"] = np.select(conditions, choices, default="")
 
     return first_per_trade[["_trade_id", "quote_date", "_exit_type"]].reset_index(
         drop=True
@@ -401,76 +416,82 @@ def _replace_exits_single_leg(
     result: pd.DataFrame,
     triggered: pd.DataFrame,
     data: pd.DataFrame,
-    contract_cols: List[str],
+    side_value: int,
 ) -> pd.DataFrame:
     """Replace exit data for triggered single-leg trades.
 
-    Updates bid_exit, ask_exit, exit, dte_exit (if present), quote_date_exit
-    (if present), pct_change, and exit_type for each triggered trade.
+    Updates bid_exit, ask_exit, exit, dte_exit (if present), pct_change,
+    exit_type, and _early_exit_date for each triggered trade. The planned
+    exit date in quote_date_exit (if present) is not modified; the actual
+    early-exit quote date is stored in _early_exit_date.
     """
-    # For each triggered trade, look up the actual bid/ask at the exit date
-    for _, trig_row in triggered.iterrows():
-        trade_id = trig_row["_trade_id"]
-        exit_date = trig_row["quote_date"]
-        exit_type = trig_row["_exit_type"]
+    # Build lookup keys: join triggered trades with result to get contract info,
+    # then merge with data to get exit prices — all vectorized.
+    trig_trades = triggered[["_trade_id", "quote_date", "_exit_type"]].rename(
+        columns={"quote_date": "_exit_quote_date"}
+    )
 
-        trade = result.loc[result["_trade_id"] == trade_id]
-        if trade.empty:
-            continue
+    # Get contract details from result for triggered trades
+    result_cols = ["_trade_id", "underlying_symbol", "expiration", "strike", "entry"]
+    if "option_type" in result.columns:
+        result_cols.append("option_type")
 
-        trade_row = trade.iloc[0]
+    lookup = trig_trades.merge(result[result_cols], on="_trade_id", how="inner")
 
-        # Look up the contract in data at the exit date
-        mask = (
-            (data["quote_date"] == exit_date)
-            & (data["underlying_symbol"] == trade_row["underlying_symbol"])
-            & (data["expiration"] == trade_row["expiration"])
-            & (data["strike"] == trade_row["strike"])
-        )
-        if "option_type" in trade_row.index and "option_type" in data.columns:
-            mask = mask & (data["option_type"] == trade_row["option_type"])
+    # Merge with data to get bid/ask at exit date
+    data_merge_cols = ["underlying_symbol", "expiration", "strike"]
+    if "option_type" in lookup.columns and "option_type" in data.columns:
+        data_merge_cols.append("option_type")
 
-        exit_rows = data[mask]
-        if exit_rows.empty:
-            continue
+    lookup = lookup.rename(columns={"_exit_quote_date": "quote_date"})
+    # Deduplicate data on merge keys to avoid expanding trades
+    data_exit_keys = ["quote_date"] + data_merge_cols
+    data_exit = data[data_exit_keys + ["bid", "ask"]].drop_duplicates(
+        subset=data_exit_keys, keep="first"
+    )
+    lookup = lookup.merge(
+        data_exit,
+        on=data_exit_keys,
+        how="inner",
+    )
 
-        exit_data = exit_rows.iloc[0]
-        idx = trade.index[0]
+    if lookup.empty:
+        return result
 
-        # Update exit columns
-        if "bid_exit" in result.columns:
-            result.at[idx, "bid_exit"] = exit_data["bid"]
-        if "ask_exit" in result.columns:
-            result.at[idx, "ask_exit"] = exit_data["ask"]
+    # Compute new exit prices and pct_change using known side_value
+    lookup["_new_exit"] = (lookup["bid"] + lookup["ask"]) / 2
+    entry_price = lookup["entry"]
+    lookup["_new_pct"] = np.where(
+        entry_price.abs() > 0,
+        side_value * (lookup["_new_exit"] - entry_price) / entry_price.abs(),
+        np.nan,
+    )
 
-        new_exit = (exit_data["bid"] + exit_data["ask"]) / 2
-        result.at[idx, "exit"] = new_exit
+    # Set result index on lookup for bulk update
+    result_indexed = result.set_index("_trade_id")
 
-        # Recalculate pct_change
-        entry_price = _scalar_float(result.at[idx, "entry"])
-        side_value = 1
-        # Recover the side from the original pct_change calculation:
-        # pct = side * (exit - entry) / |entry|
-        if abs(entry_price) > 0:
-            old_exit = _scalar_float(trade_row.get("exit", 0))
-            old_pct = _scalar_float(trade_row.get("pct_change", 0))
-            if abs(old_exit - entry_price) > 1e-10 and not np.isnan(old_pct):
-                inferred_side = old_pct * abs(entry_price) / (old_exit - entry_price)
-                side_value = 1 if inferred_side > 0 else -1
-            result.at[idx, "pct_change"] = (
-                side_value * (new_exit - entry_price) / abs(entry_price)
-            )
-        else:
-            result.at[idx, "pct_change"] = np.nan
+    for col_name, lookup_col in [
+        ("bid_exit", "bid"),
+        ("ask_exit", "ask"),
+    ]:
+        if col_name in result.columns:
+            updates = lookup.set_index("_trade_id")[lookup_col]
+            result_indexed.loc[updates.index, col_name] = updates.values
 
-        result.at[idx, "exit_type"] = exit_type
-        result.at[idx, "_early_exit_date"] = pd.Timestamp(exit_date)
+    # Update exit, pct_change, exit_type, _early_exit_date
+    updates = lookup.set_index("_trade_id")
+    result_indexed.loc[updates.index, "exit"] = updates["_new_exit"].values
+    result_indexed.loc[updates.index, "pct_change"] = updates["_new_pct"].values
+    result_indexed.loc[updates.index, "exit_type"] = updates["_exit_type"].values
+    result_indexed.loc[updates.index, "_early_exit_date"] = pd.to_datetime(
+        updates["quote_date"]
+    ).values
 
-        # Update DTE at exit if column exists
-        if "dte_exit" in result.columns and "expiration" in trade_row.index:
-            new_dte = (trade_row["expiration"] - exit_date).days
-            result.at[idx, "dte_exit"] = new_dte
+    if "dte_exit" in result.columns and "expiration" in result_indexed.columns:
+        new_dte = (updates["expiration"] - updates["quote_date"]).dt.days
+        result_indexed.loc[updates.index, "dte_exit"] = new_dte.values
 
+    result = result_indexed.reset_index()
     return result
 
 
@@ -479,93 +500,168 @@ def _replace_exits_multi_leg(
     triggered: pd.DataFrame,
     data: pd.DataFrame,
     leg_def: List[Tuple],
-    contract_cols: List[str],
 ) -> pd.DataFrame:
     """Replace exit data for triggered multi-leg trades."""
     n_legs = len(leg_def)
 
-    for _, trig_row in triggered.iterrows():
-        trade_id = trig_row["_trade_id"]
-        exit_date = trig_row["quote_date"]
-        exit_type = trig_row["_exit_type"]
+    trig_trades = triggered[["_trade_id", "quote_date", "_exit_type"]].rename(
+        columns={"quote_date": "_exit_quote_date"}
+    )
 
-        trade = result.loc[result["_trade_id"] == trade_id]
-        if trade.empty:
-            continue
+    # Collect result columns needed for contract lookup
+    result_cols = ["_trade_id", "underlying_symbol", "expiration"]
+    for leg_idx in range(1, n_legs + 1):
+        for col in [
+            f"option_type_leg{leg_idx}",
+            f"strike_leg{leg_idx}",
+            f"entry_leg{leg_idx}",
+        ]:
+            if col in result.columns:
+                result_cols.append(col)
+    if "option_type" in result.columns:
+        result_cols.append("option_type")
+    if "strike" in result.columns:
+        result_cols.append("strike")
+    if "total_entry_cost" in result.columns:
+        result_cols.append("total_entry_cost")
 
-        trade_row = trade.iloc[0]
-        idx = trade.index[0]
+    lookup = trig_trades.merge(
+        result[list(dict.fromkeys(result_cols))], on="_trade_id", how="inner"
+    )
 
-        all_legs_found = True
-        new_entry_total = 0.0
-        new_exit_total = 0.0
+    if lookup.empty:
+        return result
 
-        for leg_idx in range(1, n_legs + 1):
-            leg = leg_def[leg_idx - 1]
-            side_value = leg[0].value
-            quantity = leg[2] if len(leg) > 2 else 1
-            multiplier = side_value * quantity
+    # For each leg, merge with data to get exit bid/ask, then compute exit values
+    # Track which trade_ids have all legs found
+    valid_ids = set(lookup["_trade_id"].values)
 
-            # Get contract identifiers for this leg
-            opt_type_col = f"option_type_leg{leg_idx}"
-            strike_col = f"strike_leg{leg_idx}"
+    leg_updates: Dict[int, pd.DataFrame] = {}
+    for leg_idx in range(1, n_legs + 1):
+        leg = leg_def[leg_idx - 1]
+        side_value = leg[0].value
+        quantity = leg[2] if len(leg) > 2 else 1
+        multiplier = side_value * quantity
 
-            opt_type = trade_row.get(opt_type_col, trade_row.get("option_type"))
-            strike = trade_row.get(strike_col, trade_row.get("strike"))
+        opt_type_col = f"option_type_leg{leg_idx}"
+        strike_col = f"strike_leg{leg_idx}"
 
-            # Look up in data
-            mask = (
-                (data["quote_date"] == exit_date)
-                & (data["underlying_symbol"] == trade_row["underlying_symbol"])
-                & (data["expiration"] == trade_row["expiration"])
-                & (data["strike"] == strike)
+        # Build per-leg lookup with contract identifiers
+        leg_lookup = lookup[lookup["_trade_id"].isin(valid_ids)].copy()
+        leg_lookup["_strike"] = leg_lookup.get(
+            strike_col, leg_lookup.get("strike", pd.Series(dtype="float64"))
+        )
+        leg_lookup["_opt_type"] = leg_lookup.get(
+            opt_type_col, leg_lookup.get("option_type", pd.Series(dtype="object"))
+        )
+
+        # Merge with data at exit date
+        leg_lookup = leg_lookup.rename(columns={"_exit_quote_date": "quote_date"})
+
+        data_merge = data[
+            ["quote_date", "underlying_symbol", "expiration", "strike", "bid", "ask"]
+        ].copy()
+        if "option_type" in data.columns:
+            data_merge["option_type"] = data["option_type"]
+            leg_lookup_merge = leg_lookup.rename(
+                columns={"_strike": "strike", "_opt_type": "option_type"}
             )
-            if "option_type" in data.columns and opt_type is not None:
-                mask = mask & (data["option_type"] == opt_type)
-
-            exit_rows = data[mask]
-            if exit_rows.empty:
-                all_legs_found = False
-                break
-
-            exit_data = exit_rows.iloc[0]
-            new_mid = (exit_data["bid"] + exit_data["ask"]) / 2
-
-            # Update per-leg exit columns
-            bid_col = f"bid_exit_leg{leg_idx}"
-            ask_col = f"ask_exit_leg{leg_idx}"
-            exit_col = f"exit_leg{leg_idx}"
-
-            if bid_col in result.columns:
-                result.at[idx, bid_col] = exit_data["bid"]
-            if ask_col in result.columns:
-                result.at[idx, ask_col] = exit_data["ask"]
-            if exit_col in result.columns:
-                # exit_leg columns store price * multiplier
-                result.at[idx, exit_col] = new_mid * multiplier
-
-            entry_col = f"entry_leg{leg_idx}"
-            if entry_col in result.columns:
-                new_entry_total += _scalar_float(result.at[idx, entry_col])
-            new_exit_total += new_mid * multiplier
-
-        if not all_legs_found:
-            continue
-
-        # Update totals
-        if "total_entry_cost" in result.columns:
-            new_entry_total = _scalar_float(result.at[idx, "total_entry_cost"])
-        result.at[idx, "total_exit_proceeds"] = new_exit_total
-
-        # Recalculate pct_change
-        if abs(new_entry_total) > 0:
-            result.at[idx, "pct_change"] = (new_exit_total - new_entry_total) / abs(
-                new_entry_total
-            )
+            merge_cols = [
+                "quote_date",
+                "underlying_symbol",
+                "expiration",
+                "strike",
+                "option_type",
+            ]
         else:
-            result.at[idx, "pct_change"] = np.nan
+            leg_lookup_merge = leg_lookup.rename(columns={"_strike": "strike"})
+            merge_cols = ["quote_date", "underlying_symbol", "expiration", "strike"]
 
-        result.at[idx, "exit_type"] = exit_type
-        result.at[idx, "_early_exit_date"] = pd.Timestamp(exit_date)
+        # Deduplicate data on merge keys to avoid expanding trades
+        data_merge = data_merge.drop_duplicates(subset=merge_cols, keep="first")
+        merged = leg_lookup_merge.merge(
+            data_merge, on=merge_cols, how="inner", suffixes=("", "_data")
+        )
 
+        # Remove trade_ids that had no data match for this leg
+        bid_col_data = "bid_data" if "bid_data" in merged.columns else "bid"
+        ask_col_data = "ask_data" if "ask_data" in merged.columns else "ask"
+
+        found_ids = set(merged["_trade_id"].values)
+        valid_ids &= found_ids
+
+        merged["_new_mid"] = (merged[bid_col_data] + merged[ask_col_data]) / 2
+
+        leg_updates[leg_idx] = (
+            merged[["_trade_id", bid_col_data, ask_col_data, "_new_mid"]]
+            .rename(columns={bid_col_data: "_bid", ask_col_data: "_ask"})
+            .copy()
+        )
+        leg_updates[leg_idx]["_multiplier"] = multiplier
+
+    if not valid_ids:
+        return result
+
+    # Apply updates to result using _trade_id index
+    result_indexed = result.set_index("_trade_id")
+
+    # Filter triggered to valid trades only
+    valid_trig = trig_trades[trig_trades["_trade_id"].isin(valid_ids)].set_index(
+        "_trade_id"
+    )
+
+    new_exit_totals = pd.Series(0.0, index=valid_trig.index)
+
+    for leg_idx in range(1, n_legs + 1):
+        updates = leg_updates[leg_idx]
+        updates = updates[updates["_trade_id"].isin(valid_ids)].set_index("_trade_id")
+
+        bid_col = f"bid_exit_leg{leg_idx}"
+        ask_col = f"ask_exit_leg{leg_idx}"
+        exit_col = f"exit_leg{leg_idx}"
+
+        if bid_col in result_indexed.columns:
+            result_indexed.loc[updates.index, bid_col] = updates["_bid"].values
+        if ask_col in result_indexed.columns:
+            result_indexed.loc[updates.index, ask_col] = updates["_ask"].values
+        if exit_col in result_indexed.columns:
+            result_indexed.loc[updates.index, exit_col] = (
+                updates["_new_mid"] * updates["_multiplier"]
+            ).values
+
+        leg_exit_values = np.asarray(
+            (updates["_new_mid"] * updates["_multiplier"]).values
+        )
+        new_exit_totals.loc[updates.index] = (
+            new_exit_totals.loc[updates.index].values + leg_exit_values
+        )
+
+    # Update totals and pct_change
+    if "total_entry_cost" in result_indexed.columns:
+        entry_totals = result_indexed.loc[valid_trig.index, "total_entry_cost"]
+    else:
+        entry_cols = [f"entry_leg{i}" for i in range(1, n_legs + 1)]
+        available_entry_cols = [c for c in entry_cols if c in result_indexed.columns]
+        entry_totals = result_indexed.loc[valid_trig.index, available_entry_cols].sum(
+            axis=1
+        )
+
+    if "total_exit_proceeds" in result_indexed.columns:
+        result_indexed.loc[valid_trig.index, "total_exit_proceeds"] = (
+            new_exit_totals.values
+        )
+
+    result_indexed.loc[valid_trig.index, "pct_change"] = np.where(
+        entry_totals.abs() > 0,
+        (np.asarray(new_exit_totals.values) - np.asarray(entry_totals.values))
+        / np.asarray(entry_totals.abs().values),
+        np.nan,
+    )
+
+    result_indexed.loc[valid_trig.index, "exit_type"] = valid_trig["_exit_type"].values
+    result_indexed.loc[valid_trig.index, "_early_exit_date"] = pd.to_datetime(
+        valid_trig["_exit_quote_date"]
+    ).values
+
+    result = result_indexed.reset_index()
     return result

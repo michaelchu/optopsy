@@ -57,11 +57,8 @@ def _get_exits(
     contract_cols = ["underlying_symbol", "option_type", "expiration", "strike"]
     candidates = candidates.copy()
     candidates["_dte_diff"] = (candidates["dte"] - exit_dte).abs()
-    exits = (
-        candidates.sort_values("_dte_diff")
-        .drop_duplicates(subset=contract_cols, keep="first")
-        .drop(columns=["_dte_diff"])
-    )
+    idx = candidates.groupby(contract_cols, observed=True)["_dte_diff"].idxmin()
+    exits = candidates.loc[idx].drop(columns=["_dte_diff"])
     return exits
 
 
@@ -140,9 +137,9 @@ def _evaluate_all_options(data: pd.DataFrame, **kwargs: Any) -> pd.DataFrame:
 
 def _calls(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for call options only."""
-    return data[data["option_type"].str.startswith("c", na=False)]
+    return data[data["option_type"].str[0] == "c"]
 
 
 def _puts(data: pd.DataFrame) -> pd.DataFrame:
     """Filter dataframe for put options only."""
-    return data[data["option_type"].str.startswith("p", na=False)]
+    return data[data["option_type"].str[0] == "p"]

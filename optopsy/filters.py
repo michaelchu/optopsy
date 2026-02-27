@@ -96,11 +96,10 @@ def _select_closest_delta(
 
     data["_delta_diff"] = (data["_abs_delta"] - target).abs()
     group_cols = ["underlying_symbol", "quote_date", "expiration", "option_type"]
-    result = (
-        data.sort_values(["_delta_diff", "strike"], kind="mergesort")
-        .drop_duplicates(subset=group_cols, keep="first")
-        .drop(columns=["_abs_delta", "_delta_diff"])
-    )
+    # Sort by strike first so idxmin() deterministically picks lowest strike on ties
+    data = data.sort_values("strike", kind="mergesort")
+    idx = data.groupby(group_cols, observed=True)["_delta_diff"].idxmin()
+    result = data.loc[idx].drop(columns=["_abs_delta", "_delta_diff"])
     return result
 
 
