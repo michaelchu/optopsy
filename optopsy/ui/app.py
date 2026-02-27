@@ -785,8 +785,7 @@ async def on_message(message: cl.Message):
                 )
             ).send()
             _upload_contexts.append(
-                f"[Uploaded CSV: {label} | path: {el.path} | "
-                f"columns ({len(headers)}): {headers}]"
+                f"[Uploaded CSV: {label} | columns ({len(headers)}): {headers}]"
             )
         except Exception as e:
             await cl.Message(content=f"Failed to read **{el.name}**: {e}").send()

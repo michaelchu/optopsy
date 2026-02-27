@@ -19,8 +19,7 @@ from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
 
-# Column kwargs accepted by csv_data(), derived from default_kwargs to stay DRY.
-_CSV_COL_KEYS = tuple(k for k in default_kwargs if k not in ("start_date", "end_date"))
+# All kwarg keys accepted by csv_data(), derived from default_kwargs to stay DRY.
 _CSV_KWARG_KEYS = tuple(default_kwargs.keys())
 
 
@@ -30,15 +29,19 @@ def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _resul
     if not file_path:
         return _result("file_path is required.")
 
-    # Validate file_path against uploaded files to prevent path traversal.
-    allowed_paths = arguments.get("_uploaded_file_paths")
-    if allowed_paths is not None:
-        real_path = os.path.realpath(file_path)
-        allowed_real = {os.path.realpath(p) for p in allowed_paths}
-        if real_path not in allowed_real:
+    # Resolve file_path via the uploaded-files registry.  The LLM only sees
+    # opaque labels (filenames), so we map label → real server path here.
+    # When no registry is provided (e.g. direct API use), fall through.
+    uploaded = arguments.get("_uploaded_file_paths")
+    if uploaded is not None:
+        resolved = uploaded.get(file_path)
+        if resolved is None:
+            available = list(uploaded.keys()) if uploaded else []
             return _result(
-                f"Access denied: '{file_path}' is not a recognized uploaded file."
+                f"Access denied: '{file_path}' is not a recognized uploaded file. "
+                f"Available: {available}"
             )
+        file_path = resolved
 
     # Build kwargs for csv_data() from the validated arguments.
     csv_kwargs = {}

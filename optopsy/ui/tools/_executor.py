@@ -265,8 +265,8 @@ def execute_tool(
     # Inject internal metadata AFTER validation so Pydantic doesn't strip it.
     if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
         arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
-    if uploaded_files and tool_name == "load_csv_data":
-        arguments = {**arguments, "_uploaded_file_paths": set(uploaded_files.values())}
+    if uploaded_files is not None and tool_name == "load_csv_data":
+        arguments = {**arguments, "_uploaded_file_paths": uploaded_files}
 
     # Helper to build a ToolResult that always carries state forward.
     def _result(

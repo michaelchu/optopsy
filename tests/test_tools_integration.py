@@ -186,25 +186,34 @@ class TestLoadCsvData:
         )
         assert "Failed to load CSV" in r.llm_summary
 
-    def test_load_csv_rejects_non_uploaded_path(self):
-        """file_path not in uploaded_files is rejected when whitelist is present."""
-        csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
+    def test_load_csv_rejects_unknown_label(self):
+        """file_path label not in uploaded_files is rejected."""
         r = execute_tool(
             "load_csv_data",
-            {"file_path": csv_path},
+            {"file_path": "unknown.csv"},
             None,
             uploaded_files={"other.csv": "/tmp/other.csv"},
         )
         assert "Access denied" in r.llm_summary
 
-    def test_load_csv_allows_uploaded_path(self):
-        """file_path in uploaded_files is accepted."""
+    def test_load_csv_rejects_when_no_uploads(self):
+        """Empty uploaded_files dict denies all requests."""
+        r = execute_tool(
+            "load_csv_data",
+            {"file_path": "data.csv"},
+            None,
+            uploaded_files={},
+        )
+        assert "Access denied" in r.llm_summary
+
+    def test_load_csv_allows_uploaded_label(self):
+        """file_path matching an uploaded label resolves to the real path."""
         csv_path = f"{TEST_DATA_DIR}/data_no_underlying_price.csv"
         r = execute_tool(
             "load_csv_data",
-            {"file_path": csv_path},
+            {"file_path": "data_no_underlying_price.csv"},
             None,
-            uploaded_files={"data.csv": csv_path},
+            uploaded_files={"data_no_underlying_price.csv": csv_path},
         )
         assert r.dataset is not None
         assert "Access denied" not in r.llm_summary

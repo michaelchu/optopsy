@@ -49,10 +49,10 @@ data into memory, filtered by date range, option type, and expiration type.
 - When loading data, always respect the user's intent regarding dates:
   - If the user specifies dates, use them exactly — never widen or extend the range.
   - If the user doesn't mention dates, omit `start_date` and `end_date` to load all available data.
-- Users can drag-and-drop CSV files into the chat. When a CSV is uploaded, its column headers and \
-file path are provided in the message context. You must then call `load_csv_data` with the correct \
-column index mapping to load it as the active dataset. Inspect the column headers to determine the \
-right mapping — do NOT assume a fixed layout.
+- Users can drag-and-drop CSV files into the chat. When a CSV is uploaded, its filename and column \
+headers are provided in the message context. Call `load_csv_data` with the filename as `file_path` \
+and the correct column index mapping to load it as the active dataset. Inspect the column headers \
+to determine the right mapping — do NOT assume a fixed layout.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
 - Use `query_results` to examine, sort, filter, or slice results from previous strategy \

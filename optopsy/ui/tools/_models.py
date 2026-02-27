@@ -361,7 +361,7 @@ class SignalMixin(BaseModel):
 class LoadCsvDataArgs(BaseModel):
     file_path: str = Field(
         ...,
-        description="Path to the CSV file (provided in the upload context).",
+        description="Filename of the uploaded CSV (as shown in the upload context).",
     )
     underlying_symbol: int = Field(
         0, ge=0, description="Column index for the underlying symbol."

@@ -137,7 +137,8 @@ class TestOnMessageCSVUpload:
             user_msgs = [m for m in call_msgs if m["role"] == "user"]
             assert len(user_msgs) > 0
             assert "Uploaded CSV" in user_msgs[0]["content"]
-            assert "/tmp/test.csv" in user_msgs[0]["content"]
+            # Raw server path should NOT leak into LLM-visible context.
+            assert "/tmp/test.csv" not in user_msgs[0]["content"]
 
         asyncio.run(_run())
 
