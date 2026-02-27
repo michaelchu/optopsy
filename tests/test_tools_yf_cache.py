@@ -431,7 +431,13 @@ class TestIvSignalDataCacheFallback:
         dataset = _make_options_with_iv("SPY", dates)
         cache = ParquetCache(str(tmp_path))  # empty cache
 
-        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch(
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
+                return_value=None,
+            ),
+        ):
             result = _iv_signal_data(dataset)
 
         assert result is None
@@ -448,7 +454,7 @@ class TestIvSignalDataCacheFallback:
                 result = _iv_signal_data(dataset)
 
         assert result is not None
-        assert "underlying_price" in result.columns
+        assert "close" in result.columns
         spy_read.assert_not_called()
 
     def test_returns_none_when_implied_volatility_missing(self, tmp_path):
@@ -479,7 +485,13 @@ class TestIvSignalDataCacheFallback:
         cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 1, 3))
         cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
-        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+        with (
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch(
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
+                return_value=cached_df,
+            ),
+        ):
             result = _iv_signal_data(dataset)
 
         # Result is returned (some close values present from Jan 2)
