@@ -9,8 +9,8 @@ from ._helpers import (
     SignalFunc,
     _band_signal,
     _get_close,
-    _get_high,
-    _get_low,
+    _get_hl,
+    _get_ohlc,
     _groupby_symbol,
     _ohlcv_signal,
 )
@@ -120,9 +120,10 @@ def bb_below_lower(length: int = 20, std: float = 2.0) -> SignalFunc:
 
 def _kc_bands(length: int, scalar: float):
     def _compute(group: pd.DataFrame) -> tuple["pd.Series | None", "pd.Series | None"]:
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None, None
+        high, low, close = ohlc
         result = ta.kc(high, low, close, length=length, scalar=scalar)
         if result is None:
             return None, None
@@ -154,9 +155,10 @@ def kc_below_lower(length: int = 20, scalar: float = 1.5) -> SignalFunc:
 
 def _donchian_bands(lower_length: int, upper_length: int):
     def _compute(group: pd.DataFrame) -> tuple["pd.Series | None", "pd.Series | None"]:
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None, None
+        high, low = hl
         result = ta.donchian(
             high, low, lower_length=lower_length, upper_length=upper_length
         )
@@ -192,9 +194,10 @@ def natr_above(period: int = 14, threshold: float = 2.0) -> SignalFunc:
     """True when NATR is above threshold (high volatility as % of price)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.natr(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -204,9 +207,10 @@ def natr_below(period: int = 14, threshold: float = 1.0) -> SignalFunc:
     """True when NATR is below threshold (low volatility as % of price)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.natr(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -221,9 +225,10 @@ def massi_above(fast: int = 9, slow: int = 25, threshold: float = 27) -> SignalF
     """True when Mass Index is above threshold (potential reversal)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None
+        high, low = hl
         return ta.massi(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -233,9 +238,10 @@ def massi_below(fast: int = 9, slow: int = 25, threshold: float = 26.5) -> Signa
     """True when Mass Index is below threshold."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None
+        high, low = hl
         return ta.massi(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

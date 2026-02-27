@@ -9,8 +9,8 @@ from ._helpers import (
     SignalFunc,
     _crossover_signal,
     _get_close,
-    _get_high,
-    _get_low,
+    _get_hl,
+    _get_ohlc,
     _ohlcv_signal,
     _per_symbol_signal,
 )
@@ -93,9 +93,10 @@ def stoch_below(
     col = f"STOCHk_{k_period}_{d_period}_{d_period}"
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.stoch(high, low, close, k=k_period, d=d_period)
         if result is None or col not in result.columns:
             return None
@@ -111,9 +112,10 @@ def stoch_above(
     col = f"STOCHk_{k_period}_{d_period}_{d_period}"
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.stoch(high, low, close, k=k_period, d=d_period)
         if result is None or col not in result.columns:
             return None
@@ -184,9 +186,10 @@ def willr_below(period: int = 14, threshold: float = -80) -> SignalFunc:
     """True when Williams %R is below threshold (oversold, default -80)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.willr(high, low, close, length=period)
         return result
 
@@ -197,9 +200,10 @@ def willr_above(period: int = 14, threshold: float = -20) -> SignalFunc:
     """True when Williams %R is above threshold (overbought, default -20)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.willr(high, low, close, length=period)
         return result
 
@@ -215,9 +219,10 @@ def cci_below(period: int = 20, threshold: float = -100) -> SignalFunc:
     """True when CCI is below threshold (oversold, default -100)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.cci(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -227,9 +232,10 @@ def cci_above(period: int = 20, threshold: float = 100) -> SignalFunc:
     """True when CCI is above threshold (overbought, default 100)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.cci(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -362,9 +368,10 @@ def uo_above(
     """True when Ultimate Oscillator is above threshold (overbought)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.uo(high, low, close, fast=fast, medium=medium, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -376,9 +383,10 @@ def uo_below(
     """True when Ultimate Oscillator is below threshold (oversold)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.uo(high, low, close, fast=fast, medium=medium, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -402,9 +410,10 @@ def squeeze_on(
     """
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.squeeze(
             high,
             low,
@@ -441,9 +450,10 @@ def squeeze_off(
     """
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.squeeze(
             high,
             low,
@@ -475,9 +485,10 @@ def ao_above(fast: int = 5, slow: int = 34, threshold: float = 0) -> SignalFunc:
     """True when Awesome Oscillator is above threshold (bullish momentum)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None
+        high, low = hl
         return ta.ao(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -487,9 +498,10 @@ def ao_below(fast: int = 5, slow: int = 34, threshold: float = 0) -> SignalFunc:
     """True when Awesome Oscillator is below threshold (bearish momentum)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None
+        high, low = hl
         return ta.ao(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

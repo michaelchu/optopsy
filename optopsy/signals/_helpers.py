@@ -267,6 +267,35 @@ def _get_low(group: pd.DataFrame) -> "pd.Series | None":
     return _get_close(group)
 
 
+def _get_ohlc(
+    group: pd.DataFrame,
+) -> "tuple[pd.Series | None, pd.Series | None, pd.Series] | None":
+    """Return ``(high, low, close)`` or ``None`` when close is unavailable.
+
+    ``high`` and ``low`` may individually be ``None`` when neither the
+    dedicated column nor ``close`` is available, but ``close`` is always
+    present when the tuple is returned.
+    """
+    close = _get_close(group)
+    if close is None:
+        return None
+    return _get_high(group), _get_low(group), close
+
+
+def _get_hl(group: pd.DataFrame) -> "tuple[pd.Series | None, pd.Series | None] | None":
+    """Return ``(high, low)`` or ``None`` when unavailable.
+
+    Both ``_get_high`` and ``_get_low`` fall back to ``close``, so we gate
+    on ``_get_close`` first to avoid returning a mix of real and ``None``
+    values when only one of high/low is present.
+    """
+    if _get_close(group) is None and (
+        "high" not in group.columns or "low" not in group.columns
+    ):
+        return None
+    return _get_high(group), _get_low(group)
+
+
 def _get_volume(group: pd.DataFrame) -> "pd.Series | None":
     """Get volume if available, else None."""
     if "volume" in group.columns:

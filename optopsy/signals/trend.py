@@ -7,8 +7,8 @@ from ._helpers import (
     SignalFunc,
     _direction_signal,
     _get_close,
-    _get_high,
-    _get_low,
+    _get_hl,
+    _get_ohlc,
     _ohlcv_crossover_signal,
     _ohlcv_signal,
 )
@@ -22,9 +22,10 @@ def adx_above(period: int = 14, threshold: float = 25) -> SignalFunc:
     """True when ADX is above threshold (strong trend regardless of direction)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.adx(high, low, close, length=period)
         if result is None:
             return None
@@ -43,9 +44,10 @@ def adx_below(period: int = 14, threshold: float = 20) -> SignalFunc:
     """True when ADX is below threshold (weak/no trend, range-bound)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.adx(high, low, close, length=period)
         if result is None:
             return None
@@ -71,9 +73,10 @@ def _aroon_lines(
     def _compute(
         group: pd.DataFrame,
     ) -> tuple["pd.Series | None", "pd.Series | None"]:
-        high, low = _get_high(group), _get_low(group)
-        if high is None or low is None:
+        hl = _get_hl(group)
+        if hl is None:
             return None, None
+        high, low = hl
         result = ta.aroon(high, low, length=period)
         if result is None:
             return None, None
@@ -105,9 +108,10 @@ def aroon_cross_below(period: int = 25) -> SignalFunc:
 
 def _supertrend_direction(period: int, multiplier: float):
     def _compute(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.supertrend(high, low, close, length=period, multiplier=multiplier)
         if result is None:
             return None
@@ -137,9 +141,10 @@ def supertrend_sell(period: int = 7, multiplier: float = 3.0) -> SignalFunc:
 
 def _psar_direction(af0: float, af: float, max_af: float):
     def _compute(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         result = ta.psar(high, low, close, af0=af0, af=af, max_af=max_af)
         if result is None:
             return None
@@ -183,9 +188,10 @@ def chop_above(period: int = 14, threshold: float = 61.8) -> SignalFunc:
     """True when Choppiness Index is above threshold (choppy / range-bound)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.chop(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -195,9 +201,10 @@ def chop_below(period: int = 14, threshold: float = 38.2) -> SignalFunc:
     """True when Choppiness Index is below threshold (trending)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         return ta.chop(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

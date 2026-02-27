@@ -6,8 +6,7 @@ import pandas_ta_classic as ta
 from ._helpers import (
     SignalFunc,
     _get_close,
-    _get_high,
-    _get_low,
+    _get_ohlc,
     _get_volume,
     _ohlcv_signal,
 )
@@ -21,9 +20,10 @@ def mfi_above(period: int = 14, threshold: float = 80) -> SignalFunc:
     """True when MFI is above threshold (overbought / strong buying pressure)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -36,9 +36,10 @@ def mfi_below(period: int = 14, threshold: float = 20) -> SignalFunc:
     """True when MFI is below threshold (oversold / strong selling pressure)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -99,9 +100,10 @@ def cmf_above(period: int = 20, threshold: float = 0.05) -> SignalFunc:
     """True when CMF is above threshold (buying pressure)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -114,9 +116,10 @@ def cmf_below(period: int = 20, threshold: float = -0.05) -> SignalFunc:
     """True when CMF is below threshold (selling pressure)."""
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None
+        high, low, close = ohlc
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -136,9 +139,10 @@ def _ad_sma_lines(sma_period: int):
     def _compute(
         group: pd.DataFrame,
     ) -> tuple["pd.Series | None", "pd.Series | None"]:
-        high, low, close = _get_high(group), _get_low(group), _get_close(group)
-        if close is None:
+        ohlc = _get_ohlc(group)
+        if ohlc is None:
             return None, None
+        high, low, close = ohlc
         volume = _get_volume(group)
         if volume is None:
             return None, None
