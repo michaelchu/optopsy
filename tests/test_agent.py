@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 pytest.importorskip("pyarrow", reason="UI extras not installed")
+pytest.importorskip("litellm", reason="litellm not installed (install ui extras)")
 
 from optopsy.ui.agent import (
     _COMPACT_THRESHOLD,
