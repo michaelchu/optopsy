@@ -644,17 +644,22 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
         symbols = result["underlying_symbol"].unique().tolist()
         price_frames = []
         for symbol in symbols:
-            cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-            if cached is None or cached.empty:
-                continue
-            price_df = cached[["underlying_symbol", "date", "close"]].rename(
-                columns={"date": "quote_date"}
-            )
-            price_df["quote_date"] = pd.to_datetime(price_df["quote_date"])
-            price_frames.append(price_df)
+            try:
+                cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+                if cached is None or cached.empty:
+                    continue
+                price_df = cached[["underlying_symbol", "date", "close"]].rename(
+                    columns={"date": "quote_date"}
+                )
+                price_df["quote_date"] = pd.to_datetime(
+                    price_df["quote_date"]
+                ).dt.normalize()
+                price_frames.append(price_df)
+            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+                _log.warning("yf cache read failed for %s: %s", symbol, exc)
         if price_frames:
             prices = pd.concat(price_frames, ignore_index=True)
-            result["quote_date"] = pd.to_datetime(result["quote_date"])
+            result["quote_date"] = pd.to_datetime(result["quote_date"]).dt.normalize()
             result = result.merge(
                 prices, on=["underlying_symbol", "quote_date"], how="left"
             )
