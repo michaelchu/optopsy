@@ -55,12 +55,14 @@ def _load_env() -> None:
     """Load .env file from the project root."""
     from pathlib import Path
 
-    from dotenv import find_dotenv, load_dotenv
+    from optopsy.data._compat import import_optional_dependency
 
-    env_path = find_dotenv() or str(
+    dotenv = import_optional_dependency("dotenv")
+
+    env_path = dotenv.find_dotenv() or str(
         Path(__file__).resolve().parent.parent.parent / ".env"
     )
-    load_dotenv(env_path, override=True)
+    dotenv.load_dotenv(env_path, override=True)
 
 
 def _cmd_download(args: argparse.Namespace) -> None:
@@ -86,6 +88,8 @@ def _cmd_download(args: argparse.Namespace) -> None:
         for symbol in args.symbols:
             _download_stocks_with_rich(symbol.upper())
         return
+
+    import_optional_dependency("requests")
 
     from optopsy.data.providers import get_provider_for_tool
     from optopsy.data.providers.eodhd import EODHDProvider
@@ -180,11 +184,22 @@ def _download_stocks_with_rich(symbol: str) -> None:
     import pandas as pd
     from rich.console import Console
 
-    from optopsy.data._yf_helpers import _YF_CACHE_CATEGORY, _yf_fetch_and_cache
-    from optopsy.data.providers.cache import ParquetCache
+    from optopsy.data._compat import import_optional_dependency
 
     console = Console()
     console.rule(f"Downloading stock data for {symbol}")
+
+    try:
+        import_optional_dependency("yfinance")
+    except ImportError:
+        console.print(
+            "  [red]The 'yfinance' package is required to download stock data. "
+            "Install it with: pip install optopsy[data][/red]"
+        )
+        return
+
+    from optopsy.data._yf_helpers import _YF_CACHE_CATEGORY, _yf_fetch_and_cache
+    from optopsy.data.providers.cache import ParquetCache
 
     cache = ParquetCache()
     cached = cache.read(_YF_CACHE_CATEGORY, symbol)

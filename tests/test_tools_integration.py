@@ -11,7 +11,6 @@ import pytest
 
 pyarrow = pytest.importorskip("pyarrow")  # noqa: F841
 pydantic = pytest.importorskip("pydantic")  # noqa: F841
-plotly = pytest.importorskip("plotly")  # noqa: F841
 
 from optopsy.ui.tools._executor import execute_tool  # noqa: E402
 from optopsy.ui.tools._helpers import ToolResult  # noqa: E402
@@ -629,6 +628,7 @@ class TestIVSurfaceEndToEnd:
 
     def test_iv_tool_without_iv_column_after_preview(self, basic_dataset):
         """IV tools reject dataset without IV column even when threaded."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
         r1 = execute_tool(
             "preview_data",
             {"rows": 3},

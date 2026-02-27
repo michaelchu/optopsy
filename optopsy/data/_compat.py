@@ -14,8 +14,13 @@ def import_optional_dependency(name: str) -> types.ModuleType:
     """
     try:
         return importlib.import_module(name)
-    except ImportError:
-        raise ImportError(
-            f"Missing optional dependency '{name}'. "
-            f"Install it with: pip install optopsy[data]"
-        ) from None
+    except ModuleNotFoundError as exc:
+        # Only treat as missing optional dep if the top-level module is
+        # what's absent; re-raise internal import failures unchanged.
+        top_level_name = name.split(".", 1)[0]
+        if exc.name == top_level_name:
+            raise ImportError(
+                f"Missing optional dependency '{name}'. "
+                f"Install it with: pip install optopsy[data]"
+            ) from None
+        raise
