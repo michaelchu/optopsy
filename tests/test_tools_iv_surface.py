@@ -397,9 +397,9 @@ class TestIVTermStructureYFCacheFallback:
         cached_df = _make_yf_cached_df("SPX", "2024-01-02", 100.0)
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 return_value=cached_df,
             ),
         ):
@@ -418,9 +418,9 @@ class TestIVTermStructureYFCacheFallback:
         ds = _make_iv_dataset_no_price()
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 return_value=None,
             ),
         ):
@@ -439,9 +439,9 @@ class TestIVTermStructureYFCacheFallback:
         ds = _make_iv_dataset_no_price()
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 side_effect=OSError("network error"),
             ),
         ):
@@ -482,9 +482,9 @@ class TestIVTermStructureYFCacheFallback:
         cached_df = _make_yf_cached_df("SPX", "2024-01-02", 100.0)
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 return_value=cached_df,
             ),
         ):
@@ -503,9 +503,9 @@ class TestIVTermStructureYFCacheFallback:
         ds = _make_iv_dataset_no_price()
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 side_effect=ImportError("No module named 'yfinance'"),
             ),
         ):
@@ -524,9 +524,9 @@ class TestIVTermStructureYFCacheFallback:
         ds = _make_iv_dataset_no_price()
 
         with (
-            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch("optopsy.ui.tools._helpers._yf_cache") as mock_cache,
             patch(
-                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                "optopsy.ui.tools._helpers._yf_fetch_and_cache",
                 side_effect=pd.errors.ParserError("corrupt parquet"),
             ),
         ):

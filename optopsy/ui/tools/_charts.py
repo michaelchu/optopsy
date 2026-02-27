@@ -13,7 +13,7 @@ from ._helpers import (
     _filter_by_quote_date,
     _select_results,
     _yf_cache,
-    _yf_fetch_and_cache,
+    resolve_price_column,
 )
 
 _log = logging.getLogger(__name__)
@@ -586,46 +586,10 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
     assert df is not None
 
     # Resolve price column for ATM computation
-    if "close" in df.columns:
-        _price_col = "close"
-    elif "underlying_price" in df.columns:
-        _price_col = "underlying_price"
-    else:
-        # Fall back to yf cache: merge stock close prices by (underlying_symbol, quote_date)
-        symbols = df["underlying_symbol"].unique().tolist()
-        df_quote_dates = pd.to_datetime(df["quote_date"])
-        date_max = df_quote_dates.dt.date.max()
-        stock_frames = []
-        for sym in symbols:
-            try:
-                cached = _yf_cache.read(_YF_CACHE_CATEGORY, sym)
-                cached = _yf_fetch_and_cache(sym, cached, date_max)
-                if cached is not None and not cached.empty:
-                    stock_frames.append(
-                        cached.rename(columns={"date": "quote_date"})[
-                            ["underlying_symbol", "quote_date", "close"]
-                        ]
-                    )
-            except ImportError:
-                return _result(
-                    "Fetching stock data for IV term structure charts requires the "
-                    "optional 'yfinance' dependency, which is not installed."
-                )
-            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-                _log.warning("yf cache lookup failed for %s: %s", sym, exc)
-        if stock_frames:
-            stock_df = pd.concat(stock_frames, ignore_index=True)
-            stock_df["quote_date"] = pd.to_datetime(
-                stock_df["quote_date"]
-            ).dt.normalize()
-            df = df.assign(quote_date=df_quote_dates.dt.normalize()).merge(
-                stock_df, on=["underlying_symbol", "quote_date"], how="left"
-            )
-            _price_col = "close"
-        else:
-            return _result(
-                "No price column (close or underlying_price) found for ATM computation."
-            )
+    df, price_err = resolve_price_column(df)
+    if price_err:
+        return _result(price_err)
+    _price_col = "close"
 
     df = df.dropna(subset=["implied_volatility", _price_col])
 

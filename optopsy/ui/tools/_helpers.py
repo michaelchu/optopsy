@@ -604,6 +604,67 @@ def _date_only_fallback(dataset: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def resolve_price_column(
+    df: pd.DataFrame,
+) -> tuple[pd.DataFrame, str | None]:
+    """Ensure *df* has a usable ``close`` price column.
+
+    Checks in order:
+
+    1. ``close`` already present → return unchanged.
+    2. ``underlying_price`` present → return with ``close`` aliased from it.
+    3. Fall back to the yfinance stock-price cache keyed by symbol.
+       Merges ``close`` from the cache on ``(underlying_symbol, quote_date)``
+       with date normalization.
+
+    Returns
+    -------
+    (enriched_df, error_msg)
+        On success ``error_msg`` is ``None`` and ``enriched_df`` has a ``close``
+        column.  On failure ``enriched_df`` is ``None`` and ``error_msg`` is a
+        non-empty human-readable string.
+    """
+    if "close" in df.columns:
+        return df, None
+    if "underlying_price" in df.columns:
+        return df.assign(close=df["underlying_price"]), None
+
+    # Fall back to the yfinance stock price cache.
+    symbols = df["underlying_symbol"].unique().tolist()
+    normalized_dates = normalize_dates(pd.to_datetime(df["quote_date"]))
+    date_max = normalized_dates.dt.date.max()
+    stock_frames = []
+    for sym in symbols:
+        try:
+            cached = _yf_cache.read(_YF_CACHE_CATEGORY, sym)
+            cached = _yf_fetch_and_cache(sym, cached, date_max)
+            if cached is not None and not cached.empty:
+                stock_frames.append(
+                    cached.rename(columns={"date": "quote_date"})[
+                        ["underlying_symbol", "quote_date", "close"]
+                    ]
+                )
+        except ImportError:
+            return (
+                None,
+                "Fetching stock data requires the optional 'yfinance' dependency, "
+                "which is not installed.",
+            )
+        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+            _log.warning("yf cache lookup failed for %s: %s", sym, exc)
+    if stock_frames:
+        stock_df = pd.concat(stock_frames, ignore_index=True)
+        stock_df["quote_date"] = normalize_dates(pd.to_datetime(stock_df["quote_date"]))
+        enriched = df.assign(quote_date=normalized_dates).merge(
+            stock_df, on=["underlying_symbol", "quote_date"], how="left"
+        )
+        return enriched, None
+    return (
+        None,
+        "No price column (close or underlying_price) found for ATM computation.",
+    )
+
+
 def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     """Extract columns needed for IV rank signals from the options dataset.
 
@@ -630,45 +691,10 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     cols = [c for c in keep if c in dataset.columns]
     if len(cols) < len(keep):
         return None
-    # A price column is required for ATM strike computation in IV rank signals.
-    price_col_found = False
-    for price_col in ("close", "underlying_price"):
-        if price_col in dataset.columns and price_col not in cols:
-            cols.append(price_col)
-            price_col_found = True
-            break
-    result = dataset[cols].copy()
-    if not price_col_found:
-        # Fall back to the yfinance stock price cache keyed by symbol.
-        # Stock prices are cached separately during EODHD downloads via
-        # _yf_fetch_and_cache, so they may already be available locally.
-        symbols = result["underlying_symbol"].unique().tolist()
-        price_frames = []
-        for symbol in symbols:
-            try:
-                cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-                if cached is None or cached.empty:
-                    continue
-                price_df = cached[["underlying_symbol", "date", "close"]].rename(
-                    columns={"date": "quote_date"}
-                )
-                price_df["quote_date"] = normalize_dates(
-                    pd.to_datetime(price_df["quote_date"])
-                )
-                price_frames.append(price_df)
-            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-                _log.warning("yf cache read failed for %s: %s", symbol, exc)
-        if price_frames:
-            prices = pd.concat(price_frames, ignore_index=True)
-            result["quote_date"] = normalize_dates(pd.to_datetime(result["quote_date"]))
-            result = result.merge(
-                prices, on=["underlying_symbol", "quote_date"], how="left"
-            )
-            if result["close"].notna().any():
-                price_col_found = True
-    if not price_col_found:
+    enriched, err = resolve_price_column(dataset)
+    if err is not None:
         return None
-    return result
+    return enriched[cols + ["close"]].copy()
 
 
 # ---------------------------------------------------------------------------
