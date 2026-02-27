@@ -21,13 +21,13 @@ def run_strategy():
     spx_data = op.csv_data(
         filepath(),
         underlying_symbol=0,
-        underlying_price=1,
         option_type=5,
         expiration=6,
         quote_date=7,
         strike=8,
         bid=10,
         ask=11,
+        delta=15,
     )
 
     print("=" * 70)
