@@ -348,9 +348,9 @@ class TestExitSignalIntegration:
         """exit_dates based on price threshold should filter correctly."""
 
         # Exit only when underlying price > 215
-        # Exit date has underlying_price=220, so this should pass
+        # Exit date has close=220, so this should pass
         def price_above_215(data):
-            return data["underlying_price"] > 215
+            return data["close"] > 215
 
         exit_dates = apply_signal(stock_data_spx, price_above_215)
         results = long_calls(
@@ -377,9 +377,9 @@ class TestExitSignalIntegration:
         """exit_dates with price condition that fails should filter trades."""
 
         # Exit only when underlying price > 225
-        # Exit date has underlying_price=220, so this should filter everything
+        # Exit date has close=220, so this should filter everything
         def price_above_225(data):
-            return data["underlying_price"] > 225
+            return data["close"] > 225
 
         exit_dates = apply_signal(stock_data_spx, price_above_225)
         results = long_calls(
