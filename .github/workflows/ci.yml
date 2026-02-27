@@ -57,12 +57,4 @@ jobs:
         fi
 
     - name: Run tests with pytest
-      run: uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing --cov-report=xml
-
-    - name: Upload coverage to Codecov
-      if: always() && matrix.python-version == '3.13'
-      uses: codecov/codecov-action@v5
-      with:
-        files: coverage.xml
-        flags: py${{ matrix.python-version }}${{ matrix.extras && '-' }}${{ matrix.extras }}
-        token: ${{ secrets.CODECOV_TOKEN }}
+      run: uv run pytest tests/ -v --cov=optopsy --cov-report=term-missing
