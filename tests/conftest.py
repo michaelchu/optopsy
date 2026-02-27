@@ -576,9 +576,7 @@ def option_data_with_stock(stock_data_long_history):
                     bid, ask, call_delta = 3.5, 3.60, 0.50
                 else:
                     bid, ask, call_delta = 1.0, 1.10, 0.20
-                rows.append(
-                    ["SPX", "call", exp_date, ed, strike, bid, ask, call_delta]
-                )
+                rows.append(["SPX", "call", exp_date, ed, strike, bid, ask, call_delta])
                 # Put premiums (reverse moneyness)
                 if moneyness > 3:
                     bid, ask, put_delta = 7.0, 7.10, -0.80
@@ -586,9 +584,7 @@ def option_data_with_stock(stock_data_long_history):
                     bid, ask, put_delta = 3.5, 3.60, -0.50
                 else:
                     bid, ask, put_delta = 1.0, 1.10, -0.20
-                rows.append(
-                    ["SPX", "put", exp_date, ed, strike, bid, ask, put_delta]
-                )
+                rows.append(["SPX", "put", exp_date, ed, strike, bid, ask, put_delta])
 
         # Single set of exit rows per expiration (no per-entry duplication)
         exit_price = price_map[exp_date]
