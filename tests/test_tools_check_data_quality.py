@@ -125,7 +125,6 @@ class TestOptionalColumns:
         df = pd.DataFrame(
             {
                 "underlying_symbol": ["SPY"],
-                "underlying_price": [480.0],
                 "option_type": ["call"],
                 "expiration": pd.to_datetime(["2024-03-15"]),
                 "quote_date": pd.to_datetime(["2024-01-02"]),

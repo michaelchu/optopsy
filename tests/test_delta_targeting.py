@@ -152,7 +152,6 @@ class TestDeltaTargetingValidationErrors:
         no_delta_data = pd.DataFrame(
             {
                 "underlying_symbol": ["SPX"],
-                "underlying_price": [212.5],
                 "option_type": ["call"],
                 "expiration": [exp_date],
                 "quote_date": [entry_date],
