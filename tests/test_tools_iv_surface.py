@@ -454,3 +454,88 @@ class TestIVTermStructureYFCacheFallback:
 
         assert result.chart_figure is None
         assert "No price column" in result.llm_summary
+
+    def test_non_midnight_quote_date_matches_after_normalize(self):
+        """When quote_date has time components, .dt.normalize() ensures merge still works."""
+        # Use a non-midnight timestamp (9:30 AM) for options quote_date
+        qd = datetime.datetime(2024, 1, 2, 9, 30, 0)
+        exp1 = datetime.datetime(2024, 2, 16)
+        exp2 = datetime.datetime(2024, 3, 15)
+        rows = []
+        for exp in [exp1, exp2]:
+            for strike in [95.0, 100.0, 105.0]:
+                for ot in ["call", "put"]:
+                    iv = 0.20 + abs(strike - 100.0) * 0.005
+                    rows.append(["SPX", ot, exp, qd, strike, 3.0, 3.10, iv])
+        cols = [
+            "underlying_symbol",
+            "option_type",
+            "expiration",
+            "quote_date",
+            "strike",
+            "bid",
+            "ask",
+            "implied_volatility",
+        ]
+        ds = pd.DataFrame(data=rows, columns=cols)
+        # yf cache uses midnight timestamps
+        cached_df = _make_yf_cached_df("SPX", "2024-01-02", 100.0)
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                return_value=cached_df,
+            ),
+        ):
+            mock_cache.read.return_value = cached_df
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is not None
+        assert "IV term structure" in result.llm_summary
+
+    def test_import_error_returns_yfinance_missing_message(self):
+        """When yfinance is not installed, ImportError returns a clear message."""
+        ds = _make_iv_dataset_no_price()
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                side_effect=ImportError("No module named 'yfinance'"),
+            ),
+        ):
+            mock_cache.read.return_value = None
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is None
+        assert "yfinance" in result.llm_summary
+
+    def test_parser_error_handled_gracefully(self):
+        """When cached parquet is corrupt, ParserError is caught and fallback returns error."""
+        ds = _make_iv_dataset_no_price()
+
+        with (
+            patch("optopsy.ui.tools._charts._yf_cache") as mock_cache,
+            patch(
+                "optopsy.ui.tools._charts._yf_fetch_and_cache",
+                side_effect=pd.errors.ParserError("corrupt parquet"),
+            ),
+        ):
+            mock_cache.read.return_value = None
+            result = execute_tool(
+                "iv_term_structure",
+                {"quote_date": "2024-01-02"},
+                dataset=ds,
+            )
+
+        assert result.chart_figure is None
+        assert "No price column" in result.llm_summary
