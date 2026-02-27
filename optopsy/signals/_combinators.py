@@ -166,8 +166,6 @@ def apply_signal(
         dates where the signal is True.
     """
     df = data.copy()
-    if "close" not in df.columns and "underlying_price" in df.columns:
-        df = df.rename(columns={"underlying_price": "close"})
     df["quote_date"] = normalize_dates(df["quote_date"])
     if "close" not in df.columns and stock_data is not None:
         from ..strategies._helpers import _normalize_stock_data

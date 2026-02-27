@@ -53,7 +53,7 @@ def iv_dataset():
                     )
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -72,7 +72,7 @@ def no_iv_dataset():
     exp = datetime.datetime(2024, 2, 16)
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -99,7 +99,7 @@ def single_exp_dataset():
             rows.append(["SPX", 100.0, ot, exp, qd, strike, 3.0, 3.10, iv])
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",
@@ -241,9 +241,9 @@ class TestIVTermStructure:
     def test_vectorized_underlying_price(self):
         """ATM strike should be determined per-row, not from a single price.
 
-        Regression test for the .iloc[0] bug: if underlying_price varies
-        across expirations, the per-row calculation should still find the
-        correct ATM strike for each expiration.
+        Regression test for the .iloc[0] bug: if close varies across
+        expirations, the per-row calculation should still find the correct
+        ATM strike for each expiration.
         """
         qd = datetime.datetime(2024, 1, 2)
         exp1 = datetime.datetime(2024, 2, 16)
@@ -260,7 +260,7 @@ class TestIVTermStructure:
         ]
         cols = [
             "underlying_symbol",
-            "underlying_price",
+            "close",
             "option_type",
             "expiration",
             "quote_date",
@@ -283,7 +283,7 @@ class TestIVTermStructure:
         exp = datetime.datetime(2024, 2, 16)
         cols = [
             "underlying_symbol",
-            "underlying_price",
+            "close",
             "option_type",
             "expiration",
             "quote_date",
@@ -348,7 +348,7 @@ class TestBuildSignalIncompatibleCombination:
 
 
 def _make_iv_dataset_no_price():
-    """Options data with IV but NO price column (no close, no underlying_price)."""
+    """Options data with IV but NO price column (no close)."""
     qd = datetime.datetime(2024, 1, 2)
     exp1 = datetime.datetime(2024, 2, 16)
     exp2 = datetime.datetime(2024, 3, 15)
@@ -432,7 +432,7 @@ class TestIVTermStructureYFCacheFallback:
             )
 
         assert result.chart_figure is None
-        assert "No price column" in result.llm_summary
+        assert "No 'close' price column" in result.llm_summary
 
     def test_yf_cache_fetch_failure_returns_error(self):
         """When yf fetch raises OSError for all symbols, 'No price column' error is returned."""
@@ -453,7 +453,7 @@ class TestIVTermStructureYFCacheFallback:
             )
 
         assert result.chart_figure is None
-        assert "No price column" in result.llm_summary
+        assert "No 'close' price column" in result.llm_summary
 
     def test_non_midnight_quote_date_matches_after_normalize(self):
         """When quote_date has time components, .dt.normalize() ensures merge still works."""
@@ -538,4 +538,4 @@ class TestIVTermStructureYFCacheFallback:
             )
 
         assert result.chart_figure is None
-        assert "No price column" in result.llm_summary
+        assert "No 'close' price column" in result.llm_summary

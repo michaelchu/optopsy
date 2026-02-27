@@ -642,7 +642,7 @@ def iv_option_chain():
                     )
     cols = [
         "underlying_symbol",
-        "underlying_price",
+        "close",
         "option_type",
         "expiration",
         "quote_date",

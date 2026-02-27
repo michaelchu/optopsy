@@ -565,7 +565,7 @@ class TestSignalEntryE2E:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": range(200, 200 + len(dates)),
+                "close": range(200, 200 + len(dates)),
             }
         )
         # SMA(5) on monotonically rising prices → price always above SMA

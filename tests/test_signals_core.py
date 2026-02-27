@@ -380,35 +380,6 @@ class TestSignalEdgeCases:
             "macd_cross_above should return all-False with no price column"
         )
 
-    def test_apply_signal_normalizes_underlying_price_to_close(self):
-        """apply_signal should rename underlying_price to close (one-way normalization).
-
-        When the input only has underlying_price, the internal df passed to the
-        signal function must have close (not underlying_price). The original
-        DataFrame must be unmodified.
-        """
-        dates = pd.date_range("2018-01-01", periods=5, freq="B")
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "underlying_price": [100.0, 101.0, 102.0, 103.0, 104.0],
-            }
-        )
-        seen_columns: list = []
-
-        def capture_columns(df):
-            seen_columns.append(set(df.columns))
-            return pd.Series(True, index=df.index)
-
-        apply_signal(data, capture_columns)
-        # Signal received close, not underlying_price
-        assert "close" in seen_columns[0]
-        assert "underlying_price" not in seen_columns[0]
-        # Original data is unchanged
-        assert "underlying_price" in data.columns
-        assert "close" not in data.columns
-
     def test_apply_signal_no_duplicate_when_close_provided(self):
         """apply_signal must NOT add underlying_price when input already has close."""
         dates = pd.date_range("2018-01-01", periods=5, freq="B")

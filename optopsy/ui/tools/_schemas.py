@@ -704,7 +704,7 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
         "correct index for each field. The defaults assume an 8-column "
         "layout: underlying_symbol(0), option_type(1), expiration(2), "
         "quote_date(3), strike(4), bid(5), ask(6), delta(7). "
-        "Pass underlying_price if the CSV includes that column."
+        "Optional columns: gamma, theta, vega, volume, implied_volatility."
     ),
     "preview_data": (
         "Show shape, columns, date range, and sample rows of a dataset. "

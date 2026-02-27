@@ -471,8 +471,7 @@ async def on_chat_start():
             "Use the **settings panel** (gear icon) to adjust default parameters, "
             "or click a **starter prompt** above to jump right in.\n\n"
             "CSV format: `underlying_symbol, option_type, "
-            "expiration, quote_date, strike, bid, ask, delta` "
-            "(optional: `underlying_price`)\n\n"
+            "expiration, quote_date, strike, bid, ask, delta`\n\n"
             f"{provider_line}"
             f"Using model: `{model}` (set `OPTOPSY_MODEL` env var to change)"
         )

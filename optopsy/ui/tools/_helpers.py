@@ -612,8 +612,7 @@ def resolve_price_column(
     Checks in order:
 
     1. ``close`` already present → return unchanged.
-    2. ``underlying_price`` present → return with ``close`` aliased from it.
-    3. Fall back to the yfinance stock-price cache keyed by symbol.
+    2. Fall back to the yfinance stock-price cache keyed by symbol.
        Merges ``close`` from the cache on ``(underlying_symbol, quote_date)``
        with date normalization.
 
@@ -626,8 +625,6 @@ def resolve_price_column(
     """
     if "close" in df.columns:
         return df, None
-    if "underlying_price" in df.columns:
-        return df.assign(close=df["underlying_price"]), None
 
     # Fall back to the yfinance stock price cache.
     symbols = df["underlying_symbol"].unique().tolist()
@@ -661,7 +658,7 @@ def resolve_price_column(
         return enriched, None
     return (
         None,
-        "No price column (close or underlying_price) found for ATM computation.",
+        "No 'close' price column found and no stock data available for ATM computation.",
     )
 
 
@@ -670,13 +667,11 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
 
     Returns the dataset subset with required columns for IV rank computation,
     or None if the dataset lacks ``implied_volatility``, other required columns,
-    or a price column (``close`` or ``underlying_price``) for ATM computation.
+    or a ``close`` price column for ATM computation.
 
-    When neither ``close`` nor ``underlying_price`` is present in the options
-    dataset, attempts to merge ``close`` prices from the yfinance stock price
-    cache (``~/.optopsy/cache/yf_stocks/``), keyed by
-    ``(underlying_symbol, quote_date)``.  This handles EODHD-sourced options
-    data where ``underlying_price`` is no longer baked in (see PR #217).
+    When ``close`` is not present, attempts to merge prices from the yfinance
+    stock price cache (``~/.optopsy/cache/yf_stocks/``), keyed by
+    ``(underlying_symbol, quote_date)``.
     """
     if "implied_volatility" not in dataset.columns:
         return None
@@ -725,8 +720,8 @@ _SIM_PARAM_KEYS = frozenset(
 
 _IV_MISSING_MSG = (
     "IV rank signals require options data with an "
-    "'implied_volatility' column and a price column "
-    "('close' or 'underlying_price') for ATM computation. "
+    "'implied_volatility' column and a 'close' price column "
+    "for ATM computation. "
     "Fetch data from a provider that includes IV (e.g. EODHD), "
     "or load a CSV with these columns."
 )

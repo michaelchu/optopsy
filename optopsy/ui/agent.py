@@ -177,7 +177,7 @@ The UI provides an action button for the user to toggle between views.
 ## CSV Format
 The CSV should have columns (in order): underlying_symbol, option_type, \
 expiration, quote_date, strike, bid, ask, delta. The `delta` column is **required** for \
-delta-based strike selection. Optional: underlying_price, gamma, theta, vega, volume, \
+delta-based strike selection. Optional: gamma, theta, vega, volume, \
 implied_volatility. Column order can be remapped but the defaults assume this order.
 
 ## Understanding Output

@@ -1,8 +1,8 @@
 """Entry/exit signal filters for controlling when option positions are entered or exited.
 
 Signals are functions that take a DataFrame of underlying price data
-(with columns: underlying_symbol, quote_date, close or underlying_price)
-and return a boolean Series indicating which dates are valid for entry/exit.
+(with columns: underlying_symbol, quote_date, close) and return a boolean
+Series indicating which dates are valid for entry/exit.
 
 Built-in signals can be combined with and_signals() / or_signals(), or with
 the fluent Signal class using & and | operators.

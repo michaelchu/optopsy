@@ -9,8 +9,7 @@ from typing import Callable
 import pandas as pd
 
 # Signal function type: takes a DataFrame with (underlying_symbol, quote_date,
-# close or underlying_price) columns and returns a boolean Series indicating
-# valid entry/exit dates.
+# close) columns and returns a boolean Series indicating valid entry/exit dates.
 SignalFunc = Callable[[pd.DataFrame], "pd.Series[bool]"]
 
 
@@ -242,12 +241,7 @@ def _direction_signal(
 
 
 def _get_close(group: pd.DataFrame) -> "pd.Series | None":
-    """Get close price from a group DataFrame, or None if the column is absent.
-
-    Requires the ``close`` column to be present.  Callers that previously relied
-    on the ``underlying_price`` fallback should ensure
-    ``resolve_price_column()`` has been applied before signals run.
-    """
+    """Get close price from a group DataFrame, or None if the column is absent."""
     if "close" in group.columns:
         return group["close"]
     return None

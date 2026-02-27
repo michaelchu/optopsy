@@ -367,7 +367,7 @@ class TestYfFetchAndCache:
 
 
 def _make_options_with_iv(symbol: str, dates: list[str]) -> pd.DataFrame:
-    """Options DataFrame with IV but WITHOUT underlying_price or close columns."""
+    """Options DataFrame with IV but WITHOUT a close column."""
     rows = []
     for d in dates:
         ts = pd.Timestamp(d)
@@ -443,10 +443,10 @@ class TestIvSignalDataCacheFallback:
         assert result is None
 
     def test_uses_existing_price_col_without_cache_lookup(self, tmp_path):
-        """When underlying_price is already in the dataset, no cache read needed."""
+        """When close is already in the dataset, no cache read needed."""
         dates = ["2025-01-02", "2025-01-03"]
         dataset = _make_options_with_iv("SPY", dates)
-        dataset["underlying_price"] = 100.0
+        dataset["close"] = 100.0
         cache = ParquetCache(str(tmp_path))
 
         with patch.object(cache, "read", wraps=cache.read) as spy_read:

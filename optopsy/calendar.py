@@ -65,7 +65,6 @@ def _prepare_calendar_leg(
         DataFrame with renamed columns
     """
     strike_col = _get_strike_column(same_strike, leg_num)
-    price_col = "underlying_price_entry" if leg_num == 1 else "underlying_price_back"
 
     rename_map = {
         "expiration": f"expiration_leg{leg_num}",
@@ -75,8 +74,6 @@ def _prepare_calendar_leg(
         "ask": f"ask_leg{leg_num}",
         "delta": f"delta_leg{leg_num}",
     }
-    if "underlying_price" in options.columns:
-        rename_map["underlying_price"] = price_col
     return options.rename(columns=rename_map)
 
 
