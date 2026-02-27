@@ -156,7 +156,9 @@ def apply_signal(data: pd.DataFrame, signal_func: SignalFunc) -> pd.DataFrame:
         dates where the signal is True.
     """
     df = data.copy()
-    if "underlying_price" not in df.columns and "close" in df.columns:
+    if "close" not in df.columns and "underlying_price" in df.columns:
+        df["close"] = df["underlying_price"]
+    elif "underlying_price" not in df.columns and "close" in df.columns:
         df["underlying_price"] = df["close"]
     df["quote_date"] = normalize_dates(df["quote_date"])
     requires_per_strike = getattr(signal_func, "requires_per_strike", False)

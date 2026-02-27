@@ -17,15 +17,22 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
     For each quote_date, finds the option(s) with strike closest to the
     underlying price and averages their implied volatility.
     """
+    # Resolve the price column: prefer close, fall back to underlying_price
+    if "close" in options_data.columns:
+        price_col = "close"
+    elif "underlying_price" in options_data.columns:
+        price_col = "underlying_price"
+    else:
+        return pd.DataFrame(
+            columns=["underlying_symbol", "quote_date", "implied_volatility"]
+        )
+
     _empty_cols = [
         "underlying_symbol",
         "quote_date",
-        "underlying_price",
         "implied_volatility",
     ]
-    df = options_data.dropna(
-        subset=["implied_volatility", "strike", "underlying_price"]
-    ).copy()
+    df = options_data.dropna(subset=["implied_volatility", "strike", price_col]).copy()
     if df.empty:
         return pd.DataFrame(columns=_empty_cols)
 
@@ -39,11 +46,9 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
         )
         df = df[df["_dte"] == nearest_dte].drop(columns=["_dte"])
 
-    df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
+    df["_abs_otm"] = (df["strike"] - df[price_col]).abs()
     idx = df.groupby(["underlying_symbol", "quote_date"])["_abs_otm"].idxmin()
-    atm = df.loc[
-        idx, ["underlying_symbol", "quote_date", "underlying_price", "strike"]
-    ].copy()
+    atm = df.loc[idx, ["underlying_symbol", "quote_date", "strike"]].copy()
     merged = atm.merge(
         df.groupby(["underlying_symbol", "quote_date", "strike"])["implied_volatility"]
         .mean()
@@ -56,7 +61,6 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
             [
                 "underlying_symbol",
                 "quote_date",
-                "underlying_price",
                 "implied_volatility",
             ]
         ]

@@ -614,7 +614,6 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     keep = [
         "underlying_symbol",
         "quote_date",
-        "underlying_price",
         "strike",
         "option_type",
         "implied_volatility",
@@ -623,6 +622,11 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     cols = [c for c in keep if c in dataset.columns]
     if len(cols) < len(keep):
         return None
+    # Include price column for ATM computation if available
+    for price_col in ("close", "underlying_price"):
+        if price_col in dataset.columns and price_col not in cols:
+            cols.append(price_col)
+            break
     return dataset[cols].copy()
 
 

@@ -709,8 +709,8 @@ _TOOL_DESCRIPTIONS: dict[str, str] = {
     "check_data_quality": (
         "Run an integrity check on a loaded dataset against the columns "
         "and data quality the backtesting engine requires. Reports "
-        "missing/mistyped required columns (including delta and "
-        "underlying_price), optional column availability "
+        "missing/mistyped required columns (including delta), "
+        "optional column availability "
         "(Greeks, volume, IV), null analysis on critical columns, bid/ask "
         "quality (zero bids, crossed markets, spread stats), date coverage "
         "and gaps, monthly row distribution, duplicate rows, and negative "

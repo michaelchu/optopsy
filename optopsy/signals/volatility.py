@@ -44,7 +44,7 @@ def _atr_signal(period: int, multiplier: float, above: bool) -> SignalFunc:
         has_ohlcv = "high" in data.columns and "low" in data.columns
 
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
-            prices = group["underlying_price"]
+            prices = _get_close(group)
             high = group["high"] if has_ohlcv else None
             low = group["low"] if has_ohlcv else None
             atr = _compute_atr(prices, period, high=high, low=low)
@@ -87,7 +87,7 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
-            prices = group["underlying_price"]
+            prices = _get_close(group)
             bb = ta.bbands(prices, length=length, std=std)
             if bb is None:
                 return pd.Series(False, index=group.index)
