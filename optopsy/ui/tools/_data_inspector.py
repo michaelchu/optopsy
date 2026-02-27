@@ -1,6 +1,7 @@
 """Data inspection tool handlers: load_csv_data, preview_data, describe_data, suggest_strategy_params."""
 
 import json as _json
+import logging
 import os
 
 import pandas as pd
@@ -18,6 +19,8 @@ from optopsy.strategies._helpers import (
 from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
+
+_log = logging.getLogger(__name__)
 
 # All kwarg keys accepted by csv_data(), derived from default_kwargs to stay DRY.
 _CSV_KWARG_KEYS = tuple(default_kwargs.keys())
@@ -43,6 +46,10 @@ def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _resul
             )
         file_path = resolved
 
+    # User-facing label: use the original argument (opaque filename when via
+    # upload registry, or basename of the path for direct API use).
+    label = os.path.basename(arguments.get("file_path", file_path))
+
     # Build kwargs for csv_data() from the validated arguments.
     csv_kwargs = {}
     for key in _CSV_KWARG_KEYS:
@@ -53,9 +60,10 @@ def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _resul
     try:
         df = op.csv_data(file_path, **csv_kwargs)
     except Exception as e:
-        return _result(f"Failed to load CSV: {e}")
-
-    label = os.path.basename(file_path)
+        _log.error("load_csv_data failed for %s: %s", file_path, e)
+        return _result(
+            f"Failed to load CSV '{label}': check column mapping and file format."
+        )
     updated_datasets = {**datasets, label: df}
 
     summary = _df_summary(df, label)
