@@ -9,9 +9,9 @@ import optopsy as op
 from optopsy.signals import (
     _compute_atm_iv,
     _compute_iv_rank_series,
-    apply_signal,
     iv_rank_above,
     iv_rank_below,
+    signal_dates,
 )
 
 # ============================================================================
@@ -336,38 +336,38 @@ class TestIVRankEdgeCases:
 
 
 # ============================================================================
-# Tests for apply_signal with IV rank
+# Tests for signal_dates with IV rank signals
 # ============================================================================
 
 
-class TestApplySignalWithIVRank:
-    def test_apply_signal_with_iv_rank(self, options_data_with_iv):
-        """apply_signal should work with IV rank signals on options data."""
+class TestSignalDatesWithIVRank:
+    def test_signal_dates_with_iv_rank(self, options_data_with_iv):
+        """signal_dates should work with IV rank signals on options data."""
         sig = iv_rank_above(threshold=0.5, window=20)
-        result = apply_signal(options_data_with_iv, sig)
+        result = signal_dates(options_data_with_iv, sig)
         assert isinstance(result, pd.DataFrame)
         assert "underlying_symbol" in result.columns
         assert "quote_date" in result.columns
         assert len(result) > 0
 
-    def test_apply_signal_iv_rank_below(self, options_data_with_iv):
-        """apply_signal should work with iv_rank_below."""
+    def test_signal_dates_iv_rank_below(self, options_data_with_iv):
+        """signal_dates should work with iv_rank_below."""
         sig = iv_rank_below(threshold=0.3, window=252)
-        result = apply_signal(options_data_with_iv, sig)
+        result = signal_dates(options_data_with_iv, sig)
         assert isinstance(result, pd.DataFrame)
 
-    def test_apply_signal_no_iv_returns_empty(self, options_data_no_iv):
-        """apply_signal with IV signal on data without IV returns empty."""
+    def test_signal_dates_no_iv_returns_empty(self, options_data_no_iv):
+        """signal_dates with IV signal on data without IV returns empty."""
         sig = iv_rank_above(threshold=0.5)
-        result = apply_signal(options_data_no_iv, sig)
+        result = signal_dates(options_data_no_iv, sig)
         assert len(result) == 0
 
     def test_high_threshold_fewer_dates(self, options_data_with_iv):
         """Higher threshold should produce fewer valid dates."""
-        dates_50 = apply_signal(
+        dates_50 = signal_dates(
             options_data_with_iv, iv_rank_above(threshold=0.5, window=20)
         )
-        dates_80 = apply_signal(
+        dates_80 = signal_dates(
             options_data_with_iv, iv_rank_above(threshold=0.8, window=20)
         )
         assert len(dates_80) <= len(dates_50)

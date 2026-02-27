@@ -1,4 +1,4 @@
-"""Signal combinators, the Signal class, apply_signal, and custom_signal."""
+"""Signal combinators, the Signal class, signal_dates, and custom_signal."""
 
 import pandas as pd
 
@@ -139,52 +139,50 @@ def signal(func: SignalFunc) -> Signal:
     return Signal(func)
 
 
-# ---------------------------------------------------------------------------
-# apply_signal — public helper to compute valid dates from a signal
-# ---------------------------------------------------------------------------
-
-
-def apply_signal(
-    data: pd.DataFrame,
+def signal_dates(
+    stock_data: pd.DataFrame,
     signal_func: SignalFunc,
-    stock_data: "pd.DataFrame | None" = None,
 ) -> pd.DataFrame:
-    """Run a signal function on data and return valid (symbol, date) pairs.
+    """Run a signal on stock data and return valid (symbol, date) pairs.
+
+    This is the recommended way to generate ``entry_dates`` / ``exit_dates``
+    for strategy functions.  Signals are computed entirely from stock price
+    data — no options data is involved.
 
     Args:
-        data: DataFrame with at least ``underlying_symbol`` and ``quote_date``.
-        signal_func: Callable that takes a DataFrame and returns a boolean Series.
-        stock_data: Optional OHLCV DataFrame with stock prices.  When provided
-            and *data* lacks a ``close`` column, the stock prices are merged in
-            by ``(underlying_symbol, quote_date)``.  This is useful for IV rank
-            signals that need a price column for ATM strike selection while the
-            options data itself has no stock price.  Accepts yfinance output
-            directly (DatetimeIndex, ``Close`` column, etc.).
+        stock_data: OHLCV DataFrame with at least ``underlying_symbol``,
+            ``quote_date``, and ``close``.  Extra columns (``high``, ``low``,
+            ``volume``) are used by signals that need them.  Accepts output
+            from ``load_cached_stocks()`` directly.
+        signal_func: A signal function (e.g. ``op.rsi_below()``) or a
+            composed signal using ``&`` / ``|`` operators on ``Signal``
+            objects.
 
     Returns:
         DataFrame with columns ``(underlying_symbol, quote_date)`` for
-        dates where the signal is True.
-    """
-    df = data.copy()
-    df["quote_date"] = normalize_dates(df["quote_date"])
-    if "close" not in df.columns and stock_data is not None:
-        from ..strategies._helpers import _normalize_stock_data
+        dates where the signal is True.  Pass this directly to a strategy
+        via ``entry_dates`` or ``exit_dates``.
 
-        stock = _normalize_stock_data(stock_data, df)
-        df = df.merge(
-            stock[["underlying_symbol", "quote_date", "close"]],
-            on=["underlying_symbol", "quote_date"],
-            how="left",
+    Example::
+
+        stocks = op.load_cached_stocks("SPY")
+        entry = op.signal_dates(stocks, op.rsi_below(threshold=30))
+        results = op.long_calls(options, entry_dates=entry)
+
+    Example with composed signals::
+
+        entry = op.signal_dates(
+            stocks,
+            op.signal(op.rsi_below()) & op.signal(op.sma_above(200)),
         )
-    requires_per_strike = getattr(signal_func, "requires_per_strike", False)
-    if requires_per_strike:
-        df = df.sort_values(["underlying_symbol", "quote_date"]).reset_index(drop=True)
-    else:
-        df = (
-            df.drop_duplicates(["underlying_symbol", "quote_date"])
-            .sort_values(["underlying_symbol", "quote_date"])
-            .reset_index(drop=True)
-        )
+    """
+    df = stock_data.copy()
+    df["quote_date"] = normalize_dates(df["quote_date"])
+    df = (
+        df.drop_duplicates(["underlying_symbol", "quote_date"])
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
     mask = signal_func(df)
     return (
         df.loc[mask, ["underlying_symbol", "quote_date"]]

@@ -258,7 +258,7 @@ When `raw=True`, strategies return individual trade details:
 
 Functions for filtering strategy entries/exits using technical analysis or custom conditions. See the [Entry Signals](entry-signals.md) page for full usage examples.
 
-::: optopsy.signals.apply_signal
+::: optopsy.signals.signal_dates
 
 ::: optopsy.signals.custom_signal
 

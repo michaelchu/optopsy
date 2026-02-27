@@ -30,7 +30,7 @@ from optopsy.data._yf_helpers import (  # noqa: F401
 )
 from optopsy.metrics import profit_factor as _profit_factor
 from optopsy.metrics import win_rate as _win_rate
-from optopsy.signals import apply_signal
+from optopsy.signals import signal_dates
 from optopsy.timestamps import normalize_dates
 
 from .._dataframe_utils import stringify_interval_cols
@@ -149,7 +149,7 @@ def _empty_signal_suggestion(
 ) -> str:
     """Build a human-readable suggestion when a signal produces no overlapping dates.
 
-    raw_signal_dates: result of apply_signal() before intersection — the full set
+    raw_signal_dates: result of signal_dates() before intersection — the full set
     of dates where the signal fired in the available price history.
     opt_min / opt_max: the date range of the loaded options dataset.
 
@@ -921,7 +921,7 @@ def _resolve_inline_signal(
     if days > 1:
         sig = _signals.sustained(sig, days)
 
-    raw_dates = apply_signal(signal_data, sig)
+    raw_dates = signal_dates(signal_data, sig)
     filtered = _intersect_with_options_dates(raw_dates, dataset)
     if filtered.empty:
         opt_min = dataset["quote_date"].min().date()

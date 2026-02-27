@@ -10,7 +10,7 @@ import datetime
 import pandas as pd
 import pytest
 
-from optopsy.signals import apply_signal, day_of_week
+from optopsy.signals import day_of_week, signal_dates
 from optopsy.strategies import long_calls
 from optopsy.timestamps import normalize_dates
 
@@ -98,23 +98,23 @@ class TestCrossSourceDateMatching:
     def test_naive_signals_match(self, option_data):
         """Baseline: naive midnight signals match naive midnight options."""
         signal_data = self._make_signal_data()
-        entry_dates = apply_signal(signal_data, day_of_week(3))
+        entry_dates = signal_dates(signal_data, day_of_week(3))
         result = long_calls(option_data, entry_dates=entry_dates, raw=True)
         assert len(result) > 0
 
     def test_tz_aware_with_time_signals_match(self, option_data):
         """UTC tz-aware signals at market close match naive midnight options."""
         signal_data = self._make_signal_data(tz="UTC", hour=16, minute=30)
-        entry_dates = apply_signal(signal_data, day_of_week(3))
+        entry_dates = signal_dates(signal_data, day_of_week(3))
         result = long_calls(option_data, entry_dates=entry_dates, raw=True)
         assert len(result) > 0
 
 
-class TestApplySignalNormalization:
-    """apply_signal output is always normalized."""
+class TestSignalDatesNormalization:
+    """signal_dates output is always normalized."""
 
     def test_normalizes_tz_and_time(self):
-        """apply_signal strips timezone and time from output dates."""
+        """signal_dates strips timezone and time from output dates."""
         data = pd.DataFrame(
             {
                 "underlying_symbol": ["SPX"] * 3,
@@ -128,6 +128,6 @@ class TestApplySignalNormalization:
                 "close": [100, 101, 102],
             }
         )
-        result = apply_signal(data, lambda df: pd.Series(True, index=df.index))
+        result = signal_dates(data, lambda df: pd.Series(True, index=df.index))
         assert result["quote_date"].dt.tz is None
         assert all(result["quote_date"].dt.hour == 0)

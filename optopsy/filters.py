@@ -59,13 +59,13 @@ def _apply_signal_filter(
     Filter data to only include rows matching valid (symbol, date) pairs.
 
     Both the option chain data (normalized at the root of _process_strategy /
-    _process_calendar_strategy) and signal dates (normalized in apply_signal)
+    _process_calendar_strategy) and signal dates (normalized in signal_dates)
     are already date-only, so this is a straightforward inner join.
 
     Args:
         data: DataFrame to filter (already date-normalized)
         valid_dates: DataFrame with (underlying_symbol, quote_date) of valid dates
-            (already date-normalized via apply_signal)
+            (already date-normalized via signal_dates)
         date_col: Name of the date column in data to match against (default: quote_date)
 
     Returns:
