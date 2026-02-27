@@ -60,7 +60,6 @@ _DEFAULT_OTM_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
 _DEFAULT_WING_DELTA = {"target": 0.20, "min": 0.10, "max": 0.30}
 _DEFAULT_DEEP_ITM_DELTA = {"target": 0.80, "min": 0.60, "max": 0.95}
 _DEFAULT_ITM_WING_DELTA = {"target": 0.40, "min": 0.30, "max": 0.50}
-_DEFAULT_OTM_WING_DELTA = {"target": 0.10, "min": 0.05, "max": 0.20}
 
 
 def _singles(
@@ -136,7 +135,7 @@ def _butterfly(
     """Process butterfly strategies (3 legs at different strikes)."""
     kwargs.setdefault("leg1_delta", _DEFAULT_ITM_WING_DELTA)
     kwargs.setdefault("leg2_delta", _DEFAULT_ATM_DELTA)
-    kwargs.setdefault("leg3_delta", _DEFAULT_OTM_WING_DELTA)
+    kwargs.setdefault("leg3_delta", _DEFAULT_OTM_DELTA)
     return _process_strategy(
         data,
         internal_cols=triple_strike_internal_cols,
@@ -288,6 +287,94 @@ def _normalize_stock_data(
     return df[["underlying_symbol", "quote_date", "close"]]
 
 
+def _match_stock_prices(
+    result: pd.DataFrame,
+    stock_data: pd.DataFrame,
+    options_data: pd.DataFrame,
+) -> pd.DataFrame:
+    """Merge stock close prices by entry and exit date onto a result DataFrame.
+
+    Normalizes *stock_data* via ``_normalize_stock_data()`` and inner-joins
+    on ``(underlying_symbol, quote_date_entry)`` and
+    ``(underlying_symbol, quote_date_exit)``, adding ``_stock_entry`` and
+    ``_stock_exit`` columns.
+    """
+    stock_prices = _normalize_stock_data(stock_data, options_data)
+
+    entry_map = stock_prices.rename(
+        columns={"quote_date": "quote_date_entry", "close": "_stock_entry"}
+    )
+    result = result.merge(
+        entry_map, on=["underlying_symbol", "quote_date_entry"], how="inner"
+    )
+
+    exit_map = stock_prices.rename(
+        columns={"quote_date": "quote_date_exit", "close": "_stock_exit"}
+    )
+    result = result.merge(
+        exit_map, on=["underlying_symbol", "quote_date_exit"], how="inner"
+    )
+    return result
+
+
+def _apply_option_slippage(
+    result: pd.DataFrame,
+    side_value: int,
+    params: dict,
+    suffix: str = "",
+    num_legs: int = 1,
+) -> pd.DataFrame:
+    """Apply slippage to entry/exit prices on a single option leg.
+
+    *suffix* distinguishes legs when multiple option legs are present
+    (e.g. ``"_opt1"``, ``"_opt2"``).  When the required bid/ask columns
+    are missing or slippage is ``"mid"``, the DataFrame is returned
+    unchanged.
+    """
+    slippage = params["slippage"]
+    bid_entry_col = f"bid_entry{suffix}"
+    ask_entry_col = f"ask_entry{suffix}"
+    if bid_entry_col not in result.columns or ask_entry_col not in result.columns:
+        return result
+    if slippage == "mid":
+        return result
+
+    result = result.copy()
+    volume_entry = (
+        result.get(f"volume_entry{suffix}")
+        if f"volume_entry{suffix}" in result.columns
+        else None
+    )
+    result[f"entry{suffix}"] = _calculate_fill_price(
+        result[bid_entry_col],
+        result[ask_entry_col],
+        side_value,
+        slippage,
+        params["fill_ratio"],
+        volume_entry,
+        params["reference_volume"],
+        params["per_leg_slippage"],
+        num_legs=num_legs,
+    )
+    volume_exit = (
+        result.get(f"volume_exit{suffix}")
+        if f"volume_exit{suffix}" in result.columns
+        else None
+    )
+    result[f"exit{suffix}"] = _calculate_fill_price(
+        result[f"bid_exit{suffix}"],
+        result[f"ask_exit{suffix}"],
+        -side_value,
+        slippage,
+        params["fill_ratio"],
+        volume_exit,
+        params["reference_volume"],
+        params["per_leg_slippage"],
+        num_legs=num_legs,
+    )
+    return result
+
+
 def _covered_with_stock(
     data: pd.DataFrame,
     leg_def: List[Tuple],
@@ -355,60 +442,13 @@ def _covered_with_stock(
         return _empty_result()
 
     # --- match stock prices ---
-    stock_prices = _normalize_stock_data(stock_data, data)
-
-    # Entry price
-    entry_map = stock_prices.rename(
-        columns={"quote_date": "quote_date_entry", "close": "_stock_entry"}
-    )
-    result = evaluated.merge(
-        entry_map, on=["underlying_symbol", "quote_date_entry"], how="inner"
-    )
-
-    # Exit price – use actual option exit date from the evaluation pipeline
-    exit_map = stock_prices.rename(
-        columns={"quote_date": "quote_date_exit", "close": "_stock_exit"}
-    )
-    result = result.merge(
-        exit_map, on=["underlying_symbol", "quote_date_exit"], how="inner"
-    )
+    result = _match_stock_prices(evaluated, stock_data, data)
 
     if result.empty:
         return _empty_result()
 
     # --- apply slippage to option leg ---
-    slippage = params["slippage"]
-    has_bid_ask = "bid_entry" in result.columns and "ask_entry" in result.columns
-    if has_bid_ask and slippage != "mid":
-        result = result.copy()
-        volume_entry = (
-            result.get("volume_entry") if "volume_entry" in result.columns else None
-        )
-        result["entry"] = _calculate_fill_price(
-            result["bid_entry"],
-            result["ask_entry"],
-            option_side.value,
-            slippage,
-            params["fill_ratio"],
-            volume_entry,
-            params["reference_volume"],
-            params["per_leg_slippage"],
-            num_legs=1,
-        )
-        volume_exit = (
-            result.get("volume_exit") if "volume_exit" in result.columns else None
-        )
-        result["exit"] = _calculate_fill_price(
-            result["bid_exit"],
-            result["ask_exit"],
-            -option_side.value,
-            slippage,
-            params["fill_ratio"],
-            volume_exit,
-            params["reference_volume"],
-            params["per_leg_slippage"],
-            num_legs=1,
-        )
+    result = _apply_option_slippage(result, option_side.value, params)
 
     # --- compute combined P&L ---
     stock_entry = result["_stock_entry"]
@@ -599,70 +639,19 @@ def _collar_with_stock(
         return _empty_result()
 
     # --- match stock prices ---
-    stock_prices = _normalize_stock_data(stock_data, data)
-
-    entry_map = stock_prices.rename(
-        columns={"quote_date": "quote_date_entry", "close": "_stock_entry"}
-    )
-    result = result.merge(
-        entry_map, on=["underlying_symbol", "quote_date_entry"], how="inner"
-    )
-
-    exit_map = stock_prices.rename(
-        columns={"quote_date": "quote_date_exit", "close": "_stock_exit"}
-    )
-    result = result.merge(
-        exit_map, on=["underlying_symbol", "quote_date_exit"], how="inner"
-    )
+    result = _match_stock_prices(result, stock_data, data)
 
     if result.empty:
         return _empty_result()
 
     # --- apply slippage to option legs ---
-    slippage = params["slippage"]
     for suffix, opt_leg in [
         ("_opt1", option_leg_defs[0]),
         ("_opt2", option_leg_defs[1]),
     ]:
-        option_side = opt_leg[0]
-        has_bid_ask = (
-            f"bid_entry{suffix}" in result.columns
-            and f"ask_entry{suffix}" in result.columns
+        result = _apply_option_slippage(
+            result, opt_leg[0].value, params, suffix, num_legs=2
         )
-        if has_bid_ask and slippage != "mid":
-            result = result.copy()
-            volume_entry = (
-                result.get(f"volume_entry{suffix}")
-                if f"volume_entry{suffix}" in result.columns
-                else None
-            )
-            result[f"entry{suffix}"] = _calculate_fill_price(
-                result[f"bid_entry{suffix}"],
-                result[f"ask_entry{suffix}"],
-                option_side.value,
-                slippage,
-                params["fill_ratio"],
-                volume_entry,
-                params["reference_volume"],
-                params["per_leg_slippage"],
-                num_legs=2,
-            )
-            volume_exit = (
-                result.get(f"volume_exit{suffix}")
-                if f"volume_exit{suffix}" in result.columns
-                else None
-            )
-            result[f"exit{suffix}"] = _calculate_fill_price(
-                result[f"bid_exit{suffix}"],
-                result[f"ask_exit{suffix}"],
-                -option_side.value,
-                slippage,
-                params["fill_ratio"],
-                volume_exit,
-                params["reference_volume"],
-                params["per_leg_slippage"],
-                num_legs=2,
-            )
 
     # --- compute combined P&L ---
     opt1_side = option_leg_defs[0][0]
