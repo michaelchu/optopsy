@@ -290,6 +290,13 @@ def _get_hl(group: pd.DataFrame) -> "tuple[pd.Series | None, pd.Series | None] |
     return _get_high(group), _get_low(group)
 
 
+def _get_open(group: pd.DataFrame) -> "pd.Series | None":
+    """Get open prices if available, else None."""
+    if "open" in group.columns:
+        return group["open"]
+    return None
+
+
 def _get_volume(group: pd.DataFrame) -> "pd.Series | None":
     """Get volume if available, else None."""
     if "volume" in group.columns:

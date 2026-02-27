@@ -553,6 +553,25 @@ SIGNAL_REGISTRY: dict[str, Any] = {
     "ad_cross_below_sma": lambda **kw: _signals.ad_cross_below_sma(
         kw.get("sma_period", 20)
     ),
+    # --- Price ---
+    "price_above": lambda **kw: _signals.price_above(kw.get("level", 100)),
+    "price_below": lambda **kw: _signals.price_below(kw.get("level", 100)),
+    "price_cross_above": lambda **kw: _signals.price_cross_above(kw.get("level", 100)),
+    "price_cross_below": lambda **kw: _signals.price_cross_below(kw.get("level", 100)),
+    "gap_up": lambda **kw: _signals.gap_up(kw.get("pct", 0.5)),
+    "gap_down": lambda **kw: _signals.gap_down(kw.get("pct", 0.5)),
+    "high_of_n_days": lambda **kw: _signals.high_of_n_days(kw.get("period", 252)),
+    "low_of_n_days": lambda **kw: _signals.low_of_n_days(kw.get("period", 252)),
+    "daily_return_above": lambda **kw: _signals.daily_return_above(kw.get("pct", 1.0)),
+    "daily_return_below": lambda **kw: _signals.daily_return_below(kw.get("pct", -1.0)),
+    "drawdown_from_high": lambda **kw: _signals.drawdown_from_high(
+        kw.get("period", 20), kw.get("pct", 5.0)
+    ),
+    "rally_from_low": lambda **kw: _signals.rally_from_low(
+        kw.get("period", 20), kw.get("pct", 5.0)
+    ),
+    "consecutive_up": lambda **kw: _signals.consecutive_up(kw.get("days", 3)),
+    "consecutive_down": lambda **kw: _signals.consecutive_down(kw.get("days", 3)),
     # --- Calendar ---
     # Day-of-week — default: days=[4] (Friday); pass days=[0,1,2,3,4] for any weekday
     "day_of_week": lambda **kw: _signals.day_of_week(
@@ -616,6 +635,10 @@ _OHLC_SIGNALS = frozenset(
         "psar_sell",
         "chop_above",
         "chop_below",
+        "gap_up",
+        "gap_down",
+        "high_of_n_days",
+        "low_of_n_days",
     }
 )
 
