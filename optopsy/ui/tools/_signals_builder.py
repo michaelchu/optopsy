@@ -85,6 +85,8 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
 
     signal_data = None
     signal_symbol = arguments.get("signal_symbol")
+    if signal_symbol:
+        signal_symbol = signal_symbol.strip()
 
     if has_iv_signal:
         iv_data = _iv_signal_data(dataset)
@@ -167,8 +169,11 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     # Compute valid dates, intersected with actual options dates.
     raw_signal_dates = signal_dates(signal_data, combined)
 
-    # Cross-symbol: remap signal symbol to options dataset symbol(s)
-    if signal_symbol and not raw_signal_dates.empty:
+    # Cross-symbol: remap signal symbol to options dataset symbol(s).
+    # Only applies when we actually fetched data for signal_symbol (i.e.
+    # needs_stock was true).  IV and date-only signals already use the
+    # options dataset's symbols, so remapping would duplicate rows.
+    if signal_symbol and needs_stock and not raw_signal_dates.empty:
         options_symbols = dataset["underlying_symbol"].unique().tolist()
         frames = []
         for opt_sym in options_symbols:
@@ -259,6 +264,8 @@ def _handle_build_custom_signal(
 
     # Fetch OHLCV data for signal computation
     signal_symbol = arguments.get("signal_symbol")
+    if signal_symbol:
+        signal_symbol = signal_symbol.strip()
     if signal_symbol:
         signal_data = _fetch_stock_data_for_symbol(signal_symbol, dataset)
     else:
