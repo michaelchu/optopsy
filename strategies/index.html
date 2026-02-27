@@ -1,0 +1,1929 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Options Backtesting Library for Python">
+      
+      
+        <meta name="author" content="Michael Chu">
+      
+      
+        <link rel="canonical" href="https://michaelchu.github.io/optopsy/strategies/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="singles/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo-small.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Overview - Optopsy Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Onest:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Onest";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#strategy-overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Optopsy Documentation" class="md-header__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Optopsy Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Strategies
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../parameters/" class="md-tabs__link">
+          
+  
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Optopsy Documentation" class="md-nav__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    Optopsy Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Strategies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Strategies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#strategy-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Strategy Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-leg-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-Leg Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#straddles-strangles-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Straddles &amp; Strangles (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vertical-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertical Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ratio-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ratio Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#butterfly-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Butterfly Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iron-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iron Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condor-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condor Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#covered-collar-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Covered &amp; Collar Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagonal-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagonal Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strategy-selection-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy Selection Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Strategy Selection Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-you-think-the-market-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If you think the market will...
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#by-riskreward-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        By Risk/Reward Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="singles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-Leg Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="straddles-strangles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Straddles & Strangles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="spreads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vertical Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="butterflies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="iron-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Iron Condors & Iron Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="condors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Condor Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="covered/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covered & Collar Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="calendars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calendar Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="diagonals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagonal Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#strategy-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Strategy Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-leg-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-Leg Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#straddles-strangles-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Straddles &amp; Strangles (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vertical-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertical Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ratio-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ratio Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#butterfly-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Butterfly Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iron-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iron Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condor-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condor Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#covered-collar-strategies-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Covered &amp; Collar Strategies (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagonal-spreads-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagonal Spreads (4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strategy-selection-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy Selection Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Strategy Selection Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-you-think-the-market-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If you think the market will...
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#by-riskreward-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        By Risk/Reward Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="strategy-overview">Strategy Overview<a class="headerlink" href="#strategy-overview" title="Permanent link">&para;</a></h1>
+<p>Optopsy includes 38 built-in options strategies covering single-leg, multi-leg, ratio, and time-based strategies.</p>
+<h2 id="strategy-categories">Strategy Categories<a class="headerlink" href="#strategy-categories" title="Permanent link">&para;</a></h2>
+<h3 id="single-leg-strategies-4">Single-Leg Strategies (4)<a class="headerlink" href="#single-leg-strategies-4" title="Permanent link">&para;</a></h3>
+<p>Basic directional plays with calls or puts.</p>
+<ul>
+<li><a href="singles/#long-calls">Long Calls</a> - Bullish directional bet</li>
+<li><a href="singles/#short-calls">Short Calls</a> - Bearish or neutral income</li>
+<li><a href="singles/#long-puts">Long Puts</a> - Bearish directional bet</li>
+<li><a href="singles/#short-puts">Short Puts</a> - Bullish income strategy</li>
+</ul>
+<p><a href="singles/">Learn more →</a></p>
+<h3 id="straddles-strangles-4">Straddles &amp; Strangles (4)<a class="headerlink" href="#straddles-strangles-4" title="Permanent link">&para;</a></h3>
+<p>Volatility-based strategies combining calls and puts.</p>
+<ul>
+<li><a href="straddles-strangles/#long-straddle">Long Straddle</a> - Profit from big moves</li>
+<li><a href="straddles-strangles/#short-straddle">Short Straddle</a> - Income from low volatility</li>
+<li><a href="straddles-strangles/#long-strangle">Long Strangle</a> - Lower-cost volatility play</li>
+<li><a href="straddles-strangles/#short-strangle">Short Strangle</a> - Wider profit zone income</li>
+</ul>
+<p><a href="straddles-strangles/">Learn more →</a></p>
+<h3 id="vertical-spreads-4">Vertical Spreads (4)<a class="headerlink" href="#vertical-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Limited-risk directional strategies.</p>
+<ul>
+<li><a href="spreads/#long-call-spread">Long Call Spread</a> - Bullish debit spread</li>
+<li><a href="spreads/#short-call-spread">Short Call Spread</a> - Bearish credit spread</li>
+<li><a href="spreads/#long-put-spread">Long Put Spread</a> - Bearish debit spread</li>
+<li><a href="spreads/#short-put-spread">Short Put Spread</a> - Bullish credit spread</li>
+</ul>
+<p><a href="spreads/">Learn more →</a></p>
+<h3 id="ratio-spreads-4">Ratio Spreads (4)<a class="headerlink" href="#ratio-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Unequal-quantity spreads for directional or neutral trades.</p>
+<ul>
+<li><a href="spreads/#call-back-spread">Call Back Spread</a> - Bullish 1:2 ratio (short 1 ITM, long 2 OTM calls)</li>
+<li><a href="spreads/#put-back-spread">Put Back Spread</a> - Bearish 1:2 ratio (short 1 ITM, long 2 OTM puts)</li>
+<li><a href="spreads/#call-front-spread">Call Front Spread</a> - Neutral 1:2 ratio (long 1 ITM, short 2 OTM calls)</li>
+<li><a href="spreads/#put-front-spread">Put Front Spread</a> - Neutral 1:2 ratio (long 1 ITM, short 2 OTM puts)</li>
+</ul>
+<p><a href="spreads/">Learn more →</a></p>
+<h3 id="butterfly-spreads-4">Butterfly Spreads (4)<a class="headerlink" href="#butterfly-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Neutral strategies targeting specific price ranges.</p>
+<ul>
+<li><a href="butterflies/#long-call-butterfly">Long Call Butterfly</a> - Profit at middle strike</li>
+<li><a href="butterflies/#short-call-butterfly">Short Call Butterfly</a> - Profit from movement</li>
+<li><a href="butterflies/#long-put-butterfly">Long Put Butterfly</a> - Bearish butterfly</li>
+<li><a href="butterflies/#short-put-butterfly">Short Put Butterfly</a> - Inverse put butterfly</li>
+</ul>
+<p><a href="butterflies/">Learn more →</a></p>
+<h3 id="iron-strategies-4">Iron Strategies (4)<a class="headerlink" href="#iron-strategies-4" title="Permanent link">&para;</a></h3>
+<p>Four-leg strategies with defined risk.</p>
+<ul>
+<li><a href="iron-strategies/#iron-condor">Iron Condor</a> - Range-bound income</li>
+<li><a href="iron-strategies/#reverse-iron-condor">Reverse Iron Condor</a> - Breakout play</li>
+<li><a href="iron-strategies/#iron-butterfly">Iron Butterfly</a> - Tighter profit zone</li>
+<li><a href="iron-strategies/#reverse-iron-butterfly">Reverse Iron Butterfly</a> - Long volatility</li>
+</ul>
+<p><a href="iron-strategies/">Learn more →</a></p>
+<h3 id="condor-spreads-4">Condor Spreads (4)<a class="headerlink" href="#condor-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Four-leg strategies using the same option type at four ascending strikes.</p>
+<ul>
+<li><a href="condors/#long-call-condor">Long Call Condor</a> - Neutral, all calls</li>
+<li><a href="condors/#short-call-condor">Short Call Condor</a> - Volatility play, all calls</li>
+<li><a href="condors/#long-put-condor">Long Put Condor</a> - Neutral, all puts</li>
+<li><a href="condors/#short-put-condor">Short Put Condor</a> - Volatility play, all puts</li>
+</ul>
+<p><a href="condors/">Learn more →</a></p>
+<h3 id="covered-collar-strategies-4">Covered &amp; Collar Strategies (4)<a class="headerlink" href="#covered-collar-strategies-4" title="Permanent link">&para;</a></h3>
+<p>Stock + option combinations. Supports actual stock data via <a href="https://github.com/ranaroussi/yfinance">yfinance</a> or synthetic deep ITM calls.</p>
+<ul>
+<li><a href="covered/#covered-call">Covered Call</a> - Income on stock holdings</li>
+<li><a href="covered/#protective-put">Protective Put</a> - Downside insurance</li>
+<li><a href="covered/#collar">Collar</a> - Hedged income (stock + short call + long put)</li>
+<li><a href="covered/#cash-secured-put">Cash-Secured Put</a> - Bullish income (alias for short puts)</li>
+</ul>
+<p><a href="covered/">Learn more →</a></p>
+<h3 id="calendar-spreads-4">Calendar Spreads (4)<a class="headerlink" href="#calendar-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Same strike, different expirations.</p>
+<ul>
+<li><a href="calendars/#long-call-calendar">Long Call Calendar</a> - Time decay play</li>
+<li><a href="calendars/#short-call-calendar">Short Call Calendar</a> - Opposite calendar</li>
+<li><a href="calendars/#long-put-calendar">Long Put Calendar</a> - Bearish time spread</li>
+<li><a href="calendars/#short-put-calendar">Short Put Calendar</a> - Reverse put calendar</li>
+</ul>
+<p><a href="calendars/">Learn more →</a></p>
+<h3 id="diagonal-spreads-4">Diagonal Spreads (4)<a class="headerlink" href="#diagonal-spreads-4" title="Permanent link">&para;</a></h3>
+<p>Different strikes and expirations.</p>
+<ul>
+<li><a href="diagonals/#long-call-diagonal">Long Call Diagonal</a> - Hybrid spread</li>
+<li><a href="diagonals/#short-call-diagonal">Short Call Diagonal</a> - Reverse call diagonal</li>
+<li><a href="diagonals/#long-put-diagonal">Long Put Diagonal</a> - Bearish diagonal</li>
+<li><a href="diagonals/#short-put-diagonal">Short Put Diagonal</a> - Bullish diagonal</li>
+</ul>
+<p><a href="diagonals/">Learn more →</a></p>
+<h2 id="quick-reference-table">Quick Reference Table<a class="headerlink" href="#quick-reference-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Legs</th>
+<th>Market View</th>
+<th>Max Profit</th>
+<th>Max Loss</th>
+<th>Example Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Long Call</td>
+<td>1</td>
+<td>Bullish</td>
+<td>Unlimited</td>
+<td>Premium paid</td>
+<td>Betting on rally</td>
+</tr>
+<tr>
+<td>Short Put</td>
+<td>1</td>
+<td>Bullish</td>
+<td>Premium received</td>
+<td>Substantial</td>
+<td>Income generation</td>
+</tr>
+<tr>
+<td>Iron Condor</td>
+<td>4</td>
+<td>Neutral</td>
+<td>Net credit</td>
+<td>Difference in strikes</td>
+<td>Range-bound markets</td>
+</tr>
+<tr>
+<td>Long Straddle</td>
+<td>2</td>
+<td>High volatility</td>
+<td>Unlimited</td>
+<td>Premiums paid</td>
+<td>Before earnings</td>
+</tr>
+<tr>
+<td>Call Butterfly</td>
+<td>3</td>
+<td>Neutral</td>
+<td>Width of wing</td>
+<td>Net debit</td>
+<td>Pinning at strike</td>
+</tr>
+<tr>
+<td>Call Back Spread</td>
+<td>2 (1:2)</td>
+<td>Very bullish</td>
+<td>Unlimited</td>
+<td>Limited</td>
+<td>Large upside move</td>
+</tr>
+<tr>
+<td>Call Front Spread</td>
+<td>2 (1:2)</td>
+<td>Neutral</td>
+<td>Net credit</td>
+<td>Unlimited</td>
+<td>Time decay near strike</td>
+</tr>
+<tr>
+<td>Collar</td>
+<td>3</td>
+<td>Neutral/Hedged</td>
+<td>Short call strike</td>
+<td>Put strike</td>
+<td>Hedging stock position</td>
+</tr>
+<tr>
+<td>Long Call Condor</td>
+<td>4</td>
+<td>Neutral</td>
+<td>Net debit</td>
+<td>Defined</td>
+<td>Range-bound, all calls</td>
+</tr>
+<tr>
+<td>Call Calendar</td>
+<td>2</td>
+<td>Neutral</td>
+<td>Variable</td>
+<td>Net debit</td>
+<td>Time decay play</td>
+</tr>
+</tbody>
+</table>
+<h2 id="strategy-selection-guide">Strategy Selection Guide<a class="headerlink" href="#strategy-selection-guide" title="Permanent link">&para;</a></h2>
+<h3 id="if-you-think-the-market-will">If you think the market will...<a class="headerlink" href="#if-you-think-the-market-will" title="Permanent link">&para;</a></h3>
+<p><strong>Go Up Significantly</strong>
+- Long Calls
+- Long Call Spread
+- Call Back Spread</p>
+<p><strong>Go Down Significantly</strong>
+- Long Puts
+- Long Put Spread
+- Put Back Spread</p>
+<p><strong>Stay Flat</strong>
+- Short Straddle
+- Short Strangle
+- Iron Condor
+- Iron Butterfly
+- Call/Put Front Spread
+- Call/Put Condor</p>
+<p><strong>Move But Unsure Direction</strong>
+- Long Straddle
+- Long Strangle</p>
+<p><strong>Hedge an Existing Position</strong>
+- Collar
+- Protective Put</p>
+<p><strong>Stay Near Current Price</strong>
+- Calendar Spreads
+- Butterflies</p>
+<h3 id="by-riskreward-profile">By Risk/Reward Profile<a class="headerlink" href="#by-riskreward-profile" title="Permanent link">&para;</a></h3>
+<p><strong>Limited Risk, Limited Reward</strong>
+- All spreads (vertical, butterfly, iron condor)</p>
+<p><strong>Limited Risk, Unlimited Reward</strong>
+- Long calls/puts
+- Long straddles/strangles</p>
+<p><strong>Substantial Risk, Limited Reward</strong>
+- Short calls/puts
+- Short straddles/strangles</p>
+<h2 id="common-parameters">Common Parameters<a class="headerlink" href="#common-parameters" title="Permanent link">&para;</a></h2>
+<p>All strategies accept these common parameters:</p>
+<ul>
+<li><code>max_entry_dte</code> - Maximum days to expiration at entry</li>
+<li><code>exit_dte</code> - Days to expiration at exit</li>
+<li><code>dte_interval</code> - Grouping interval for results</li>
+<li><code>leg1_delta</code>–<code>leg4_delta</code> - Per-leg delta targeting via <code>TargetRange</code></li>
+<li><code>delta_interval</code> - Grouping interval for delta ranges</li>
+<li><code>min_bid_ask</code> - Minimum bid-ask spread filter</li>
+<li><code>raw</code> - Return raw trade data (default: aggregated stats)</li>
+</ul>
+<p>See the <a href="../parameters/">Parameters Guide</a> for complete details.</p>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Dive into specific <a href="#strategy-categories">strategy categories</a></li>
+<li>Learn about <a href="../parameters/">strategy parameters</a></li>
+<li>See <a href="../examples/">examples</a> of real backtests</li>
+<li>Check the <a href="../api-reference/">API Reference</a> for function signatures</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "toc.follow", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

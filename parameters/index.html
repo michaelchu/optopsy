@@ -1,0 +1,2723 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Options Backtesting Library for Python">
+      
+      
+        <meta name="author" content="Michael Chu">
+      
+      
+        <link rel="canonical" href="https://michaelchu.github.io/optopsy/parameters/">
+      
+      
+        <link rel="prev" href="../strategies/diagonals/">
+      
+      
+        <link rel="next" href="../entry-signals/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo-small.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Parameters - Optopsy Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Onest:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Onest";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#strategy-parameters" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Optopsy Documentation" class="md-header__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Optopsy Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Parameters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../strategies/" class="md-tabs__link">
+          
+  
+  
+  Strategies
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Optopsy Documentation" class="md-nav__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    Optopsy Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/michaelchu/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    michaelchu/optopsy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Strategies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Strategies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/singles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-Leg Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/straddles-strangles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Straddles & Strangles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/spreads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vertical Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/butterflies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/iron-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Iron Condors & Iron Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/condors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Condor Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/covered/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covered & Collar Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/calendars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calendar Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/diagonals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagonal Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entry-and-exit-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry and Exit Timing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entry and Exit Timing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#max_entry_dte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_entry_dte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit_dte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exit_dte
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filtering-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#min_bid_ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        min_bid_ask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grouping-and-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grouping and Aggregation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grouping and Aggregation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dte_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dte_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delta_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        delta_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drop_nan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_nan
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-leg-delta-targeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Leg Delta Targeting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Per-Leg Delta Targeting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#targetrange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TargetRange
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leg1_delta-leg2_delta-leg3_delta-leg4_delta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        leg1_delta / leg2_delta / leg3_delta / leg4_delta
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#early-exit-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Early Exit Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Early Exit Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stop_loss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stop_loss
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#take_profit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        take_profit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_hold_days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_hold_days
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit_type-column-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exit_type Column Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commission-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commission Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Commission Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        commission
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slippage-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slippage Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slippage Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slippage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slippage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fill_ratio-liquidity-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fill_ratio (Liquidity Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference_volume-liquidity-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reference_volume (Liquidity Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per_leg_slippage-per-leg-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        per_leg_slippage (Per-Leg Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calendar-diagonal-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar &amp; Diagonal Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calendar &amp; Diagonal Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#front_dte_min-front_dte_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        front_dte_min / front_dte_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#back_dte_min-back_dte_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        back_dte_min / back_dte_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-values-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Values Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Values Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-diagonal-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar &amp; Diagonal Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entry-and-exit-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry and Exit Timing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entry and Exit Timing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#max_entry_dte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_entry_dte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit_dte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exit_dte
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filtering-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#min_bid_ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        min_bid_ask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grouping-and-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grouping and Aggregation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grouping and Aggregation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dte_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dte_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delta_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        delta_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drop_nan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_nan
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-leg-delta-targeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Leg Delta Targeting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Per-Leg Delta Targeting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#targetrange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TargetRange
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leg1_delta-leg2_delta-leg3_delta-leg4_delta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        leg1_delta / leg2_delta / leg3_delta / leg4_delta
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#early-exit-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Early Exit Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Early Exit Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stop_loss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stop_loss
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#take_profit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        take_profit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max_hold_days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        max_hold_days
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit_type-column-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exit_type Column Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commission-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commission Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Commission Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        commission
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slippage-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slippage Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slippage Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slippage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        slippage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fill_ratio-liquidity-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fill_ratio (Liquidity Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference_volume-liquidity-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reference_volume (Liquidity Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per_leg_slippage-per-leg-mode-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        per_leg_slippage (Per-Leg Mode Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calendar-diagonal-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar &amp; Diagonal Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calendar &amp; Diagonal Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#front_dte_min-front_dte_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        front_dte_min / front_dte_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#back_dte_min-back_dte_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        back_dte_min / back_dte_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-values-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Values Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Values Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calendar-diagonal-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calendar &amp; Diagonal Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="strategy-parameters">Strategy Parameters<a class="headerlink" href="#strategy-parameters" title="Permanent link">&para;</a></h1>
+<p>All Optopsy strategies accept a common set of parameters for filtering, grouping, and output formatting. This guide covers all available parameters and their usage.</p>
+<div class="admonition warning">
+<p class="admonition-title">Strict Parameter Validation</p>
+<p>Parameters are validated at runtime using Pydantic. This means:</p>
+<ul>
+<li><strong>Boolean parameters</strong> (<code>raw</code>, <code>drop_nan</code>) must be actual <code>bool</code> values. <code>raw=1</code> or <code>raw=0</code> will raise a validation error — use <code>raw=True</code> or <code>raw=False</code>.</li>
+<li><strong>Float parameters</strong> (<code>min_bid_ask</code>, <code>delta_interval</code>) must be <code>float</code> type. <code>min_bid_ask=5</code> will be rejected — use <code>min_bid_ask=5.0</code>.</li>
+<li><strong>Integer parameters</strong> (<code>max_entry_dte</code>, <code>exit_dte</code>, etc.) reject <code>float</code> and <code>bool</code> values.</li>
+<li><strong>Calendar/diagonal cross-field rules</strong> are enforced: <code>front_dte_min</code> must be &le; <code>front_dte_max</code>, <code>back_dte_min</code> must be &le; <code>back_dte_max</code>, and <code>front_dte_max</code> must be &lt; <code>back_dte_min</code>.</li>
+</ul>
+<p>Validation errors include the field name and constraint for easy debugging.</p>
+</div>
+<h2 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">&para;</a></h2>
+<h3 id="entry-and-exit-timing">Entry and Exit Timing<a class="headerlink" href="#entry-and-exit-timing" title="Permanent link">&para;</a></h3>
+<h4 id="max_entry_dte"><code>max_entry_dte</code><a class="headerlink" href="#max_entry_dte" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>90</code></p>
+<p>Maximum days to expiration at strategy entry.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>  <span class="c1"># Enter at 45 DTE or less</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- <code>max_entry_dte=30</code> - Short-term trades
+- <code>max_entry_dte=60</code> - Medium-term trades
+- <code>max_entry_dte=90</code> - Longer-term positions</p>
+<hr />
+<h4 id="exit_dte"><code>exit_dte</code><a class="headerlink" href="#exit_dte" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>0</code></p>
+<p>Days to expiration when the strategy exits. Use <code>0</code> to hold until expiration.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">exit_dte</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># Exit at 30 DTE</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- <code>exit_dte=0</code> - Hold to expiration
+- <code>exit_dte=21</code> - Exit 3 weeks before expiration
+- <code>exit_dte=7</code> - Exit 1 week before expiration</p>
+<hr />
+<h3 id="filtering-parameters">Filtering Parameters<a class="headerlink" href="#filtering-parameters" title="Permanent link">&para;</a></h3>
+<h4 id="min_bid_ask"><code>min_bid_ask</code><a class="headerlink" href="#min_bid_ask" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float</code> | <strong>Default:</strong> <code>0.05</code></p>
+<p>Minimum bid-ask spread required for option liquidity.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.10</span><span class="p">)</span>  <span class="c1"># Require $0.10+ spread</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- <code>0.05</code> - Less liquid underlyings
+- <code>0.10</code> - Standard liquidity requirement
+- <code>0.20</code> - High liquidity requirement (SPX, SPY)</p>
+<hr />
+<h3 id="grouping-and-aggregation">Grouping and Aggregation<a class="headerlink" href="#grouping-and-aggregation" title="Permanent link">&para;</a></h3>
+<h4 id="dte_interval"><code>dte_interval</code><a class="headerlink" href="#dte_interval" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>7</code></p>
+<p>Interval for grouping results by DTE ranges.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dte_interval</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>  <span class="c1"># Group by 14-day buckets</span>
+</code></pre></div>
+<p><strong>Examples:</strong>
+- <code>7</code> - Weekly groupings: (0,7], (7,14], (14,21], ...
+- <code>14</code> - Bi-weekly groupings: (0,14], (14,28], ...
+- <code>30</code> - Monthly groupings: (0,30], (30,60], ...</p>
+<hr />
+<h4 id="delta_interval"><code>delta_interval</code><a class="headerlink" href="#delta_interval" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float</code> | <strong>Default:</strong> <code>0.05</code></p>
+<p>Interval for grouping results by delta ranges in aggregated output.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.10</span>  <span class="c1"># Group by: (0.0,0.1], (0.1,0.2], etc.</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h3 id="output-control">Output Control<a class="headerlink" href="#output-control" title="Permanent link">&para;</a></h3>
+<h4 id="raw"><code>raw</code><a class="headerlink" href="#raw" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>bool</code> | <strong>Default:</strong> <code>False</code></p>
+<p>Return raw trade data instead of aggregated statistics.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Aggregated statistics (default)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Output: [&#39;dte_range&#39;, &#39;delta_range&#39;, &#39;count&#39;, &#39;mean&#39;, &#39;std&#39;, ...]</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Raw trade data</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">trades</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Output: [&#39;expiration&#39;, &#39;strike_leg1&#39;, &#39;strike_leg2&#39;, &#39;entry&#39;, &#39;exit&#39;, &#39;pct_change&#39;, ...]</span>
+</code></pre></div>
+<p><strong>Use Cases:</strong>
+- <code>raw=False</code> - Performance statistics, backtesting results
+- <code>raw=True</code> - Custom analysis, detailed inspection, debugging</p>
+<hr />
+<h4 id="drop_nan"><code>drop_nan</code><a class="headerlink" href="#drop_nan" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>bool</code> | <strong>Default:</strong> <code>True</code></p>
+<p>Drop rows with NaN values in the results.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">drop_nan</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Keep NaN values</span>
+</code></pre></div>
+<hr />
+<h2 id="per-leg-delta-targeting">Per-Leg Delta Targeting<a class="headerlink" href="#per-leg-delta-targeting" title="Permanent link">&para;</a></h2>
+<p>Optopsy uses per-leg delta targeting to select option strikes. Each leg of a strategy has its own delta parameter (<code>leg1_delta</code>, <code>leg2_delta</code>, etc.) that takes a <code>TargetRange</code> value specifying the ideal delta and an acceptable range.</p>
+<h3 id="targetrange"><code>TargetRange</code><a class="headerlink" href="#targetrange" title="Permanent link">&para;</a></h3>
+<p>A <code>TargetRange</code> has three fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target</code></td>
+<td>Ideal delta value (the engine picks the strike closest to this)</td>
+</tr>
+<tr>
+<td><code>min</code></td>
+<td>Minimum acceptable delta (options below this are excluded)</td>
+</tr>
+<tr>
+<td><code>max</code></td>
+<td>Maximum acceptable delta (options above this are excluded)</td>
+</tr>
+</tbody>
+</table>
+<p>All values are unsigned (0–1 for delta). The ordering constraint <code>min &lt;= target &lt;= max</code> is enforced.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">TargetRange</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Target 30-delta options, accepting anything between 20 and 40</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">delta</span> <span class="o">=</span> <span class="n">TargetRange</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">0.40</span><span class="p">)</span>
+</code></pre></div>
+<p>You can also pass a plain dict:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">leg1_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">}</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">)</span>
+</code></pre></div>
+<h3 id="leg1_delta-leg2_delta-leg3_delta-leg4_delta"><code>leg1_delta</code> / <code>leg2_delta</code> / <code>leg3_delta</code> / <code>leg4_delta</code><a class="headerlink" href="#leg1_delta-leg2_delta-leg3_delta-leg4_delta" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>TargetRange | dict | None</code> | <strong>Default:</strong> strategy-dependent</p>
+<p>Per-leg delta targeting. The number of legs depends on the strategy:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy Type</th>
+<th>Legs Used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single-leg (calls, puts)</td>
+<td><code>leg1_delta</code></td>
+</tr>
+<tr>
+<td>Straddles, strangles, vertical spreads</td>
+<td><code>leg1_delta</code>, <code>leg2_delta</code></td>
+</tr>
+<tr>
+<td>Butterflies</td>
+<td><code>leg1_delta</code>, <code>leg2_delta</code>, <code>leg3_delta</code></td>
+</tr>
+<tr>
+<td>Iron condors, iron butterflies</td>
+<td><code>leg1_delta</code>, <code>leg2_delta</code>, <code>leg3_delta</code>, <code>leg4_delta</code></td>
+</tr>
+<tr>
+<td>Covered strategies</td>
+<td><code>leg1_delta</code> (stock), <code>leg2_delta</code> (option)</td>
+</tr>
+</tbody>
+</table>
+<p>Each strategy has sensible defaults. For example:</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Default Delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standard OTM leg</td>
+<td><code>target=0.30, min=0.20, max=0.40</code></td>
+</tr>
+<tr>
+<td>ATM leg</td>
+<td><code>target=0.50, min=0.40, max=0.60</code></td>
+</tr>
+<tr>
+<td>OTM wing</td>
+<td><code>target=0.10, min=0.05, max=0.20</code></td>
+</tr>
+<tr>
+<td>Deep ITM (stock proxy)</td>
+<td><code>target=0.80, min=0.60, max=0.95</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Single-leg: target 20-delta puts</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">leg1_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">}</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Iron condor: customize short strike deltas</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">leg2_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.35</span><span class="p">},</span>  <span class="c1"># short put</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">leg3_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.35</span><span class="p">},</span>  <span class="c1"># short call</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="p">)</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Delta column required</p>
+<p>Your data must include a <code>delta</code> column. This is a <strong>required</strong> column in Optopsy.</p>
+</div>
+<hr />
+<h2 id="early-exit-parameters">Early Exit Parameters<a class="headerlink" href="#early-exit-parameters" title="Permanent link">&para;</a></h2>
+<p>Early exits let you close positions before the scheduled <code>exit_dte</code> based on P&amp;L thresholds or a maximum holding period. When an early exit triggers, the <code>exit_type</code> column in raw output indicates which condition fired.</p>
+<h4 id="stop_loss"><code>stop_loss</code><a class="headerlink" href="#stop_loss" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float | None</code> | <strong>Default:</strong> <code>None</code></p>
+<p>Close the position early if unrealized P&amp;L drops to or below this threshold. Must be a <strong>negative</strong> float.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">stop_loss</span><span class="o">=-</span><span class="mf">0.50</span><span class="p">,</span>  <span class="c1"># Close if losing 50% or more</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">raw</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h4 id="take_profit"><code>take_profit</code><a class="headerlink" href="#take_profit" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float | None</code> | <strong>Default:</strong> <code>None</code></p>
+<p>Close the position early if unrealized P&amp;L reaches or exceeds this threshold. Must be a <strong>positive</strong> float.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">take_profit</span><span class="o">=</span><span class="mf">0.50</span><span class="p">,</span>  <span class="c1"># Close if gaining 50% or more</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">raw</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h4 id="max_hold_days"><code>max_hold_days</code><a class="headerlink" href="#max_hold_days" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int | None</code> | <strong>Default:</strong> <code>None</code></p>
+<p>Close the position after holding for this many calendar days, regardless of P&amp;L. Must be a positive integer.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">max_hold_days</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>  <span class="c1"># Exit after 21 calendar days</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">raw</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h3 id="exit_type-column-values"><code>exit_type</code> Column Values<a class="headerlink" href="#exit_type-column-values" title="Permanent link">&para;</a></h3>
+<p>When early exits are enabled and <code>raw=True</code>, the output includes an <code>exit_type</code> column:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stop_loss</code></td>
+<td>Position hit the stop-loss threshold</td>
+</tr>
+<tr>
+<td><code>take_profit</code></td>
+<td>Position hit the take-profit threshold</td>
+</tr>
+<tr>
+<td><code>max_hold</code></td>
+<td>Position reached the maximum holding period</td>
+</tr>
+<tr>
+<td><code>expiration</code></td>
+<td>Position exited at scheduled <code>exit_dte</code> (no early exit triggered)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Priority:</strong> If multiple conditions trigger on the same day, priority is: <code>stop_loss</code> &gt; <code>take_profit</code> &gt; <code>max_hold</code>.</p>
+<hr />
+<h2 id="commission-parameters">Commission Parameters<a class="headerlink" href="#commission-parameters" title="Permanent link">&para;</a></h2>
+<h4 id="commission"><code>commission</code><a class="headerlink" href="#commission" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>Commission | float | None</code> | <strong>Default:</strong> <code>None</code></p>
+<p>Commission fee structure applied to entry and exit trades. Accepts three forms:</p>
+<p><strong>Float shorthand</strong> — interpreted as per-contract fee:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_puts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">commission</span><span class="o">=</span><span class="mf">0.65</span><span class="p">)</span>  <span class="c1"># $0.65 per contract</span>
+</code></pre></div>
+<p><strong>Commission object</strong> — full fee structure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Commission</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">commission</span><span class="o">=</span><span class="n">Commission</span><span class="p">(</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>        <span class="n">per_contract</span><span class="o">=</span><span class="mf">0.65</span><span class="p">,</span>  <span class="c1"># Per option contract</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>        <span class="n">base_fee</span><span class="o">=</span><span class="mf">9.99</span><span class="p">,</span>      <span class="c1"># Flat fee per trade</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    <span class="p">)</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Commission fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>per_contract</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Fee per option contract</td>
+</tr>
+<tr>
+<td><code>per_share</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Fee per share (for stock legs in covered strategies)</td>
+</tr>
+<tr>
+<td><code>base_fee</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Flat fee per trade</td>
+</tr>
+<tr>
+<td><code>min_fee</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Minimum fee per trade</td>
+</tr>
+</tbody>
+</table>
+<p>When set, commission costs are subtracted from P&amp;L in the output.</p>
+<hr />
+<h2 id="slippage-parameters">Slippage Parameters<a class="headerlink" href="#slippage-parameters" title="Permanent link">&para;</a></h2>
+<h4 id="slippage"><code>slippage</code><a class="headerlink" href="#slippage" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>str</code> | <strong>Default:</strong> <code>'mid'</code></p>
+<p>Slippage model for fill price calculation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_calls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Description</th>
+<th>Buy Fill</th>
+<th>Sell Fill</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>'mid'</code></td>
+<td>Mid-price between bid/ask</td>
+<td>(bid+ask)/2</td>
+<td>(bid+ask)/2</td>
+<td>Ideal/optimistic</td>
+</tr>
+<tr>
+<td><code>'spread'</code></td>
+<td>Worst-case spread</td>
+<td>Ask</td>
+<td>Bid</td>
+<td>Conservative</td>
+</tr>
+<tr>
+<td><code>'liquidity'</code></td>
+<td>Volume-based dynamic</td>
+<td>Dynamic</td>
+<td>Dynamic</td>
+<td>Realistic (volume)</td>
+</tr>
+<tr>
+<td><code>'per_leg'</code></td>
+<td>Scales with leg count</td>
+<td>Dynamic</td>
+<td>Dynamic</td>
+<td>Realistic (complexity)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h4 id="fill_ratio-liquidity-mode-only"><code>fill_ratio</code> (Liquidity Mode Only)<a class="headerlink" href="#fill_ratio-liquidity-mode-only" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float</code> | <strong>Default:</strong> <code>0.5</code></p>
+<p>Base fill ratio for liquidity-based slippage (0.0 = bid/ask, 1.0 = ask/bid).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.3</span>  <span class="c1"># More conservative fill (30% through spread)</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Examples:</strong>
+- <code>0.0</code> - Worst case (buy at ask, sell at bid)
+- <code>0.5</code> - Mid-point (default)
+- <code>1.0</code> - Best case (buy at bid, sell at ask - unrealistic)</p>
+<hr />
+<h4 id="reference_volume-liquidity-mode-only"><code>reference_volume</code> (Liquidity Mode Only)<a class="headerlink" href="#reference_volume-liquidity-mode-only" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>1000</code></p>
+<p>Volume threshold for determining liquid options in liquidity mode.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">short_strangles</span><span class="p">(</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">5000</span>  <span class="c1"># Higher threshold for SPX</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Guidelines:</strong>
+- <code>500-1000</code> - Less liquid underlyings
+- <code>1000-2000</code> - Standard liquidity (default)
+- <code>5000+</code> - Highly liquid (SPX, SPY, QQQ)</p>
+<p><strong>Note:</strong> Requires <code>volume</code> or <code>open_interest</code> column in your data.</p>
+<hr />
+<h4 id="per_leg_slippage-per-leg-mode-only"><code>per_leg_slippage</code> (Per-Leg Mode Only)<a class="headerlink" href="#per_leg_slippage-per-leg-mode-only" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>float</code> | <strong>Default:</strong> <code>0.073</code></p>
+<p>Additive penalty per additional leg beyond the first. The effective fill ratio
+increases with strategy complexity:
+<code>effective_ratio = min(fill_ratio + per_leg_slippage * (num_legs - 1), 1.0)</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;per_leg&#39;</span><span class="p">,</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>          <span class="c1"># 1-leg base: 75% edge retained</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    <span class="n">per_leg_slippage</span><span class="o">=</span><span class="mf">0.073</span><span class="p">,</span>   <span class="c1"># penalty per extra leg</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="p">)</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># 1-leg: ratio=0.250 (75% edge), 2-leg: 0.323 (~68%), 3-leg: 0.396 (~60%), 4-leg: 0.469 (~53%)</span>
+</code></pre></div>
+<p><strong>Notes:</strong>
+- All legs in a strategy receive the same effective ratio (package pricing).
+- The ratio is clamped to 1.0 (equivalent to <code>'spread'</code> mode).
+- Does not require a <code>volume</code> column.</p>
+<hr />
+<h2 id="calendar-diagonal-parameters">Calendar &amp; Diagonal Parameters<a class="headerlink" href="#calendar-diagonal-parameters" title="Permanent link">&para;</a></h2>
+<p>Calendar and diagonal spreads use different timing parameters:</p>
+<h4 id="front_dte_min-front_dte_max"><code>front_dte_min</code> / <code>front_dte_max</code><a class="headerlink" href="#front_dte_min-front_dte_max" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>20</code> / <code>40</code></p>
+<p>DTE range for the front-month leg.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_calendar</span><span class="p">(</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">front_dte_min</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">front_dte_max</span><span class="o">=</span><span class="mi">35</span>  <span class="c1"># Front leg between 25-35 DTE</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h4 id="back_dte_min-back_dte_max"><code>back_dte_min</code> / <code>back_dte_max</code><a class="headerlink" href="#back_dte_min-back_dte_max" title="Permanent link">&para;</a></h4>
+<p><strong>Type:</strong> <code>int</code> | <strong>Default:</strong> <code>50</code> / <code>90</code></p>
+<p>DTE range for the back-month leg.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">long_call_diagonal</span><span class="p">(</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    <span class="n">back_dte_min</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    <span class="n">back_dte_max</span><span class="o">=</span><span class="mi">120</span>  <span class="c1"># Back leg between 60-120 DTE</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="complete-example">Complete Example<a class="headerlink" href="#complete-example" title="Permanent link">&para;</a></h2>
+<p>Combining multiple parameters:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">optopsy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">op</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="n">data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">csv_data</span><span class="p">(</span><span class="s1">&#39;SPX_options.csv&#39;</span><span class="p">)</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">iron_condor</span><span class="p">(</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    <span class="n">data</span><span class="p">,</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="c1"># Timing</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="n">max_entry_dte</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>    <span class="n">exit_dte</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="c1"># Per-leg delta targeting</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>    <span class="n">leg2_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">},</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>    <span class="n">leg3_delta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="mf">0.20</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">},</span>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>    <span class="c1"># Filtering</span>
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>    <span class="n">min_bid_ask</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>    <span class="c1"># Grouping</span>
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>    <span class="n">dte_interval</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>    <span class="n">delta_interval</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>    <span class="c1"># Slippage</span>
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>    <span class="n">slippage</span><span class="o">=</span><span class="s1">&#39;liquidity&#39;</span><span class="p">,</span>
+<a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a>    <span class="n">fill_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a>    <span class="n">reference_volume</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+<a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a>
+<a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a>    <span class="c1"># Early exits</span>
+<a id="__codelineno-21-28" name="__codelineno-21-28" href="#__codelineno-21-28"></a>    <span class="n">stop_loss</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+<a id="__codelineno-21-29" name="__codelineno-21-29" href="#__codelineno-21-29"></a>    <span class="n">take_profit</span><span class="o">=</span><span class="mf">0.50</span><span class="p">,</span>
+<a id="__codelineno-21-30" name="__codelineno-21-30" href="#__codelineno-21-30"></a>
+<a id="__codelineno-21-31" name="__codelineno-21-31" href="#__codelineno-21-31"></a>    <span class="c1"># Commission</span>
+<a id="__codelineno-21-32" name="__codelineno-21-32" href="#__codelineno-21-32"></a>    <span class="n">commission</span><span class="o">=</span><span class="mf">0.65</span><span class="p">,</span>
+<a id="__codelineno-21-33" name="__codelineno-21-33" href="#__codelineno-21-33"></a>
+<a id="__codelineno-21-34" name="__codelineno-21-34" href="#__codelineno-21-34"></a>    <span class="c1"># Output</span>
+<a id="__codelineno-21-35" name="__codelineno-21-35" href="#__codelineno-21-35"></a>    <span class="n">raw</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-21-36" name="__codelineno-21-36" href="#__codelineno-21-36"></a>    <span class="n">drop_nan</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-21-37" name="__codelineno-21-37" href="#__codelineno-21-37"></a><span class="p">)</span>
+<a id="__codelineno-21-38" name="__codelineno-21-38" href="#__codelineno-21-38"></a>
+<a id="__codelineno-21-39" name="__codelineno-21-39" href="#__codelineno-21-39"></a><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="default-values-reference">Default Values Reference<a class="headerlink" href="#default-values-reference" title="Permanent link">&para;</a></h2>
+<h3 id="standard-strategies">Standard Strategies<a class="headerlink" href="#standard-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">default_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>    <span class="s2">&quot;dte_interval&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="s2">&quot;max_entry_dte&quot;</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    <span class="s2">&quot;exit_dte&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="s2">&quot;min_bid_ask&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    <span class="s2">&quot;delta_interval&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="s2">&quot;leg1_delta&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>   <span class="c1"># strategy-specific defaults applied by helpers</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>    <span class="s2">&quot;leg2_delta&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="s2">&quot;leg3_delta&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="s2">&quot;leg4_delta&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>    <span class="s2">&quot;drop_nan&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>    <span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>    <span class="s2">&quot;slippage&quot;</span><span class="p">:</span> <span class="s2">&quot;mid&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>    <span class="s2">&quot;fill_ratio&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>    <span class="s2">&quot;reference_volume&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+<a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="s2">&quot;per_leg_slippage&quot;</span><span class="p">:</span> <span class="mf">0.073</span><span class="p">,</span>
+<a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>    <span class="s2">&quot;stop_loss&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>    <span class="s2">&quot;take_profit&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-19" name="__codelineno-22-19" href="#__codelineno-22-19"></a>    <span class="s2">&quot;max_hold_days&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-20" name="__codelineno-22-20" href="#__codelineno-22-20"></a>    <span class="s2">&quot;commission&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-22-21" name="__codelineno-22-21" href="#__codelineno-22-21"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="calendar-diagonal-strategies">Calendar &amp; Diagonal Strategies<a class="headerlink" href="#calendar-diagonal-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">calendar_default_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    <span class="s2">&quot;front_dte_min&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    <span class="s2">&quot;front_dte_max&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    <span class="s2">&quot;back_dte_min&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>    <span class="s2">&quot;back_dte_max&quot;</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>    <span class="s2">&quot;exit_dte&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>    <span class="s2">&quot;dte_interval&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>    <span class="s2">&quot;min_bid_ask&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    <span class="s2">&quot;delta_interval&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>    <span class="s2">&quot;drop_nan&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>    <span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>    <span class="s2">&quot;slippage&quot;</span><span class="p">:</span> <span class="s2">&quot;mid&quot;</span><span class="p">,</span>
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>    <span class="s2">&quot;fill_ratio&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>    <span class="s2">&quot;reference_volume&quot;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>    <span class="s2">&quot;per_leg_slippage&quot;</span><span class="p">:</span> <span class="mf">0.073</span><span class="p">,</span>
+<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li>See <a href="../examples/">Examples</a> for real-world parameter usage</li>
+<li>Explore <a href="../strategies/">Strategies</a> to understand strategy-specific considerations</li>
+<li>Review <a href="../api-reference/">API Reference</a> for function signatures</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "toc.follow", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
