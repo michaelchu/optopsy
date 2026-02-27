@@ -78,7 +78,7 @@ ignore = ["E501"]
 # --- ty ---
 
 [tool.ty.src]
-exclude = ["optopsy/ui/", "optopsy/data/"]
+exclude = ["optopsy/ui/"]
 
 # --- pytest (was pytest.ini) ---
 
