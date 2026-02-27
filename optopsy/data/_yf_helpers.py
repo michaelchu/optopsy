@@ -37,7 +37,7 @@ def _yf_fetch_and_cache(
     ``ValueError``) are **not** caught here — callers are responsible for
     handling them.
     """
-    import yfinance as yf  # type: ignore[unresolved-import]
+    import yfinance as yf
 
     if cached is None or cached.empty:
         _log.info("Cold cache for %s, fetching full history from yfinance", symbol)
