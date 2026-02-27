@@ -7,36 +7,36 @@ Series indicating which dates are valid for entry/exit.
 Built-in signals can be combined with and_signals() / or_signals(), or with
 the fluent Signal class using & and | operators.
 
-Use ``apply_signal()`` to run a signal function on data and get back a
+Use ``signal_dates()`` to run a signal function on stock data and get back a
 DataFrame of valid ``(underlying_symbol, quote_date)`` pairs to pass as
 ``entry_dates`` or ``exit_dates`` to any strategy.
 
 Example:
-    >>> from optopsy.signals import rsi_below, day_of_week, and_signals, apply_signal
+    >>> from optopsy.signals import rsi_below, day_of_week, and_signals, signal_dates
     >>> import optopsy as op
     >>> data = op.csv_data('./SPX_2018.csv')
     >>> stock = load_stock_data(...)  # OHLCV DataFrame
 
     >>> # Compute entry dates: Thursdays when RSI(14) < 30
     >>> sig = and_signals(rsi_below(14, 30), day_of_week(3))
-    >>> entry_dates = apply_signal(stock, sig)
+    >>> entry_dates = signal_dates(stock, sig)
     >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 
     >>> # Fluent API with Signal class
     >>> sig = signal(rsi_below(14, 30)) & signal(day_of_week(3))
-    >>> entry_dates = apply_signal(stock, sig)
+    >>> entry_dates = signal_dates(stock, sig)
     >>> results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 """
 
 # Type alias
-# Combinators, Signal class, apply_signal, custom_signal
+# Combinators, Signal class, signal_dates, custom_signal
 from ._combinators import (
     Signal,
     and_signals,
-    apply_signal,
     custom_signal,
     or_signals,
     signal,
+    signal_dates,
     sustained,
 )
 
@@ -223,7 +223,7 @@ __all__ = [
     "custom_signal",
     "Signal",
     "signal",
-    "apply_signal",
+    "signal_dates",
     # Momentum
     "rsi_below",
     "rsi_above",

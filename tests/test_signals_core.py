@@ -1,4 +1,4 @@
-"""Tests for signal combinators, Signal class, sustained(), custom_signal(), and edge cases."""
+"""Tests for signal combinators, Signal class, sustained(), custom_signal(), signal_dates(), and edge cases."""
 
 import pandas as pd
 import pytest
@@ -6,12 +6,12 @@ import pytest
 from optopsy.signals import (
     Signal,
     and_signals,
-    apply_signal,
     custom_signal,
     day_of_week,
     or_signals,
     rsi_below,
     signal,
+    signal_dates,
     sma_above,
     sma_below,
     sustained,
@@ -137,10 +137,10 @@ class TestSignalClass:
         # Monday AND Tuesday — no single day can be both
         assert not result.any()
 
-    def test_signal_accepted_via_apply_signal(self, option_data_entry_exit):
-        """Signal object accepted by apply_signal and used as entry_dates."""
+    def test_signal_accepted_via_signal_dates(self, option_data_entry_exit):
+        """Signal object accepted by signal_dates and used as entry_dates."""
         sig = Signal(day_of_week(3))  # Thursday
-        entry_dates = apply_signal(option_data_entry_exit, sig)
+        entry_dates = signal_dates(option_data_entry_exit, sig)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -151,13 +151,13 @@ class TestSignalClass:
         assert isinstance(results, pd.DataFrame)
 
     def test_signal_combined_with_callable(self, option_data_entry_exit):
-        """Signal combined with another Signal and used via apply_signal works."""
+        """Signal combined with another Signal and used via signal_dates works."""
 
         def always_true(data):
             return pd.Series(True, index=data.index)
 
         sig = Signal(day_of_week(3)) & Signal(always_true)
-        entry_dates = apply_signal(option_data_entry_exit, sig)
+        entry_dates = signal_dates(option_data_entry_exit, sig)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -312,14 +312,14 @@ class TestSustainedSignal:
         flagged_days = price_data.loc[result, "quote_date"].dt.dayofweek
         assert (flagged_days == 0).all()
 
-    def test_sustained_accepted_via_apply_signal(self, option_data_entry_exit):
-        """sustained() output is accepted by apply_signal and used as entry_dates."""
+    def test_sustained_accepted_via_signal_dates(self, option_data_entry_exit):
+        """sustained() output is accepted by signal_dates and used as entry_dates."""
 
         def always_true(d):
             return pd.Series(True, index=d.index)
 
         sig = sustained(always_true, days=1)
-        entry_dates = apply_signal(option_data_entry_exit, sig)
+        entry_dates = signal_dates(option_data_entry_exit, sig)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -379,123 +379,6 @@ class TestSignalEdgeCases:
         assert not result_macd.any(), (
             "macd_cross_above should return all-False with no price column"
         )
-
-    def test_apply_signal_no_duplicate_when_close_provided(self):
-        """apply_signal must NOT add underlying_price when input already has close."""
-        dates = pd.date_range("2018-01-01", periods=5, freq="B")
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
-            }
-        )
-        seen_columns: list = []
-
-        def capture_columns(df):
-            seen_columns.append(set(df.columns))
-            return pd.Series(True, index=df.index)
-
-        apply_signal(data, capture_columns)
-        assert "close" in seen_columns[0]
-        assert "underlying_price" not in seen_columns[0]
-
-    def test_apply_signal_stock_data_merges_close(self):
-        """apply_signal with stock_data should merge close into options data."""
-        dates = pd.date_range("2018-01-01", periods=60, freq="B")
-        options = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "strike": [100.0] * 60,
-                "option_type": ["c"] * 60,
-                "implied_volatility": [0.20 + i * 0.005 for i in range(60)],
-                "expiration": dates + pd.Timedelta(days=30),
-            }
-        )
-        stock = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "close": [100.0] * 60,
-            }
-        )
-        # Without stock_data, IV rank has no price column → all-False
-        from optopsy.signals import iv_rank_above
-
-        result_without = apply_signal(options, iv_rank_above(threshold=0.1, window=20))
-        assert result_without.empty
-
-        # With stock_data, close is merged → IV rank can compute
-        result_with = apply_signal(
-            options, iv_rank_above(threshold=0.1, window=20), stock_data=stock
-        )
-        assert not result_with.empty
-
-    def test_apply_signal_stock_data_ignored_when_close_exists(self):
-        """stock_data should be ignored when data already has close."""
-        dates = pd.date_range("2018-01-01", periods=5, freq="B")
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
-            }
-        )
-        # stock_data with different prices — should be ignored
-        stock = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "close": [999.0] * 5,
-            }
-        )
-        seen_prices: list = []
-
-        def capture_close(df):
-            seen_prices.append(df["close"].iloc[0])
-            return pd.Series(True, index=df.index)
-
-        apply_signal(data, capture_close, stock_data=stock)
-        assert seen_prices[0] == 100.0  # original close, not stock_data
-
-    def test_apply_signal_stock_data_accepts_yfinance_format(self):
-        """stock_data should accept yfinance-style DataFrames."""
-        dates = pd.date_range("2018-01-01", periods=5, freq="B")
-        options = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "strike": [100.0] * 5,
-            }
-        )
-        # yfinance style: DatetimeIndex, capitalized columns, no underlying_symbol
-        stock = pd.DataFrame(
-            {"Close": [100.0, 101.0, 102.0, 103.0, 104.0]},
-            index=dates,
-        )
-        stock.index.name = "Date"
-        seen_columns: list = []
-
-        def capture(df):
-            seen_columns.append(set(df.columns))
-            return pd.Series(True, index=df.index)
-
-        apply_signal(options, capture, stock_data=stock)
-        assert "close" in seen_columns[0]
-
-    def test_apply_signal_stock_data_none_is_noop(self):
-        """stock_data=None should behave like the original apply_signal."""
-        dates = pd.date_range("2018-01-01", periods=5, freq="B")
-        data = pd.DataFrame(
-            {
-                "underlying_symbol": "SPX",
-                "quote_date": dates,
-                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
-            }
-        )
-        result = apply_signal(data, sma_below(period=3), stock_data=None)
-        assert isinstance(result, pd.DataFrame)
 
     def test_sustained_days_zero_raises(self):
         """sustained() with days < 1 should raise ValueError."""
@@ -558,10 +441,10 @@ class TestCustomSignal:
         result = sig(df)
         assert result.tolist() == [True, False, True, False]
 
-    def test_apply_signal_integration(self, flagged_df):
-        """custom_signal() returned SignalFunc should work with apply_signal()."""
+    def test_signal_dates_integration(self, flagged_df):
+        """custom_signal() returned SignalFunc should work with signal_dates()."""
         sig = custom_signal(flagged_df)
-        result = apply_signal(flagged_df, sig)
+        result = signal_dates(flagged_df, sig)
         assert isinstance(result, pd.DataFrame)
         assert list(result.columns) == ["underlying_symbol", "quote_date"]
         assert len(result) == 2  # only dates where flag is True
@@ -571,7 +454,7 @@ class TestCustomSignal:
         }
 
     def test_all_false_returns_empty(self):
-        """All-False flag column should produce an empty result from apply_signal."""
+        """All-False flag column should produce an empty result from signal_dates."""
         df = pd.DataFrame(
             {
                 "underlying_symbol": ["SPY", "SPY"],
@@ -580,7 +463,7 @@ class TestCustomSignal:
             }
         )
         sig = custom_signal(df)
-        result = apply_signal(df, sig)
+        result = signal_dates(df, sig)
         assert result.empty
 
     def test_all_true_returns_all_dates(self, flagged_df):
@@ -588,7 +471,7 @@ class TestCustomSignal:
         df = flagged_df.copy()
         df["signal"] = True
         sig = custom_signal(df)
-        result = apply_signal(df, sig)
+        result = signal_dates(df, sig)
         assert len(result) == len(df)
 
     def test_composable_with_and_signals(self, flagged_df):
@@ -598,14 +481,14 @@ class TestCustomSignal:
         # 2018-01-03 is Wednesday, flagged False → not in result
         # 2018-01-04 is Thursday, flagged True → not in result (not Tuesday)
         sig = and_signals(custom_signal(flagged_df), day_of_week(1))
-        result = apply_signal(flagged_df, sig)
+        result = signal_dates(flagged_df, sig)
         assert len(result) == 1
         assert result.iloc[0]["quote_date"] == pd.Timestamp("2018-01-02")
 
     def test_composable_with_signal_class(self, flagged_df):
         """custom_signal() result should compose with the Signal fluent API."""
         sig = signal(custom_signal(flagged_df)) & signal(day_of_week(1))
-        result = apply_signal(flagged_df, sig)
+        result = signal_dates(flagged_df, sig)
         assert len(result) == 1
         assert result.iloc[0]["quote_date"] == pd.Timestamp("2018-01-02")
 
@@ -690,3 +573,116 @@ class TestCustomSignal:
 
         assert hasattr(op, "custom_signal")
         assert callable(op.custom_signal)
+
+
+# ============================================================================
+# signal_dates()
+# ============================================================================
+
+
+class TestSignalDates:
+    """Tests for signal_dates() — the recommended way to generate entry/exit dates."""
+
+    @pytest.fixture
+    def stock_data(self):
+        """Stock OHLCV data with a clear SMA crossover."""
+        dates = pd.date_range("2018-01-01", periods=30, freq="B")
+        # Price starts at 100, drops to ~85, then recovers
+        prices = [100 - i for i in range(15)] + [86 + i for i in range(15)]
+        return pd.DataFrame(
+            {
+                "underlying_symbol": "SPY",
+                "quote_date": dates,
+                "close": prices,
+            }
+        )
+
+    def test_returns_symbol_and_date_columns(self, stock_data):
+        """signal_dates should return DataFrame with (underlying_symbol, quote_date)."""
+        result = signal_dates(stock_data, sma_below(period=5))
+        assert list(result.columns) == ["underlying_symbol", "quote_date"]
+
+    def test_filters_to_true_dates_only(self, stock_data):
+        """Only dates where the signal is True should be returned."""
+        # day_of_week(0) = Monday — roughly 1/5 of business days
+        result = signal_dates(stock_data, day_of_week(0))
+        assert not result.empty
+        assert all(result["quote_date"].dt.dayofweek == 0)
+
+    def test_all_false_returns_empty(self):
+        """Signal that's always False returns empty DataFrame."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPY",
+                "quote_date": dates,
+                "close": [100.0] * 5,
+            }
+        )
+
+        def always_false(df):
+            return pd.Series(False, index=df.index)
+
+        result = signal_dates(data, always_false)
+        assert result.empty
+        assert list(result.columns) == ["underlying_symbol", "quote_date"]
+
+    def test_composed_signal_with_operators(self, stock_data):
+        """Composed signals via Signal & operator should work."""
+        sig = signal(day_of_week(0)) & signal(sma_below(period=5))
+        result = signal_dates(stock_data, sig)
+        assert isinstance(result, pd.DataFrame)
+        if not result.empty:
+            assert all(result["quote_date"].dt.dayofweek == 0)
+
+    def test_deduplicates_dates(self):
+        """Duplicate (symbol, date) rows in input should not produce duplicates."""
+        dates = pd.date_range("2018-01-01", periods=3, freq="B")
+        # Duplicate each row
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"] * 6,
+                "quote_date": list(dates) * 2,
+                "close": [100.0, 101.0, 102.0, 100.0, 101.0, 102.0],
+            }
+        )
+
+        def always_true(df):
+            return pd.Series(True, index=df.index)
+
+        result = signal_dates(data, always_true)
+        assert len(result) == 3  # 3 unique dates, not 6
+
+    def test_multi_symbol(self):
+        """signal_dates should work with multi-symbol stock data."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY"] * 5 + ["QQQ"] * 5,
+                "quote_date": list(dates) * 2,
+                "close": [100.0] * 5 + [200.0] * 5,
+            }
+        )
+        result = signal_dates(data, day_of_week(0))
+        # Both symbols should have Mondays
+        assert set(result["underlying_symbol"]) == {"SPY", "QQQ"}
+
+    def test_no_options_data_required(self):
+        """signal_dates should work with stock data only — no options data needed."""
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        stock_only = pd.DataFrame(
+            {
+                "underlying_symbol": "SPY",
+                "quote_date": dates,
+                "close": [100.0, 101.0, 102.0, 103.0, 104.0],
+            }
+        )
+        result = signal_dates(stock_only, day_of_week(0))
+        assert isinstance(result, pd.DataFrame)
+
+    def test_accessible_from_public_api(self):
+        """signal_dates is accessible via op.signal_dates."""
+        import optopsy as op
+
+        assert hasattr(op, "signal_dates")
+        assert op.signal_dates is signal_dates

@@ -16,9 +16,9 @@ import pytest
 import optopsy as op
 from optopsy.signals import (
     and_signals,
-    apply_signal,
     day_of_week,
     or_signals,
+    signal_dates,
     sma_above,
 )
 from optopsy.simulator import _TRADE_LOG_COLUMNS, SimulationResult
@@ -464,7 +464,7 @@ class TestSelectorsE2E:
 def stock_data(chain_data):
     """Build a stock price DataFrame from the chain data for signal computation.
 
-    apply_signal needs: underlying_symbol, quote_date, underlying_price.
+    signal_dates needs: underlying_symbol, quote_date, underlying_price.
     We extract unique (symbol, date, price) rows from the option chain.
     """
     stock = (
@@ -481,7 +481,7 @@ class TestSignalEntryE2E:
 
     def test_day_of_week_filters_entries(self, chain_data, stock_data):
         """day_of_week(3) = Thursday only allows Feb 1 entry."""
-        entry_dates = apply_signal(stock_data, day_of_week(3))  # Thursday
+        entry_dates = signal_dates(stock_data, day_of_week(3))  # Thursday
         result = op.simulate(
             chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
@@ -493,7 +493,7 @@ class TestSignalEntryE2E:
 
     def test_day_of_week_tuesday_allows_two_entries(self, chain_data, stock_data):
         """day_of_week(1) = Tuesday allows Jan 2 and Jan 16 entries."""
-        entry_dates = apply_signal(stock_data, day_of_week(1))  # Tuesday
+        entry_dates = signal_dates(stock_data, day_of_week(1))  # Tuesday
         result = op.simulate(
             chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
@@ -501,7 +501,7 @@ class TestSignalEntryE2E:
 
     def test_no_matching_signal_returns_empty(self, chain_data, stock_data):
         """day_of_week(4) = Friday — no entries on Friday → empty result."""
-        entry_dates = apply_signal(stock_data, day_of_week(4))  # Friday
+        entry_dates = signal_dates(stock_data, day_of_week(4))  # Friday
         result = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
         assert len(result.trade_log) == 0
         assert result.summary["total_trades"] == 0
@@ -509,7 +509,7 @@ class TestSignalEntryE2E:
     def test_or_signals_union(self, chain_data, stock_data):
         """or_signals(Tuesday, Thursday) allows all 3 entries."""
         sig = or_signals(day_of_week(1), day_of_week(3))
-        entry_dates = apply_signal(stock_data, sig)
+        entry_dates = signal_dates(stock_data, sig)
         result = op.simulate(
             chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )
@@ -518,14 +518,14 @@ class TestSignalEntryE2E:
     def test_and_signals_intersection(self, chain_data, stock_data):
         """and_signals(Tuesday, Thursday) — impossible, empty result."""
         sig = and_signals(day_of_week(1), day_of_week(3))
-        entry_dates = apply_signal(stock_data, sig)
+        entry_dates = signal_dates(stock_data, sig)
         result = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
         assert len(result.trade_log) == 0
 
     def test_signal_with_position_limits(self, chain_data, stock_data):
         """Tuesday signal gives 2 entries, but max_positions=1 and they overlap
         (Jan 16 entry < Jan 31 exit), so only 1 trade executes."""
-        entry_dates = apply_signal(stock_data, day_of_week(1))
+        entry_dates = signal_dates(stock_data, day_of_week(1))
         result = op.simulate(
             chain_data, op.long_calls, entry_dates=entry_dates, max_positions=1
         )
@@ -534,7 +534,7 @@ class TestSignalEntryE2E:
     def test_signal_pnl_matches_unfiltered(self, chain_data, stock_data):
         """Thursday-only signal picks the same trade as the Feb 1 entry
         in the unfiltered run. Verify P&L matches."""
-        entry_dates = apply_signal(stock_data, day_of_week(3))
+        entry_dates = signal_dates(stock_data, day_of_week(3))
 
         # Signal-filtered: only the Feb 1 trade
         r_signal = op.simulate(chain_data, op.long_calls, entry_dates=entry_dates)
@@ -569,7 +569,7 @@ class TestSignalEntryE2E:
             }
         )
         # SMA(5) on monotonically rising prices → price always above SMA
-        entry_dates = apply_signal(stock, sma_above(5))
+        entry_dates = signal_dates(stock, sma_above(5))
         result = op.simulate(
             chain_data, op.long_calls, entry_dates=entry_dates, max_positions=10
         )

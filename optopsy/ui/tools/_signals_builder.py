@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 import optopsy.signals as _signals
-from optopsy.signals import apply_signal
+from optopsy.signals import signal_dates
 
 from ._executor import _register, _require_dataset
 from ._helpers import (
@@ -159,7 +159,7 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
         combined = _signals.and_signals(*built_signals)
 
     # Compute valid dates, intersected with actual options dates.
-    raw_signal_dates = apply_signal(signal_data, combined)
+    raw_signal_dates = signal_dates(signal_data, combined)
     valid_dates = _intersect_with_options_dates(raw_signal_dates, dataset)
 
     # Store in signals dict

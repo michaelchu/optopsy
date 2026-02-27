@@ -79,7 +79,7 @@ class StrategyParamsDict(TypedDict, total=False):
 
     # Pre-computed signal dates (optional).
     # DataFrames with (underlying_symbol, quote_date) pairs indicating
-    # valid dates for entry/exit.  Use signals.apply_signal() to generate.
+    # valid dates for entry/exit.  Use signals.signal_dates() to generate.
     entry_dates: Optional[pd.DataFrame]
     exit_dates: Optional[pd.DataFrame]
 

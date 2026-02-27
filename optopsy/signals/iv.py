@@ -20,7 +20,7 @@ def _compute_atm_iv(options_data: pd.DataFrame) -> pd.DataFrame:
     is absent.
 
     Callers should ensure ``resolve_price_column()`` or
-    ``apply_signal()`` has been applied before invoking this function
+    ``signal_dates()`` has been applied before invoking this function
     so that ``close`` is available.
     """
     if "close" not in options_data.columns:

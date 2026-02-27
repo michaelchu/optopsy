@@ -20,7 +20,7 @@ For detailed documentation, visit: https://github.com/michaelchu/optopsy
 
 __version__ = "2.2.0"
 
-from .datafeeds import csv_data
+from .datafeeds import csv_data, load_cached_options, load_cached_stocks, options_data
 from .metrics import (
     calmar_ratio,
     compute_risk_metrics,
@@ -46,7 +46,6 @@ from .signals import (
     and_signals,
     ao_above,
     ao_below,
-    apply_signal,
     aroon_cross_above,
     aroon_cross_below,
     atr_above,
@@ -101,6 +100,7 @@ from .signals import (
     rsi_above,
     rsi_below,
     signal,
+    signal_dates,
     sma_above,
     sma_below,
     smi_cross_above,
@@ -241,6 +241,9 @@ __all__ = [
     "long_put_diagonal",
     "short_put_diagonal",
     "csv_data",
+    "options_data",
+    "load_cached_options",
+    "load_cached_stocks",
     # Type definitions
     "Commission",
     "StrategyParams",
@@ -249,7 +252,7 @@ __all__ = [
     "CalendarStrategyParamsDict",
     "TargetRange",
     # Signal functions — combinators & utilities
-    "apply_signal",
+    "signal_dates",
     "and_signals",
     "or_signals",
     "sustained",

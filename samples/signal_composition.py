@@ -1,16 +1,15 @@
 """Signal composition example — filtering entries with technical signals.
 
 Demonstrates:
+- Loading stock and options data separately
+- Building signals on stock data with signal_dates()
 - Combining signals with and_signals / or_signals
 - Using sustained() for multi-day confirmation
-- apply_signal() to produce entry_dates for a strategy
-- IV rank signal for premium-selling regimes
+- IV rank signal for premium-selling regimes (runs on options data)
 - custom_signal() from a user-created DataFrame
 
-Note: Many signals (RSI, Bollinger, etc.) require OHLCV stock price data.
-      When option chain data lacks a 'close' column, pass stock_data= to
-      apply_signal().  This example uses the option chain's underlying_last
-      column mapped via csv_data(underlying_price=1) as a proxy.
+Note: Most signals (RSI, Bollinger, etc.) require stock OHLCV price data.
+      IV rank is the exception — it runs on options data with implied_volatility.
 """
 
 import os
@@ -23,7 +22,7 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "sample_spx_data.csv
 
 
 def load_data():
-    """Load data with implied_volatility for IV rank signals."""
+    """Load options data with implied_volatility for IV rank signals."""
     return op.csv_data(
         DATA_PATH,
         underlying_symbol=0,
@@ -42,11 +41,22 @@ def load_data():
 def main():
     data = load_data()
 
+    # For stock-based signals, we need a price DataFrame with close column.
+    # Here we derive it from the options data as a proxy (in practice, use
+    # op.load_cached_stocks() or your own OHLCV DataFrame).
+    stock_data = (
+        data[["underlying_symbol", "quote_date", "underlying_price"]]
+        .drop_duplicates(["underlying_symbol", "quote_date"])
+        .rename(columns={"underlying_price": "close"})
+        .sort_values(["underlying_symbol", "quote_date"])
+        .reset_index(drop=True)
+    )
+
     # --- 1. Single signal: only enter on Thursdays ---
     print("=" * 60)
     print("ENTRY SIGNAL — Thursdays Only")
     print("=" * 60)
-    thursday_dates = op.apply_signal(data, op.day_of_week(3))
+    thursday_dates = op.signal_dates(stock_data, op.day_of_week(3))
     print(f"Entry dates found: {len(thursday_dates)}")
 
     results = op.long_puts(
@@ -68,7 +78,7 @@ def main():
         op.rsi_below(period=14, threshold=30),
         op.bb_below_lower(length=20, std=2.0),
     )
-    entry_dates = op.apply_signal(data, combined)
+    entry_dates = op.signal_dates(stock_data, combined)
     print(f"Entry dates matching both conditions: {len(entry_dates)}")
 
     if len(entry_dates) > 0:
@@ -87,15 +97,16 @@ def main():
     print("SUSTAINED SIGNAL — RSI Overbought for 3 Days")
     print("=" * 60)
     overbought_3d = op.sustained(op.rsi_above(period=14, threshold=70), days=3)
-    entry_dates = op.apply_signal(data, overbought_3d)
+    entry_dates = op.signal_dates(stock_data, overbought_3d)
     print(f"Sustained overbought dates: {len(entry_dates)}")
 
     # --- 4. IV rank signal: sell premium when IV is high ---
+    # Note: IV rank runs on options data (needs implied_volatility column)
     print("\n" + "=" * 60)
     print("IV RANK SIGNAL — Sell Premium in High IV")
     print("=" * 60)
     high_iv = op.iv_rank_above(threshold=0.5, window=252)
-    iv_dates = op.apply_signal(data, high_iv)
+    iv_dates = op.signal_dates(data, high_iv)
     print(f"High IV rank dates: {len(iv_dates)}")
 
     if len(iv_dates) > 0:
@@ -121,7 +132,7 @@ def main():
             "signal": [True, True, True],
         }
     )
-    custom_dates = op.apply_signal(data, op.custom_signal(custom_df))
+    custom_dates = op.signal_dates(custom_df, op.custom_signal(custom_df))
     print(f"Custom entry dates: {len(custom_dates)}")
 
     results = op.long_calls(

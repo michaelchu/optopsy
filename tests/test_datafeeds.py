@@ -1,11 +1,18 @@
 import os
 from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
 import optopsy as op
-from optopsy.datafeeds import _standardize_cols, _trim_cols
+from optopsy.datafeeds import (
+    _standardize_cols,
+    _trim_cols,
+    load_cached_options,
+    load_cached_stocks,
+    options_data,
+)
 
 _TEST_DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "test_data")
 
@@ -361,3 +368,293 @@ class TestStandardizeCols:
         assert "symbol" in result.columns
         assert "price" in result.columns
         assert "delta" not in result.columns
+
+
+# =============================================================================
+# options_data() Tests
+# =============================================================================
+
+
+def _make_options_df(**overrides):
+    """Build a minimal valid options DataFrame for testing."""
+    data = {
+        "underlying_symbol": ["SPX"],
+        "option_type": ["c"],
+        "expiration": ["2020-01-17"],
+        "quote_date": ["2020-01-02"],
+        "strike": [3200.0],
+        "bid": [50.0],
+        "ask": [51.0],
+        "delta": [0.45],
+    }
+    data.update(overrides)
+    return pd.DataFrame(data)
+
+
+class TestOptionsData:
+    def test_valid_dataframe(self):
+        """Valid DataFrame with all required columns returns normalized output."""
+        df = _make_options_df()
+        result = options_data(df)
+        assert not result.empty
+        assert pd.api.types.is_datetime64_any_dtype(result["expiration"])
+        assert pd.api.types.is_datetime64_any_dtype(result["quote_date"])
+
+    def test_missing_required_column(self):
+        """Missing required column raises ValueError."""
+        df = _make_options_df()
+        df = df.drop(columns=["delta"])
+        with pytest.raises(ValueError, match="Missing required columns.*delta"):
+            options_data(df)
+
+    def test_multiple_missing_columns(self):
+        """Multiple missing columns are all reported."""
+        df = _make_options_df()
+        df = df.drop(columns=["delta", "bid"])
+        with pytest.raises(ValueError, match="bid.*delta|delta.*bid"):
+            options_data(df)
+
+    def test_extra_columns_preserved(self):
+        """Extra columns (greeks, volume, etc.) pass through unchanged."""
+        df = _make_options_df(gamma=[0.02], theta=[-0.05], volume=[1000])
+        result = options_data(df)
+        assert "gamma" in result.columns
+        assert "theta" in result.columns
+        assert "volume" in result.columns
+        assert result.iloc[0]["gamma"] == 0.02
+
+    def test_date_filtering(self):
+        """Date range filtering works correctly."""
+        df = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPX", "SPX", "SPX"],
+                "option_type": ["c", "c", "c"],
+                "expiration": ["2020-01-17", "2020-06-19", "2021-01-15"],
+                "quote_date": ["2020-01-02", "2020-01-02", "2020-01-02"],
+                "strike": [3200.0, 3200.0, 3200.0],
+                "bid": [50.0, 50.0, 50.0],
+                "ask": [51.0, 51.0, 51.0],
+                "delta": [0.45, 0.45, 0.45],
+            }
+        )
+        result = options_data(
+            df,
+            start_date=datetime(2020, 3, 1),
+            end_date=datetime(2020, 12, 31),
+        )
+        assert len(result) == 1
+        assert result.iloc[0]["expiration"] == pd.Timestamp("2020-06-19")
+
+    def test_string_dates_converted(self):
+        """String date columns are converted to datetime64."""
+        df = _make_options_df()
+        assert not pd.api.types.is_datetime64_any_dtype(df["expiration"])
+        result = options_data(df)
+        assert pd.api.types.is_datetime64_any_dtype(result["expiration"])
+        assert pd.api.types.is_datetime64_any_dtype(result["quote_date"])
+
+    def test_accessible_from_public_api(self):
+        """options_data is accessible via op.options_data."""
+        assert hasattr(op, "options_data")
+        assert op.options_data is options_data
+
+
+# =============================================================================
+# load_cached_options() Tests
+# =============================================================================
+
+
+class TestLoadCachedOptions:
+    def _make_cached_df(self):
+        """Sample DataFrame mimicking parquet cache content."""
+        return pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY"],
+                "option_type": ["Call", "Put"],
+                "expiration": pd.to_datetime(["2020-01-17", "2020-01-17"]),
+                "quote_date": pd.to_datetime(["2020-01-02", "2020-01-02"]),
+                "strike": [320.0, 310.0],
+                "bid": [5.0, 4.0],
+                "ask": [5.5, 4.5],
+                "delta": [0.55, -0.40],
+                "gamma": [0.03, 0.03],
+                "theta": [-0.05, -0.04],
+                "vega": [0.15, 0.14],
+                "implied_volatility": [0.20, 0.22],
+                "volume": [1000, 800],
+                # Extra columns that should be excluded
+                "expiration_type": ["monthly", "monthly"],
+                "moneyness": ["ITM", "OTM"],
+                "theoretical": [5.2, 4.3],
+                "dte": [15, 15],
+            }
+        )
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_loads_and_normalizes(self, MockCache):
+        """Loading cached data returns normalized DataFrame."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = self._make_cached_df()
+        MockCache.return_value = mock_instance
+
+        result = load_cached_options("SPY")
+
+        mock_instance.read.assert_called_once_with("options", "SPY")
+        assert not result.empty
+        assert len(result) == 2
+        # option_type normalized to single char
+        assert list(result["option_type"]) == ["c", "p"]
+        # Extra cache columns excluded
+        assert "expiration_type" not in result.columns
+        assert "moneyness" not in result.columns
+        assert "theoretical" not in result.columns
+        assert "dte" not in result.columns
+        # Greeks preserved
+        assert "delta" in result.columns
+        assert "gamma" in result.columns
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_symbol_not_cached(self, MockCache):
+        """Missing symbol raises FileNotFoundError."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = None
+        MockCache.return_value = mock_instance
+
+        with pytest.raises(
+            FileNotFoundError, match="No cached options data for 'AAPL'"
+        ):
+            load_cached_options("AAPL")
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_date_filtering(self, MockCache):
+        """Date range filtering is applied correctly."""
+        cached = pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "SPY"],
+                "option_type": ["c", "c", "c"],
+                "expiration": pd.to_datetime(
+                    ["2020-01-17", "2020-06-19", "2021-01-15"]
+                ),
+                "quote_date": pd.to_datetime(
+                    ["2020-01-02", "2020-01-02", "2020-01-02"]
+                ),
+                "strike": [320.0, 320.0, 320.0],
+                "bid": [5.0, 5.0, 5.0],
+                "ask": [5.5, 5.5, 5.5],
+                "delta": [0.55, 0.55, 0.55],
+            }
+        )
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = cached
+        MockCache.return_value = mock_instance
+
+        result = load_cached_options(
+            "SPY",
+            start_date=datetime(2020, 3, 1),
+            end_date=datetime(2020, 12, 31),
+        )
+        assert len(result) == 1
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_empty_cache_raises(self, MockCache):
+        """Empty cached DataFrame raises FileNotFoundError."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = pd.DataFrame()
+        MockCache.return_value = mock_instance
+
+        with pytest.raises(FileNotFoundError, match="No cached options data"):
+            load_cached_options("SPY")
+
+    def test_accessible_from_public_api(self):
+        """load_cached_options is accessible via op.load_cached_options."""
+        assert hasattr(op, "load_cached_options")
+        assert op.load_cached_options is load_cached_options
+
+
+# =============================================================================
+# load_cached_stocks() Tests
+# =============================================================================
+
+
+class TestLoadCachedStocks:
+    def _make_cached_stock_df(self):
+        """Sample DataFrame mimicking yfinance parquet cache content."""
+        return pd.DataFrame(
+            {
+                "underlying_symbol": ["SPY", "SPY", "SPY"],
+                "date": pd.to_datetime(["2020-01-02", "2020-01-03", "2020-01-06"]),
+                "open": [320.0, 321.0, 319.0],
+                "high": [322.0, 323.0, 321.0],
+                "low": [319.0, 320.0, 318.0],
+                "close": [321.0, 322.0, 320.0],
+                "volume": [50000000, 48000000, 52000000],
+            }
+        )
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_loads_and_renames_date(self, MockCache):
+        """Loading cached stock data renames 'date' to 'quote_date'."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = self._make_cached_stock_df()
+        MockCache.return_value = mock_instance
+
+        result = load_cached_stocks("SPY")
+
+        mock_instance.read.assert_called_once_with("yf_stocks", "SPY")
+        assert not result.empty
+        assert len(result) == 3
+        assert "quote_date" in result.columns
+        assert "date" not in result.columns
+        assert "close" in result.columns
+        assert "high" in result.columns
+        assert "volume" in result.columns
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_symbol_not_cached(self, MockCache):
+        """Missing symbol raises FileNotFoundError."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = None
+        MockCache.return_value = mock_instance
+
+        with pytest.raises(FileNotFoundError, match="No cached stock data for 'AAPL'"):
+            load_cached_stocks("AAPL")
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_date_filtering(self, MockCache):
+        """Date range filtering works on quote_date."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = self._make_cached_stock_df()
+        MockCache.return_value = mock_instance
+
+        result = load_cached_stocks(
+            "SPY",
+            start_date=datetime(2020, 1, 3),
+            end_date=datetime(2020, 1, 3),
+        )
+        assert len(result) == 1
+        assert result.iloc[0]["close"] == 322.0
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_empty_cache_raises(self, MockCache):
+        """Empty cached DataFrame raises FileNotFoundError."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = pd.DataFrame()
+        MockCache.return_value = mock_instance
+
+        with pytest.raises(FileNotFoundError, match="No cached stock data"):
+            load_cached_stocks("SPY")
+
+    @patch("optopsy.data.providers.cache.ParquetCache", autospec=True)
+    def test_quote_date_is_datetime(self, MockCache):
+        """quote_date column should be datetime64."""
+        mock_instance = MagicMock()
+        mock_instance.read.return_value = self._make_cached_stock_df()
+        MockCache.return_value = mock_instance
+
+        result = load_cached_stocks("SPY")
+        assert pd.api.types.is_datetime64_any_dtype(result["quote_date"])
+
+    def test_accessible_from_public_api(self):
+        """load_cached_stocks is accessible via op.load_cached_stocks."""
+        assert hasattr(op, "load_cached_stocks")
+        assert op.load_cached_stocks is load_cached_stocks

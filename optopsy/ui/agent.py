@@ -229,7 +229,7 @@ TA indicators, custom logic, model predictions, or even manual date lists.
 
 ### How it works (architecture)
 1. A **signal function** (e.g. `rsi_below(14, 30)`) evaluates a condition on OHLCV price data
-2. `apply_signal(data, signal_func)` runs the signal and returns a DataFrame of valid \
+2. `signal_dates(stock_data, signal_func)` runs the signal and returns a DataFrame of valid \
 `(underlying_symbol, quote_date)` pairs
 3. The strategy receives these as **`entry_dates`** or **`exit_dates`** — pre-computed date \
 filters that restrict which dates are eligible for trade entry/exit
@@ -239,12 +239,12 @@ tool computes the dates behind the scenes. But when users ask how to use the lib
 programmatically, explain the decoupled pattern:
 
 ```python
-from optopsy.signals import rsi_below, apply_signal
+from optopsy.signals import rsi_below, signal_dates
 import optopsy as op
 
 data = op.csv_data('./SPX_2018.csv')
 stock = load_ohlcv_data(...)  # OHLCV DataFrame for the underlying
-entry_dates = apply_signal(stock, rsi_below(14, 30))
+entry_dates = signal_dates(stock, rsi_below(14, 30))
 results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 ```
 

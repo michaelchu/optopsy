@@ -7,11 +7,11 @@ import pytest
 
 from optopsy.signals import (
     and_signals,
-    apply_signal,
     atr_above,
     day_of_week,
     rsi_above,
     rsi_below,
+    signal_dates,
     sma_above,
     sustained,
 )
@@ -119,7 +119,7 @@ class TestEntrySignalIntegration:
         )
 
         # With Thursday-only dates
-        entry_dates = apply_signal(option_data_entry_exit, day_of_week(3))
+        entry_dates = signal_dates(option_data_entry_exit, day_of_week(3))
         results_thu = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -135,7 +135,7 @@ class TestEntrySignalIntegration:
     def test_signal_filters_no_match_returns_empty(self, option_data_entry_exit):
         """entry_dates with no matches should return empty DataFrame."""
         # Saturday signal on weekday data -> no matches
-        entry_dates = apply_signal(option_data_entry_exit, day_of_week(5))
+        entry_dates = signal_dates(option_data_entry_exit, day_of_week(5))
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -156,7 +156,7 @@ class TestEntrySignalIntegration:
             raw=True,
         )
 
-        entry_dates = apply_signal(option_data_entry_exit, always_true_signal)
+        entry_dates = signal_dates(option_data_entry_exit, always_true_signal)
         results_true_signal = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -169,7 +169,7 @@ class TestEntrySignalIntegration:
 
     def test_entry_dates_with_short_puts(self, option_data_entry_exit):
         """entry_dates should work with short put strategies too."""
-        entry_dates = apply_signal(option_data_entry_exit, day_of_week(3))
+        entry_dates = signal_dates(option_data_entry_exit, day_of_week(3))
         results = short_puts(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -198,7 +198,7 @@ class TestEntrySignalIntegration:
         # Combine Thursday + always True (effectively just Thursday)
         combined = and_signals(day_of_week(3), always_true_signal)
 
-        entry_dates_combined = apply_signal(option_data_entry_exit, combined)
+        entry_dates_combined = signal_dates(option_data_entry_exit, combined)
         results_combined = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -207,7 +207,7 @@ class TestEntrySignalIntegration:
             raw=True,
         )
 
-        entry_dates_thu = apply_signal(option_data_entry_exit, day_of_week(3))
+        entry_dates_thu = signal_dates(option_data_entry_exit, day_of_week(3))
         results_thu = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -237,7 +237,7 @@ class TestExitSignalIntegration:
 
         # With exit dates that match the exit date (Saturday Feb 3 -> dayofweek=5)
         # The expiration date 2018-02-03 is a Saturday
-        exit_dates = apply_signal(option_data_entry_exit, day_of_week(5))
+        exit_dates = signal_dates(option_data_entry_exit, day_of_week(5))
         results_sat = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -252,7 +252,7 @@ class TestExitSignalIntegration:
     def test_exit_dates_no_match_returns_empty(self, option_data_entry_exit):
         """exit_dates with no matches should return empty DataFrame."""
         # The exit date (2018-02-03) is Saturday. Filter for Monday exits only.
-        exit_dates = apply_signal(option_data_entry_exit, day_of_week(0))
+        exit_dates = signal_dates(option_data_entry_exit, day_of_week(0))
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -273,7 +273,7 @@ class TestExitSignalIntegration:
             raw=True,
         )
 
-        exit_dates = apply_signal(option_data_entry_exit, always_true_signal)
+        exit_dates = signal_dates(option_data_entry_exit, always_true_signal)
         results_true_signal = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -289,7 +289,7 @@ class TestExitSignalIntegration:
     ):
         """entry_dates and exit_dates should both be applied independently."""
         # Entry on Thursday only, exit any time
-        entry_dates = apply_signal(option_data_entry_exit, day_of_week(3))
+        entry_dates = signal_dates(option_data_entry_exit, day_of_week(3))
         results_entry_only = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -299,7 +299,7 @@ class TestExitSignalIntegration:
         )
 
         # Entry on Thursday, exit dates always true (no additional filtering)
-        exit_dates = apply_signal(option_data_entry_exit, always_true_signal)
+        exit_dates = signal_dates(option_data_entry_exit, always_true_signal)
         results_both = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -322,7 +322,7 @@ class TestExitSignalIntegration:
             raw=True,
         )
 
-        exit_dates = apply_signal(option_data_entry_exit, always_true_signal)
+        exit_dates = signal_dates(option_data_entry_exit, always_true_signal)
         results_with_dates = short_puts(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -352,7 +352,7 @@ class TestExitSignalIntegration:
         def price_above_215(data):
             return data["close"] > 215
 
-        exit_dates = apply_signal(stock_data_spx, price_above_215)
+        exit_dates = signal_dates(stock_data_spx, price_above_215)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -381,7 +381,7 @@ class TestExitSignalIntegration:
         def price_above_225(data):
             return data["close"] > 225
 
-        exit_dates = apply_signal(stock_data_spx, price_above_225)
+        exit_dates = signal_dates(stock_data_spx, price_above_225)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -471,7 +471,7 @@ class TestExitDteTolerance:
 
     def test_tolerance_with_exit_dates(self, sparse_exit_data, always_true_signal):
         """exit_dte_tolerance should work alongside exit_dates."""
-        exit_dates = apply_signal(sparse_exit_data, always_true_signal)
+        exit_dates = signal_dates(sparse_exit_data, always_true_signal)
         results = long_calls(
             sparse_exit_data,
             max_entry_dte=90,
@@ -484,7 +484,7 @@ class TestExitDteTolerance:
 
     def test_tolerance_with_entry_dates(self, sparse_exit_data, always_true_signal):
         """exit_dte_tolerance should work alongside entry_dates."""
-        entry_dates = apply_signal(sparse_exit_data, always_true_signal)
+        entry_dates = signal_dates(sparse_exit_data, always_true_signal)
         results = long_calls(
             sparse_exit_data,
             max_entry_dte=90,
@@ -518,12 +518,12 @@ class TestExitDteTolerance:
 
 
 # ============================================================================
-# apply_signal() tests
+# signal_dates() tests
 # ============================================================================
 
 
-class TestApplySignal:
-    """Tests for the apply_signal() function that decouples signal computation."""
+class TestSignalDates:
+    """Tests for the signal_dates() function that decouples signal computation."""
 
     @pytest.fixture
     def ohlcv_stock_data(self):
@@ -545,64 +545,64 @@ class TestApplySignal:
             }
         )
 
-    def test_apply_signal_returns_dates_dataframe(self, ohlcv_stock_data):
-        """apply_signal should return a DataFrame with (underlying_symbol, quote_date)."""
+    def test_signal_dates_returns_dates_dataframe(self, ohlcv_stock_data):
+        """signal_dates should return a DataFrame with (underlying_symbol, quote_date)."""
 
         def always_true(d):
             return pd.Series(True, index=d.index)
 
-        result = apply_signal(ohlcv_stock_data, always_true)
+        result = signal_dates(ohlcv_stock_data, always_true)
         assert isinstance(result, pd.DataFrame)
         assert "underlying_symbol" in result.columns
         assert "quote_date" in result.columns
         assert len(result.columns) == 2
 
-    def test_apply_signal_close_maps_to_underlying_price(self, ohlcv_stock_data):
-        """apply_signal should auto-map 'close' to 'underlying_price' for TA signals."""
+    def test_signal_dates_close_maps_to_underlying_price(self, ohlcv_stock_data):
+        """signal_dates should auto-map 'close' to 'underlying_price' for TA signals."""
         # This signal reads underlying_price — should work when only close is present
         sig = sma_above(period=10)
-        result = apply_signal(ohlcv_stock_data, sig)
+        result = signal_dates(ohlcv_stock_data, sig)
         assert isinstance(result, pd.DataFrame)
 
-    def test_apply_signal_all_true_returns_all_dates(self, ohlcv_stock_data):
-        """apply_signal with always-true signal returns all unique dates."""
+    def test_signal_dates_all_true_returns_all_dates(self, ohlcv_stock_data):
+        """signal_dates with always-true signal returns all unique dates."""
 
         def always_true(d):
             return pd.Series(True, index=d.index)
 
-        result = apply_signal(ohlcv_stock_data, always_true)
+        result = signal_dates(ohlcv_stock_data, always_true)
         n_unique = ohlcv_stock_data.drop_duplicates(
             ["underlying_symbol", "quote_date"]
         ).shape[0]
         assert len(result) == n_unique
 
-    def test_apply_signal_all_false_returns_empty(self, ohlcv_stock_data):
-        """apply_signal with always-false signal returns empty DataFrame."""
+    def test_signal_dates_all_false_returns_empty(self, ohlcv_stock_data):
+        """signal_dates with always-false signal returns empty DataFrame."""
 
         def always_false(d):
             return pd.Series(False, index=d.index)
 
-        result = apply_signal(ohlcv_stock_data, always_false)
+        result = signal_dates(ohlcv_stock_data, always_false)
         assert len(result) == 0
         assert "underlying_symbol" in result.columns
         assert "quote_date" in result.columns
 
-    def test_apply_signal_date_only_signal(self, ohlcv_stock_data):
-        """Date-based signals (e.g. day_of_week) work with apply_signal."""
-        result = apply_signal(ohlcv_stock_data, day_of_week(3))
+    def test_signal_dates_date_only_signal(self, ohlcv_stock_data):
+        """Date-based signals (e.g. day_of_week) work with signal_dates."""
+        result = signal_dates(ohlcv_stock_data, day_of_week(3))
         assert isinstance(result, pd.DataFrame)
         # All flagged dates should be Thursdays
         assert (result["quote_date"].dt.dayofweek == 3).all()
 
-    def test_apply_signal_entry_dates_accepted_by_strategy(
+    def test_signal_dates_entry_dates_accepted_by_strategy(
         self, option_data_entry_exit, ohlcv_stock_data
     ):
-        """entry_dates from apply_signal are accepted by strategy functions."""
+        """entry_dates from signal_dates are accepted by strategy functions."""
 
         def always_true(d):
             return pd.Series(True, index=d.index)
 
-        entry_dates = apply_signal(ohlcv_stock_data, always_true)
+        entry_dates = signal_dates(ohlcv_stock_data, always_true)
         results = long_calls(
             option_data_entry_exit,
             max_entry_dte=90,
@@ -612,22 +612,22 @@ class TestApplySignal:
         )
         assert isinstance(results, pd.DataFrame)
 
-    def test_apply_signal_with_combined_signal(self, ohlcv_stock_data):
-        """apply_signal works with combined signals (and_signals, Signal class)."""
+    def test_signal_dates_with_combined_signal(self, ohlcv_stock_data):
+        """signal_dates works with combined signals (and_signals, Signal class)."""
 
         def always_true(d):
             return pd.Series(True, index=d.index)
 
         combined = and_signals(day_of_week(0, 1, 2, 3, 4), always_true)
-        result = apply_signal(ohlcv_stock_data, combined)
+        result = signal_dates(ohlcv_stock_data, combined)
         assert isinstance(result, pd.DataFrame)
 
-    def test_apply_signal_with_signal_class(self, ohlcv_stock_data):
-        """apply_signal works with Signal objects."""
+    def test_signal_dates_with_signal_class(self, ohlcv_stock_data):
+        """signal_dates works with Signal objects."""
         from optopsy.signals import signal
 
         sig = signal(day_of_week(3)) & signal(day_of_week(0, 1, 2, 3, 4))
-        result = apply_signal(ohlcv_stock_data, sig)
+        result = signal_dates(ohlcv_stock_data, sig)
         assert (result["quote_date"].dt.dayofweek == 3).all()
 
     def test_atr_uses_real_high_low_when_available(self, ohlcv_stock_data):
@@ -698,7 +698,7 @@ class TestApplySignal:
 class TestTASignalE2E:
     """
     End-to-end tests that exercise the full pipeline:
-    real pandas_ta signal + apply_signal() → entry_dates/exit_dates → strategy output.
+    real pandas_ta signal + signal_dates() → entry_dates/exit_dates → strategy output.
     """
 
     def _get_entry_dates(self, stock_data_long_history):
@@ -737,7 +737,7 @@ class TestTASignalE2E:
         )
         assert len(results_all) > 0
 
-        entry_dates = apply_signal(stock_data_long_history, sma_above(20))
+        entry_dates = signal_dates(stock_data_long_history, sma_above(20))
         results_sma = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -757,7 +757,7 @@ class TestTASignalE2E:
         """rsi_below(14, 30) entry_dates should only keep decline-phase entries."""
         ed = self._get_entry_dates(stock_data_long_history)
 
-        entry_dates = apply_signal(stock_data_long_history, rsi_below(14, 30))
+        entry_dates = signal_dates(stock_data_long_history, rsi_below(14, 30))
         results = short_puts(
             option_data_with_stock,
             max_entry_dte=365,
@@ -785,7 +785,7 @@ class TestTASignalE2E:
         )
         assert len(results_all) > 0
 
-        exit_dates = apply_signal(stock_data_long_history, rsi_above(14, 70))
+        exit_dates = signal_dates(stock_data_long_history, rsi_above(14, 70))
         results_exit = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -800,7 +800,7 @@ class TestTASignalE2E:
         assert set(results_exit["expiration"].unique()) == {exps["B"]}
 
         # Inverse: rsi_below(14, 30) keeps only exp-A exits
-        exit_dates_inv = apply_signal(stock_data_long_history, rsi_below(14, 30))
+        exit_dates_inv = signal_dates(stock_data_long_history, rsi_below(14, 30))
         results_inverse = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -820,8 +820,8 @@ class TestTASignalE2E:
         ed = self._get_entry_dates(stock_data_long_history)
         exps = self._exp_dates(stock_data_long_history)
 
-        entry_dates = apply_signal(stock_data_long_history, rsi_below(14, 30))
-        exit_dates = apply_signal(stock_data_long_history, rsi_above(14, 70))
+        entry_dates = signal_dates(stock_data_long_history, rsi_below(14, 30))
+        exit_dates = signal_dates(stock_data_long_history, rsi_above(14, 70))
         results = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -860,14 +860,14 @@ class TestTASignalE2E:
         assert len(results) < len(results_entry_only)
         assert len(results) < len(results_exit_only)
 
-    def test_sustained_ta_signal_with_apply_signal(
+    def test_sustained_ta_signal_with_signal_dates(
         self, option_data_with_stock, stock_data_long_history
     ):
         """sustained(rsi_below(14, 30), days=3) must reject bar 55."""
         decline_deep = {pd.Timestamp(stock_data_long_history["quote_date"].values[30])}
 
         # Plain rsi_below keeps both decline entries
-        entry_dates_plain = apply_signal(stock_data_long_history, rsi_below(14, 30))
+        entry_dates_plain = signal_dates(stock_data_long_history, rsi_below(14, 30))
         results_plain = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -878,7 +878,7 @@ class TestTASignalE2E:
         assert len(results_plain) > 0
 
         # sustained(days=3) rejects bar 55 (streak < 3 bars)
-        entry_dates_sust = apply_signal(
+        entry_dates_sust = signal_dates(
             stock_data_long_history, sustained(rsi_below(14, 30), days=3)
         )
         results_sustained = long_calls(
@@ -904,7 +904,7 @@ class TestTASignalE2E:
         sd_full = stock_data_long_history
         sd_close_only = sd_full.drop(columns=["high", "low"])
 
-        entry_dates_ohlcv = apply_signal(sd_full, atr_above(period=14, multiplier=1.0))
+        entry_dates_ohlcv = signal_dates(sd_full, atr_above(period=14, multiplier=1.0))
         results_ohlcv = long_calls(
             option_data_with_stock,
             max_entry_dte=365,
@@ -913,7 +913,7 @@ class TestTASignalE2E:
             raw=True,
         )
 
-        entry_dates_close = apply_signal(
+        entry_dates_close = signal_dates(
             sd_close_only, atr_above(period=14, multiplier=1.0)
         )
         results_close = long_calls(

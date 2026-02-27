@@ -1,9 +1,11 @@
-"""CSV data import and column normalization for option chain data.
+"""Data import and column normalization for option chain data.
 
-The primary entry point is ``csv_data()``, which reads a CSV file and maps
-its columns to the standardized names used throughout optopsy (e.g.
-``underlying_symbol``, ``quote_date``, ``strike``).  Column positions are
-specified by integer index, allowing the library to work with any CSV layout.
+Entry points:
+
+- ``csv_data()`` — reads a CSV file and maps columns by integer index.
+- ``options_data()`` — validates/normalizes an already-loaded DataFrame.
+- ``load_cached_options()`` — reads from the parquet cache produced by
+  ``optopsy-data download`` and returns a normalized DataFrame.
 
 The module also handles:
 - Date column inference (``_infer_date_cols``)
@@ -200,3 +202,182 @@ def csv_data(
         raise ValueError(f"Column mapping error in {file_path}: {str(e)}")
     except Exception as e:
         raise ValueError(f"Unexpected error reading CSV file {file_path}: {str(e)}")
+
+
+_REQUIRED_COLUMNS = [
+    "underlying_symbol",
+    "option_type",
+    "expiration",
+    "quote_date",
+    "strike",
+    "bid",
+    "ask",
+    "delta",
+]
+
+
+def options_data(
+    df: pd.DataFrame,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """Validate and normalize an existing DataFrame for use with strategies.
+
+    Accepts a DataFrame that already has named columns matching the standard
+    optopsy schema.  Unlike ``csv_data()`` which maps columns by integer index,
+    this function expects columns to already be named correctly.
+
+    Args:
+        df: DataFrame with named columns (at minimum the 8 required columns:
+            underlying_symbol, option_type, expiration, quote_date, strike,
+            bid, ask, delta).  Extra columns (greeks, volume, etc.) are
+            passed through unchanged.
+        start_date: Optional start date for filtering (inclusive).
+        end_date: Optional end date for filtering (inclusive).
+
+    Returns:
+        Normalized DataFrame with date columns converted to datetime64 and
+        optional date filtering applied.
+
+    Raises:
+        ValueError: If any required column is missing from the DataFrame.
+    """
+    missing = [col for col in _REQUIRED_COLUMNS if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+
+    return df.pipe(_infer_date_cols).pipe(_trim_dates, start_date, end_date)
+
+
+def load_cached_options(
+    symbol: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """Load cached options data downloaded by ``optopsy-data download``.
+
+    Reads from the parquet cache and normalizes the DataFrame for use with
+    strategy functions.  Requires the ``optopsy[data]`` extra (pyarrow).
+
+    Args:
+        symbol: Ticker symbol (e.g. ``"SPY"``).
+        start_date: Optional start date for filtering (inclusive).
+        end_date: Optional end date for filtering (inclusive).
+
+    Returns:
+        Normalized DataFrame ready for strategy functions.
+
+    Raises:
+        FileNotFoundError: If no cached data exists for *symbol*.
+        ImportError: If pyarrow is not installed.
+    """
+    try:
+        from .data.providers.cache import ParquetCache
+    except ImportError as exc:
+        raise ImportError(
+            "pyarrow is required for load_cached_options. "
+            "Install it with: pip install optopsy[data]"
+        ) from exc
+
+    cache = ParquetCache()
+    df = cache.read("options", symbol)
+    if df is None or df.empty:
+        raise FileNotFoundError(
+            f"No cached options data for '{symbol}'. "
+            f"Download it first with: optopsy-data download {symbol}"
+        )
+
+    # Select columns matching _select_options_columns from EODHDProvider
+    keep = [
+        "underlying_symbol",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+    ]
+    optional = [
+        "delta",
+        "gamma",
+        "theta",
+        "vega",
+        "rho",
+        "implied_volatility",
+        "volume",
+        "open_interest",
+    ]
+    keep.extend([c for c in optional if c in df.columns])
+    df = df[[c for c in keep if c in df.columns]]
+
+    # Normalize option_type to lowercase single char (c/p)
+    if "option_type" in df.columns:
+        df = df.copy()
+        df["option_type"] = (
+            df["option_type"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .map({"call": "c", "put": "p", "c": "c", "p": "p"})
+        )
+
+    return options_data(df, start_date=start_date, end_date=end_date)
+
+
+def load_cached_stocks(
+    symbol: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.DataFrame:
+    """Load cached stock OHLCV data downloaded by ``optopsy-data download -s``.
+
+    Reads from the yfinance parquet cache and returns a DataFrame suitable for
+    use with ``signal_dates()`` and the signals system.
+    Requires the ``optopsy[data]`` extra (pyarrow).
+
+    Args:
+        symbol: Ticker symbol (e.g. ``"SPY"``).
+        start_date: Optional start date for filtering (inclusive).
+        end_date: Optional end date for filtering (inclusive).
+
+    Returns:
+        DataFrame with columns ``underlying_symbol``, ``quote_date``,
+        ``open``, ``high``, ``low``, ``close``, ``volume`` (where available).
+
+    Raises:
+        FileNotFoundError: If no cached stock data exists for *symbol*.
+        ImportError: If pyarrow is not installed.
+    """
+    try:
+        from .data.providers.cache import ParquetCache
+    except ImportError as exc:
+        raise ImportError(
+            "pyarrow is required for load_cached_stocks. "
+            "Install it with: pip install optopsy[data]"
+        ) from exc
+
+    cache = ParquetCache()
+    df = cache.read("yf_stocks", symbol)
+    if df is None or df.empty:
+        raise FileNotFoundError(
+            f"No cached stock data for '{symbol}'. "
+            f"Download it first with: optopsy-data download {symbol} -s"
+        )
+
+    df = df.copy()
+
+    # Rename 'date' → 'quote_date' for compatibility with signal_dates
+    if "quote_date" not in df.columns and "date" in df.columns:
+        df = df.rename(columns={"date": "quote_date"})
+
+    # Ensure quote_date is datetime
+    if "quote_date" in df.columns:
+        df["quote_date"] = pd.to_datetime(df["quote_date"])
+
+    # Apply date filtering on quote_date
+    if start_date is not None:
+        df = df[df["quote_date"] >= pd.to_datetime(start_date)]
+    if end_date is not None:
+        df = df[df["quote_date"] <= pd.to_datetime(end_date)]
+
+    return df

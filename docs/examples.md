@@ -62,7 +62,7 @@ Backtest long straddles on specific dates using `entry_dates`:
 
 ```python
 import pandas as pd
-from optopsy import custom_signal, apply_signal
+import optopsy as op
 
 # Define earnings dates as entry signals
 earnings_dates = pd.DataFrame({
@@ -71,10 +71,11 @@ earnings_dates = pd.DataFrame({
     "enter": [True] * 4,
 })
 
-sig = custom_signal(earnings_dates, flag_col="enter")
-entry_dates = apply_signal(earnings_dates, sig)
+sig = op.custom_signal(earnings_dates, flag_col="enter")
+entry_dates = op.signal_dates(earnings_dates, sig)
 
 # Backtest ATM straddles — only enters on earnings dates
+data = op.csv_data('SPX_2023.csv')
 results = op.long_straddles(
     data,
     max_entry_dte=7,  # Enter up to 1 week before expiration
@@ -435,10 +436,10 @@ my_flags = pd.DataFrame({
 })
 
 sig = op.custom_signal(my_flags, flag_col="go")
-entry_dates = op.apply_signal(my_flags, sig)
+entry_dates = op.signal_dates(my_flags, sig)
 
-data = op.csv_data('SPY_2023.csv')
-results = op.long_calls(data, entry_dates=entry_dates)
+options = op.csv_data('SPY_2023.csv')
+results = op.long_calls(options, entry_dates=entry_dates)
 print(results)
 ```
 
@@ -558,12 +559,15 @@ results = op.iron_condor(
 Optopsy supports filtering entries with technical analysis indicators. See the [Entry Signals](entry-signals.md) page for the full reference. Here's a quick example:
 
 ```python
-from optopsy import apply_signal, rsi_below, sma_above, signal
+import optopsy as op
+
+stocks = op.load_cached_stocks("SPY")
+options = op.load_cached_options("SPY")
 
 # Enter long calls only when RSI < 30 AND price is above the 50-day SMA
-entry = signal(rsi_below(14, 30)) & signal(sma_above(50))
-entry_dates = apply_signal(data, entry)
-results = op.long_calls(data, entry_dates=entry_dates)
+entry = op.signal(op.rsi_below(14, 30)) & op.signal(op.sma_above(50))
+entry_dates = op.signal_dates(stocks, entry)
+results = op.long_calls(options, entry_dates=entry_dates)
 ```
 
 ## Data Sources
