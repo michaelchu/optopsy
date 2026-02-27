@@ -38,7 +38,7 @@ def macd_price_data_bullish():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": prices,
+            "close": prices,
         }
     )
 
@@ -110,7 +110,7 @@ class TestRSISignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": [100.0 - i for i in range(20)],
+                "close": [100.0 - i for i in range(20)],
             }
         )
         signal = rsi_below(period=14, threshold=30)
@@ -125,7 +125,7 @@ class TestRSISignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": [100.0 + i for i in range(20)],
+                "close": [100.0 + i for i in range(20)],
             }
         )
         signal = rsi_above(period=14, threshold=70)
@@ -166,7 +166,7 @@ class TestStochSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 0.5 for c in close],
                 "low": [c - 0.5 for c in close],
             }
@@ -200,7 +200,7 @@ class TestWillRSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 0.5 for c in close],
                 "low": [c - 0.5 for c in close],
             }
@@ -214,7 +214,7 @@ class TestWillRSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 0.5 for c in close],
                 "low": [c - 0.5 for c in close],
             }
@@ -234,7 +234,7 @@ class TestROCSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": [100.0 + i * 2 for i in range(20)],
+                "close": [100.0 + i * 2 for i in range(20)],
             }
         )
         assert roc_above(threshold=0)(data).any()
@@ -245,7 +245,7 @@ class TestROCSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": [100.0 - i * 2 for i in range(20)],
+                "close": [100.0 - i * 2 for i in range(20)],
             }
         )
         assert roc_below(threshold=0)(data).any()

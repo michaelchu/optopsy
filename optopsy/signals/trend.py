@@ -23,6 +23,8 @@ def adx_above(period: int = 14, threshold: float = 25) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.adx(high, low, close, length=period)
         if result is None:
             return None
@@ -42,6 +44,8 @@ def adx_below(period: int = 14, threshold: float = 20) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.adx(high, low, close, length=period)
         if result is None:
             return None
@@ -68,6 +72,8 @@ def _aroon_lines(
         group: pd.DataFrame,
     ) -> tuple["pd.Series | None", "pd.Series | None"]:
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None, None
         result = ta.aroon(high, low, length=period)
         if result is None:
             return None, None
@@ -100,6 +106,8 @@ def aroon_cross_below(period: int = 25) -> SignalFunc:
 def _supertrend_direction(period: int, multiplier: float):
     def _compute(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.supertrend(high, low, close, length=period, multiplier=multiplier)
         if result is None:
             return None
@@ -130,6 +138,8 @@ def supertrend_sell(period: int = 7, multiplier: float = 3.0) -> SignalFunc:
 def _psar_direction(af0: float, af: float, max_af: float):
     def _compute(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.psar(high, low, close, af0=af0, af=af, max_af=max_af)
         if result is None:
             return None
@@ -174,6 +184,8 @@ def chop_above(period: int = 14, threshold: float = 61.8) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.chop(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -184,6 +196,8 @@ def chop_below(period: int = 14, threshold: float = 38.2) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.chop(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -199,6 +213,8 @@ def vhf_above(period: int = 28, threshold: float = 0.4) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
+        if close is None:
+            return None
         return ta.vhf(close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -209,6 +225,8 @@ def vhf_below(period: int = 28, threshold: float = 0.4) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
+        if close is None:
+            return None
         return ta.vhf(close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

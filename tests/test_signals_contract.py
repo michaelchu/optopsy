@@ -107,7 +107,7 @@ def _make_insufficient_data(periods=3):
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": [100.0 + i for i in range(periods)],
+            "close": [100.0 + i for i in range(periods)],
         }
     )
 

@@ -94,6 +94,8 @@ def stoch_below(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.stoch(high, low, close, k=k_period, d=d_period)
         if result is None or col not in result.columns:
             return None
@@ -110,6 +112,8 @@ def stoch_above(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.stoch(high, low, close, k=k_period, d=d_period)
         if result is None or col not in result.columns:
             return None
@@ -135,6 +139,8 @@ def stochrsi_below(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
+        if close is None:
+            return None
         result = ta.stochrsi(
             close, length=period, rsi_length=rsi_period, k=k_smooth, d=d_smooth
         )
@@ -157,6 +163,8 @@ def stochrsi_above(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         close = _get_close(group)
+        if close is None:
+            return None
         result = ta.stochrsi(
             close, length=period, rsi_length=rsi_period, k=k_smooth, d=d_smooth
         )
@@ -177,6 +185,8 @@ def willr_below(period: int = 14, threshold: float = -80) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.willr(high, low, close, length=period)
         return result
 
@@ -188,6 +198,8 @@ def willr_above(period: int = 14, threshold: float = -20) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.willr(high, low, close, length=period)
         return result
 
@@ -204,6 +216,8 @@ def cci_below(period: int = 20, threshold: float = -100) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.cci(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -214,6 +228,8 @@ def cci_above(period: int = 20, threshold: float = 100) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.cci(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -347,6 +363,8 @@ def uo_above(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.uo(high, low, close, fast=fast, medium=medium, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -359,6 +377,8 @@ def uo_below(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.uo(high, low, close, fast=fast, medium=medium, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -383,6 +403,8 @@ def squeeze_on(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.squeeze(
             high,
             low,
@@ -420,6 +442,8 @@ def squeeze_off(
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         result = ta.squeeze(
             high,
             low,
@@ -452,6 +476,8 @@ def ao_above(fast: int = 5, slow: int = 34, threshold: float = 0) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None
         return ta.ao(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -462,6 +488,8 @@ def ao_below(fast: int = 5, slow: int = 34, threshold: float = 0) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None
         return ta.ao(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

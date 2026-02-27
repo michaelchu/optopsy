@@ -45,6 +45,8 @@ def _atr_signal(period: int, multiplier: float, above: bool) -> SignalFunc:
 
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = _get_close(group)
+            if prices is None:
+                return pd.Series(False, index=group.index)
             high = group["high"] if has_ohlcv else None
             low = group["low"] if has_ohlcv else None
             atr = _compute_atr(prices, period, high=high, low=low)
@@ -88,6 +90,8 @@ def _bb_signal(length: int, std: float, above: bool) -> SignalFunc:
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = _get_close(group)
+            if prices is None:
+                return pd.Series(False, index=group.index)
             bb = ta.bbands(prices, length=length, std=std)
             if bb is None:
                 return pd.Series(False, index=group.index)
@@ -117,6 +121,8 @@ def bb_below_lower(length: int = 20, std: float = 2.0) -> SignalFunc:
 def _kc_bands(length: int, scalar: float):
     def _compute(group: pd.DataFrame) -> tuple["pd.Series | None", "pd.Series | None"]:
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None, None
         result = ta.kc(high, low, close, length=length, scalar=scalar)
         if result is None:
             return None, None
@@ -149,6 +155,8 @@ def kc_below_lower(length: int = 20, scalar: float = 1.5) -> SignalFunc:
 def _donchian_bands(lower_length: int, upper_length: int):
     def _compute(group: pd.DataFrame) -> tuple["pd.Series | None", "pd.Series | None"]:
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None, None
         result = ta.donchian(
             high, low, lower_length=lower_length, upper_length=upper_length
         )
@@ -185,6 +193,8 @@ def natr_above(period: int = 14, threshold: float = 2.0) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.natr(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -195,6 +205,8 @@ def natr_below(period: int = 14, threshold: float = 1.0) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         return ta.natr(high, low, close, length=period)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)
@@ -210,6 +222,8 @@ def massi_above(fast: int = 9, slow: int = 25, threshold: float = 27) -> SignalF
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None
         return ta.massi(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind > threshold)
@@ -220,6 +234,8 @@ def massi_below(fast: int = 9, slow: int = 25, threshold: float = 26.5) -> Signa
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low = _get_high(group), _get_low(group)
+        if high is None or low is None:
+            return None
         return ta.massi(high, low, fast=fast, slow=slow)
 
     return _ohlcv_signal(_indicator, lambda ind: ind < threshold)

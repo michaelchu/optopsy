@@ -61,6 +61,8 @@ def _per_symbol_signal(
     def signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = _get_close(group)
+            if prices is None:
+                return pd.Series(False, index=group.index)
             indicator = indicator_fn(prices)
             if indicator is None:
                 return pd.Series(False, index=group.index)
@@ -91,6 +93,8 @@ def _crossover_signal(
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
             prices = _get_close(group)
+            if prices is None:
+                return pd.Series(False, index=group.index)
             line_a, line_b = compute_lines_fn(prices)
             if line_a is None or line_b is None:
                 return pd.Series(False, index=group.index)
@@ -192,6 +196,8 @@ def _band_signal(
             if band is None:
                 return pd.Series(False, index=group.index)
             prices = _get_close(group)
+            if prices is None:
+                return pd.Series(False, index=group.index)
             return cmp(prices, band.fillna(fill_val)).fillna(False)
 
         return _groupby_symbol(data, _compute_group)
@@ -235,22 +241,27 @@ def _direction_signal(
 # ---------------------------------------------------------------------------
 
 
-def _get_close(group: pd.DataFrame) -> pd.Series:
-    """Get close/underlying_price from a group DataFrame."""
+def _get_close(group: pd.DataFrame) -> "pd.Series | None":
+    """Get close price from a group DataFrame, or None if the column is absent.
+
+    Requires the ``close`` column to be present.  Callers that previously relied
+    on the ``underlying_price`` fallback should ensure
+    ``resolve_price_column()`` has been applied before signals run.
+    """
     if "close" in group.columns:
         return group["close"]
-    return group["underlying_price"]
+    return None
 
 
-def _get_high(group: pd.DataFrame) -> pd.Series:
-    """Get high prices, falling back to close/underlying_price."""
+def _get_high(group: pd.DataFrame) -> "pd.Series | None":
+    """Get high prices, falling back to close.  Returns None when unavailable."""
     if "high" in group.columns:
         return group["high"]
     return _get_close(group)
 
 
-def _get_low(group: pd.DataFrame) -> pd.Series:
-    """Get low prices, falling back to close/underlying_price."""
+def _get_low(group: pd.DataFrame) -> "pd.Series | None":
+    """Get low prices, falling back to close.  Returns None when unavailable."""
     if "low" in group.columns:
         return group["low"]
     return _get_close(group)
