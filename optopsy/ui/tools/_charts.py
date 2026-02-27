@@ -606,12 +606,19 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
                             ["underlying_symbol", "quote_date", "close"]
                         ]
                     )
-            except (OSError, ValueError, KeyError) as exc:
+            except ImportError:
+                return _result(
+                    "Fetching stock data for IV term structure charts requires the "
+                    "optional 'yfinance' dependency, which is not installed."
+                )
+            except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
                 _log.warning("yf cache lookup failed for %s: %s", sym, exc)
         if stock_frames:
             stock_df = pd.concat(stock_frames, ignore_index=True)
-            stock_df["quote_date"] = pd.to_datetime(stock_df["quote_date"])
-            df = df.assign(quote_date=df_quote_dates).merge(
+            stock_df["quote_date"] = pd.to_datetime(
+                stock_df["quote_date"]
+            ).dt.normalize()
+            df = df.assign(quote_date=df_quote_dates.dt.normalize()).merge(
                 stock_df, on=["underlying_symbol", "quote_date"], how="left"
             )
             _price_col = "close"
