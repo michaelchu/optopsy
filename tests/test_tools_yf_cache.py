@@ -75,6 +75,7 @@ def test_cache_miss_fetches_yfinance_and_writes_cache(tmp_path):
     cache = ParquetCache(str(tmp_path))
 
     with (
+        patch("optopsy.data._yf_helpers._yf_cache", cache),
         patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
@@ -115,6 +116,7 @@ def test_full_cache_hit_skips_yfinance(tmp_path):
     cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
     with (
+        patch("optopsy.data._yf_helpers._yf_cache", cache),
         patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
@@ -145,6 +147,7 @@ def test_warm_cache_fetches_only_tail(tmp_path):
     expected_fetch_end = str(date_max + timedelta(days=1))
 
     with (
+        patch("optopsy.data._yf_helpers._yf_cache", cache),
         patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
@@ -211,6 +214,7 @@ def test_multi_symbol_independent_cache_entries(tmp_path):
     padded_start = date_min - timedelta(days=365)
 
     with (
+        patch("optopsy.data._yf_helpers._yf_cache", cache),
         patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download") as mock_dl,
     ):
@@ -251,6 +255,7 @@ def test_failed_symbol_does_not_block_other(tmp_path):
         return _make_yf_download_result(padded_start, date_max)
 
     with (
+        patch("optopsy.data._yf_helpers._yf_cache", cache),
         patch("optopsy.ui.tools._helpers._yf_cache", cache),
         patch("yfinance.download", side_effect=fake_download),
     ):
@@ -283,6 +288,7 @@ class TestYfFetchAndCache:
         cached_df = _make_cached_df("SPY", date(2020, 1, 1), date(2025, 12, 10))
 
         with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
             patch("optopsy.ui.tools._helpers._yf_cache", cache),
             patch("yfinance.download") as mock_dl,
         ):
@@ -297,6 +303,7 @@ class TestYfFetchAndCache:
         cache = ParquetCache(str(tmp_path))
 
         with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
             patch("optopsy.ui.tools._helpers._yf_cache", cache),
             patch("yfinance.download") as mock_dl,
         ):
@@ -320,6 +327,7 @@ class TestYfFetchAndCache:
         cached_df = pd.concat([part1, part2], ignore_index=True)
 
         with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
             patch("optopsy.ui.tools._helpers._yf_cache", cache),
             patch("yfinance.download") as mock_dl,
         ):
@@ -337,6 +345,7 @@ class TestYfFetchAndCache:
         actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
 
         with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
             patch("optopsy.ui.tools._helpers._yf_cache", cache),
             patch("yfinance.download") as mock_dl,
         ):

@@ -1,4 +1,4 @@
-"""Tests for optopsy/ui/cli.py — additional coverage for download and cache commands."""
+"""Tests for optopsy/data/cli.py — additional coverage for download and cache commands."""
 
 import argparse
 
@@ -8,7 +8,7 @@ pytest.importorskip("pyarrow", reason="UI extras not installed")
 
 from unittest.mock import MagicMock, patch
 
-from optopsy.ui.cli import _cmd_cache_clear, _cmd_download, _format_bytes, _load_env
+from optopsy.data.cli import _cmd_cache_clear, _cmd_download, _format_bytes, _load_env
 
 # ---------------------------------------------------------------------------
 # _format_bytes edge cases
@@ -48,8 +48,8 @@ def test_load_env_fallback(mock_load, mock_find):
 # ---------------------------------------------------------------------------
 
 
-@patch("optopsy.ui.cli._load_env")
-@patch("optopsy.ui.providers.get_provider_for_tool", return_value=None)
+@patch("optopsy.data.cli._load_env")
+@patch("optopsy.data.providers.get_provider_for_tool", return_value=None)
 def test_cmd_download_no_provider(mock_get_provider, mock_env, capsys):
     """When no provider is configured, should print an error."""
     args = argparse.Namespace(symbols=["SPY"], verbose=False)
@@ -58,8 +58,8 @@ def test_cmd_download_no_provider(mock_get_provider, mock_env, capsys):
     assert "No data provider" in captured.out
 
 
-@patch("optopsy.ui.cli._load_env")
-@patch("optopsy.ui.providers.get_provider_for_tool")
+@patch("optopsy.data.cli._load_env")
+@patch("optopsy.data.providers.get_provider_for_tool")
 def test_cmd_download_generic_provider(mock_get_provider, mock_env, capsys):
     """Non-EODHD provider should use the generic download path."""
     mock_provider = MagicMock(
@@ -81,7 +81,7 @@ def test_cmd_download_generic_provider(mock_get_provider, mock_env, capsys):
 # ---------------------------------------------------------------------------
 
 
-@patch("optopsy.ui.providers.cache.ParquetCache")
+@patch("optopsy.data.providers.cache.ParquetCache")
 def test_cmd_cache_clear_with_symbol(mock_cache_cls, capsys):
     """Clearing cache for a specific symbol should pass the symbol filter."""
     mock_cache = MagicMock()
@@ -97,7 +97,7 @@ def test_cmd_cache_clear_with_symbol(mock_cache_cls, capsys):
     assert "2" in captured.out
 
 
-@patch("optopsy.ui.providers.cache.ParquetCache")
+@patch("optopsy.data.providers.cache.ParquetCache")
 def test_cmd_cache_clear_all(mock_cache_cls, capsys):
     """Clearing all cache should pass symbol=None."""
     mock_cache = MagicMock()

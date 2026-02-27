@@ -301,12 +301,12 @@ class TestPluginProviderIntegration:
 
     def setup_method(self):
         """Reset provider cache before each test."""
-        import optopsy.ui.providers as _prov
+        import optopsy.data.providers as _prov
 
         _prov._ALL_PROVIDERS = None
 
     def teardown_method(self):
-        import optopsy.ui.providers as _prov
+        import optopsy.data.providers as _prov
 
         _prov._ALL_PROVIDERS = None
 
@@ -344,7 +344,7 @@ class TestPluginProviderIntegration:
             _prov._ALL_PROVIDERS = None
 
             # Patch the EODHD import to fail so we only get plugin providers
-            with patch.dict(sys.modules, {"optopsy.ui.providers.eodhd": None}):
+            with patch.dict(sys.modules, {"optopsy.data.providers.eodhd": None}):
                 # Force reimport
                 importlib.reload(_prov)
                 _prov._ALL_PROVIDERS = None
@@ -361,8 +361,8 @@ class TestPluginProviderIntegration:
             pass
 
         with patch("optopsy.plugins.get_plugin_providers", return_value=[NotAProvider]):
-            with patch.dict(sys.modules, {"optopsy.ui.providers.eodhd": None}):
-                import optopsy.ui.providers as _prov
+            with patch.dict(sys.modules, {"optopsy.data.providers.eodhd": None}):
+                import optopsy.data.providers as _prov
 
                 importlib.reload(_prov)
                 _prov._ALL_PROVIDERS = None
@@ -373,7 +373,7 @@ class TestPluginProviderIntegration:
 
     def test_provider_instantiation_failure_skipped(self):
         """A DataProvider subclass that raises on __init__ is skipped."""
-        from optopsy.ui.providers.base import DataProvider
+        from optopsy.data.providers.base import DataProvider
 
         class BrokenProvider(DataProvider):
             name = "broken"
@@ -394,8 +394,8 @@ class TestPluginProviderIntegration:
         with patch(
             "optopsy.plugins.get_plugin_providers", return_value=[BrokenProvider]
         ):
-            with patch.dict(sys.modules, {"optopsy.ui.providers.eodhd": None}):
-                import optopsy.ui.providers as _prov
+            with patch.dict(sys.modules, {"optopsy.data.providers.eodhd": None}):
+                import optopsy.data.providers as _prov
 
                 importlib.reload(_prov)
                 _prov._ALL_PROVIDERS = None

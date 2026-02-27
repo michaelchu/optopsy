@@ -23,6 +23,7 @@ dependencies = [
     "empyrical-reloaded>=0.5.7",
     "pytz",
     "pydantic>=2.0,<3.0",
+    "rich>=13.0.0,<14.0.0",
 ]
 
 [project.urls]
@@ -34,13 +35,16 @@ docs = [
     "mkdocs-material>=9.0.0,<10.0.0",
     "mkdocstrings[python]>=0.25.0,<1.0.0",
 ]
-ui = [
+data = [
     "pyarrow>=14.0.0",
+    "requests>=2.28.0,<3.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    "yfinance>=0.2.0,<2.0.0",
+]
+ui = [
+    "optopsy[data]",
     "chainlit>=1.0.0,<3.0.0",
     "litellm>=1.0.0,<3.0.0",
-    "python-dotenv>=1.0.0,<2.0.0",
-    "requests>=2.28.0,<3.0.0",
-    "yfinance>=0.2.0,<2.0.0",
     "sqlalchemy>=2.0.0,<3.0.0",
     "aiosqlite>=0.17.0,<1.0.0",
     "asyncpg>=0.29.0,<1.0.0",
@@ -51,6 +55,7 @@ ui = [
 
 [project.scripts]
 optopsy-chat = "optopsy.ui.cli:main"
+optopsy-data = "optopsy.data.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["optopsy"]

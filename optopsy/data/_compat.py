@@ -1,8 +1,4 @@
-"""Re-export from optopsy.data._compat for backwards compatibility.
-
-The UI shim intentionally keeps the ``optopsy[ui]`` install hint so that
-callers inside the UI package get the correct suggestion.
-"""
+"""Helpers for optional data dependency imports."""
 
 from __future__ import annotations
 
@@ -21,5 +17,5 @@ def import_optional_dependency(name: str) -> types.ModuleType:
     except ImportError:
         raise ImportError(
             f"Missing optional dependency '{name}'. "
-            f"Install it with: pip install optopsy[ui]"
+            f"Install it with: pip install optopsy[data]"
         ) from None

@@ -1,4 +1,4 @@
-"""Tests for optopsy/ui/providers/__init__.py — provider registry."""
+"""Tests for optopsy/data/providers/__init__.py — provider registry."""
 
 import pytest
 
@@ -6,8 +6,8 @@ pytest.importorskip("pyarrow", reason="UI extras not installed")
 
 from unittest.mock import MagicMock, patch
 
-import optopsy.ui.providers as providers_mod
-from optopsy.ui.providers import (
+import optopsy.data.providers as providers_mod
+from optopsy.data.providers import (
     get_all_provider_tool_schemas,
     get_provider_for_tool,
     get_provider_names,
@@ -25,7 +25,7 @@ def _reset_providers_cache():
 
 def test_load_providers_import_error():
     """When eodhd import fails, _load_providers returns an empty list."""
-    with patch.dict("sys.modules", {"optopsy.ui.providers.eodhd": None}):
+    with patch.dict("sys.modules", {"optopsy.data.providers.eodhd": None}):
         # Force reimport to trigger ImportError path
         providers_mod._ALL_PROVIDERS = None
         result = providers_mod._load_providers()
