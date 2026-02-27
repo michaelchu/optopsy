@@ -137,6 +137,31 @@ def csv_data(
                    or other data processing issues
 
     """
+    # Auto-detect old 9-column layout: if no column kwargs were overridden
+    # (all match the new 8-column defaults) and the CSV has 9+ columns,
+    # assume underlying_price lives at column 1 and shift indices up by 1.
+    _new_defaults = (
+        underlying_price is None
+        and option_type == 1
+        and expiration == 2
+        and quote_date == 3
+        and strike == 4
+        and bid == 5
+        and ask == 6
+        and delta == 7
+    )
+    if _new_defaults:
+        num_cols = len(pd.read_csv(file_path, nrows=0).columns)
+        if num_cols >= 9:
+            underlying_price = 1
+            option_type = 2
+            expiration = 3
+            quote_date = 4
+            strike = 5
+            bid = 6
+            ask = 7
+            delta = 8
+
     params = {
         "start_date": start_date,
         "end_date": end_date,
