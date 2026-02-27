@@ -481,6 +481,7 @@ class TestSchemaGeneration:
     def test_all_tools_have_models(self):
         """Ensure TOOL_ARG_MODELS covers all expected tools."""
         expected = {
+            "load_csv_data",
             "preview_data",
             "describe_data",
             "suggest_strategy_params",

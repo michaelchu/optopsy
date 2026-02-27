@@ -22,6 +22,10 @@ def filepath_with_greeks():
     return os.path.join(_TEST_DATA_DIR, "data_with_greeks.csv")
 
 
+def filepath_no_underlying_price():
+    return os.path.join(_TEST_DATA_DIR, "data_no_underlying_price.csv")
+
+
 def filepath_empty():
     return os.path.join(_TEST_DATA_DIR, "empty.csv")
 
@@ -68,6 +72,7 @@ def test_import_csv_with_date_range():
         strike=5,
         bid=6,
         ask=7,
+        delta=8,
     )
     assert len(data) == 1
     assert data.iloc[0]["expiration"] == datetime(1990, 1, 20)
@@ -85,6 +90,7 @@ def test_import_csv_with_start_date():
         strike=5,
         bid=6,
         ask=7,
+        delta=8,
     )
     assert len(data) == 3
     assert data.iloc[0]["expiration"] == datetime(2000, 1, 20)
@@ -104,6 +110,7 @@ def test_import_csv_with_end_date():
         strike=5,
         bid=6,
         ask=7,
+        delta=8,
     )
     assert len(data) == 2
     assert data.iloc[0]["expiration"] == datetime(1990, 1, 20)
@@ -121,6 +128,7 @@ def test_import_csv_with_no_date_range():
         strike=5,
         bid=6,
         ask=7,
+        delta=8,
     )
     assert len(data) == 4
     assert data.iloc[0]["expiration"] == datetime(1990, 1, 20)
@@ -206,6 +214,50 @@ def test_import_csv_with_delta_column():
     assert "delta" in data.columns
     assert len(data) == 4
     assert data.iloc[0]["delta"] == 0.65
+
+
+def test_import_csv_without_underlying_price_uses_defaults():
+    """CSV without underlying_price column should load correctly using default column positions."""
+    data = op.datafeeds.csv_data(filepath_no_underlying_price())
+
+    assert "underlying_price" not in data.columns
+    expected_columns = [
+        "underlying_symbol",
+        "option_type",
+        "expiration",
+        "quote_date",
+        "strike",
+        "bid",
+        "ask",
+        "delta",
+    ]
+    assert list(data.columns) == expected_columns
+    assert len(data) == 4
+    assert data.iloc[0]["underlying_symbol"] == "SPX"
+    assert data.iloc[0]["option_type"] == "call"
+    assert data.iloc[0]["strike"] == 225
+    assert data.iloc[0]["bid"] == 135.5
+    assert data.iloc[0]["delta"] == 0.65
+    assert data.iloc[0]["expiration"] == datetime(1990, 1, 20)
+
+
+def test_import_csv_with_underlying_price_explicit():
+    """CSV with underlying_price column should load it when index is specified explicitly."""
+    data = op.datafeeds.csv_data(
+        filepath(),
+        underlying_symbol=0,
+        underlying_price=1,
+        option_type=2,
+        expiration=3,
+        quote_date=4,
+        strike=5,
+        bid=6,
+        ask=7,
+        delta=8,
+    )
+
+    assert "underlying_price" in data.columns
+    assert data.iloc[0]["underlying_price"] == 359.69
 
 
 # =============================================================================

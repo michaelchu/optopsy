@@ -39,13 +39,13 @@ _env_path = find_dotenv() or str(Path(__file__).resolve().parent.parent.parent /
 load_dotenv(_env_path, override=True)
 
 import chainlit as cl
+import pandas as pd
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 from chainlit.server import app as chainlit_app
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRoute
 
-import optopsy as op
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
 from optopsy.ui.paths import DB_PATH, STORAGE_DIR
 from optopsy.ui.providers import get_provider_names
@@ -757,44 +757,53 @@ async def on_message(message: cl.Message):
         cl.user_session.set("agent", agent)
         cl.user_session.set("messages", messages)
 
-    # Handle CSV file uploads via drag-and-drop
+    # Handle CSV file uploads via drag-and-drop.
+    # We store the raw file path so the agent can inspect the headers and
+    # call csv_data() with the correct column mapping.
     csv_elements = [
         el
         for el in (message.elements or [])
         if el.name and el.name.lower().endswith(".csv") and el.path
     ]
+    _upload_contexts: list[str] = []
     for el in csv_elements:
         try:
-            assert el.path is not None
-            df = op.csv_data(el.path)
+            if not el.path:
+                continue
+            raw = pd.read_csv(el.path, nrows=5)
             label = el.name
-            agent.datasets[label] = df
-            agent.dataset = df
+            agent.uploaded_files[label] = el.path
 
-            date_range = ""
-            if "quote_date" in df.columns:
-                d_min = df["quote_date"].min().date()
-                d_max = df["quote_date"].max().date()
-                date_range = f"Date range: {d_min} to {d_max}\n"
-
+            headers = list(raw.columns)
+            preview = _df_to_markdown(raw, max_rows=5)
             await cl.Message(
                 content=(
-                    f"Loaded **{label}** — "
-                    f"{len(df):,} rows, {len(df.columns)} columns\n"
-                    f"{date_range}"
-                    f"{_df_to_markdown(df, max_rows=5)}"
+                    f"Received **{label}** — {len(headers)} columns\n"
+                    f"Headers: `{headers}`\n"
+                    f"{preview}\n\n"
+                    f"Inspecting columns to load the dataset..."
                 )
             ).send()
+            _upload_contexts.append(
+                f"[Uploaded CSV: {label} | columns ({len(headers)}): {headers}]"
+            )
         except Exception as e:
-            await cl.Message(content=f"Failed to load **{el.name}**: {e}").send()
+            await cl.Message(content=f"Failed to read **{el.name}**: {e}").send()
 
     # Inject chat settings defaults into user message context so the LLM
     # is aware of the user's preferred parameters.
     chat_settings = cl.user_session.get("chat_settings") or {}
     settings_context = _build_settings_context(chat_settings)
     user_content = message.content
+    if _upload_contexts:
+        user_content = (
+            f"{user_content}\n\n"
+            + "\n".join(_upload_contexts)
+            + "\nPlease inspect the columns and load the CSV with the correct "
+            "column mapping using the appropriate tool."
+        )
     if settings_context:
-        user_content = f"{message.content}\n\n{settings_context}"
+        user_content = f"{user_content}\n\n{settings_context}"
     messages.append({"role": "user", "content": user_content})
 
     # Show tool calls as expandable steps with a loading indicator.

@@ -210,6 +210,7 @@ def execute_tool(
     datasets: dict[str, pd.DataFrame] | None = None,
     results: dict[str, dict] | None = None,
     dataset_fingerprint: str | None = None,
+    uploaded_files: dict[str, str] | None = None,
 ) -> ToolResult:
     """
     Execute a tool call and return a ToolResult.
@@ -261,9 +262,11 @@ def execute_tool(
                 results=results,
             )
 
-    # Inject dataset fingerprint AFTER validation so Pydantic doesn't strip it.
+    # Inject internal metadata AFTER validation so Pydantic doesn't strip it.
     if dataset_fingerprint and tool_name in _CACHEABLE_TOOLS:
         arguments = {**arguments, "_dataset_fingerprint": dataset_fingerprint}
+    if uploaded_files is not None and tool_name == "load_csv_data":
+        arguments = {**arguments, "_uploaded_file_paths": uploaded_files}
 
     # Helper to build a ToolResult that always carries state forward.
     def _result(

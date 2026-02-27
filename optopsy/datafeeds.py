@@ -21,14 +21,14 @@ default_kwargs: Dict[str, Any] = {
     "start_date": None,
     "end_date": None,
     "underlying_symbol": 0,
-    "underlying_price": 1,
-    "option_type": 2,
-    "expiration": 3,
-    "quote_date": 4,
-    "strike": 5,
-    "bid": 6,
-    "ask": 7,
-    "delta": 8,
+    "underlying_price": None,
+    "option_type": 1,
+    "expiration": 2,
+    "quote_date": 3,
+    "strike": 4,
+    "bid": 5,
+    "ask": 6,
+    "delta": 7,
     # Optional Greek columns (set to column index to include)
     "gamma": None,
     "theta": None,
@@ -87,14 +87,14 @@ def csv_data(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     underlying_symbol: int = 0,
-    underlying_price: int = 1,
-    option_type: int = 2,
-    expiration: int = 3,
-    quote_date: int = 4,
-    strike: int = 5,
-    bid: int = 6,
-    ask: int = 7,
-    delta: int = 8,
+    underlying_price: Optional[int] = None,
+    option_type: int = 1,
+    expiration: int = 2,
+    quote_date: int = 3,
+    strike: int = 4,
+    bid: int = 5,
+    ask: int = 6,
+    delta: int = 7,
     gamma: Optional[int] = None,
     theta: Optional[int] = None,
     vega: Optional[int] = None,
@@ -113,7 +113,7 @@ def csv_data(
         start_date: Optional start date of dataset to consider (inclusive)
         end_date: Optional end date of dataset to consider (inclusive)
         underlying_symbol: Column index containing underlying symbol
-        underlying_price: Column index containing underlying stock price
+        underlying_price: Optional column index containing underlying stock price; omit (or pass ``None``) if the CSV does not include this column
         quote_date: Column index containing quote date
         expiration: Column index containing expiration date
         strike: Column index containing strike price
@@ -160,7 +160,6 @@ def csv_data(
     # Required columns
     column_mapping: List[Tuple[Optional[int], str]] = [
         (params["underlying_symbol"], "underlying_symbol"),
-        (params["underlying_price"], "underlying_price"),
         (params["option_type"], "option_type"),
         (params["expiration"], "expiration"),
         (params["quote_date"], "quote_date"),
@@ -170,11 +169,11 @@ def csv_data(
         (params["delta"], "delta"),
     ]
 
-    # Add optional Greek columns if specified
-    for greek in ["gamma", "theta", "vega", "implied_volatility"]:
-        col_idx = params.get(greek)
+    # Add optional underlying_price and Greek columns if specified
+    for col in ["underlying_price", "gamma", "theta", "vega", "implied_volatility"]:
+        col_idx = params.get(col)
         if col_idx is not None:
-            column_mapping.append((int(col_idx), greek))
+            column_mapping.append((int(col_idx), col))
 
     # Add optional liquidity columns if specified
     for col in ["volume", "open_interest"]:

@@ -1,9 +1,13 @@
-"""Data inspection tool handlers: preview_data, describe_data, suggest_strategy_params."""
+"""Data inspection tool handlers: load_csv_data, preview_data, describe_data, suggest_strategy_params."""
 
 import json as _json
+import logging
+import os
 
 import pandas as pd
 
+import optopsy as op
+from optopsy.datafeeds import default_kwargs
 from optopsy.strategies._helpers import (
     _DEFAULT_ATM_DELTA,
     _DEFAULT_DEEP_ITM_DELTA,
@@ -15,6 +19,63 @@ from optopsy.strategies._helpers import (
 from ._executor import _register, _require_dataset
 from ._helpers import _df_summary, _df_to_markdown
 from ._schemas import CALENDAR_STRATEGIES
+
+_log = logging.getLogger(__name__)
+
+# All kwarg keys accepted by csv_data(), derived from default_kwargs to stay DRY.
+_CSV_KWARG_KEYS = tuple(default_kwargs.keys())
+
+
+@_register("load_csv_data")
+def _handle_load_csv_data(arguments, dataset, signals, datasets, results, _result):
+    file_path = arguments.get("file_path")
+    if not file_path:
+        return _result("file_path is required.")
+
+    # Resolve file_path via the uploaded-files registry.  The LLM only sees
+    # opaque labels (filenames), so we map label → real server path here.
+    # When no registry is provided (e.g. direct API use), fall through.
+    uploaded = arguments.get("_uploaded_file_paths")
+    if uploaded is not None:
+        resolved = uploaded.get(file_path)
+        if resolved is None:
+            available = list(uploaded.keys()) if uploaded else []
+            return _result(
+                f"Access denied: '{file_path}' is not a recognized uploaded file. "
+                f"Available: {available}"
+            )
+        file_path = resolved
+
+    # User-facing label: use the original argument (opaque filename when via
+    # upload registry, or basename of the path for direct API use).
+    label = os.path.basename(arguments.get("file_path", file_path))
+
+    # Build kwargs for csv_data() from the validated arguments.
+    csv_kwargs = {}
+    for key in _CSV_KWARG_KEYS:
+        val = arguments.get(key)
+        if val is not None:
+            csv_kwargs[key] = val
+
+    try:
+        df = op.csv_data(file_path, **csv_kwargs)
+    except Exception as e:
+        _log.error("load_csv_data failed for %s: %s", file_path, e)
+        return _result(
+            f"Failed to load CSV '{label}': check column mapping and file format."
+        )
+    updated_datasets = {**datasets, label: df}
+
+    summary = _df_summary(df, label)
+    display = f"{summary}\n\nFirst 5 rows:\n{_df_to_markdown(df.head())}"
+
+    return _result(
+        summary,
+        ds=df,
+        user_display=display,
+        dss=updated_datasets,
+        active_name=label,
+    )
 
 
 @_register("preview_data")

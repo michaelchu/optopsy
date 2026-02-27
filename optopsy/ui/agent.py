@@ -49,8 +49,10 @@ data into memory, filtered by date range, option type, and expiration type.
 - When loading data, always respect the user's intent regarding dates:
   - If the user specifies dates, use them exactly — never widen or extend the range.
   - If the user doesn't mention dates, omit `start_date` and `end_date` to load all available data.
-- Users can also drag-and-drop CSV files directly into the chat to load them. When a CSV is uploaded, \
-it is automatically loaded and set as the active dataset — no tool call needed.
+- Users can drag-and-drop CSV files into the chat. When a CSV is uploaded, its filename and column \
+headers are provided in the message context. Call `load_csv_data` with the filename as `file_path` \
+and the correct column index mapping to load it as the active dataset. Inspect the column headers \
+to determine the right mapping — do NOT assume a fixed layout.
 - Use `preview_data` to show the user what their dataset looks like.
 - Run strategy functions (e.g. `long_calls`, `iron_condor`) to backtest strategies on the loaded data.
 - Use `query_results` to examine, sort, filter, or slice results from previous strategy \
@@ -488,6 +490,9 @@ class OptopsyAgent:
         # Named dataset registry — multiple datasets can be active at once.
         # Keys are ticker symbols or filenames; values are DataFrames.
         self.datasets: dict[str, pd.DataFrame] = {}
+        # Uploaded CSV file paths — keyed by filename, values are local paths.
+        # Stored so the agent can load them later with explicit column kwargs.
+        self.uploaded_files: dict[str, str] = {}
         # Session-scoped strategy run registry — keyed by result key string,
         # values are lightweight scalar summaries (no DataFrames).
         self.results: dict[str, dict] = {}
@@ -696,6 +701,7 @@ class OptopsyAgent:
                         self.datasets,
                         self.results,
                         dataset_fingerprint=self._dataset_fingerprint,
+                        uploaded_files=self.uploaded_files,
                     ),
                 )
                 # Update dataset and recompute fingerprint.  Always
