@@ -628,6 +628,7 @@ class TestIVSurfaceEndToEnd:
 
     def test_iv_tool_without_iv_column_after_preview(self, basic_dataset):
         """IV tools reject dataset without IV column even when threaded."""
+        plotly = pytest.importorskip("plotly")  # noqa: F841
         r1 = execute_tool(
             "preview_data",
             {"rows": 3},
