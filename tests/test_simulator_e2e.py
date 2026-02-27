@@ -36,6 +36,20 @@ def _write_csv(df: pd.DataFrame, tmpdir: str, name: str = "chain.csv") -> str:
     return path
 
 
+# Column indices for CSVs produced by _make_chain (includes underlying_price at col 1)
+_CHAIN_COL_KWARGS = dict(
+    underlying_symbol=0,
+    underlying_price=1,
+    option_type=2,
+    expiration=3,
+    quote_date=4,
+    strike=5,
+    bid=6,
+    ask=7,
+    delta=8,
+)
+
+
 def _make_chain(rows: list[list]) -> pd.DataFrame:
     """Build an option-chain DataFrame from compact row data."""
     cols = [
@@ -135,7 +149,7 @@ def chain_csv():
 @pytest.fixture(scope="module")
 def chain_data(chain_csv):
     """Load the chain CSV into a DataFrame (avoids repeating op.csv_data)."""
-    return op.csv_data(chain_csv, delta=8)
+    return op.csv_data(chain_csv, **_CHAIN_COL_KWARGS)
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +186,7 @@ def losing_csv():
 @pytest.fixture(scope="module")
 def losing_data(losing_csv):
     """Load the losing CSV into a DataFrame."""
-    return op.csv_data(losing_csv, delta=8)
+    return op.csv_data(losing_csv, **_CHAIN_COL_KWARGS)
 
 
 # ---------------------------------------------------------------------------
@@ -587,7 +601,7 @@ class TestEdgeCasesE2E:
         df = pd.DataFrame(columns=cols)
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _write_csv(df, tmpdir)
-            data = op.csv_data(path, delta=8)
+            data = op.csv_data(path, **_CHAIN_COL_KWARGS)
             result = op.simulate(data, op.long_calls)
             assert isinstance(result, SimulationResult)
             assert len(result.trade_log) == 0
@@ -602,7 +616,7 @@ class TestEdgeCasesE2E:
         df = _make_chain(rows)
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _write_csv(df, tmpdir)
-            data = op.csv_data(path, delta=8)
+            data = op.csv_data(path, **_CHAIN_COL_KWARGS)
             result = op.simulate(data, op.long_calls)
             assert isinstance(result, SimulationResult)
             assert len(result.trade_log) == 0
@@ -670,7 +684,7 @@ def drawdown_csv():
 @pytest.fixture(scope="module")
 def drawdown_data(drawdown_csv):
     """Load the drawdown CSV into a DataFrame."""
-    return op.csv_data(drawdown_csv, delta=8)
+    return op.csv_data(drawdown_csv, **_CHAIN_COL_KWARGS)
 
 
 class TestSummaryMetricsE2E:
@@ -798,7 +812,7 @@ def multi_symbol_csv():
 @pytest.fixture(scope="module")
 def multi_symbol_data(multi_symbol_csv):
     """Load the multi-symbol CSV into a DataFrame."""
-    return op.csv_data(multi_symbol_csv, delta=8)
+    return op.csv_data(multi_symbol_csv, **_CHAIN_COL_KWARGS)
 
 
 class TestMultiSymbolE2E:
