@@ -1,7 +1,8 @@
-"""Re-export from optopsy.data._compat for backwards compatibility.
+"""UI compatibility shim mirroring :mod:`optopsy.data._compat`.
 
-The UI shim intentionally keeps the ``optopsy[ui]`` install hint so that
-callers inside the UI package get the correct suggestion.
+This module provides a local ``import_optional_dependency`` helper for the
+UI package, keeping the ``optopsy[ui]`` install hint so that callers inside
+the UI package get the correct suggestion.
 """
 
 from __future__ import annotations
@@ -18,8 +19,13 @@ def import_optional_dependency(name: str) -> types.ModuleType:
     """
     try:
         return importlib.import_module(name)
-    except ImportError:
-        raise ImportError(
-            f"Missing optional dependency '{name}'. "
-            f"Install it with: pip install optopsy[ui]"
-        ) from None
+    except ModuleNotFoundError as exc:
+        # Only treat as missing optional dep if the top-level module is
+        # what's absent; re-raise internal import failures unchanged.
+        top_level_name = name.split(".", 1)[0]
+        if exc.name == top_level_name:
+            raise ImportError(
+                f"Missing optional dependency '{name}'. "
+                f"Install it with: pip install optopsy[ui]"
+            ) from None
+        raise

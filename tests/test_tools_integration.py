@@ -11,7 +11,6 @@ import pytest
 
 pyarrow = pytest.importorskip("pyarrow")  # noqa: F841
 pydantic = pytest.importorskip("pydantic")  # noqa: F841
-plotly = pytest.importorskip("plotly")  # noqa: F841
 
 from optopsy.ui.tools._executor import execute_tool  # noqa: E402
 from optopsy.ui.tools._helpers import ToolResult  # noqa: E402
