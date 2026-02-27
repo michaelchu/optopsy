@@ -424,7 +424,7 @@ class TestIvSignalDataCacheFallback:
         dataset["underlying_price"] = 100.0
         cache = ParquetCache(str(tmp_path))
 
-        with patch("optopsy.ui.tools._helpers._yf_cache", cache) as mock_cache:
+        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
             result = _iv_signal_data(dataset)
 
         assert result is not None
