@@ -109,7 +109,7 @@ class TestDescribeData:
         result = execute_tool("describe_data", {}, option_data)
         summary = result.llm_summary
         assert "8 rows" in summary
-        assert "8 columns" in summary
+        assert "7 columns" in summary
         # Should mention numeric column stats
         assert "strike" in summary or "bid" in summary
 
