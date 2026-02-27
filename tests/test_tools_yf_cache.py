@@ -424,13 +424,13 @@ class TestIvSignalDataCacheFallback:
         dataset["underlying_price"] = 100.0
         cache = ParquetCache(str(tmp_path))
 
-        with patch("optopsy.ui.tools._helpers._yf_cache", cache):
-            result = _iv_signal_data(dataset)
+        with patch.object(cache, "read", wraps=cache.read) as spy_read:
+            with patch("optopsy.ui.tools._helpers._yf_cache", cache):
+                result = _iv_signal_data(dataset)
 
         assert result is not None
         assert "underlying_price" in result.columns
-        # Cache should not have been read since price col was already present
-        # (ParquetCache.read would be a no-op since nothing is written)
+        spy_read.assert_not_called()
 
     def test_returns_none_when_implied_volatility_missing(self, tmp_path):
         """Returns None immediately when implied_volatility is absent."""
