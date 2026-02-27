@@ -767,22 +767,12 @@ class EODHDProvider(DataProvider):
         option_type: str | None,
         expiration_type: str | None,
     ) -> tuple[str, pd.DataFrame | None]:
-        """Pipeline: filter → resolve prices → select columns → summarize."""
+        """Pipeline: filter → select columns → summarize."""
         df, err = self._filter_options(df, symbol, option_type, expiration_type)
         if err:
             return err, None
 
-        df = self._resolve_underlying_prices(df, symbol)
         df = self._select_options_columns(df)
-        df = df.dropna(subset=["underlying_price"])
-
-        if df.empty:
-            return (
-                f"Fetched options for {symbol} from EODHD but could not "
-                "resolve underlying stock prices (yfinance lookup failed). "
-                "Try a different date range or check the ticker symbol.",
-                None,
-            )
 
         summary = (
             f"Loaded {len(df)} options records for {symbol}. "
@@ -826,56 +816,10 @@ class EODHDProvider(DataProvider):
         return df, None
 
     @staticmethod
-    def _resolve_underlying_prices(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-        """Merge underlying close prices from yfinance into the DataFrame."""
-        try:
-            import yfinance as yf
-        except ImportError:
-            _log.warning(
-                "yfinance is not installed; cannot resolve underlying prices for %s",
-                symbol,
-            )
-            df["underlying_price"] = pd.NA
-            return df
-
-        _log.info(
-            "Resolving underlying prices via yfinance for %s (%s rows)",
-            symbol,
-            f"{len(df):,}",
-        )
-        date_min = df["quote_date"].min().date()
-        date_max = df["quote_date"].max().date()
-        try:
-            stock_df = yf.download(
-                symbol,
-                start=str(date_min),
-                end=str(date_max + timedelta(days=1)),
-                progress=False,
-            )
-            if not stock_df.empty:
-                close_col = stock_df["Close"]
-                if isinstance(close_col, pd.DataFrame):
-                    close_col = close_col.iloc[:, 0]
-                price_map = close_col.reset_index()
-                price_map.columns = ["quote_date", "underlying_price"]
-                price_map["quote_date"] = pd.to_datetime(
-                    price_map["quote_date"]
-                ).dt.tz_localize(None)
-                df = df.merge(price_map, on="quote_date", how="left")
-            else:
-                _log.warning("yfinance returned no data for %s", symbol)
-                df["underlying_price"] = pd.NA
-        except Exception as exc:
-            _log.warning("yfinance price lookup failed for %s: %s", symbol, exc)
-            df["underlying_price"] = pd.NA
-        return df
-
-    @staticmethod
     def _select_options_columns(df: pd.DataFrame) -> pd.DataFrame:
         """Keep only the columns needed for optopsy backtesting."""
         keep = [
             "underlying_symbol",
-            "underlying_price",
             "option_type",
             "expiration",
             "quote_date",

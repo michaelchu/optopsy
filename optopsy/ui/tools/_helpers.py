@@ -607,14 +607,14 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     """Extract columns needed for IV rank signals from the options dataset.
 
     Returns the dataset subset with required columns for IV rank computation,
-    or None if the dataset lacks ``implied_volatility``.
+    or None if the dataset lacks ``implied_volatility``, other required columns,
+    or a price column (``close`` or ``underlying_price``) for ATM computation.
     """
     if "implied_volatility" not in dataset.columns:
         return None
     keep = [
         "underlying_symbol",
         "quote_date",
-        "underlying_price",
         "strike",
         "option_type",
         "implied_volatility",
@@ -622,6 +622,16 @@ def _iv_signal_data(dataset: pd.DataFrame) -> pd.DataFrame | None:
     ]
     cols = [c for c in keep if c in dataset.columns]
     if len(cols) < len(keep):
+        return None
+    # A price column is required for ATM strike computation in IV rank signals.
+    # Return None if neither is present so callers get a clear signal.
+    price_col_found = False
+    for price_col in ("close", "underlying_price"):
+        if price_col in dataset.columns and price_col not in cols:
+            cols.append(price_col)
+            price_col_found = True
+            break
+    if not price_col_found:
         return None
     return dataset[cols].copy()
 
@@ -654,9 +664,10 @@ _SIM_PARAM_KEYS = frozenset(
 
 _IV_MISSING_MSG = (
     "IV rank signals require options data with an "
-    "'implied_volatility' column. Fetch data from a provider "
-    "that includes IV (e.g. EODHD), or load a CSV with an "
-    "implied_volatility column."
+    "'implied_volatility' column and a price column "
+    "('close' or 'underlying_price') for ATM computation. "
+    "Fetch data from a provider that includes IV (e.g. EODHD), "
+    "or load a CSV with these columns."
 )
 
 _IV_COLUMN_MISSING_MSG = (

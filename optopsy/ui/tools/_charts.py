@@ -581,13 +581,23 @@ def _handle_iv_term_structure(arguments, dataset, signals, datasets, results, _r
         return _result(qd_err)
     assert df is not None
 
-    df = df.dropna(subset=["implied_volatility", "underlying_price"])
+    # Resolve price column for ATM computation
+    if "close" in df.columns:
+        _price_col = "close"
+    elif "underlying_price" in df.columns:
+        _price_col = "underlying_price"
+    else:
+        return _result(
+            "No price column (close or underlying_price) found for ATM computation."
+        )
+
+    df = df.dropna(subset=["implied_volatility", _price_col])
 
     if df.empty:
         return _result(f"No options with IV data on {quote_date_str}.")
 
-    # Find ATM options: closest strike to underlying_price per (symbol, expiration).
-    df["_abs_otm"] = (df["strike"] - df["underlying_price"]).abs()
+    # Find ATM options: closest strike to price per (symbol, expiration).
+    df["_abs_otm"] = (df["strike"] - df[_price_col]).abs()
     atm_idx = df.groupby(["underlying_symbol", "expiration"])["_abs_otm"].idxmin()
     atm_df = df.loc[atm_idx].copy()
 
