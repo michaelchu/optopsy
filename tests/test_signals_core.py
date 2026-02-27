@@ -30,10 +30,10 @@ def multi_symbol_price_data():
     rows = []
     for i, d in enumerate(dates):
         rows.append(
-            {"underlying_symbol": "SPX", "quote_date": d, "underlying_price": 100.0 - i}
+            {"underlying_symbol": "SPX", "quote_date": d, "close": 100.0 - i}
         )
         rows.append(
-            {"underlying_symbol": "NDX", "quote_date": d, "underlying_price": 100.0 + i}
+            {"underlying_symbol": "NDX", "quote_date": d, "close": 100.0 + i}
         )
     return pd.DataFrame(rows)
 
@@ -42,7 +42,7 @@ def _make_data(prices, symbol="SPX"):
     """Helper: build a minimal price DataFrame from a list of prices."""
     dates = pd.date_range("2018-01-01", periods=len(prices), freq="B")
     return pd.DataFrame(
-        {"underlying_symbol": symbol, "quote_date": dates, "underlying_price": prices}
+        {"underlying_symbol": symbol, "quote_date": dates, "close": prices}
     )
 
 
@@ -351,11 +351,34 @@ class TestSignalEdgeCases:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": [100.0, 101.0],
+                "close": [100.0, 101.0],
             }
         )
         result = sma_below(period=20)(data)
         assert not result.any()
+
+    def test_ta_signal_no_price_column_returns_all_false(self):
+        """TA signals should return all-False (not raise) when no close column exists.
+
+        When the DataFrame has neither ``close`` nor ``underlying_price``,
+        ``_get_close`` returns None and every TA signal skeleton falls back
+        to an all-False series rather than raising KeyError.
+        """
+        dates = pd.date_range("2018-01-01", periods=5, freq="B")
+        data = pd.DataFrame(
+            {
+                "underlying_symbol": "SPX",
+                "quote_date": dates,
+                # No 'close' or 'underlying_price' column
+                "implied_volatility": [0.2, 0.21, 0.22, 0.23, 0.24],
+            }
+        )
+        from optopsy.signals import rsi_below, macd_cross_above
+
+        result_rsi = rsi_below(period=14, threshold=30)(data)
+        result_macd = macd_cross_above()(data)
+        assert not result_rsi.any(), "rsi_below should return all-False with no price column"
+        assert not result_macd.any(), "macd_cross_above should return all-False with no price column"
 
     def test_apply_signal_normalizes_underlying_price_to_close(self):
         """apply_signal should rename underlying_price to close (one-way normalization).

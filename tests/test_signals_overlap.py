@@ -27,7 +27,7 @@ class TestSMASignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": prices,
+                "close": prices,
             }
         )
         signal = sma_below(period=10)
@@ -44,7 +44,7 @@ class TestSMASignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": prices,
+                "close": prices,
             }
         )
         signal = sma_above(period=10)

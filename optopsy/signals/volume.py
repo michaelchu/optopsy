@@ -22,6 +22,8 @@ def mfi_above(period: int = 14, threshold: float = 80) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -35,6 +37,8 @@ def mfi_below(period: int = 14, threshold: float = 20) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -55,6 +59,8 @@ def _obv_sma_lines(sma_period: int):
         group: pd.DataFrame,
     ) -> tuple["pd.Series | None", "pd.Series | None"]:
         close = _get_close(group)
+        if close is None:
+            return None, None
         volume = _get_volume(group)
         if volume is None:
             return None, None
@@ -94,6 +100,8 @@ def cmf_above(period: int = 20, threshold: float = 0.05) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -107,6 +115,8 @@ def cmf_below(period: int = 20, threshold: float = -0.05) -> SignalFunc:
 
     def _indicator(group: pd.DataFrame) -> "pd.Series | None":
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None
         volume = _get_volume(group)
         if volume is None:
             return None
@@ -127,6 +137,8 @@ def _ad_sma_lines(sma_period: int):
         group: pd.DataFrame,
     ) -> tuple["pd.Series | None", "pd.Series | None"]:
         high, low, close = _get_high(group), _get_low(group), _get_close(group)
+        if close is None:
+            return None, None
         volume = _get_volume(group)
         if volume is None:
             return None, None

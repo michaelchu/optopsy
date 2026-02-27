@@ -25,7 +25,7 @@ class TestADXSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 1.0 for c in close],
                 "low": [c - 1.0 for c in close],
             }
@@ -48,7 +48,7 @@ class TestPSARSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 1.0 for c in close],
                 "low": [c - 1.0 for c in close],
             }

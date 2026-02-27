@@ -640,7 +640,7 @@ def price_data():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": [
+            "close": [
                 # Declining trend then recovering
                 100,
                 99,
@@ -686,7 +686,7 @@ def ohlcv_60bars():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": close,
+            "close": close,
             "high": [c + 2.0 for c in close],
             "low": [c - 2.0 for c in close],
         }
@@ -702,7 +702,7 @@ def price_data_100bars():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": prices,
+            "close": prices,
         }
     )
 
@@ -716,7 +716,7 @@ def ohlcv_100bars():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": close,
+            "close": close,
             "high": [c + 2.0 for c in close],
             "low": [c - 2.0 for c in close],
         }
@@ -732,7 +732,7 @@ def ohlcv_with_volume_60bars():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": close,
+            "close": close,
             "high": [c + 2.0 for c in close],
             "low": [c - 2.0 for c in close],
             "volume": [1_000_000 + i * 5000 for i in range(60)],
@@ -749,7 +749,7 @@ def ohlcv_with_volume_100bars():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": close,
+            "close": close,
             "high": [c + 2.0 for c in close],
             "low": [c - 2.0 for c in close],
             "volume": [1_000_000 + i * 3000 for i in range(100)],
@@ -766,6 +766,6 @@ def cross_price_data():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": prices,
+            "close": prices,
         }
     )

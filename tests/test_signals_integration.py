@@ -647,7 +647,7 @@ class TestApplySignal:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": prices,
+                "close": prices,
             }
         )
         result = atr_above(period=14, multiplier=0.0)(data)

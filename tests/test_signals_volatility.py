@@ -31,7 +31,7 @@ def bb_spike_data():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": prices,
+            "close": prices,
         }
     )
 
@@ -45,7 +45,7 @@ def volatile_price_data():
         {
             "underlying_symbol": "SPX",
             "quote_date": dates,
-            "underlying_price": prices,
+            "close": prices,
         }
     )
 
@@ -116,7 +116,7 @@ class TestKeltnerChannelSignals:
             {
                 "underlying_symbol": "SPX",
                 "quote_date": dates,
-                "underlying_price": close,
+                "close": close,
                 "high": [c + 1.0 for c in close],
                 "low": [c - 1.0 for c in close],
             }
