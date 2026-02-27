@@ -29,12 +29,8 @@ def multi_symbol_price_data():
     dates = pd.date_range("2018-01-01", periods=20, freq="B")
     rows = []
     for i, d in enumerate(dates):
-        rows.append(
-            {"underlying_symbol": "SPX", "quote_date": d, "close": 100.0 - i}
-        )
-        rows.append(
-            {"underlying_symbol": "NDX", "quote_date": d, "close": 100.0 + i}
-        )
+        rows.append({"underlying_symbol": "SPX", "quote_date": d, "close": 100.0 - i})
+        rows.append({"underlying_symbol": "NDX", "quote_date": d, "close": 100.0 + i})
     return pd.DataFrame(rows)
 
 
@@ -373,12 +369,16 @@ class TestSignalEdgeCases:
                 "implied_volatility": [0.2, 0.21, 0.22, 0.23, 0.24],
             }
         )
-        from optopsy.signals import rsi_below, macd_cross_above
+        from optopsy.signals import macd_cross_above, rsi_below
 
         result_rsi = rsi_below(period=14, threshold=30)(data)
         result_macd = macd_cross_above()(data)
-        assert not result_rsi.any(), "rsi_below should return all-False with no price column"
-        assert not result_macd.any(), "macd_cross_above should return all-False with no price column"
+        assert not result_rsi.any(), (
+            "rsi_below should return all-False with no price column"
+        )
+        assert not result_macd.any(), (
+            "macd_cross_above should return all-False with no price column"
+        )
 
     def test_apply_signal_normalizes_underlying_price_to_close(self):
         """apply_signal should rename underlying_price to close (one-way normalization).
