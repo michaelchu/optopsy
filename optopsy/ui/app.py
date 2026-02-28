@@ -43,7 +43,7 @@ import pandas as pd
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 from chainlit.server import app as chainlit_app
 from fastapi import HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 
 from optopsy.ui.agent import OptopsyAgent, _sanitize_tool_messages
@@ -244,7 +244,13 @@ def _init_db_sync() -> None:
 
     Uses SQLAlchemy so the same DDL works for both SQLite and PostgreSQL.
     The sync Postgres path requires ``psycopg2`` (included in the ``ui`` extra).
+
+    Retries up to 5 times with exponential backoff so the app survives
+    transient database unavailability (e.g. Railway starting the DB service
+    concurrently with the app).
     """
+    import time
+
     from sqlalchemy import create_engine, text
     from sqlalchemy.exc import OperationalError, ProgrammingError
 
@@ -254,24 +260,47 @@ def _init_db_sync() -> None:
     if sync_url.startswith("sqlite"):
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(sync_url)
-    try:
-        with engine.begin() as conn:
-            for stmt in _DB_SCHEMA_STATEMENTS:
-                conn.execute(text(stmt))
-            # Add columns introduced in newer Chainlit versions.
-            for col, definition in [
-                ("defaultOpen", "INTEGER DEFAULT 0"),
-                ("waitForAnswer", "INTEGER"),
-            ]:
-                try:
-                    conn.execute(
-                        text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
-                    )
-                except (OperationalError, ProgrammingError):
-                    pass  # column already exists
-    finally:
-        engine.dispose()
+    _log_init = logging.getLogger(__name__)
+    max_retries = 5
+    for attempt in range(max_retries):
+        engine = create_engine(sync_url)
+        try:
+            with engine.begin() as conn:
+                for stmt in _DB_SCHEMA_STATEMENTS:
+                    conn.execute(text(stmt))
+                # Add columns introduced in newer Chainlit versions.
+                for col, definition in [
+                    ("defaultOpen", "INTEGER DEFAULT 0"),
+                    ("waitForAnswer", "INTEGER"),
+                ]:
+                    try:
+                        conn.execute(
+                            text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
+                        )
+                    except (OperationalError, ProgrammingError):
+                        pass  # column already exists
+            return  # success
+        except Exception:
+            engine.dispose()
+            if attempt < max_retries - 1:
+                delay = 2 ** (attempt + 1)
+                _log_init.warning(
+                    "DB init attempt %d/%d failed, retrying in %ds…",
+                    attempt + 1,
+                    max_retries,
+                    delay,
+                    exc_info=True,
+                )
+                time.sleep(delay)
+            else:
+                _log_init.error(
+                    "DB init failed after %d attempts; "
+                    "app will start but persistence may be unavailable",
+                    max_retries,
+                    exc_info=True,
+                )
+        finally:
+            engine.dispose()
 
 
 _init_db_sync()
@@ -350,6 +379,15 @@ _insert_idx = next(
     len(chainlit_app.routes),
 )
 chainlit_app.routes.insert(_insert_idx, _storage_route)
+
+
+# --- Health check endpoint for Railway / container orchestrators -----------
+async def _health():
+    return JSONResponse({"status": "ok"})
+
+
+_health_route = APIRoute(path="/health", endpoint=_health, methods=["GET"])
+chainlit_app.routes.insert(_insert_idx, _health_route)
 
 
 @cl.data_layer
