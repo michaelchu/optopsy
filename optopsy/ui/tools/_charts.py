@@ -11,6 +11,7 @@ from ._helpers import (
     _IV_COLUMN_MISSING_MSG,
     _YF_CACHE_CATEGORY,
     _filter_by_quote_date,
+    _resolve_result_key,
     _select_results,
     _yf_cache,
     resolve_price_column,
@@ -69,14 +70,17 @@ def _resolve_ds_result(arguments, _dataset, _datasets, results, _signals):
         if not results:
             return None, "", "No strategy results available. Run a strategy first."
         result_key = list(results.keys())[-1]
-    entry = results.get(result_key)
-    if entry is None:
+    canonical = _resolve_result_key(results, result_key)
+    if canonical is None:
+        available = [entry.get("display_key", k) for k, entry in results.items()]
         return (
             None,
             result_key,
-            f"Result '{result_key}' not found. Available: {list(results.keys())}",
+            f"Result '{result_key}' not found. Available: {available}",
         )
-    return pd.DataFrame([entry]), result_key, None
+    entry = results[canonical]
+    display_label = entry.get("display_key") or canonical
+    return pd.DataFrame([entry]), display_label, None
 
 
 def _resolve_ds_results(arguments, _dataset, _datasets, results, _signals):
@@ -89,7 +93,10 @@ def _resolve_ds_results(arguments, _dataset, _datasets, results, _signals):
     strat_entries = {k: v for k, v in selected.items() if v.get("type") != "simulation"}
     if not strat_entries:
         return None, "results", "No strategy results found (only simulations)."
-    rows = [{**entry, "result_key": key} for key, entry in strat_entries.items()]
+    rows = [
+        {**entry, "result_key": entry.get("display_key") or key}
+        for key, entry in strat_entries.items()
+    ]
     return pd.DataFrame(rows), "results", None
 
 
@@ -100,13 +107,19 @@ def _resolve_ds_simulation(arguments, _dataset, _datasets, results, _signals):
         if not sim_entries:
             return None, "", "No simulations run yet. Use simulate first."
         sim_key = sim_entries[-1]
-    entry = results.get(sim_key, {})
+    canonical = _resolve_result_key(results, sim_key)
+    entry = results.get(canonical, {}) if canonical else {}
+    display_label = entry.get("display_key") or sim_key
     cache_key = entry.get("_cache_key")
     store = ResultStore()
     trade_log = store.read(cache_key) if cache_key else None
     if trade_log is None:
-        return None, sim_key, f"Simulation '{sim_key}' has no trade log data."
-    return trade_log, sim_key, None
+        return (
+            None,
+            display_label,
+            f"Simulation '{display_label}' has no trade log data.",
+        )
+    return trade_log, display_label, None
 
 
 def _resolve_ds_signal(arguments, _dataset, _datasets, _results, signals):

@@ -10,11 +10,12 @@ from ._helpers import (
     _build_strat_kwargs,
     _cached_run,
     _df_to_markdown,
-    _make_result_key,
+    _make_display_key,
     _make_result_summary,
     _pop_internal_keys,
     _resolve_signals_for_strategy,
     _run_one_strategy,
+    _session_result_key,
     _strategy_llm_summary,
     _validate_strategy_and_dataset,
     _with_cache_key,
@@ -45,6 +46,7 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
         return _result(sig_err)
     strat_kwargs.update(sig_update)
 
+    display_key = _make_display_key(strategy_name, arguments)
     store = ResultStore()
     result_df, cache_key, run_err = _cached_run(
         store,
@@ -55,7 +57,7 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
         metadata={
             "type": "strategy",
             "strategy": strategy_name,
-            "display_key": _make_result_key(strategy_name, arguments),
+            "display_key": display_key,
             "params": {
                 k: v for k, v in strat_kwargs.items() if not isinstance(v, pd.DataFrame)
             },
@@ -74,11 +76,17 @@ def _handle_run_strategy(arguments, dataset, signals, datasets, results, _result
     table = _df_to_markdown(result_df)
     display = f"**{strategy_name}** — {len(result_df)} {mode}\n\n{table}"
     llm_summary = _strategy_llm_summary(result_df, strategy_name, mode)
-    result_key = _make_result_key(strategy_name, arguments)
-    summary = _make_result_summary(strategy_name, result_df, arguments)
+    session_key = _session_result_key(cache_key, display_key)
+    summary = _make_result_summary(
+        strategy_name,
+        result_df,
+        arguments,
+        display_key=display_key,
+        dataset_fingerprint=ds_fp,
+    )
     updated_results = {
         **results,
-        result_key: _with_cache_key(summary, cache_key),
+        session_key: _with_cache_key(summary, cache_key),
     }
     return _result(
         llm_summary, user_display=display, res=updated_results, result_df=result_df
@@ -131,6 +139,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             "slippage": slippage,
         }
 
+        combo_display_key = _make_display_key(strat, combo_args)
         result_df, cache_key, combo_err = _cached_run(
             store,
             strat,
@@ -142,7 +151,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             metadata={
                 "type": "strategy",
                 "strategy": strat,
-                "display_key": _make_result_key(strat, combo_args),
+                "display_key": combo_display_key,
                 "params": combo_args,
             },
         )
@@ -166,7 +175,13 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
             )
             continue
 
-        summary = _make_result_summary(strat, result_df, combo_args)
+        summary = _make_result_summary(
+            strat,
+            result_df,
+            combo_args,
+            display_key=combo_display_key,
+            dataset_fingerprint=ds_fp,
+        )
         rows.append(
             {
                 "strategy": strat,
@@ -179,7 +194,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
                 "profit_factor": summary["profit_factor"],
             }
         )
-        key = _make_result_key(strat, combo_args)
+        key = _session_result_key(cache_key, combo_display_key)
         scan_results[key] = _with_cache_key(
             {**summary, "source": "scan_strategies"}, cache_key
         )

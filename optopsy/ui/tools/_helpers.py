@@ -271,10 +271,13 @@ class ToolResult:
     can be active simultaneously (keyed by label, e.g. ticker or filename).
     ``active_dataset_name`` is the label of the dataset that was just loaded
     or selected; None means no change to the active selection.
-    ``results`` is the session-scoped registry of strategy runs (keyed by a
-    string like ``"short_puts:dte=45,exit=0,slip=mid"``), carrying
-    lightweight scalar summaries across tool calls so the agent can recall
-    what it has already run without re-executing.
+    ``results`` is the session-scoped registry of strategy runs keyed by the
+    SHA-256 hash of all parameters + dataset fingerprint (ensuring unique,
+    collision-free entries).  Each entry contains a ``display_key`` field
+    with a human-readable label (e.g. ``"short_puts:dte=45,exit=0,slip=mid"``)
+    for display and fallback lookup.  Entries carry lightweight scalar
+    summaries so the agent can recall what it has already run without
+    re-executing.
     """
 
     __slots__ = (
@@ -495,30 +498,54 @@ def _with_cache_key(summary: dict, cache_key: str | None) -> dict:
     return summary
 
 
+def _resolve_result_key(
+    results: dict[str, dict],
+    key: str,
+) -> str | None:
+    """Resolve a result key, trying direct lookup then display_key fallback.
+
+    Returns the canonical dict key if found, or ``None``.
+    """
+    if key in results:
+        return key
+    # Fallback: search by display_key field
+    for k, entry in results.items():
+        if entry.get("display_key") == key:
+            return k
+    return None
+
+
 def _select_results(
     results: dict[str, dict],
     result_keys: list[str] | None,
 ) -> tuple[dict[str, dict] | None, str | None]:
-    """Select and validate results by key.
+    """Select and validate results by key (supports display_key fallback).
 
     Returns ``(selected, error_msg)``.  When ``error_msg`` is not None,
     the caller should surface it to the user.
     """
     if result_keys:
-        missing = [k for k in result_keys if k not in results]
+        resolved = {}
+        missing = []
+        for k in result_keys:
+            canonical = _resolve_result_key(results, k)
+            if canonical is None:
+                missing.append(k)
+            else:
+                resolved[canonical] = results[canonical]
         if missing:
-            return None, (
-                f"Result key(s) not found: {missing}. Available: {list(results.keys())}"
-            )
-        return {k: results[k] for k in result_keys}, None
+            available = [entry.get("display_key", k) for k, entry in results.items()]
+            return None, (f"Result key(s) not found: {missing}. Available: {available}")
+        return resolved, None
     return dict(results), None
 
 
-def _make_result_key(strategy_name: str, arguments: dict) -> str:
-    """Stable, human-readable key for a strategy run (used as results dict key).
+def _make_display_key(strategy_name: str, arguments: dict) -> str:
+    """Human-readable label for a strategy run.
 
-    Encodes the core parameters that meaningfully distinguish runs. Omits
-    signal params and dataset_name to keep keys short and scannable.
+    Encodes the core parameters that meaningfully distinguish runs. Used
+    for display and as a fallback lookup key — not as the canonical
+    session results dict key (which is the SHA-256 hash).
     """
     dte = arguments.get("max_entry_dte", 90)
     exit_dte = arguments.get("exit_dte", 0)
@@ -531,10 +558,27 @@ def _make_result_key(strategy_name: str, arguments: dict) -> str:
     return base
 
 
+# Keep backward-compatible alias for callers that haven't been updated yet.
+_make_result_key = _make_display_key
+
+
+def _session_result_key(cache_key: str | None, display_key: str) -> str:
+    """Return the canonical key for the session results dict.
+
+    Uses the SHA-256 cache key when available (encodes ALL parameters +
+    dataset fingerprint), falling back to the human-readable display key
+    when no dataset fingerprint was available to compute a hash.
+    """
+    return cache_key if cache_key else display_key
+
+
 def _make_result_summary(
     strategy_name: str,
     result_df: pd.DataFrame,
     arguments: dict,
+    *,
+    display_key: str = "",
+    dataset_fingerprint: str | None = None,
 ) -> dict:
     """Build a lightweight scalar summary stored in the results registry.
 
@@ -550,6 +594,8 @@ def _make_result_summary(
         "exit_dte": arguments.get("exit_dte", 0),
         "slippage": arguments.get("slippage", "mid"),
         "dataset": arguments.get("dataset_name", "default"),
+        "display_key": display_key,
+        "dataset_fingerprint": dataset_fingerprint,
     }
     if "pct_change" in result_df.columns:
         pct = result_df["pct_change"].dropna()

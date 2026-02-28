@@ -1040,6 +1040,8 @@ class StrategyResultSummary(BaseModel):
     exit_dte: int = 0
     slippage: str = "mid"
     dataset: str = "default"
+    display_key: str = ""
+    dataset_fingerprint: str | None = None
     count: int = 0
     mean_return: float | None = None
     std: float | None = None
@@ -1050,6 +1052,8 @@ class StrategyResultSummary(BaseModel):
 class SimulationResultEntry(BaseModel):
     type: Literal["simulation"] = "simulation"
     strategy: str
+    display_key: str = ""
+    dataset_fingerprint: str | None = None
     summary: dict[str, Any]
 
 

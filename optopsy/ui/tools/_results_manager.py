@@ -6,7 +6,7 @@ from optopsy.data.providers.cache import get_store
 
 from ..providers.result_store import ResultStore
 from ._executor import _fmt_pf, _register
-from ._helpers import _df_to_markdown, _select_results
+from ._helpers import _df_to_markdown, _resolve_result_key, _select_results
 
 
 @_register("inspect_cache")
@@ -122,11 +122,12 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
     # Build comparison rows from both strategy and simulation results
     rows = []
     for key, entry in selected.items():
+        label = entry.get("display_key") or key
         is_sim = entry.get("type") == "simulation"
         if is_sim:
             s = entry.get("summary", {})
             row = {
-                "label": key,
+                "label": label,
                 "strategy": entry.get("strategy", "?"),
                 "type": "simulation",
                 "count": s.get("total_trades", 0),
@@ -150,7 +151,7 @@ def _handle_compare_results(arguments, dataset, signals, datasets, results, _res
                 sharpe = round(float(pct_mean / pct_std), 4)
 
             row = {
-                "label": key,
+                "label": label,
                 "strategy": entry.get("strategy", "?"),
                 "type": "backtest",
                 "count": count,
@@ -352,6 +353,7 @@ def _handle_list_results(arguments, dataset, signals, datasets, results, _result
         .reset_index(drop=True)
     )
     col_order = [
+        "display_key",
         "strategy",
         "max_entry_dte",
         "exit_dte",
@@ -418,8 +420,9 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
 
         lines = [f"Session has {len(results)} result(s):"]
         for key, entry in results.items():
+            display_label = entry.get("display_key") or key
             rtype = entry.get("type", "strategy")
-            parts = [f"  {key} ({rtype})"]
+            parts = [f"  {display_label} ({rtype})"]
             if rtype == "simulation":
                 s = entry.get("summary", {})
                 if s:
@@ -438,8 +441,9 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
         return _result("\n".join(lines))
 
     # Query mode — result_key specified
-    # Look up _cache_key from session results
-    entry = results.get(result_key)
+    # Resolve by direct key or display_key fallback
+    canonical = _resolve_result_key(results, result_key)
+    entry = results.get(canonical) if canonical else None
     cache_key = entry.get("_cache_key") if entry else None
 
     if not cache_key:
@@ -450,7 +454,11 @@ def _handle_query_results(arguments, dataset, signals, datasets, results, _resul
                 break
 
     if not cache_key:
-        available = list(results.keys()) if results else []
+        available = (
+            [entry.get("display_key", k) for k, entry in results.items()]
+            if results
+            else []
+        )
         return _result(
             f"Result key '{result_key}' not found. "
             f"Available: {available or 'none — run a strategy first'}"
@@ -597,7 +605,7 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             pf = entry.get("profit_factor")
             bt_rows.append(
                 {
-                    "key": key,
+                    "key": entry.get("display_key") or key,
                     "strategy": entry.get("strategy", "?"),
                     "max_entry_dte": entry.get("max_entry_dte", "?"),
                     "exit_dte": entry.get("exit_dte", "?"),
@@ -661,6 +669,7 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
         sim_lines_llm: list[str] = []
         sim_lines_display: list[str] = []
         for key, entry in sim_results.items():
+            display_label = entry.get("display_key") or key
             s = entry.get("summary", {})
             total_trades = s.get("total_trades")
             total_return = s.get("total_return")
@@ -671,13 +680,13 @@ def _handle_summarize_session(arguments, dataset, signals, datasets, results, _r
             wr_str = f"{win_rate:.1%}" if win_rate is not None else "?"
             pf_str = _fmt_pf(profit_factor) if profit_factor is not None else "?"
             sim_lines_llm.append(
-                f"  {key}: strategy={entry.get('strategy', '?')}, "
+                f"  {display_label}: strategy={entry.get('strategy', '?')}, "
                 f"trades={trades_str}, "
                 f"return={return_str}, "
                 f"win_rate={wr_str}"
             )
             sim_lines_display.append(
-                f"- **{key}**: strategy={entry.get('strategy', '?')}, "
+                f"- **{display_label}**: strategy={entry.get('strategy', '?')}, "
                 f"trades={trades_str}, "
                 f"total return={return_str}, "
                 f"win rate={wr_str}, "
