@@ -16,6 +16,7 @@ from ._helpers import (
     _df_to_markdown,
     _empty_signal_suggestion,
     _fetch_stock_data_for_signals,
+    _fetch_stock_data_for_symbol,
     _intersect_with_options_dates,
     _iv_signal_data,
     _signal_slot_summary,
@@ -26,12 +27,33 @@ from ._schemas import (
     _DATE_ONLY_SIGNALS,
     _IV_SIGNALS,
     _OHLC_SIGNALS,
+    _OPEN_SIGNALS,
     _VOLUME_SIGNALS,
     SIGNAL_NAMES,
     SIGNAL_REGISTRY,
 )
 
 _log = logging.getLogger(__name__)
+
+
+def _remap_cross_symbol_dates(
+    signal_dates_df: pd.DataFrame,
+    dataset: pd.DataFrame,
+) -> pd.DataFrame:
+    """Replace the signal symbol with the options dataset symbol(s).
+
+    When ``signal_symbol`` is used, the signal fires on a different ticker
+    (e.g. VIX) than the options dataset (e.g. SPX).  This function copies
+    the signal dates once per options-dataset symbol so that the subsequent
+    intersection matches correctly.
+    """
+    options_symbols = dataset["underlying_symbol"].unique().tolist()
+    frames = []
+    for opt_sym in options_symbols:
+        mapped = signal_dates_df.copy()
+        mapped["underlying_symbol"] = opt_sym
+        frames.append(mapped)
+    return pd.concat(frames, ignore_index=True)
 
 
 @_register("build_signal")
@@ -83,13 +105,20 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
     from ._helpers import _IV_MISSING_MSG
 
     signal_data = None
+    signal_symbol = arguments.get("signal_symbol")
+    if signal_symbol:
+        signal_symbol = signal_symbol.strip()
+
     if has_iv_signal:
         iv_data = _iv_signal_data(dataset)
         if iv_data is None:
             return _result(_IV_MISSING_MSG)
         signal_data = iv_data
     elif needs_stock:
-        signal_data = _fetch_stock_data_for_signals(dataset)
+        if signal_symbol:
+            signal_data = _fetch_stock_data_for_symbol(signal_symbol, dataset)
+        else:
+            signal_data = _fetch_stock_data_for_signals(dataset)
         if signal_data is None:
             return _result(
                 "TA signals require stock price data but yfinance is not "
@@ -119,6 +148,17 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
                 f"OHLC signals ({', '.join(ohlc_names)}) require "
                 f"'high', 'low', and 'close' columns in the stock data, "
                 f"but {', '.join(missing_ohlc)} were not found. "
+                f"Ensure the stock data source provides OHLCV information.",
+            )
+        # Validate that gap signals have access to an open column.
+        has_open_signal = any(s.get("name") in _OPEN_SIGNALS for s in signal_specs)
+        if has_open_signal and "open" not in signal_data.columns:
+            open_names = [
+                s.get("name") for s in signal_specs if s.get("name") in _OPEN_SIGNALS
+            ]
+            return _result(
+                f"Gap signals ({', '.join(open_names)}) require an 'open' "
+                f"column in the stock data, but it was not found. "
                 f"Ensure the stock data source provides OHLCV information.",
             )
 
@@ -160,6 +200,14 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
 
     # Compute valid dates, intersected with actual options dates.
     raw_signal_dates = signal_dates(signal_data, combined)
+
+    # Cross-symbol: remap signal symbol to options dataset symbol(s).
+    # Only applies when we actually fetched data for signal_symbol (i.e.
+    # needs_stock was true).  IV and date-only signals already use the
+    # options dataset's symbols, so remapping would duplicate rows.
+    if signal_symbol and needs_stock and not raw_signal_dates.empty:
+        raw_signal_dates = _remap_cross_symbol_dates(raw_signal_dates, dataset)
+
     valid_dates = _intersect_with_options_dates(raw_signal_dates, dataset)
 
     # Store in signals dict
@@ -240,8 +288,14 @@ def _handle_build_custom_signal(
     assert active_ds is not None
     dataset = active_ds
 
-    # Fetch OHLCV data for all symbols in the dataset
-    signal_data = _fetch_stock_data_for_signals(dataset)
+    # Fetch OHLCV data for signal computation
+    signal_symbol = arguments.get("signal_symbol")
+    if signal_symbol:
+        signal_symbol = signal_symbol.strip()
+    if signal_symbol:
+        signal_data = _fetch_stock_data_for_symbol(signal_symbol, dataset)
+    else:
+        signal_data = _fetch_stock_data_for_signals(dataset)
     if signal_data is None:
         return _result(
             "Custom signals require stock price data but yfinance is not "
@@ -320,6 +374,12 @@ def _handle_build_custom_signal(
         combined = pd.DataFrame(columns=["underlying_symbol", "quote_date"])
     else:
         combined = pd.concat(flagged_frames, ignore_index=True)
+
+    # Cross-symbol: remap signal symbol to options dataset symbol(s).
+    # build_custom_signal always fetches stock data, so signal_symbol
+    # always means the data came from a different ticker.
+    if signal_symbol and not combined.empty:
+        combined = _remap_cross_symbol_dates(combined, dataset)
 
     # Intersect with options dates
     valid_dates = _intersect_with_options_dates(combined, dataset)

@@ -51,6 +51,54 @@ _log = logging.getLogger(__name__)
 MAX_ROWS = 50
 
 
+_STOCK_COLS = [
+    "underlying_symbol",
+    "quote_date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+]
+
+
+def _fetch_single_symbol_stock(
+    symbol: str,
+    padded_start: "date",
+    date_max: "date",
+) -> pd.DataFrame | None:
+    """Fetch and slice OHLCV data for one symbol.
+
+    Reads from (or populates) the yfinance parquet cache, then slices to
+    ``[padded_start, date_max]``.  Returns a DataFrame with available
+    columns from ``_STOCK_COLS`` (at minimum ``underlying_symbol``,
+    ``quote_date``, ``close``), or ``None`` on failure.
+    """
+    try:
+        cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
+        cached = _yf_fetch_and_cache(symbol, cached, date_max)
+
+        if cached is None or cached.empty:
+            return None
+
+        result = cached[
+            (pd.to_datetime(cached["date"]).dt.date >= padded_start)
+            & (pd.to_datetime(cached["date"]).dt.date <= date_max)
+        ].rename(columns={"date": "quote_date"})
+        if result.empty:
+            return None
+        # Select only columns that are actually present — yfinance may
+        # omit optional columns (open, high, low, volume) for some
+        # instruments.  Callers validate specific column requirements.
+        available = [c for c in _STOCK_COLS if c in result.columns]
+        if "close" not in result.columns:
+            return None
+        return result[available]
+    except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
+        _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        return None
+
+
 def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     """Fetch OHLCV stock data via yfinance for signal computation.
 
@@ -79,43 +127,43 @@ def _fetch_stock_data_for_signals(dataset: pd.DataFrame) -> pd.DataFrame | None:
     symbols = dataset["underlying_symbol"].unique().tolist()
     date_min = pd.to_datetime(dataset["quote_date"].min()).date()
     date_max = pd.to_datetime(dataset["quote_date"].max()).date()
-    # Pad start by ~250 trading days for indicator warmup
     padded_start = date_min - timedelta(days=365)
 
     frames = []
     for symbol in symbols:
-        try:
-            cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
-            cached = _yf_fetch_and_cache(symbol, cached, date_max)
-
-            if cached is None or cached.empty:
-                continue
-
-            # Phase 3: slice to [padded_start, date_max], rename date → quote_date
-            result = cached[
-                (pd.to_datetime(cached["date"]).dt.date >= padded_start)
-                & (pd.to_datetime(cached["date"]).dt.date <= date_max)
-            ].rename(columns={"date": "quote_date"})
-            if not result.empty:
-                frames.append(
-                    result[
-                        [
-                            "underlying_symbol",
-                            "quote_date",
-                            "open",
-                            "high",
-                            "low",
-                            "close",
-                            "volume",
-                        ]
-                    ]
-                )
-        except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
-            _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        result = _fetch_single_symbol_stock(symbol, padded_start, date_max)
+        if result is not None:
+            frames.append(result)
 
     if not frames:
         return None
     return pd.concat(frames, ignore_index=True)
+
+
+def _fetch_stock_data_for_symbol(
+    symbol: str, dataset: pd.DataFrame
+) -> pd.DataFrame | None:
+    """Fetch OHLCV stock data for a specific symbol (cross-symbol signals).
+
+    Like ``_fetch_stock_data_for_signals`` but fetches data for a single
+    specified symbol instead of the symbols in the options dataset.
+    The date range is still derived from the options dataset.
+    """
+    if dataset.empty:
+        return None
+
+    try:
+        import yfinance as yf  # noqa: F401 — validates availability
+    except ImportError:
+        _log.warning("yfinance not installed — cannot fetch stock data for TA signals")
+        return None
+
+    symbol = symbol.upper()
+    date_min = pd.to_datetime(dataset["quote_date"].min()).date()
+    date_max = pd.to_datetime(dataset["quote_date"].max()).date()
+    padded_start = date_min - timedelta(days=365)
+
+    return _fetch_single_symbol_stock(symbol, padded_start, date_max)
 
 
 def _intersect_with_options_dates(

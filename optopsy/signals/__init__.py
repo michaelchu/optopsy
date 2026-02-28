@@ -50,6 +50,7 @@ from ._helpers import (
     _get_close,
     _get_high,
     _get_low,
+    _get_open,
     _get_volume,
     _groupby_symbol,
     _ohlcv_crossover_signal,
@@ -152,6 +153,24 @@ from .overlap import (
     zlma_cross_below,
 )
 
+# --- Price signals ---
+from .price import (
+    consecutive_down,
+    consecutive_up,
+    daily_return_above,
+    daily_return_below,
+    drawdown_from_high,
+    gap_down,
+    gap_up,
+    high_of_n_days,
+    low_of_n_days,
+    price_above,
+    price_below,
+    price_cross_above,
+    price_cross_below,
+    rally_from_low,
+)
+
 # --- Trend signals ---
 from .trend import (
     # ADX
@@ -224,6 +243,21 @@ __all__ = [
     "Signal",
     "signal",
     "signal_dates",
+    # Price
+    "price_above",
+    "price_below",
+    "price_cross_above",
+    "price_cross_below",
+    "gap_up",
+    "gap_down",
+    "high_of_n_days",
+    "low_of_n_days",
+    "daily_return_above",
+    "daily_return_below",
+    "drawdown_from_high",
+    "rally_from_low",
+    "consecutive_up",
+    "consecutive_down",
     # Momentum
     "rsi_below",
     "rsi_above",

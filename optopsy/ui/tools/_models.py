@@ -270,8 +270,15 @@ class SignalMixin(BaseModel):
         None,
         json_schema_extra={"enum": SIGNAL_NAMES},
         description=(
-            "Optional TA signal that gates entry. Only enters trades on "
+            "Optional signal that gates entry. Only enters trades on "
             "dates where the signal is True for the underlying symbol. "
+            "Price: price_above, price_below (state; close vs fixed level), "
+            "price_cross_above, price_cross_below (event; fires on crossover bar). "
+            "Gap: gap_up, gap_down (event; open vs prev close by pct%). "
+            "Breakout: high_of_n_days (N-bar high), low_of_n_days (N-bar low). "
+            "Returns: daily_return_above, daily_return_below (close-to-close % change). "
+            "Drawdown: drawdown_from_high (down pct% from N-bar high), rally_from_low (up pct% from N-bar low). "
+            "Streaks: consecutive_up, consecutive_down (N straight up/down closes). "
             "Momentum: macd_cross_above, macd_cross_below, ema_cross_above, ema_cross_below. "
             "Mean-reversion: rsi_below (default RSI<30), rsi_above (default RSI>70), "
             "bb_below_lower, bb_above_upper. "
@@ -287,6 +294,12 @@ class SignalMixin(BaseModel):
         None,
         description=(
             "Optional parameters for entry_signal. Keys by signal type: "
+            "price_above/price_below/price_cross_above/price_cross_below -> {level: float}; "
+            "gap_up/gap_down -> {pct: float}; "
+            "high_of_n_days/low_of_n_days -> {period: int}; "
+            "daily_return_above/daily_return_below -> {pct: float}; "
+            "drawdown_from_high/rally_from_low -> {period: int, pct: float}; "
+            "consecutive_up/consecutive_down -> {days: int}; "
             "rsi_below/rsi_above -> {period: int, threshold: float}; "
             "sma_below/sma_above -> {period: int}; "
             "macd_cross_above/macd_cross_below -> {fast: int, slow: int, signal_period: int}; "
@@ -587,6 +600,15 @@ class BuildSignalArgs(BaseModel):
             "signal from. Omit to use the most-recently-loaded dataset."
         ),
     )
+    signal_symbol: str | None = Field(
+        None,
+        description=(
+            "Optional: ticker symbol to use for signal computation instead of "
+            "the symbols in the options dataset. Use for cross-symbol signals "
+            "(e.g. use VIX data to trigger entries on SPX options). "
+            "Stock data for this symbol is fetched via yfinance."
+        ),
+    )
 
 
 class BuildCustomSignalArgs(BaseModel):
@@ -621,6 +643,15 @@ class BuildCustomSignalArgs(BaseModel):
         description=(
             "Name (ticker or filename) of the dataset to build the signal from. "
             "Omit to use the most-recently-loaded dataset."
+        ),
+    )
+    signal_symbol: str | None = Field(
+        None,
+        description=(
+            "Optional: ticker symbol to use for signal computation instead of "
+            "the symbols in the options dataset. Use for cross-symbol signals "
+            "(e.g. use VIX data to trigger entries on SPX options). "
+            "Stock data for this symbol is fetched via yfinance."
         ),
     )
 

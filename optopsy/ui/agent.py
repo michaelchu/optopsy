@@ -252,6 +252,20 @@ results = op.long_calls(data, entry_dates=entry_dates, raw=True)
 
 | Signal | Type | Default params | Notes |
 |---|---|---|---|
+| `price_above` | state | level=100 | Close > level; simple price threshold |
+| `price_below` | state | level=100 | Close < level; simple price threshold |
+| `price_cross_above` | event | level=100 | Close crosses above level |
+| `price_cross_below` | event | level=100 | Close crosses below level |
+| `gap_up` | event | pct=0.5 | Open gaps above prev close by pct% |
+| `gap_down` | event | pct=0.5 | Open gaps below prev close by pct% |
+| `high_of_n_days` | event | period=252 | Close reaches N-bar high (breakout) |
+| `low_of_n_days` | event | period=252 | Close reaches N-bar low (breakdown) |
+| `daily_return_above` | event | pct=1.0 | Daily close-to-close return > pct% |
+| `daily_return_below` | event | pct=-1.0 | Daily return < pct% (use negative for drops) |
+| `drawdown_from_high` | state | period=20, pct=5.0 | Close down >= pct% from N-bar high |
+| `rally_from_low` | state | period=20, pct=5.0 | Close up >= pct% from N-bar low |
+| `consecutive_up` | event | days=3 | N consecutive up-closes |
+| `consecutive_down` | event | days=3 | N consecutive down-closes |
 | `rsi_below` | state | period=14, threshold=30 | Oversold; potential bounce |
 | `rsi_above` | state | period=14, threshold=70 | Overbought; potential reversal |
 | `sma_below` | state | period=50 | Price below SMA; downtrend |
@@ -335,6 +349,12 @@ When users ask how to combine signals programmatically (outside the chat), optop
 - "Enter only on Thursdays" → `entry_signal="day_of_week"`, `entry_signal_params={"days": [3]}`
 - "RSI below 30 for 5 days" → `entry_signal="rsi_below"`, `entry_signal_days=5`
 - "Exit when overbought" → `exit_signal="rsi_above"`
+- "Enter when price above 450" → `entry_signal="price_above"`, `entry_signal_params={"level": 450}`
+- "Enter on gap up > 1%" → `entry_signal="gap_up"`, `entry_signal_params={"pct": 1.0}`
+- "Enter on 52-week high" → `entry_signal="high_of_n_days"`, `entry_signal_params={"period": 252}`
+- "Enter after a 3% daily drop" → `entry_signal="daily_return_below"`, `entry_signal_params={"pct": -3.0}`
+- "Enter when 10% off 20-day high" → `entry_signal="drawdown_from_high"`, `entry_signal_params={"period": 20, "pct": 10.0}`
+- "Enter after 3 consecutive down days" → `entry_signal="consecutive_down"`, `entry_signal_params={"days": 3}`
 
 **Composite signal (build_signal + slot):**
 - "Enter when RSI < 30 AND above 200-day SMA" → `build_signal(slot="entry", \
@@ -344,6 +364,13 @@ signals=[{"name": "rsi_below"}, {"name": "sma_above", "params": {"period": 200}}
 signals=[{"name": "atr_below"}, {"name": "day_of_week"}])`
 - "Enter on MACD cross OR RSI oversold" → `build_signal(slot="entry", \
 signals=[{"name": "macd_cross_above"}, {"name": "rsi_below"}], combine="or")`
+
+**Cross-symbol signal (build_signal with signal_symbol):**
+- "Enter long puts on SPX when VIX crosses above 25" → `build_signal(slot="entry", \
+signals=[{"name": "price_cross_above", "params": {"level": 25}}], signal_symbol="^VIX")` \
+then `run_strategy(strategy="long_puts", entry_signal_slot="entry")`. \
+The `signal_symbol` parameter fetches stock data for a different ticker (VIX) and maps \
+the resulting signal dates to the options dataset's symbol (SPX) for intersection.
 
 ## Guidelines
 ## Multiple Datasets
