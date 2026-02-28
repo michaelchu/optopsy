@@ -872,6 +872,70 @@ def _filter_by_quote_date(
 
 
 # ---------------------------------------------------------------------------
+# Date-range filtering for create_chart (8.2.5)
+# ---------------------------------------------------------------------------
+
+
+def _filter_by_date_range(
+    df: pd.DataFrame,
+    start_date: str | None,
+    end_date: str | None,
+) -> tuple[pd.DataFrame, str | None]:
+    """Filter *df* to rows whose date column falls within [start_date, end_date].
+
+    The date column is auto-detected: ``quote_date`` is preferred, then
+    ``entry_date``, then ``date``, and finally the first column whose dtype is
+    datetime-like.  Both *start_date* and *end_date* are optional (YYYY-MM-DD).
+    When both are ``None`` the original DataFrame is returned unchanged.
+
+    Returns ``(filtered_df, error_msg)``.  When *error_msg* is not None the
+    caller should surface it as a tool error.
+    """
+    if not start_date and not end_date:
+        return df, None
+
+    # Auto-detect the date column.
+    date_col: str | None = None
+    for candidate in ("quote_date", "entry_date", "date"):
+        if candidate in df.columns:
+            date_col = candidate
+            break
+    if date_col is None:
+        # Fall back to the first datetime-like column.
+        for col in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[col]):
+                date_col = col
+                break
+    if date_col is None:
+        return df, "Cannot apply date filter: no date column found in the data."
+
+    try:
+        col_dates = pd.to_datetime(df[date_col]).dt.normalize()
+    except (ValueError, TypeError):
+        return (
+            df,
+            f"Cannot parse date column '{date_col}' as datetime. "
+            "Please ensure the column contains valid date values.",
+        )
+
+    mask = pd.Series(True, index=df.index)
+    if start_date:
+        try:
+            start_ts = pd.Timestamp(start_date).normalize()
+        except (ValueError, TypeError):
+            return df, f"Invalid start_date '{start_date}'. Use YYYY-MM-DD format."
+        mask &= col_dates >= start_ts
+    if end_date:
+        try:
+            end_ts = pd.Timestamp(end_date).normalize()
+        except (ValueError, TypeError):
+            return df, f"Invalid end_date '{end_date}'. Use YYYY-MM-DD format."
+        mask &= col_dates <= end_ts
+
+    return df[mask].copy(), None
+
+
+# ---------------------------------------------------------------------------
 # Signal resolution for strategy handlers (8.2.2)
 # ---------------------------------------------------------------------------
 

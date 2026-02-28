@@ -1146,3 +1146,163 @@ class TestResultsDataSource:
         assert result.chart_figure is not None
         # Only 1 row (simulation excluded)
         assert "1 data points" in result.llm_summary
+
+
+# ---------------------------------------------------------------------------
+# Date range filtering tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def dated_dataset():
+    """Dataset with quote_date spanning Jan–Mar 2024."""
+    dates = pd.date_range("2024-01-01", "2024-03-31", freq="B")
+    return pd.DataFrame(
+        {
+            "quote_date": dates,
+            "strike": 100.0,
+            "bid": 1.0,
+        }
+    )
+
+
+class TestDateRangeFiltering:
+    def test_start_date_filters_older_rows(self, dated_dataset):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "2024-02-01",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is not None
+        # Only rows from Feb 1 onwards should remain
+        expected_n = len(dated_dataset[dated_dataset["quote_date"] >= "2024-02-01"])
+        assert f"{expected_n} data points" in result.llm_summary
+
+    def test_end_date_filters_newer_rows(self, dated_dataset):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "end_date": "2024-01-31",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is not None
+        expected_n = len(dated_dataset[dated_dataset["quote_date"] <= "2024-01-31"])
+        assert f"{expected_n} data points" in result.llm_summary
+
+    def test_start_and_end_date(self, dated_dataset):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "2024-01-15",
+                "end_date": "2024-01-31",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is not None
+        expected = dated_dataset[
+            (dated_dataset["quote_date"] >= "2024-01-15")
+            & (dated_dataset["quote_date"] <= "2024-01-31")
+        ]
+        assert f"{len(expected)} data points" in result.llm_summary
+
+    def test_empty_after_date_filter_returns_error(self, dated_dataset):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "2025-01-01",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is None
+        assert "date range" in result.llm_summary.lower()
+
+    def test_invalid_start_date_returns_error(self, dated_dataset):
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "not-a-date",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is None
+        assert "start_date" in result.llm_summary.lower()
+
+    def test_no_date_column_returns_error(self):
+        """When no datetime column exists the filter returns an error."""
+        df = pd.DataFrame({"strike": [100.0, 105.0], "bid": [1.0, 2.0]})
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "bar",
+                "data_source": "dataset",
+                "x": "strike",
+                "y": "bid",
+                "start_date": "2024-01-01",
+            },
+            df,
+        )
+        assert result.chart_figure is None
+        assert "date" in result.llm_summary.lower()
+
+    def test_date_column_autodetect_entry_date(self):
+        """Filter should use entry_date when quote_date is absent."""
+        df = pd.DataFrame(
+            {
+                "entry_date": pd.to_datetime(
+                    ["2024-01-05", "2024-02-10", "2024-03-15"]
+                ),
+                "pnl": [100.0, -50.0, 200.0],
+            }
+        )
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "entry_date",
+                "y": "pnl",
+                "start_date": "2024-02-01",
+            },
+            df,
+        )
+        assert result.chart_figure is not None
+        # Only Feb 10 and Mar 15 rows pass the filter
+        assert "2 data points" in result.llm_summary
+
+    def test_no_filter_when_neither_date_given(self, dated_dataset):
+        """When neither start_date nor end_date is supplied, all rows are kept."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is not None
+        assert f"{len(dated_dataset)} data points" in result.llm_summary
