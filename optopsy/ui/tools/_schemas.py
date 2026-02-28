@@ -635,14 +635,12 @@ _OHLC_SIGNALS = frozenset(
         "psar_sell",
         "chop_above",
         "chop_below",
-        "gap_up",
-        "gap_down",
         "high_of_n_days",
         "low_of_n_days",
     }
 )
 
-# Signals that additionally require an ``open`` column (subset of _OHLC_SIGNALS).
+# Signals that require an ``open`` column (open + close only, not full OHLC).
 _OPEN_SIGNALS = frozenset({"gap_up", "gap_down"})
 
 # Signals that require OHLCV data (high, low, close, volume).

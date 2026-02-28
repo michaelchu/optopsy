@@ -190,14 +190,13 @@ class TestNPeriodHighLow:
             }
         )
         result = high_of_n_days(period=5)(data)
-        # Bar 7: close=103, prev 5-bar high max = max(103,99,98,100,104)
-        # Wait — rolling high is on the high column, shifted by 1
-        # Bar 7 rolling(5).max().shift(1) = max of bars 2-6 highs = max(101,103,99,98,100) = 103
-        # close=103 >= 103 → True
-        assert result.iloc[7] == True
-        # Bar 9: close=105, prev 5-bar high = max of bars 4-8 = max(99,98,100,104,103) = 104
-        # 105 >= 104 → True
-        assert result.iloc[9] == True
+        # rolling(5).max() of high, shifted by 1:
+        # Bar 0: NaN→False, Bar 1: 100→101>=100→T, Bar 2: 102→100>=102→F,
+        # Bar 3: 102→102>=102→T, Bar 4: 103→98>=103→F, Bar 5: 103→97>=103→F,
+        # Bar 6: 103→99>=103→F, Bar 7: 103→103>=103→T, Bar 8: 104→102>=104→F,
+        # Bar 9: 104→105>=104→T
+        fire_indices = [i for i, v in enumerate(result) if v]
+        assert fire_indices == [1, 3, 7, 9]
 
     def test_low_of_n_days_breakdown(self):
         """Should fire when close reaches N-bar rolling low."""
@@ -212,9 +211,13 @@ class TestNPeriodHighLow:
             }
         )
         result = low_of_n_days(period=5)(data)
-        # Bar 7: close=96, prev 5-bar low = min of bars 2-6 lows = min(99,101,97,96,98) = 96
-        # 96 <= 96 → True
-        assert result.iloc[7] == True
+        # rolling(5).min() of low, shifted by 1:
+        # Bar 0: NaN→F, Bar 1: 98→101<=98→F, Bar 2: 98→100<=98→F,
+        # Bar 3: 98→102<=98→F, Bar 4: 98→98<=98→T, Bar 5: 97→97<=97→T,
+        # Bar 6: 96→99<=96→F, Bar 7: 96→96<=96→T, Bar 8: 95→95<=95→T,
+        # Bar 9: 94→93<=94→T
+        fire_indices = [i for i, v in enumerate(result) if v]
+        assert fire_indices == [4, 5, 7, 8, 9]
 
     def test_high_of_n_days_no_high_column(self):
         """Should fall back to close when high column is missing."""

@@ -70,8 +70,9 @@ def _fetch_single_symbol_stock(
     """Fetch and slice OHLCV data for one symbol.
 
     Reads from (or populates) the yfinance parquet cache, then slices to
-    ``[padded_start, date_max]``.  Returns a DataFrame with ``_STOCK_COLS``
-    or ``None`` on failure.
+    ``[padded_start, date_max]``.  Returns a DataFrame with available
+    columns from ``_STOCK_COLS`` (at minimum ``underlying_symbol``,
+    ``quote_date``, ``close``), or ``None`` on failure.
     """
     try:
         cached = _yf_cache.read(_YF_CACHE_CATEGORY, symbol)
@@ -86,7 +87,13 @@ def _fetch_single_symbol_stock(
         ].rename(columns={"date": "quote_date"})
         if result.empty:
             return None
-        return result[_STOCK_COLS]
+        # Select only columns that are actually present — yfinance may
+        # omit optional columns (open, high, low, volume) for some
+        # instruments.  Callers validate specific column requirements.
+        available = [c for c in _STOCK_COLS if c in result.columns]
+        if "close" not in result.columns:
+            return None
+        return result[available]
     except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
         _log.warning("yfinance fetch failed for %s: %s", symbol, exc)
         return None
