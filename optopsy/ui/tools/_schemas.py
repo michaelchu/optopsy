@@ -642,6 +642,9 @@ _OHLC_SIGNALS = frozenset(
     }
 )
 
+# Signals that additionally require an ``open`` column (subset of _OHLC_SIGNALS).
+_OPEN_SIGNALS = frozenset({"gap_up", "gap_down"})
+
 # Signals that require OHLCV data (high, low, close, volume).
 _VOLUME_SIGNALS = frozenset(
     {

@@ -137,18 +137,20 @@ class TestGapSignals:
         # prev close: [-, 102, 103, 101, 104, 98, 97, 101]
         # open:       [100, 102, 101, 105, 99, 98, 100, 103]
         # gap pct:    [-, 0, -1.9%, +3.96%, -4.8%, 0%, +3.1%, +1.98%]
-        # At 1% threshold: bar 3 (105 > 101*1.01=102.01) and bar 7 (103 > 101*1.01=102.01)
+        # At 1% threshold: bar 3 (105 > 101*1.01=102.01), bar 6 (100 > 97*1.01=97.97),
+        # and bar 7 (103 > 101*1.01=102.01)
         result = gap_up(pct=1.0)(ohlcv_data)
         gap_indices = [i for i, v in enumerate(result) if v]
-        assert 3 in gap_indices  # 105 vs prev close 101
-        assert 7 in gap_indices  # 103 vs prev close 101
+        assert gap_indices == [3, 6, 7]
 
     def test_gap_down_detects_gap(self, ohlcv_data):
         """gap_down should fire when open < prev close * (1 - pct/100)."""
-        # At 1% threshold: bar 4 (open=99, prev_close=104, 104*0.99=102.96) → 99 < 102.96
+        # prev close: [-, 102, 103, 101, 104, 98, 97, 101]
+        # open:       [100, 102, 101, 105, 99, 98, 100, 103]
+        # At 1% threshold: bar 2 (101 < 103*0.99=101.97), bar 4 (99 < 104*0.99=102.96)
         result = gap_down(pct=1.0)(ohlcv_data)
         gap_indices = [i for i, v in enumerate(result) if v]
-        assert 4 in gap_indices
+        assert gap_indices == [2, 4]
 
     def test_gap_up_no_open_column(self):
         """gap_up should return all-False when open column is missing."""
@@ -224,10 +226,16 @@ class TestNPeriodHighLow:
                 "close": [100, 101, 102, 103, 104],
             }
         )
-        # _get_high falls back to close, so this should still work
+        # _get_high falls back to close; with monotonically rising close,
+        # every bar reaches a new high vs its shifted rolling max.
+        # Bar 0: shifted rolling high = NaN → False
+        # Bar 1: 101 >= 100 → True
+        # Bar 2: 102 >= 101 → True
+        # Bar 3: 103 >= 102 → True
+        # Bar 4: 104 >= 103 → True
         result = high_of_n_days(period=3)(data)
-        # Each bar has rising close, so every bar after warmup reaches a new high
-        assert result.any()
+        expected = [False, True, True, True, True]
+        assert list(result) == expected
 
     def test_first_bar_is_false(self):
         """First bar has no prior history, should not fire."""
@@ -416,3 +424,10 @@ class TestConsecutiveUpDown:
         df = pd.DataFrame(columns=["underlying_symbol", "quote_date", "close"])
         assert len(consecutive_up(3)(df)) == 0
         assert len(consecutive_down(3)(df)) == 0
+
+    def test_consecutive_days_below_one_raises(self):
+        """days < 1 should raise ValueError."""
+        with pytest.raises(ValueError, match="days must be >= 1"):
+            consecutive_up(0)
+        with pytest.raises(ValueError, match="days must be >= 1"):
+            consecutive_down(-1)

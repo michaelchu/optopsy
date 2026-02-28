@@ -27,6 +27,7 @@ from ._schemas import (
     _DATE_ONLY_SIGNALS,
     _IV_SIGNALS,
     _OHLC_SIGNALS,
+    _OPEN_SIGNALS,
     _VOLUME_SIGNALS,
     SIGNAL_NAMES,
     SIGNAL_REGISTRY,
@@ -147,6 +148,17 @@ def _handle_build_signal(arguments, dataset, signals, datasets, results, _result
                 f"OHLC signals ({', '.join(ohlc_names)}) require "
                 f"'high', 'low', and 'close' columns in the stock data, "
                 f"but {', '.join(missing_ohlc)} were not found. "
+                f"Ensure the stock data source provides OHLCV information.",
+            )
+        # Validate that gap signals have access to an open column.
+        has_open_signal = any(s.get("name") in _OPEN_SIGNALS for s in signal_specs)
+        if has_open_signal and "open" not in signal_data.columns:
+            open_names = [
+                s.get("name") for s in signal_specs if s.get("name") in _OPEN_SIGNALS
+            ]
+            return _result(
+                f"Gap signals ({', '.join(open_names)}) require an 'open' "
+                f"column in the stock data, but it was not found. "
                 f"Ensure the stock data source provides OHLCV information.",
             )
 

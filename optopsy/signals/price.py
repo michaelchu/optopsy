@@ -257,6 +257,8 @@ def consecutive_up(days: int = 3) -> SignalFunc:
     Example: ``consecutive_up(3)`` fires after 3 straight up-closes.
     """
     days = int(days)
+    if days < 1:
+        raise ValueError(f"days must be >= 1, got {days}")
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
@@ -278,6 +280,8 @@ def consecutive_down(days: int = 3) -> SignalFunc:
     Example: ``consecutive_down(3)`` fires after 3 straight down-closes.
     """
     days = int(days)
+    if days < 1:
+        raise ValueError(f"days must be >= 1, got {days}")
 
     def _signal(data: pd.DataFrame) -> "pd.Series[bool]":
         def _compute_group(group: pd.DataFrame) -> "pd.Series[bool]":
