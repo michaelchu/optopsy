@@ -123,6 +123,183 @@ def test_simulate_success(mock_sim, mock_signals, mock_store_cls):
 @patch("optopsy.ui.tools._simulators.ResultStore")
 @patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
 @patch("optopsy.simulator.simulate")
+def test_simulate_display_shows_parameters(mock_sim, mock_signals, mock_store_cls):
+    """user_display should include a Parameters table when params are provided."""
+    mock_signals.return_value = ({}, None)
+    mock_result = MagicMock()
+    mock_result.summary = {
+        "total_trades": 2,
+        "winning_trades": 1,
+        "losing_trades": 1,
+        "win_rate": 0.5,
+        "total_pnl": 0.0,
+        "total_return": 0.0,
+        "avg_pnl": 0.0,
+        "avg_win": 50.0,
+        "avg_loss": -50.0,
+        "max_win": 50.0,
+        "max_loss": -50.0,
+        "profit_factor": 1.0,
+        "max_drawdown": -0.01,
+        "avg_days_in_trade": 14.0,
+        "sharpe_ratio": 0.0,
+        "sortino_ratio": 0.0,
+        "var_95": -0.01,
+        "cvar_95": -0.02,
+        "calmar_ratio": 0.0,
+    }
+    mock_result.trade_log = pd.DataFrame(
+        {
+            "trade_id": [1, 2],
+            "entry_date": ["2024-01-01", "2024-02-01"],
+            "exit_date": ["2024-01-15", "2024-02-15"],
+            "days_held": [14, 14],
+            "entry_cost": [-100, -100],
+            "exit_proceeds": [150, 50],
+            "realized_pnl": [50, -50],
+            "equity": [10050, 10000],
+        }
+    )
+    mock_sim.return_value = mock_result
+    mock_store = MagicMock()
+    mock_store.has.return_value = False
+    mock_store_cls.return_value = mock_store
+
+    df = pd.DataFrame({"col": [1]})
+    result = execute_tool(
+        "simulate",
+        {"strategy_name": "long_calls", "capital": 50000, "max_entry_dte": 45},
+        dataset=df,
+    )
+
+    assert "**Parameters**" in result.user_display
+    assert "capital" in result.user_display
+    assert "50000" in result.user_display
+    assert "max_entry_dte" in result.user_display
+    assert "45" in result.user_display
+    # strategy_name should NOT appear in the params table
+    assert "strategy_name" not in result.user_display.split("| Metric")[0]
+
+
+@patch("optopsy.ui.tools._simulators.ResultStore")
+@patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
+@patch("optopsy.simulator.simulate")
+def test_simulate_display_defaults_when_no_params(
+    mock_sim, mock_signals, mock_store_cls
+):
+    """user_display should show 'defaults' when only strategy_name is provided."""
+    mock_signals.return_value = ({}, None)
+    mock_result = MagicMock()
+    mock_result.summary = {
+        "total_trades": 2,
+        "winning_trades": 1,
+        "losing_trades": 1,
+        "win_rate": 0.5,
+        "total_pnl": 0.0,
+        "total_return": 0.0,
+        "avg_pnl": 0.0,
+        "avg_win": 50.0,
+        "avg_loss": -50.0,
+        "max_win": 50.0,
+        "max_loss": -50.0,
+        "profit_factor": 1.0,
+        "max_drawdown": -0.01,
+        "avg_days_in_trade": 14.0,
+        "sharpe_ratio": 0.0,
+        "sortino_ratio": 0.0,
+        "var_95": -0.01,
+        "cvar_95": -0.02,
+        "calmar_ratio": 0.0,
+    }
+    mock_result.trade_log = pd.DataFrame(
+        {
+            "trade_id": [1, 2],
+            "entry_date": ["2024-01-01", "2024-02-01"],
+            "exit_date": ["2024-01-15", "2024-02-15"],
+            "days_held": [14, 14],
+            "entry_cost": [-100, -100],
+            "exit_proceeds": [150, 50],
+            "realized_pnl": [50, -50],
+            "equity": [10050, 10000],
+        }
+    )
+    mock_sim.return_value = mock_result
+    mock_store = MagicMock()
+    mock_store.has.return_value = False
+    mock_store_cls.return_value = mock_store
+
+    df = pd.DataFrame({"col": [1]})
+    result = execute_tool(
+        "simulate",
+        {"strategy_name": "long_calls"},
+        dataset=df,
+    )
+
+    assert "**Parameters**: defaults" in result.user_display
+
+
+@patch("optopsy.ui.tools._simulators.ResultStore")
+@patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
+@patch("optopsy.simulator.simulate")
+def test_simulate_display_escapes_pipe_in_params(
+    mock_sim, mock_signals, mock_store_cls
+):
+    """Pipe characters in parameter values should be escaped in the markdown table."""
+    mock_signals.return_value = ({}, None)
+    mock_result = MagicMock()
+    mock_result.summary = {
+        "total_trades": 2,
+        "winning_trades": 1,
+        "losing_trades": 1,
+        "win_rate": 0.5,
+        "total_pnl": 0.0,
+        "total_return": 0.0,
+        "avg_pnl": 0.0,
+        "avg_win": 50.0,
+        "avg_loss": -50.0,
+        "max_win": 50.0,
+        "max_loss": -50.0,
+        "profit_factor": 1.0,
+        "max_drawdown": -0.01,
+        "avg_days_in_trade": 14.0,
+        "sharpe_ratio": 0.0,
+        "sortino_ratio": 0.0,
+        "var_95": -0.01,
+        "cvar_95": -0.02,
+        "calmar_ratio": 0.0,
+    }
+    mock_result.trade_log = pd.DataFrame(
+        {
+            "trade_id": [1, 2],
+            "entry_date": ["2024-01-01", "2024-02-01"],
+            "exit_date": ["2024-01-15", "2024-02-15"],
+            "days_held": [14, 14],
+            "entry_cost": [-100, -100],
+            "exit_proceeds": [150, 50],
+            "realized_pnl": [50, -50],
+            "equity": [10050, 10000],
+        }
+    )
+    mock_sim.return_value = mock_result
+    mock_store = MagicMock()
+    mock_store.has.return_value = False
+    mock_store_cls.return_value = mock_store
+
+    df = pd.DataFrame({"col": [1]})
+    # Inject a param with a pipe character in its value
+    result = execute_tool(
+        "simulate",
+        {"strategy_name": "long_calls", "entry_signal_params": {"key": "a|b"}},
+        dataset=df,
+    )
+
+    # The pipe should be escaped so the markdown table renders correctly
+    assert r"a\|b" in result.user_display
+
+
+@patch("optopsy.ui.tools._simulators.ResultStore")
+@patch("optopsy.ui.tools._simulators._resolve_signals_for_strategy")
+@patch("optopsy.simulator.simulate")
 def test_simulate_caches_on_miss(mock_sim, mock_signals, mock_store_cls):
     """With a dataset fingerprint, simulate should write to ResultStore on cache miss."""
     mock_signals.return_value = ({}, None)
