@@ -367,7 +367,7 @@ class TestCmdCache:
         mock_cache = MagicMock()
         mock_cache.clear.return_value = 5
 
-        args = argparse.Namespace(symbol=None)
+        args = argparse.Namespace(symbol=None, yes=True, stocks=False, options=False)
 
         with (
             patch(
@@ -382,7 +382,7 @@ class TestCmdCache:
 
         output = capsys.readouterr().out
         assert "5" in output
-        mock_cache.clear.assert_called_once_with(symbol=None)
+        mock_cache.clear.assert_called_once_with(symbol=None, category=None)
 
     def test_cache_clear_symbol(self, capsys):
         """_cmd_cache_clear with symbol clears only that symbol."""
@@ -391,7 +391,7 @@ class TestCmdCache:
         mock_cache = MagicMock()
         mock_cache.clear.return_value = 2
 
-        args = argparse.Namespace(symbol="SPY")
+        args = argparse.Namespace(symbol="SPY", yes=True, stocks=False, options=False)
 
         with (
             patch(
@@ -407,7 +407,7 @@ class TestCmdCache:
         output = capsys.readouterr().out
         assert "2" in output
         assert "SPY" in output
-        mock_cache.clear.assert_called_once_with(symbol="SPY")
+        mock_cache.clear.assert_called_once_with(symbol="SPY", category=None)
 
 
 # ---------------------------------------------------------------------------
