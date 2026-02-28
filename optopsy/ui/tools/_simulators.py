@@ -169,8 +169,21 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     available_cols = [c for c in preview_cols if c in trade_log.columns]
     preview = trade_log[available_cols].head(20)
 
+    # Parameters table — show all user-facing params used for this simulation
+    _SKIP_PARAM_KEYS = {"strategy_name", "dataset_name", "_dataset_fingerprint"}
+    param_rows = [
+        (k, v) for k, v in sorted(arguments.items()) if k not in _SKIP_PARAM_KEYS
+    ]
+    if param_rows:
+        params_table = "| Parameter | Value |\n|---|---|\n"
+        params_table += "\n".join(f"| {k} | {v} |" for k, v in param_rows)
+        params_section = f"**Parameters**\n\n{params_table}\n\n"
+    else:
+        params_section = "**Parameters**: defaults\n\n"
+
     user_display = (
         f"### Simulation: {strategy_name}\n\n"
+        f"{params_section}"
         f"{stats_table}\n\n"
         f"**Trade Log** (first {min(20, len(trade_log))} of "
         f"{len(trade_log)} trades)\n\n"
