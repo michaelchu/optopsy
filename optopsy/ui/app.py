@@ -269,16 +269,23 @@ def _init_db_sync() -> None:
                 for stmt in _DB_SCHEMA_STATEMENTS:
                     conn.execute(text(stmt))
                 # Add columns introduced in newer Chainlit versions.
+                # Each ALTER TABLE is wrapped in a SAVEPOINT so that a
+                # "column already exists" error on PostgreSQL only rolls
+                # back that savepoint instead of aborting the whole
+                # transaction (PostgreSQL aborts all subsequent commands
+                # after an error within a transaction).
                 for col, definition in [
                     ("defaultOpen", "INTEGER DEFAULT 0"),
                     ("waitForAnswer", "INTEGER"),
                 ]:
                     try:
+                        nested = conn.begin_nested()
                         conn.execute(
                             text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
                         )
+                        nested.commit()
                     except (OperationalError, ProgrammingError):
-                        pass  # column already exists
+                        nested.rollback()
             return  # success
         except Exception:
             engine.dispose()
