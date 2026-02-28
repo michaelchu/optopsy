@@ -276,15 +276,25 @@ def _init_db_sync() -> None:
             # transaction as failed after any error).  Using separate
             # transactions avoids SAVEPOINTs, which are unreliable with
             # pysqlite's default transaction handling.
+            is_pg = sync_url.startswith("postgresql")
             for col, definition in [
                 ("defaultOpen", "INTEGER DEFAULT 0"),
                 ("waitForAnswer", "INTEGER"),
             ]:
                 try:
                     with engine.begin() as conn:
-                        conn.execute(
-                            text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
-                        )
+                        if is_pg:
+                            conn.execute(
+                                text(
+                                    f'ALTER TABLE steps ADD COLUMN IF NOT EXISTS "{col}" {definition}'
+                                )
+                            )
+                        else:
+                            conn.execute(
+                                text(
+                                    f'ALTER TABLE steps ADD COLUMN "{col}" {definition}'
+                                )
+                            )
                 except (OperationalError, ProgrammingError):
                     pass  # column already exists
 
