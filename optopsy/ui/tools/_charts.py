@@ -108,7 +108,9 @@ def _resolve_ds_simulation(arguments, _dataset, _datasets, results, _signals):
             return None, "", "No simulations run yet. Use simulate first."
         sim_key = sim_entries[-1]
     canonical = _resolve_result_key(results, sim_key)
-    entry = results.get(canonical, {}) if canonical else {}
+    if canonical is None:
+        return None, sim_key, f"Simulation key '{sim_key}' not found in results."
+    entry = results.get(canonical, {})
     display_label = entry.get("display_key") or sim_key
     cache_key = entry.get("_cache_key")
     store = ResultStore()

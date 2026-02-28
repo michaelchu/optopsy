@@ -504,6 +504,11 @@ def _resolve_result_key(
 ) -> str | None:
     """Resolve a result key, trying direct lookup then display_key fallback.
 
+    When multiple entries share the same ``display_key`` (e.g. runs that
+    differ only in delta or signals), this returns the *first* match.
+    Callers that need an exact match should use the SHA-256 hash key
+    directly.
+
     Returns the canonical dict key if found, or ``None``.
     """
     if key in results:
@@ -556,10 +561,6 @@ def _make_display_key(strategy_name: str, arguments: dict) -> str:
         effective_pls = 0.073 if per_leg is None else float(per_leg)
         base += f",pls={effective_pls:.3f}"
     return base
-
-
-# Keep backward-compatible alias for callers that haven't been updated yet.
-_make_result_key = _make_display_key
 
 
 def _session_result_key(cache_key: str | None, display_key: str) -> str:
