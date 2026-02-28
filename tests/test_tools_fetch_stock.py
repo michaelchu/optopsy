@@ -126,9 +126,16 @@ def test_stale_cache_fetches_incremental(tmp_path):
 
     # _make_cached_df uses freq="B" (business days), so the actual last date
     # may be earlier than cache_end if it falls on a weekend.
+    # _yf_fetch_and_cache snaps both end_dt (backward) and fetch_start
+    # (forward) to weekdays, so expected values must account for that.
+    from optopsy.data._yf_helpers import _snap_to_weekday
+
     actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
-    expected_start = str(actual_cache_max + timedelta(days=1))
-    expected_end = str(date.today() + timedelta(days=1))
+    snapped_end = _snap_to_weekday(date.today())
+    expected_start = str(
+        _snap_to_weekday(actual_cache_max + timedelta(days=1), forward=True)
+    )
+    expected_end = str(snapped_end + timedelta(days=1))
 
     with patch("yfinance.download") as mock_dl:
         mock_dl.return_value = _make_yf_download_result(

@@ -20,6 +20,20 @@ _YF_CACHE_CATEGORY = "yf_stocks"
 _YF_DEDUP_COLS = ["date"]
 
 
+def _snap_to_weekday(dt: date, *, forward: bool = False) -> date:
+    """Snap a date to the nearest weekday (Mon–Fri).
+
+    By default snaps backward (Sat→Fri, Sun→Fri).  With *forward=True*,
+    snaps forward instead (Sat→Mon, Sun→Mon).
+    """
+    wd = dt.weekday()  # Mon=0 … Sun=6
+    if wd == 5:  # Saturday
+        return dt + timedelta(days=2) if forward else dt - timedelta(days=1)
+    if wd == 6:  # Sunday
+        return dt + timedelta(days=1) if forward else dt - timedelta(days=2)
+    return dt
+
+
 def _yf_fetch_and_cache(
     symbol: str,
     cached: pd.DataFrame | None,
@@ -39,12 +53,16 @@ def _yf_fetch_and_cache(
     """
     import yfinance as yf
 
+    # Snap end_dt back to the last weekday — markets are closed on weekends,
+    # so fetching Sat/Sun windows is pointless and returns empty results.
+    end_dt = _snap_to_weekday(end_dt)
+
     if cached is None or cached.empty:
         _log.info("Cold cache for %s, fetching full history from yfinance", symbol)
         raw = yf.download(symbol, period="max", progress=False)
     else:
         cache_max = pd.to_datetime(cached["date"]).dt.date.max()
-        fetch_start = cache_max + timedelta(days=1)
+        fetch_start = _snap_to_weekday(cache_max + timedelta(days=1), forward=True)
         if fetch_start > end_dt:
             _log.info("Cache for %s is up to date, skipping yfinance", symbol)
             return cached

@@ -141,9 +141,14 @@ def test_warm_cache_fetches_only_tail(tmp_path):
     cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
 
     # _make_cached_df uses freq="B" so actual max may differ from cache_end;
-    # compute expected fetch start from the real cached max date.
+    # compute expected fetch start from the real cached max date, snapped
+    # forward to the next weekday (e.g. Sat→Mon).
+    from optopsy.data._yf_helpers import _snap_to_weekday
+
     actual_cache_max = pd.to_datetime(cached_df["date"]).dt.date.max()
-    expected_fetch_start = str(actual_cache_max + timedelta(days=1))
+    expected_fetch_start = str(
+        _snap_to_weekday(actual_cache_max + timedelta(days=1), forward=True)
+    )
     expected_fetch_end = str(date_max + timedelta(days=1))
 
     with (
@@ -335,6 +340,220 @@ class TestYfFetchAndCache:
 
         mock_dl.assert_not_called()
         assert result is not None
+
+    def test_weekend_end_dt_skips_fetch(self, tmp_path):
+        """When end_dt falls on a weekend and cache covers the last weekday, skip fetch."""
+        cache = ParquetCache(str(tmp_path))
+        # Cache ends on Friday Dec 12
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 12))
+
+        # Saturday Dec 13 as end_dt — should NOT trigger a fetch
+        saturday = date(2025, 12, 13)
+        assert saturday.weekday() == 5  # sanity check
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            result = _yf_fetch_and_cache("SPY", cached_df, saturday)
+
+        mock_dl.assert_not_called()
+        assert result is not None
+
+    def test_sunday_end_dt_skips_fetch(self, tmp_path):
+        """When end_dt falls on Sunday and cache covers Friday, skip fetch."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 12))
+
+        sunday = date(2025, 12, 14)
+        assert sunday.weekday() == 6  # sanity check
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            result = _yf_fetch_and_cache("SPY", cached_df, sunday)
+
+        mock_dl.assert_not_called()
+        assert result is not None
+
+    def test_monday_fetch_start_snaps_forward(self, tmp_path):
+        """On Monday with cache through Friday, fetch_start snaps Sat→Mon."""
+        cache = ParquetCache(str(tmp_path))
+        # Cache ends on Friday Dec 12
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 12))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        monday = date(2025, 12, 15)
+        assert monday.weekday() == 0  # sanity check
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(monday, monday)
+            _yf_fetch_and_cache("SPY", cached_df, monday)
+
+        # fetch_start should be Monday (snapped from Saturday), not Saturday
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(monday),
+            end=str(monday + timedelta(days=1)),
+            progress=False,
+        )
+
+    # ------------------------------------------------------------------
+    # Cache-through-Friday matrix
+    # ------------------------------------------------------------------
+
+    def test_friday_end_dt_cache_through_friday_skips(self, tmp_path):
+        """Friday end_dt with cache through Friday → skip."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 12))
+
+        friday = date(2025, 12, 12)
+        assert friday.weekday() == 4
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            result = _yf_fetch_and_cache("SPY", cached_df, friday)
+
+        mock_dl.assert_not_called()
+        assert result is not None
+
+    def test_tuesday_end_dt_cache_through_friday_fetches_mon_tue(self, tmp_path):
+        """Tuesday end_dt with cache through Friday → fetch Mon–Tue."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 12))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        tuesday = date(2025, 12, 16)
+        monday = date(2025, 12, 15)
+        assert tuesday.weekday() == 1
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(monday, tuesday)
+            _yf_fetch_and_cache("SPY", cached_df, tuesday)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(monday),
+            end=str(tuesday + timedelta(days=1)),
+            progress=False,
+        )
+
+    # ------------------------------------------------------------------
+    # Cache-through-Thursday matrix
+    # ------------------------------------------------------------------
+
+    def test_friday_end_dt_cache_through_thursday_fetches_fri(self, tmp_path):
+        """Friday end_dt with cache through Thursday → fetch Fri only."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 11))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        friday = date(2025, 12, 12)
+        assert friday.weekday() == 4
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(friday, friday)
+            _yf_fetch_and_cache("SPY", cached_df, friday)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(friday),
+            end=str(friday + timedelta(days=1)),
+            progress=False,
+        )
+
+    def test_saturday_end_dt_cache_through_thursday_fetches_fri(self, tmp_path):
+        """Saturday end_dt with cache through Thursday → snap to Fri, fetch Fri."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 11))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        saturday = date(2025, 12, 13)
+        friday = date(2025, 12, 12)
+        assert saturday.weekday() == 5
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(friday, friday)
+            _yf_fetch_and_cache("SPY", cached_df, saturday)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(friday),
+            end=str(friday + timedelta(days=1)),
+            progress=False,
+        )
+
+    def test_sunday_end_dt_cache_through_thursday_fetches_fri(self, tmp_path):
+        """Sunday end_dt with cache through Thursday → snap to Fri, fetch Fri."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 11))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        sunday = date(2025, 12, 14)
+        friday = date(2025, 12, 12)
+        assert sunday.weekday() == 6
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(friday, friday)
+            _yf_fetch_and_cache("SPY", cached_df, sunday)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(friday),
+            end=str(friday + timedelta(days=1)),
+            progress=False,
+        )
+
+    def test_monday_end_dt_cache_through_thursday_fetches_fri_to_mon(self, tmp_path):
+        """Monday end_dt with cache through Thursday → fetch Fri–Mon."""
+        cache = ParquetCache(str(tmp_path))
+        cached_df = _make_cached_df("SPY", date(2025, 1, 1), date(2025, 12, 11))
+        cache.write(_YF_CACHE_CATEGORY, "SPY", cached_df)
+
+        monday = date(2025, 12, 15)
+        friday = date(2025, 12, 12)
+        assert monday.weekday() == 0
+
+        with (
+            patch("optopsy.data._yf_helpers._yf_cache", cache),
+            patch("optopsy.ui.tools._helpers._yf_cache", cache),
+            patch("yfinance.download") as mock_dl,
+        ):
+            mock_dl.return_value = _make_yf_download_result(friday, monday)
+            _yf_fetch_and_cache("SPY", cached_df, monday)
+
+        mock_dl.assert_called_once_with(
+            "SPY",
+            start=str(friday),
+            end=str(monday + timedelta(days=1)),
+            progress=False,
+        )
 
     def test_tail_merges_and_persists(self, tmp_path):
         """Tail fetch data is merged with existing cache and persisted to disk."""
