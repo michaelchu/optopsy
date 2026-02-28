@@ -28,7 +28,7 @@ import pandas as pd
 import requests
 
 from .base import DataProvider
-from .cache import ParquetCache
+from .cache import get_store
 
 _log = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ def _safe_raise_for_status(resp: requests.Response) -> None:
 
 class EODHDProvider(DataProvider):
     def __init__(self) -> None:
-        self._cache = ParquetCache()
+        self._cache = get_store()
         self._session = requests.Session()
         self._last_request_time: float = 0.0
         self._request_count: int = 0

@@ -59,7 +59,7 @@ class TestClearCache:
         df.to_parquet(cat_dir / "QQQ.parquet")
 
         with patch(
-            "optopsy.ui.tools._results_manager.ParquetCache",
+            "optopsy.ui.tools._results_manager.get_store",
             return_value=ParquetCache(str(cache_dir)),
         ):
             result = execute_tool("clear_cache", {}, None)
@@ -77,7 +77,7 @@ class TestClearCache:
         df.to_parquet(cat_dir / "QQQ.parquet")
 
         with patch(
-            "optopsy.ui.tools._results_manager.ParquetCache",
+            "optopsy.ui.tools._results_manager.get_store",
             return_value=ParquetCache(str(cache_dir)),
         ):
             result = execute_tool("clear_cache", {"symbol": "SPY"}, None)
@@ -90,7 +90,7 @@ class TestClearCache:
         cache_dir = tmp_path / "nonexistent_cache"
 
         with patch(
-            "optopsy.ui.tools._results_manager.ParquetCache",
+            "optopsy.ui.tools._results_manager.get_store",
             return_value=ParquetCache(str(cache_dir)),
         ):
             result = execute_tool("clear_cache", {}, None)

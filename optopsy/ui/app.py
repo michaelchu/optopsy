@@ -202,6 +202,12 @@ def _init_db_sync() -> None:
         engine = create_engine(sync_url)
         try:
             _db_metadata.create_all(engine)
+
+            # Create data store tables (options_data, stocks_data) on PostgreSQL.
+            if sync_url.startswith("postgresql"):
+                from optopsy.data.providers.pg_store import ensure_tables
+
+                ensure_tables(engine)
             return  # success
         except Exception:
             engine.dispose()

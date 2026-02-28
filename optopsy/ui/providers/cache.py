@@ -3,4 +3,5 @@
 from optopsy.data.providers.cache import (  # noqa: F401
     ParquetCache,
     compute_date_gaps,
+    get_store,
 )

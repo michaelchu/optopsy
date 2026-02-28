@@ -17,6 +17,7 @@ from datetime import date, timedelta
 import pandas as pd
 
 from optopsy.data.paths import CACHE_DIR
+from optopsy.data.providers.store import DataStore
 
 _log = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def compute_date_gaps(
     return gaps
 
 
-class ParquetCache:
+class ParquetCache(DataStore):
     """Simple parquet-based cache for immutable historical data.
 
     Each (category, symbol) pair maps to a single parquet file at:
@@ -212,3 +213,17 @@ class ParquetCache:
     def total_size_bytes(self) -> int:
         """Return total cache size in bytes."""
         return sum(self.size().values())
+
+
+def get_store() -> DataStore:
+    """Return the appropriate data store backend.
+
+    Uses ``PostgresStore`` when ``DATABASE_URL`` is set to a PostgreSQL URL,
+    otherwise falls back to the file-based ``ParquetCache``.
+    """
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url.startswith(("postgres://", "postgresql://")):
+        from optopsy.data.providers.pg_store import PostgresStore
+
+        return PostgresStore(db_url)
+    return ParquetCache()

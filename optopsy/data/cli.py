@@ -22,16 +22,16 @@ def _cmd_cache_size(args: argparse.Namespace) -> None:
 
     import_optional_dependency("pyarrow")
 
-    from optopsy.data.providers.cache import ParquetCache
+    from optopsy.data.providers.cache import get_store
 
-    cache = ParquetCache()
-    entries = cache.size()
+    store = get_store()
+    entries = store.size()
     if not entries:
         print("Cache is empty.")
         return
     for name, nbytes in entries.items():
         print(f"  {name:<30s} {_format_bytes(nbytes):>10s}")
-    print(f"  {'Total':<30s} {_format_bytes(cache.total_size_bytes()):>10s}")
+    print(f"  {'Total':<30s} {_format_bytes(store.total_size_bytes()):>10s}")
 
 
 def _cmd_cache_clear(args: argparse.Namespace) -> None:
@@ -40,11 +40,11 @@ def _cmd_cache_clear(args: argparse.Namespace) -> None:
 
     import_optional_dependency("pyarrow")
 
-    from optopsy.data.providers.cache import ParquetCache
+    from optopsy.data.providers.cache import get_store
 
-    cache = ParquetCache()
+    store = get_store()
     symbol = args.symbol
-    count = cache.clear(symbol=symbol)
+    count = store.clear(symbol=symbol)
     if symbol:
         print(f"Cleared {count} cached file(s) for {symbol.upper()}.")
     else:
@@ -199,10 +199,10 @@ def _download_stocks_with_rich(symbol: str) -> None:
         return
 
     from optopsy.data._yf_helpers import _YF_CACHE_CATEGORY, _yf_fetch_and_cache
-    from optopsy.data.providers.cache import ParquetCache
+    from optopsy.data.providers.cache import get_store
 
-    cache = ParquetCache()
-    cached = cache.read(_YF_CACHE_CATEGORY, symbol)
+    store = get_store()
+    cached = store.read(_YF_CACHE_CATEGORY, symbol)
 
     with console.status(f"[bold green]Fetching {symbol} from yfinance…"):
         try:
@@ -219,7 +219,7 @@ def _download_stocks_with_rich(symbol: str) -> None:
     date_max = pd.to_datetime(result["date"]).dt.date.max()
     row_count = len(result)
 
-    size_bytes = cache.size().get(f"{_YF_CACHE_CATEGORY}/{symbol}", 0)
+    size_bytes = store.size().get(f"{_YF_CACHE_CATEGORY}/{symbol}", 0)
     size_str = _format_bytes(size_bytes)
 
     console.print(f"  [bold]{symbol}[/bold]  {date_min} → {date_max}")
@@ -276,6 +276,58 @@ def _cmd_symbols(args: argparse.Namespace) -> None:
         console.print(
             "[yellow]No data provider supports listing symbols.\n"
             "Set EODHD_API_KEY in your environment or .env file.[/yellow]"
+        )
+
+
+def _cmd_import(args: argparse.Namespace) -> None:
+    """Import local parquet files into the PostgreSQL data store."""
+    import os
+
+    import pandas as pd
+    from rich.console import Console
+
+    _load_env()
+
+    from optopsy.data.providers.cache import get_store
+
+    console = Console()
+    store = get_store()
+
+    # Verify we're targeting PostgreSQL
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url.startswith(("postgres://", "postgresql://")):
+        console.print(
+            "[red]DATABASE_URL is not set or is not PostgreSQL. "
+            "Import requires a PostgreSQL database.[/red]"
+        )
+        return
+
+    for fpath in args.files:
+        if not os.path.exists(fpath):
+            console.print(f"[red]File not found: {fpath}[/red]")
+            continue
+
+        # Auto-detect category from path
+        category = args.category
+        if not category:
+            if "/options/" in fpath or "\\options\\" in fpath:
+                category = "options"
+            elif "/yf_stocks/" in fpath or "\\yf_stocks\\" in fpath:
+                category = "yf_stocks"
+            else:
+                console.print(
+                    f"[yellow]Cannot detect category for {fpath}. Use -c flag.[/yellow]"
+                )
+                continue
+
+        symbol = os.path.basename(fpath).replace(".parquet", "").upper()
+
+        with console.status(f"Importing {symbol} ({category})..."):
+            df = pd.read_parquet(fpath)
+            store.write(category, symbol, df)
+
+        console.print(
+            f"  [green]Imported {symbol}: {len(df):,} rows into {category}[/green]"
         )
 
 
@@ -339,6 +391,25 @@ def _build_data_subparsers(
         help="Symbol to clear (e.g. SPY). Omit to clear all.",
     )
     clear_parser.set_defaults(func=_cmd_cache_clear)
+
+    # --- import ---
+    import_parser = subparsers.add_parser(
+        "import",
+        help="Import local parquet files into the PostgreSQL data store",
+    )
+    import_parser.add_argument(
+        "files",
+        nargs="+",
+        help="Parquet file paths (e.g. ~/.optopsy/cache/options/SPY.parquet)",
+    )
+    import_parser.add_argument(
+        "-c",
+        "--category",
+        choices=["options", "yf_stocks"],
+        default=None,
+        help="Data category (auto-detected from path if omitted)",
+    )
+    import_parser.set_defaults(func=_cmd_import)
 
     return {"cache": cache_parser}
 

@@ -272,15 +272,15 @@ def load_cached_options(
         ImportError: If pyarrow is not installed.
     """
     try:
-        from .data.providers.cache import ParquetCache
+        from .data.providers.cache import get_store
     except ImportError as exc:
         raise ImportError(
             "pyarrow is required for load_cached_options. "
             "Install it with: pip install optopsy[data]"
         ) from exc
 
-    cache = ParquetCache()
-    df = cache.read("options", symbol)
+    store = get_store()
+    df = store.read("options", symbol)
     if df is None or df.empty:
         raise FileNotFoundError(
             f"No cached options data for '{symbol}'. "
@@ -349,15 +349,15 @@ def load_cached_stocks(
         ImportError: If pyarrow is not installed.
     """
     try:
-        from .data.providers.cache import ParquetCache
+        from .data.providers.cache import get_store
     except ImportError as exc:
         raise ImportError(
             "pyarrow is required for load_cached_stocks. "
             "Install it with: pip install optopsy[data]"
         ) from exc
 
-    cache = ParquetCache()
-    df = cache.read("yf_stocks", symbol)
+    store = get_store()
+    df = store.read("yf_stocks", symbol)
     if df is None or df.empty:
         raise FileNotFoundError(
             f"No cached stock data for '{symbol}'. "
