@@ -1306,3 +1306,21 @@ class TestDateRangeFiltering:
         )
         assert result.chart_figure is not None
         assert f"{len(dated_dataset)} data points" in result.llm_summary
+
+    def test_reversed_date_range_returns_error(self, dated_dataset):
+        """start_date after end_date should return an explicit error."""
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "2024-03-01",
+                "end_date": "2024-01-01",
+            },
+            dated_dataset,
+        )
+        assert result.chart_figure is None
+        assert "start_date" in result.llm_summary.lower()
+        assert "end_date" in result.llm_summary.lower()

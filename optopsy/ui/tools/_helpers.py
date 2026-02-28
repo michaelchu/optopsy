@@ -919,6 +919,8 @@ def _filter_by_date_range(
         )
 
     mask = pd.Series(True, index=df.index)
+    start_ts: pd.Timestamp | None = None
+    end_ts: pd.Timestamp | None = None
     if start_date:
         try:
             start_ts = pd.Timestamp(start_date).normalize()
@@ -931,6 +933,9 @@ def _filter_by_date_range(
         except (ValueError, TypeError):
             return df, f"Invalid end_date '{end_date}'. Use YYYY-MM-DD format."
         mask &= col_dates <= end_ts
+
+    if start_ts is not None and end_ts is not None and start_ts > end_ts:
+        return df, "start_date must be on or before end_date."
 
     return df[mask].copy(), None
 
