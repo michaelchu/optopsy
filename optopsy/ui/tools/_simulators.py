@@ -14,6 +14,10 @@ from ._helpers import (
     _with_cache_key,
 )
 
+# Keys excluded from the user-facing parameters table (already shown in the
+# heading or stripped by _pop_internal_keys before we get here).
+_DISPLAY_SKIP_KEYS = frozenset({"strategy_name", "dataset_name"})
+
 
 @_register("simulate")
 def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
@@ -170,13 +174,15 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     preview = trade_log[available_cols].head(20)
 
     # Parameters table — show all user-facing params used for this simulation
-    _SKIP_PARAM_KEYS = {"strategy_name", "dataset_name", "_dataset_fingerprint"}
     param_rows = [
-        (k, v) for k, v in sorted(arguments.items()) if k not in _SKIP_PARAM_KEYS
+        (k, v) for k, v in sorted(arguments.items()) if k not in _DISPLAY_SKIP_KEYS
     ]
     if param_rows:
         params_table = "| Parameter | Value |\n|---|---|\n"
-        params_table += "\n".join(f"| {k} | {v} |" for k, v in param_rows)
+        params_table += "\n".join(
+            f"| {k} | {str(v).replace('|', '\\|').replace(chr(10), ' ')} |"
+            for k, v in param_rows
+        )
         params_section = f"**Parameters**\n\n{params_table}\n\n"
     else:
         params_section = "**Parameters**: defaults\n\n"
