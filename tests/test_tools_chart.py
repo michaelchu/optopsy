@@ -1352,4 +1352,4 @@ class TestDateRangeFiltering:
             df,
         )
         assert result.chart_figure is not None
-        assert "1 data point" in result.llm_summary
+        assert "1 data points" in result.llm_summary
