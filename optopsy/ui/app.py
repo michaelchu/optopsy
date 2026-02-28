@@ -136,72 +136,7 @@ def _patched_plotly_post_init(self):
 
 cl.Plotly.__post_init__ = _patched_plotly_post_init
 
-_DB_SCHEMA_STATEMENTS = [
-    """CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        identifier TEXT NOT NULL UNIQUE,
-        "createdAt" TEXT NOT NULL,
-        metadata TEXT DEFAULT '{}'
-    )""",
-    """CREATE TABLE IF NOT EXISTS threads (
-        id TEXT PRIMARY KEY,
-        "userId" TEXT,
-        "userIdentifier" TEXT,
-        "createdAt" TEXT,
-        name TEXT,
-        metadata TEXT,
-        tags TEXT,
-        FOREIGN KEY("userId") REFERENCES users(id)
-    )""",
-    """CREATE TABLE IF NOT EXISTS steps (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        type TEXT,
-        "threadId" TEXT NOT NULL,
-        "parentId" TEXT,
-        streaming INTEGER DEFAULT 0,
-        "waitForAnswer" INTEGER,
-        "isError" INTEGER,
-        metadata TEXT DEFAULT '{}',
-        tags TEXT,
-        input TEXT,
-        output TEXT,
-        "createdAt" TEXT,
-        start TEXT,
-        "end" TEXT,
-        generation TEXT DEFAULT '{}',
-        "defaultOpen" INTEGER DEFAULT 0,
-        "showInput" TEXT,
-        language TEXT,
-        FOREIGN KEY("threadId") REFERENCES threads(id)
-    )""",
-    """CREATE TABLE IF NOT EXISTS feedbacks (
-        id TEXT PRIMARY KEY,
-        "forId" TEXT NOT NULL,
-        value REAL,
-        comment TEXT,
-        FOREIGN KEY("forId") REFERENCES steps(id)
-    )""",
-    """CREATE TABLE IF NOT EXISTS elements (
-        id TEXT PRIMARY KEY,
-        "threadId" TEXT NOT NULL,
-        type TEXT,
-        "chainlitKey" TEXT,
-        url TEXT,
-        "objectKey" TEXT,
-        name TEXT,
-        display TEXT,
-        size TEXT,
-        language TEXT,
-        page TEXT,
-        "forId" TEXT,
-        mime TEXT,
-        props TEXT DEFAULT '{}',
-        "autoPlay" TEXT,
-        "playerConfig" TEXT,
-        FOREIGN KEY("threadId") REFERENCES threads(id)
-    )""",
-]
+from optopsy.ui.models import metadata as _db_metadata
 
 
 def _get_async_conninfo() -> str:
@@ -242,8 +177,10 @@ def _get_sync_conninfo() -> str:
 def _init_db_sync() -> None:
     """Create tables synchronously at module import time.
 
-    Uses SQLAlchemy so the same DDL works for both SQLite and PostgreSQL.
-    The sync Postgres path requires ``psycopg2`` (included in the ``ui`` extra).
+    Uses SQLAlchemy's ``metadata.create_all()`` so the DDL is generated from
+    the Table definitions in ``models.py`` — emitting native ``UUID``,
+    ``JSONB``, ``TEXT[]``, and ``BOOLEAN`` on PostgreSQL while falling back
+    to ``TEXT`` / ``INTEGER`` on SQLite.
 
     Retries up to 5 times with exponential backoff so the app survives
     transient database unavailability (e.g. Railway starting the DB service
@@ -251,8 +188,7 @@ def _init_db_sync() -> None:
     """
     import time
 
-    from sqlalchemy import create_engine, text
-    from sqlalchemy.exc import OperationalError, ProgrammingError
+    from sqlalchemy import create_engine
 
     sync_url = _get_sync_conninfo()
 
@@ -265,39 +201,7 @@ def _init_db_sync() -> None:
     for attempt in range(max_retries):
         engine = create_engine(sync_url)
         try:
-            with engine.begin() as conn:
-                for stmt in _DB_SCHEMA_STATEMENTS:
-                    conn.execute(text(stmt))
-
-            # Add columns introduced in newer Chainlit versions.
-            # Each ALTER TABLE runs in its own transaction so that a
-            # "column already exists" error on PostgreSQL doesn't abort
-            # subsequent statements (PostgreSQL marks the whole
-            # transaction as failed after any error).  Using separate
-            # transactions avoids SAVEPOINTs, which are unreliable with
-            # pysqlite's default transaction handling.
-            is_pg = sync_url.startswith("postgresql")
-            for col, definition in [
-                ("defaultOpen", "INTEGER DEFAULT 0"),
-                ("waitForAnswer", "INTEGER"),
-            ]:
-                try:
-                    with engine.begin() as conn:
-                        if is_pg:
-                            conn.execute(
-                                text(
-                                    f'ALTER TABLE steps ADD COLUMN IF NOT EXISTS "{col}" {definition}'
-                                )
-                            )
-                        else:
-                            conn.execute(
-                                text(
-                                    f'ALTER TABLE steps ADD COLUMN "{col}" {definition}'
-                                )
-                            )
-                except (OperationalError, ProgrammingError):
-                    pass  # column already exists
-
+            _db_metadata.create_all(engine)
             return  # success
         except Exception:
             engine.dispose()
