@@ -170,17 +170,22 @@ class ParquetCache(DataStore):
         self.write(category, symbol, merged)
         return merged
 
-    def clear(self, symbol: str | None = None) -> int:
+    def clear(self, symbol: str | None = None, category: str | None = None) -> int:
         """Remove cached files.
 
-        If *symbol* is given, remove that symbol across all categories.
-        If ``None``, remove everything.  Returns number of files deleted.
+        *symbol* — restrict to a single symbol (across categories).
+        *category* — restrict to a single category subdirectory.
+        Both ``None`` removes everything.  Returns number of files deleted.
         """
         count = 0
         if not os.path.exists(self._cache_dir):
             return count
-        for category in os.listdir(self._cache_dir):
-            cat_path = os.path.join(self._cache_dir, category)
+        if category:
+            categories = [category]
+        else:
+            categories = os.listdir(self._cache_dir)
+        for cat in categories:
+            cat_path = os.path.join(self._cache_dir, cat)
             if not os.path.isdir(cat_path):
                 continue
             if symbol:

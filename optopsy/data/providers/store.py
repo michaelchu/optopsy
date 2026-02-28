@@ -32,8 +32,12 @@ class DataStore(ABC):
         """Merge *new_df* with existing data, deduplicate, and persist."""
 
     @abstractmethod
-    def clear(self, symbol: str | None = None) -> int:
-        """Remove stored data.  Returns count of items deleted."""
+    def clear(self, symbol: str | None = None, category: str | None = None) -> int:
+        """Remove stored data.  Returns count of items deleted.
+
+        *category* — restrict to a single category (e.g. ``"options"``,
+        ``"yf_stocks"``).  ``None`` means all categories.
+        """
 
     @abstractmethod
     def size(self) -> dict[str, int]:

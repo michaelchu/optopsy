@@ -250,9 +250,13 @@ class PostgresStore(DataStore):
         result = self.read(category, symbol)
         return result if result is not None else write_df
 
-    def clear(self, symbol: str | None = None) -> int:
+    def clear(self, symbol: str | None = None, category: str | None = None) -> int:
         total = 0
-        for tbl in _CATEGORY_TABLE.values():
+        if category:
+            tables = {category: _CATEGORY_TABLE[category]}
+        else:
+            tables = _CATEGORY_TABLE
+        for tbl in tables.values():
             with self._engine.begin() as conn:
                 if symbol:
                     stmt = delete(tbl).where(tbl.c.underlying_symbol == symbol.upper())
