@@ -35,20 +35,43 @@ def _cmd_cache_size(args: argparse.Namespace) -> None:
 
 
 def _cmd_cache_clear(args: argparse.Namespace) -> None:
-    """Delete cached parquet files, optionally filtered by symbol."""
+    """Delete cached parquet files, optionally filtered by symbol or category."""
+    from rich.console import Console
+    from rich.prompt import Confirm
+
     from optopsy.data._compat import import_optional_dependency
 
     import_optional_dependency("pyarrow")
 
     from optopsy.data.providers.cache import get_store
 
+    console = Console()
     store = get_store()
     symbol = args.symbol
-    count = store.clear(symbol=symbol)
-    if symbol:
-        print(f"Cleared {count} cached file(s) for {symbol.upper()}.")
+    category = None
+    if getattr(args, "stocks", False):
+        category = "yf_stocks"
+    elif getattr(args, "options", False):
+        category = "options"
+
+    # Build a human-readable description of what will be deleted
+    parts = []
+    if category:
+        label = "stock" if category == "yf_stocks" else "options"
+        parts.append(f"{label} data")
     else:
-        print(f"Cleared {count} cached file(s).")
+        parts.append("all cached data")
+    if symbol:
+        parts.append(f"for {symbol.upper()}")
+    description = " ".join(parts)
+
+    if not getattr(args, "yes", False):
+        if not Confirm.ask(f"Clear {description}?", console=console, default=False):
+            console.print("[dim]Aborted.[/dim]")
+            return
+
+    count = store.clear(symbol=symbol, category=category)
+    console.print(f"Cleared {count} cached file(s) ({description}).")
 
 
 def _load_env() -> None:
@@ -389,6 +412,25 @@ def _build_data_subparsers(
         nargs="?",
         default=None,
         help="Symbol to clear (e.g. SPY). Omit to clear all.",
+    )
+    clear_category = clear_parser.add_mutually_exclusive_group()
+    clear_category.add_argument(
+        "-o",
+        "--options",
+        action="store_true",
+        help="Clear only options data",
+    )
+    clear_category.add_argument(
+        "-s",
+        "--stocks",
+        action="store_true",
+        help="Clear only stock data",
+    )
+    clear_parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompt",
     )
     clear_parser.set_defaults(func=_cmd_cache_clear)
 

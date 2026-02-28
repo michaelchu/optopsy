@@ -88,10 +88,10 @@ def test_cmd_cache_clear_with_symbol(mock_cache_cls, capsys):
     mock_cache.clear.return_value = 2
     mock_cache_cls.return_value = mock_cache
 
-    args = argparse.Namespace(symbol="spy")
+    args = argparse.Namespace(symbol="spy", yes=True, stocks=False, options=False)
     _cmd_cache_clear(args)
 
-    mock_cache.clear.assert_called_once_with(symbol="spy")
+    mock_cache.clear.assert_called_once_with(symbol="spy", category=None)
     captured = capsys.readouterr()
     assert "SPY" in captured.out
     assert "2" in captured.out
@@ -104,10 +104,10 @@ def test_cmd_cache_clear_all(mock_cache_cls, capsys):
     mock_cache.clear.return_value = 5
     mock_cache_cls.return_value = mock_cache
 
-    args = argparse.Namespace(symbol=None)
+    args = argparse.Namespace(symbol=None, yes=True, stocks=False, options=False)
     _cmd_cache_clear(args)
 
-    mock_cache.clear.assert_called_once_with(symbol=None)
+    mock_cache.clear.assert_called_once_with(symbol=None, category=None)
     captured = capsys.readouterr()
     assert "5" in captured.out
     assert "SPY" not in captured.out
