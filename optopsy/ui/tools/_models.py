@@ -825,6 +825,22 @@ class CreateChartArgs(BaseModel):
     figsize_height: int | None = Field(
         None, description="Chart height in pixels (default: 500)."
     )
+    start_date: str | None = Field(
+        None,
+        description=(
+            "Start of the date range to plot (YYYY-MM-DD, inclusive). "
+            "Filters data before passing to the chart builder. "
+            "The date column is auto-detected (quote_date, entry_date, or date)."
+        ),
+    )
+    end_date: str | None = Field(
+        None,
+        description=(
+            "End of the date range to plot (YYYY-MM-DD, inclusive). "
+            "Filters data before passing to the chart builder. "
+            "The date column is auto-detected (quote_date, entry_date, or date)."
+        ),
+    )
 
 
 class SimulateArgs(SignalMixin, StrategyParamsMixin, CalendarParamsMixin):

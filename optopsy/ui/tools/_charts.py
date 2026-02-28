@@ -10,6 +10,7 @@ from ._executor import _register, _require_dataset, _resolve_dataset
 from ._helpers import (
     _IV_COLUMN_MISSING_MSG,
     _YF_CACHE_CATEGORY,
+    _filter_by_date_range,
     _filter_by_quote_date,
     _resolve_result_key,
     _select_results,
@@ -441,6 +442,19 @@ def _handle_create_chart(arguments, dataset, signals, datasets, results, _result
         return _result(err)
     if df is None or df.empty:
         return _result(f"Data source '{source_label}' is empty.")
+
+    # Apply optional date range filter before passing data to chart builders.
+    start_date = arguments.get("start_date")
+    end_date = arguments.get("end_date")
+    if start_date or end_date:
+        df, filter_err = _filter_by_date_range(df, start_date, end_date)
+        if filter_err:
+            return _result(filter_err)
+        if df.empty:
+            return _result(
+                f"No data in '{source_label}' for the requested date range "
+                f"({start_date or '…'} – {end_date or '…'})."
+            )
 
     x = arguments.get("x")
     y = arguments.get("y")
