@@ -910,7 +910,7 @@ def _filter_by_date_range(
         return df, "Cannot apply date filter: no date column found in the data."
 
     try:
-        col_dates = pd.to_datetime(df[date_col]).dt.normalize()
+        col_dates = normalize_dates(pd.to_datetime(df[date_col]))
     except (ValueError, TypeError):
         return (
             df,

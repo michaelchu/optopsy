@@ -1324,3 +1324,32 @@ class TestDateRangeFiltering:
         assert result.chart_figure is None
         assert "start_date" in result.llm_summary.lower()
         assert "end_date" in result.llm_summary.lower()
+
+    def test_tz_aware_date_column(self):
+        """Tz-aware datetime columns must not raise TypeError during filtering."""
+        import pytz
+
+        tz = pytz.utc
+        df = pd.DataFrame(
+            {
+                "quote_date": pd.to_datetime(
+                    ["2024-01-10", "2024-02-10", "2024-03-10"]
+                ).tz_localize(tz),
+                "bid": [1.0, 2.0, 3.0],
+                "ask": [1.1, 2.1, 3.1],
+            }
+        )
+        result = execute_tool(
+            "create_chart",
+            {
+                "chart_type": "line",
+                "data_source": "dataset",
+                "x": "quote_date",
+                "y": "bid",
+                "start_date": "2024-02-01",
+                "end_date": "2024-02-28",
+            },
+            df,
+        )
+        assert result.chart_figure is not None
+        assert "1 data point" in result.llm_summary
