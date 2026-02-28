@@ -268,17 +268,26 @@ def _init_db_sync() -> None:
             with engine.begin() as conn:
                 for stmt in _DB_SCHEMA_STATEMENTS:
                     conn.execute(text(stmt))
-                # Add columns introduced in newer Chainlit versions.
-                for col, definition in [
-                    ("defaultOpen", "INTEGER DEFAULT 0"),
-                    ("waitForAnswer", "INTEGER"),
-                ]:
-                    try:
+
+            # Add columns introduced in newer Chainlit versions.
+            # Each ALTER TABLE runs in its own transaction so that a
+            # "column already exists" error on PostgreSQL doesn't abort
+            # subsequent statements (PostgreSQL marks the whole
+            # transaction as failed after any error).  Using separate
+            # transactions avoids SAVEPOINTs, which are unreliable with
+            # pysqlite's default transaction handling.
+            for col, definition in [
+                ("defaultOpen", "INTEGER DEFAULT 0"),
+                ("waitForAnswer", "INTEGER"),
+            ]:
+                try:
+                    with engine.begin() as conn:
                         conn.execute(
                             text(f'ALTER TABLE steps ADD COLUMN "{col}" {definition}')
                         )
-                    except (OperationalError, ProgrammingError):
-                        pass  # column already exists
+                except (OperationalError, ProgrammingError):
+                    pass  # column already exists
+
             return  # success
         except Exception:
             engine.dispose()
