@@ -177,10 +177,11 @@ def test_simulate_caches_on_miss(mock_sim, mock_signals, mock_store_cls):
 
     assert "10 trades" in result.llm_summary
     mock_store.write.assert_called_once()
-    # Verify the cache key is attached to results
-    sim_keys = [k for k in result.results if k.startswith("sim:")]
-    assert sim_keys
-    assert result.results[sim_keys[0]].get("_cache_key") == "fake_cache_key"
+    # Verify the cache key is used as the session result key (SHA-256 hash strategy)
+    assert "fake_cache_key" in result.results
+    entry = result.results["fake_cache_key"]
+    assert entry.get("_cache_key") == "fake_cache_key"
+    assert entry.get("display_key") == "sim:long_calls"
 
 
 # ---------------------------------------------------------------------------

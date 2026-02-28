@@ -7,7 +7,9 @@ from ._helpers import (
     _build_strat_kwargs,
     _df_to_markdown,
     _pop_internal_keys,
+    _resolve_result_key,
     _resolve_signals_for_strategy,
+    _session_result_key,
     _validate_strategy_and_dataset,
     _with_cache_key,
 )
@@ -97,21 +99,24 @@ def _handle_simulate(arguments, dataset, signals, datasets, results, _result):
     if trade_log is None or trade_log.empty or not s or s.get("total_trades", 0) == 0:
         return _result(f"simulate({strategy_name}): no trades generated.")
 
-    # Build result key — include all params that affect output
+    # Build human-readable display key from all params
     key_parts = [f"sim:{strategy_name}"]
     for k in sorted(arguments.keys()):
         if k not in ("strategy_name", "dataset_name", "_dataset_fingerprint"):
             key_parts.append(f"{k}={arguments[k]}")
-    sim_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
+    sim_display_key = ":".join(key_parts) if len(key_parts) > 1 else key_parts[0]
+    sim_session_key = _session_result_key(cache_key, sim_display_key)
 
     from ._models import SimulationResultEntry
 
     updated_results = dict(results)
     entry = SimulationResultEntry(
         strategy=strategy_name,
+        display_key=sim_display_key,
+        dataset_fingerprint=ds_fp,
         summary=s,
     ).model_dump()
-    updated_results[sim_key] = _with_cache_key(entry, cache_key)
+    updated_results[sim_session_key] = _with_cache_key(entry, cache_key)
 
     # Format output
     pf_str = _fmt_pf(s["profit_factor"])
@@ -183,13 +188,19 @@ def _handle_get_simulation_trades(
 
     # Find the simulation result
     if sim_key:
-        entry = results.get(sim_key)
+        canonical = _resolve_result_key(results, sim_key)
+        entry = results.get(canonical) if canonical else None
         if entry is None or entry.get("type") != "simulation":
-            sim_keys = [k for k, v in results.items() if v.get("type") == "simulation"]
+            sim_keys = [
+                v.get("display_key", k)
+                for k, v in results.items()
+                if v.get("type") == "simulation"
+            ]
             return _result(
                 f"No simulation found for key '{sim_key}'. "
                 f"Available: {sim_keys or 'none — run simulate first'}"
             )
+        sim_key = canonical
     else:
         # Find most recent simulation
         sim_entries = [
@@ -199,14 +210,16 @@ def _handle_get_simulation_trades(
             return _result("No simulations run yet. Use simulate first.")
         sim_key, entry = sim_entries[-1]
 
+    display_label = entry.get("display_key", sim_key)
+
     # Read trade log from ResultStore via _cache_key
     cache_key = entry.get("_cache_key")
     store = ResultStore()
     trade_log = store.read(cache_key) if cache_key else None
 
     if trade_log is None:
-        return _result(f"Simulation '{sim_key}' has no cached trade log.")
+        return _result(f"Simulation '{display_label}' has no cached trade log.")
 
-    llm_summary = f"get_simulation_trades({sim_key}): {len(trade_log)} trades"
-    user_display = f"### Trade Log: {sim_key}\n\n{_df_to_markdown(trade_log)}"
+    llm_summary = f"get_simulation_trades({display_label}): {len(trade_log)} trades"
+    user_display = f"### Trade Log: {display_label}\n\n{_df_to_markdown(trade_log)}"
     return _result(llm_summary, user_display=user_display)
