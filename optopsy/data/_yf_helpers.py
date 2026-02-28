@@ -9,13 +9,13 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from optopsy.data.providers.cache import ParquetCache
+from optopsy.data.providers.cache import get_store
 
 _log = logging.getLogger(__name__)
 
 # Cache for yfinance OHLCV data (category="yf_stocks", one file per symbol).
 # Deliberately distinct from EODHD's "stocks" category to avoid schema collisions.
-_yf_cache = ParquetCache()
+_yf_cache = get_store()
 _YF_CACHE_CATEGORY = "yf_stocks"
 _YF_DEDUP_COLS = ["date"]
 

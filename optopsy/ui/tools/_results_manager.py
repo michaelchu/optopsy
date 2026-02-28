@@ -2,7 +2,8 @@
 
 import pandas as pd
 
-from ..providers.cache import ParquetCache
+from optopsy.data.providers.cache import get_store
+
 from ..providers.result_store import ResultStore
 from ._executor import _fmt_pf, _register
 from ._helpers import _df_to_markdown, _select_results
@@ -11,7 +12,7 @@ from ._helpers import _df_to_markdown, _select_results
 @_register("inspect_cache")
 def _handle_inspect_cache(arguments, dataset, signals, datasets, results, _result):
     filter_symbol = arguments.get("symbol", "").strip().upper() or None
-    cache = ParquetCache()
+    cache = get_store()
     cache_files = cache.size()  # {category/SYMBOL.parquet: bytes}
 
     if not cache_files:
@@ -83,7 +84,7 @@ def _handle_inspect_cache(arguments, dataset, signals, datasets, results, _resul
 @_register("clear_cache")
 def _handle_clear_cache(arguments, dataset, signals, datasets, results, _result):
     symbol = arguments.get("symbol", "").strip().upper() or None
-    cache = ParquetCache()
+    cache = get_store()
     target = f" for {symbol}" if symbol else ""
     size_before = cache.total_size_bytes()
     count = cache.clear(symbol)

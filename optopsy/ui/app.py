@@ -298,6 +298,12 @@ def _init_db_sync() -> None:
                 except (OperationalError, ProgrammingError):
                     pass  # column already exists
 
+            # Create data store tables (options_data, stocks_data) on PostgreSQL.
+            if sync_url.startswith("postgresql"):
+                from optopsy.data.providers.pg_store import ensure_tables
+
+                ensure_tables(engine)
+
             return  # success
         except Exception:
             engine.dispose()
