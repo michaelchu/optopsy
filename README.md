@@ -1,6 +1,6 @@
 ![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2Fmichaelchu%2Foptopsy&label=Visitors&icon=suitcase-lg&color=%239ec5fe&message=&style=flat&tz=Canada%2FEastern)
 ![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fmichaelchu.github.io%2Foptopsy%2F&label=Docs&icon=github&color=%23d2f4ea&message=&style=flat&tz=Canada%2FEastern)
-[![CI](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelchu/optopsy/actions/workflows/ci.yml)
+[![CI](https://github.com/goldspanlabs/optopsy/actions/workflows/ci.yml/badge.svg)](https://github.com/goldspanlabs/optopsy/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/optopsy.svg)](https://badge.fury.io/py/optopsy)
 [![Python](https://img.shields.io/pypi/pyversions/optopsy)](https://pypi.org/project/optopsy/)
 
@@ -8,9 +8,9 @@
 
 <img src="docs/assets/logo.png" alt="Optopsy" width="150">
 
-An AI-powered research and backtesting tool for options strategies.
+A nimble backtesting and statistics library for options strategies.
 
-Optopsy combines a Python backtesting engine with an optional conversational AI interface that fetches data from online or local sources, runs strategies, and interprets results — so you can go from *"How do 45-DTE iron condors on SPX perform with a 50% profit target and 2x stop loss vs holding to expiration?"* to detailed performance statistics in seconds, not spreadsheets.
+Optopsy is a Python backtesting engine that lets you go from *"How do 45-DTE iron condors on SPX perform with a 50% profit target and 2x stop loss vs holding to expiration?"* to detailed performance statistics in seconds, not spreadsheets.
 
 [Full Documentation](https://michaelchu.github.io/optopsy/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
 
@@ -33,7 +33,6 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 - **Live Data Providers** - Fetch options chains and stock prices directly from supported data sources (e.g. EODHD)
 - **Smart Caching** - Automatic local caching of fetched data with gap detection for efficient re-fetches
 - **Plugin System** - Extend with custom strategies, signals, and data providers via entry points
-- **AI Chat UI** - Interactive AI-powered chat interface with conversation starters, settings panel, and result caching
 
 ## Installation
 
@@ -41,98 +40,15 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 # Core library only (latest stable release)
 pip install optopsy
 
-# With Data CLI (download & cache market data, no Chainlit needed)
+# With Data CLI (download & cache market data)
 pip install optopsy[data]
-
-# With AI Chat UI (beta — requires pre-release, includes data package)
-pip install --pre optopsy[ui]
 ```
 
 **Requirements:** Python 3.12-3.13, Pandas 2.0+, NumPy 1.26+
 
-## AI Chat UI (Beta)
-
-An AI-powered chat interface that lets you fetch data, run backtests, and interpret results using natural language.
-
-![AI Chat UI](docs/images/example.gif)
-
-### Setup & Configuration
-
-Install the beta pre-release with the `ui` extra:
-
-```bash
-pip install --pre optopsy[ui]
-```
-
-Configure your environment variables in a `.env` file at the project root (the app auto-loads it):
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...       # or OPENAI_API_KEY for OpenAI models
-EODHD_API_KEY=your-key-here        # enables live data downloads (optional)
-OPTOPSY_MODEL=anthropic/claude-haiku-4-5-20251001  # override the default model (optional)
-```
-
-At minimum you need an LLM API key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`). Set `EODHD_API_KEY` to enable downloading historical options data directly from [EODHD](https://eodhd.com/). The `OPTOPSY_MODEL` variable accepts any [LiteLLM model string](https://docs.litellm.ai/docs/providers) if you want to use a different model.
-
-### Downloading Data
-
-The recommended workflow is to download data first via the CLI, then use the chat agent to analyze it:
-
-```bash
-# Download historical options data (requires EODHD_API_KEY)
-optopsy-chat download SPY
-optopsy-chat download SPY AAPL TSLA    # multiple symbols
-optopsy-chat download SPY -v           # verbose/debug output
-```
-
-> **Note:** If developing with `uv`, prefix commands with `uv run` (e.g., `uv run optopsy-chat download SPY`).
-
-Data is stored locally as Parquet files at `~/.optopsy/cache/`. Re-running the download command only fetches new data since your last download — it won't re-download what you already have. A Rich progress display shows download progress in the terminal.
-
-Once downloaded, the chat agent can query this data instantly without needing to re-fetch. Stock price history (via yfinance) is also cached locally and fetched automatically when the agent needs it for charting or signal analysis — no manual download required.
-
-### Cache Management
-
-```bash
-optopsy-chat cache size              # show per-symbol disk usage
-optopsy-chat cache clear             # clear all cached data
-optopsy-chat cache clear SPY         # clear specific symbol
-```
-
-### Launching the Chat
-
-```bash
-optopsy-chat                         # launch (opens browser)
-optopsy-chat run --port 9000         # custom port
-optopsy-chat run --headless          # don't open browser
-optopsy-chat run --debug             # enable debug logging
-```
-
-### What the Agent Can Do
-
-- **Run any of the 38 strategies** — ask in plain English (e.g. *"Run iron condors on SPY with 30-45 DTE"*) and the agent picks the right function and parameters
-- **Fetch live options data** — pull options chains from EODHD and cache them locally for fast repeat access
-- **Fetch stock price history** — automatically download OHLCV data via yfinance for charting and signal analysis
-- **Load & preview CSV data** — drag-and-drop a CSV into the chat or point to a file on disk; inspect shape, columns, date ranges, and sample rows
-- **Scan & compare strategies** — run up to 50 strategy/parameter combinations in one call and get a ranked leaderboard
-- **Suggest parameters** — analyze your dataset's DTE and OTM% distributions and recommend sensible starting ranges
-- **Build entry/exit signals** — compose 80+ technical analysis signals (momentum, overlap, volatility, trend, volume, IV rank, calendar) with AND/OR logic
-- **Simulate trades** — run chronological simulations with starting capital, position limits, and a full equity curve with metrics (win rate, profit factor, max drawdown, etc.)
-- **Create interactive charts** — generate Plotly charts (line, bar, scatter, histogram, heatmap, candlestick with indicator overlays) from results, simulations, or raw data
-- **Multi-dataset sessions** — load multiple symbols, run the same strategy across each, and compare side-by-side
-- **Session memory** — the agent tracks all strategy runs and results so it can reference prior analysis without re-running
-
-### Data Providers
-
-EODHD is the built-in data provider for downloading historical options and stock data. The provider system is pluggable — you can build custom providers by subclassing `DataProvider` in `optopsy/data/providers/` to integrate your own data sources.
-
-> **Note:** The download and cache commands are also available via the standalone `optopsy-data` CLI (`pip install optopsy[data]`) without the Chainlit dependency. See [Data Management](https://michaelchu.github.io/optopsy/data/) for details.
-
-See the [Chat UI documentation](https://michaelchu.github.io/optopsy/chat-ui/) for more details.
-
 ## Data Management
 
-Optopsy includes a standalone data CLI for downloading and caching historical market data — no chat UI or Chainlit required.
+Optopsy includes a standalone data CLI for downloading and caching historical market data.
 
 ```bash
 pip install optopsy[data]
@@ -234,13 +150,12 @@ The simulator works with all 38 strategies. It selects one trade per entry date,
 - [Parameters](https://michaelchu.github.io/optopsy/parameters/) - Configuration options reference
 - [Entry Signals](https://michaelchu.github.io/optopsy/entry-signals/) - Technical analysis signal filters
 - [Data Management](https://michaelchu.github.io/optopsy/data/) - Standalone data CLI and caching
-- [Chat UI](https://michaelchu.github.io/optopsy/chat-ui/) - AI-powered chat interface
 - [Examples](https://michaelchu.github.io/optopsy/examples/) - Common use cases and recipes
 - [API Reference](https://michaelchu.github.io/optopsy/api-reference/) - Complete function documentation
 
 ## Star History
 
-[![Star History Chart](https://app.repohistory.com/api/svg?repo=michaelchu/optopsy&type=Date&background=FFFFFF&color=62C3F8)](https://app.repohistory.com/star-history)
+[![Star History Chart](https://app.repohistory.com/api/svg?repo=goldspanlabs/optopsy&type=Date&background=FFFFFF&color=62C3F8)](https://app.repohistory.com/star-history)
 
 ## Disclaimer
 
