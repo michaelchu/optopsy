@@ -14,6 +14,10 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 
 [Full Documentation](https://michaelchu.github.io/optopsy/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
 
+## 🤖 Looking for AI/LLM integration?
+
+[optopsy-mcp](https://github.com/goldspanlabs/optopsy-mcp) provides a high-performance MCP server for strategy screening and backtesting, specifically built for interaction with Large Language Models.
+
 ## Features
 
 - **38 Built-in Strategies** - From simple calls/puts to iron condors, butterflies, condors, ratio spreads, collars, calendars, and diagonals
