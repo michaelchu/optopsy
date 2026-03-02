@@ -33,7 +33,7 @@ Homepage = "https://github.com/michaelchu/optopsy"
 docs = [
     "mkdocs>=1.6.0,<2.0.0",
     "mkdocs-material>=9.0.0,<10.0.0",
-    "mkdocstrings[python]>=0.25.0,<1.0.0",
+    "mkdocstrings[python]>=0.25.0,<2.0.0",
 ]
 data = [
     "pyarrow>=14.0.0",
