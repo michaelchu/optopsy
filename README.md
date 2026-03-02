@@ -16,7 +16,7 @@ Optopsy combines a Python backtesting engine with an optional conversational AI 
 
 ## 🤖 Looking for AI/LLM integration?
 
-[optopsy-mcp](https://github.com/goldspanlabs/optopsy-mcp) provides a high-performance MCP server for strategy screening and backtesting, specifically built for interaction with Large Language Models.
+[optopsy-mcp](https://github.com/goldspanlabs/optopsy-mcp) provides a high-performance MCP server for strategy screening and backtesting. Powered by a complete Rust rewrite of the Optopsy engine, it is specifically built for seamless interaction with Large Language Models.
 
 ## Features
 
