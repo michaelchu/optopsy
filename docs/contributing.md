@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Optopsy! This guide will help you
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/michaelchu/optopsy.git
+git clone https://github.com/goldspanlabs/optopsy.git
 cd optopsy
 ```
 

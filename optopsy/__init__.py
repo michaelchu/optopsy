@@ -15,7 +15,7 @@ Example:
     >>> data = op.csv_data('./SPX_2018.csv')
     >>> results = op.long_calls(data, max_entry_dte=60, exit_dte=30)
 
-For detailed documentation, visit: https://github.com/michaelchu/optopsy
+For detailed documentation, visit: https://github.com/goldspanlabs/optopsy
 """
 
 __version__ = "2.2.0"

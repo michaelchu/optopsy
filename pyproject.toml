@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/michaelchu/optopsy"
+Homepage = "https://github.com/goldspanlabs/optopsy"
 
 [project.optional-dependencies]
 docs = [

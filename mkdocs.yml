@@ -1,9 +1,9 @@
 site_name: Optopsy Documentation
 site_description: Options Backtesting Library for Python
 site_author: Michael Chu
-site_url: https://michaelchu.github.io/optopsy/
-repo_url: https://github.com/michaelchu/optopsy
-repo_name: michaelchu/optopsy
+site_url: https://goldspanlabs.github.io/optopsy/
+repo_url: https://github.com/goldspanlabs/optopsy
+repo_name: goldspanlabs/optopsy
 
 theme:
   name: material
