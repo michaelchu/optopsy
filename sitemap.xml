@@ -1,83 +1,87 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://michaelchu.github.io/optopsy/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/api-reference/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/api-reference/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/chat-ui/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/chat-ui/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/contributing/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/contributing/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/data/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/data/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/entry-signals/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/entry-signals/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/examples/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/examples/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/getting-started/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/getting-started/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/parameters/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/pandasai-integration/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/plugins/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/parameters/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/plugins/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/butterflies/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/calendars/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/butterflies/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/condors/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/calendars/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/covered/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/condors/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/diagonals/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/covered/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/iron-strategies/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/diagonals/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/singles/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/iron-strategies/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/spreads/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/singles/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
     <url>
-         <loc>https://michaelchu.github.io/optopsy/strategies/straddles-strangles/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/spreads/</loc>
+         <lastmod>2026-03-03</lastmod>
+    </url>
+    <url>
+         <loc>https://goldspanlabs.github.io/optopsy/strategies/straddles-strangles/</loc>
+         <lastmod>2026-03-03</lastmod>
     </url>
 </urlset>

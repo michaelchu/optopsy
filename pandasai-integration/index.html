@@ -1,0 +1,1869 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Options Backtesting Library for Python">
+      
+      
+        <meta name="author" content="Michael Chu">
+      
+      
+        <link rel="canonical" href="https://goldspanlabs.github.io/optopsy/pandasai-integration/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo-small.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>PandasAI Integration for Optopsy Chat UI - Optopsy Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Onest:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Onest";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pandasai-integration-for-optopsy-chat-ui" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Optopsy Documentation" class="md-header__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Optopsy Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PandasAI Integration for Optopsy Chat UI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/goldspanlabs/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    goldspanlabs/optopsy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../strategies/" class="md-tabs__link">
+          
+  
+  
+  Strategies
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../parameters/" class="md-tabs__link">
+          
+  
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Optopsy Documentation" class="md-nav__button md-logo" aria-label="Optopsy Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo-small-dark.png" alt="logo">
+
+    </a>
+    Optopsy Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/goldspanlabs/optopsy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    goldspanlabs/optopsy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Strategies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Strategies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/singles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-Leg Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/straddles-strangles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Straddles & Strangles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/spreads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vertical Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/butterflies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/iron-strategies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Iron Condors & Iron Butterflies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/condors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Condor Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/covered/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covered & Collar Strategies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/calendars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calendar Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../strategies/diagonals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagonal Spreads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entry-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entry Signals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Chat UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-pandasai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is PandasAI?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What is PandasAI?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-achieves-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Achieves Accuracy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-compatibility-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Compatibility Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python Compatibility Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#our-constraint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Our Constraint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#can-we-downgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Can We Downgrade?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-chat-ui-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Chat UI Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current Chat UI Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-could-be-offloaded-to-pandasai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Could Be Offloaded to PandasAI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-must-stay-as-custom-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Must Stay as Custom Tooling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Design
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-ask_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool: ask_data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files-to-modify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files to Modify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyprojecttoml-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyproject.toml Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reusable-existing-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reusable Existing Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Considerations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-considered-build-our-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternative Considered: Build Our Own
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification Plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pandasai-integration-for-optopsy-chat-ui">PandasAI Integration for Optopsy Chat UI<a class="headerlink" href="#pandasai-integration-for-optopsy-chat-ui" title="Permanent link">&para;</a></h1>
+<h2 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">&para;</a></h2>
+<p>The Optopsy chat UI (<code>optopsy/ui/</code>) is built on Chainlit + LiteLLM with a custom tool-calling agent loop. Users load options chain CSVs and run backtests. Currently, data exploration is limited to pre-built tools (<code>preview_data</code>, <code>describe_data</code>, <code>create_chart</code>), which means every possible data question must be anticipated and coded as a tool.</p>
+<p>We investigated PandasAI as a way to handle arbitrary free-form data exploration queries (statistics, filtering, aggregation, ad-hoc visualization), letting us focus our custom tooling on what's truly domain-specific: options backtesting.</p>
+<hr />
+<h2 id="what-is-pandasai">What is PandasAI?<a class="headerlink" href="#what-is-pandasai" title="Permanent link">&para;</a></h2>
+<p>PandasAI v3 (released Oct 2025, MIT license) translates natural language into Python/pandas code, executes it, and returns typed results. It supports multiple LLM backends via a LiteLLM integration package.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandasai</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pai</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pandasai</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pandasai_litellm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LiteLLM</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">pai</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">set</span><span class="p">({</span><span class="s2">&quot;llm&quot;</span><span class="p">:</span> <span class="n">LiteLLM</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;anthropic/claude-haiku-4-5-20251001&quot;</span><span class="p">)})</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">df</span> <span class="o">=</span> <span class="n">pai</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;options_data.csv&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">response</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="s2">&quot;What is the average bid-ask spread by expiration?&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="how-it-achieves-accuracy">How It Achieves Accuracy<a class="headerlink" href="#how-it-achieves-accuracy" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Schema context</strong> — sends column names, dtypes, and sample rows (<code>df.head()</code>) to the LLM so it understands the data structure</li>
+<li><strong>Code generation</strong> — LLM produces Python code that assigns a result to a structured output dict</li>
+<li><strong>Error correction</strong> — if generated code fails, the error is fed back to the LLM for retry (configurable <code>max_retries</code>, default 3)</li>
+<li><strong>Result type detection</strong> — responses are typed via <code>isinstance()</code> checks:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Response Type</th>
+<th>Value</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NumberResponse</code></td>
+<td>int/float</td>
+<td>"What's the average delta?"</td>
+</tr>
+<tr>
+<td><code>StringResponse</code></td>
+<td>str</td>
+<td>"What symbol is this?"</td>
+</tr>
+<tr>
+<td><code>DataFrameResponse</code></td>
+<td>pd.DataFrame</td>
+<td>"Show top 10 strikes by volume"</td>
+</tr>
+<tr>
+<td><code>ChartResponse</code></td>
+<td>base64 image / file path</td>
+<td>"Plot bid-ask spread over time"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-capabilities">Key Capabilities<a class="headerlink" href="#key-capabilities" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Accepts existing pandas DataFrames directly (no need for <code>pai.read_csv()</code>)</li>
+<li>Multi-DataFrame queries via <code>Agent([df1, df2])</code></li>
+<li>Conversation memory with <code>agent.follow_up()</code></li>
+<li>Synchronous API — works in thread pool executors</li>
+<li>LiteLLM integration supports any model (Claude, GPT, Gemini, local via Ollama)</li>
+<li>Built-in retry logic with error self-correction</li>
+</ul>
+<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Python &lt;3.12 only</strong> — does not support Python 3.12 or 3.13</li>
+<li><strong>Matplotlib only</strong> for charts — no Plotly support; charts returned as base64 images</li>
+<li><strong>No built-in sandboxing</strong> — uses raw <code>exec()</code> with no restricted builtins</li>
+<li><strong>Known RCE vulnerability</strong> (CVE-2024-12366) — prompt injection can bypass code filters</li>
+<li><strong>Custom skills require enterprise license</strong> — <code>@pai.skill()</code> decorator is enterprise-only</li>
+<li><strong>No streaming</strong> — synchronous only, no token streaming</li>
+</ul>
+<hr />
+<h2 id="python-compatibility-analysis">Python Compatibility Analysis<a class="headerlink" href="#python-compatibility-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="our-constraint">Our Constraint<a class="headerlink" href="#our-constraint" title="Permanent link">&para;</a></h3>
+<p><code>pyproject.toml</code> specifies <code>requires-python = "&gt;=3.12,&lt;3.14"</code>. Our dev environment runs Python 3.13.</p>
+<h3 id="can-we-downgrade">Can We Downgrade?<a class="headerlink" href="#can-we-downgrade" title="Permanent link">&para;</a></h3>
+<p>We performed an exhaustive search of the entire codebase (<code>optopsy/</code> and <code>tests/</code>) for Python 3.12+ features:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PEP 695: <code>type</code> statement</td>
+<td>Not used</td>
+</tr>
+<tr>
+<td>PEP 695: Generic syntax (<code>class Foo[T]:</code>, <code>def foo[T]()</code>)</td>
+<td>Not used</td>
+</tr>
+<tr>
+<td>PEP 698: <code>@override</code> decorator</td>
+<td>Not used</td>
+</tr>
+<tr>
+<td>PEP 701: Nested f-strings</td>
+<td>Not used</td>
+</tr>
+<tr>
+<td><code>itertools.batched()</code></td>
+<td>Not used</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.walk()</code></td>
+<td>Not used</td>
+</tr>
+<tr>
+<td><code>typing.Buffer</code></td>
+<td>Not used</td>
+</tr>
+<tr>
+<td>Match statement type guards</td>
+<td>Not used</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Result</strong>: The codebase contains zero Python 3.12+ features. The <code>&gt;=3.12</code> constraint was inherited from the original pandas-ta dependency (since replaced with <code>pandas-ta-classic</code>, which supports 3.9-3.13).</p>
+<p>All dependencies also support 3.11:
+- <code>pandas-ta-classic</code> — Python &gt;=3.9
+- <code>empyrical-reloaded</code> — Python &gt;=3.9 (recommends 3.10+)
+- <code>pandas</code>, <code>numpy</code>, <code>pydantic</code>, <code>chainlit</code>, <code>litellm</code> — all support 3.11</p>
+<p><strong>Conclusion</strong>: Downgrading to Python 3.11 is safe.</p>
+<hr />
+<h2 id="current-chat-ui-architecture">Current Chat UI Architecture<a class="headerlink" href="#current-chat-ui-architecture" title="Permanent link">&para;</a></h2>
+<h3 id="what-could-be-offloaded-to-pandasai">What Could Be Offloaded to PandasAI<a class="headerlink" href="#what-could-be-offloaded-to-pandasai" title="Permanent link">&para;</a></h3>
+<p>These tools handle generic data exploration that PandasAI can do natively:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Lines</th>
+<th>What It Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>preview_data</code></td>
+<td>~50</td>
+<td>Show head/tail of dataset</td>
+</tr>
+<tr>
+<td><code>describe_data</code></td>
+<td>~200</td>
+<td>Column stats, nulls, distributions</td>
+</tr>
+<tr>
+<td><code>create_chart</code> (dataset source)</td>
+<td>~300</td>
+<td>Ad-hoc Plotly charts from raw data</td>
+</tr>
+</tbody>
+</table>
+<p>Plus any arbitrary pandas question users might ask (which currently gets no answer or a generic LLM text response).</p>
+<p><strong>Estimated savings</strong>: ~500-600 lines of data inspection/charting code could be simplified or removed over time.</p>
+<h3 id="what-must-stay-as-custom-tooling">What Must Stay as Custom Tooling<a class="headerlink" href="#what-must-stay-as-custom-tooling" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Why PandasAI Can't Handle It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>run_strategy</code> / <code>scan_strategies</code></td>
+<td>Calls optopsy library with domain-specific strike selection, leg pairing, Greeks filtering</td>
+</tr>
+<tr>
+<td><code>build_signal</code> / signal composition</td>
+<td>TA indicator computation + signal-date-to-option-date alignment</td>
+</tr>
+<tr>
+<td><code>simulate</code></td>
+<td>Monte Carlo portfolio simulation with options-specific P&amp;L accounting</td>
+</tr>
+<tr>
+<td><code>compare_results</code> / <code>query_results</code></td>
+<td>Results interpretation with DTE/delta bucketing</td>
+</tr>
+<tr>
+<td><code>check_data_quality</code></td>
+<td>Strategy-specific validation (e.g., "enough strikes for iron condor?")</td>
+</tr>
+<tr>
+<td><code>suggest_strategy_params</code></td>
+<td>Domain knowledge about DTE/delta distributions</td>
+</tr>
+<tr>
+<td><code>load_csv_data</code></td>
+<td>Column remapping + optopsy normalization</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="integration-design">Integration Design<a class="headerlink" href="#integration-design" title="Permanent link">&para;</a></h2>
+<h3 id="tool-ask_data">Tool: <code>ask_data</code><a class="headerlink" href="#tool-ask_data" title="Permanent link">&para;</a></h3>
+<p>A new tool registered in the existing tool handler system that delegates to PandasAI.</p>
+<p><strong>Parameters</strong>:
+- <code>question</code> (str, required) — natural language question about the dataset
+- <code>dataset_name</code> (str, optional) — which dataset to query; defaults to active dataset</p>
+<p><strong>Flow</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>User: &quot;What is the average bid-ask spread?&quot;
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>        │
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        ▼
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>OptopsyAgent (existing LiteLLM loop)
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  → selects ask_data tool
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        │
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        ▼
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>_handle_ask_data()
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  1. Resolve dataset via _require_dataset()
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  2. Configure PandasAI with OPTOPSY_MODEL
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  3. Create Agent([df])
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  4. response = agent.chat(question)
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  5. Format response → ToolResult
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>        │
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        ▼
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>ToolResult(llm_summary, user_display, chart_figure=None, result_df=...)
+</code></pre></div></p>
+<p><strong>Response formatting</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>PandasAI Type</th>
+<th>llm_summary</th>
+<th>user_display</th>
+<th>Extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NumberResponse</td>
+<td><code>str(value)</code></td>
+<td><code>str(value)</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>StringResponse</td>
+<td><code>value</code></td>
+<td><code>value</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>DataFrameResponse</td>
+<td>Shape + head(10)</td>
+<td>Full markdown table</td>
+<td><code>result_df</code> for CSV download</td>
+</tr>
+<tr>
+<td>ChartResponse</td>
+<td>"Chart generated"</td>
+<td><code>![chart](data:image/png;base64,...)</code></td>
+<td>Inline image</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Chart handling</strong>: PandasAI produces matplotlib charts as base64 images. These are embedded as inline markdown images in <code>user_display</code>. Chainlit renders markdown images natively. Users who need interactive Plotly charts can still use the existing <code>create_chart</code> tool.</p>
+<h3 id="files-to-modify">Files to Modify<a class="headerlink" href="#files-to-modify" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>Python 3.11, add pandasai deps to <code>ui</code> extras</td>
+</tr>
+<tr>
+<td><code>optopsy/ui/tools/_ask_data.py</code></td>
+<td><strong>New</strong>: PandasAI tool handler (~150 lines)</td>
+</tr>
+<tr>
+<td><code>optopsy/ui/tools/_models.py</code></td>
+<td>Add <code>AskDataArgs</code> Pydantic model + register</td>
+</tr>
+<tr>
+<td><code>optopsy/ui/tools/_schemas.py</code></td>
+<td>Add <code>ask_data</code> description</td>
+</tr>
+<tr>
+<td><code>optopsy/ui/tools/_executor.py</code></td>
+<td>Import <code>_ask_data</code> to trigger registration</td>
+</tr>
+<tr>
+<td><code>tests/test_tools_ask_data.py</code></td>
+<td><strong>New</strong>: test suite with mocked PandasAI</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pyprojecttoml-changes">pyproject.toml Changes<a class="headerlink" href="#pyprojecttoml-changes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">requires-python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&gt;=3.11,&lt;3.12&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">classifiers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="s2">&quot;Programming Language :: Python :: 3.11&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">]</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">[project.optional-dependencies]</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">ui</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="s2">&quot;optopsy[data]&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="s2">&quot;chainlit&gt;=1.0.0,&lt;3.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="s2">&quot;litellm&gt;=1.0.0,&lt;3.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="s2">&quot;pandasai&gt;=3.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="s2">&quot;pandasai-litellm&gt;=1.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="c1"># ... existing deps ...</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="p">]</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="k">[tool.ruff]</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="n">target-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;py311&quot;</span>
+</code></pre></div>
+<h3 id="reusable-existing-code">Reusable Existing Code<a class="headerlink" href="#reusable-existing-code" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>_require_dataset()</code> (<code>_executor.py:156</code>) — dataset resolution with error handling</li>
+<li><code>_df_to_markdown()</code> (<code>_helpers.py</code>) — DataFrame display formatting</li>
+<li><code>ToolResult</code> (<code>_helpers.py</code>) — standard return type</li>
+<li><code>@_register()</code> (<code>_executor.py:72</code>) — tool handler registration</li>
+<li><code>TOOL_ARG_MODELS</code> pattern (<code>_models.py:1117</code>) — schema registration</li>
+</ul>
+<hr />
+<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<p>PandasAI executes LLM-generated Python code via <code>exec()</code> with no restricted builtins. This is a known vulnerability (CVE-2024-12366).</p>
+<p><strong>Mitigations</strong>:
+- Our chat UI is a local/self-hosted tool, not a public-facing API
+- PandasAI only has access to the DataFrame passed to it
+- No filesystem/network access is needed for data analysis
+- Future: could wrap PandasAI's execution in a Docker sandbox (PandasAI provides a <code>Sandbox</code> base class)</p>
+<hr />
+<h2 id="alternative-considered-build-our-own">Alternative Considered: Build Our Own<a class="headerlink" href="#alternative-considered-build-our-own" title="Permanent link">&para;</a></h2>
+<p>We also designed a lightweight (~200 line) alternative that replicates PandasAI's core approach:
+- LLM generates pandas code via <code>litellm.completion()</code>
+- Code executed in sandbox with restricted builtins (reusing pattern from <code>_signals_builder.py</code>)
+- Generates Plotly charts natively (vs PandasAI's matplotlib)
+- Error retry with error message feedback
+- No external dependency</p>
+<p><strong>Trade-offs</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>PandasAI</th>
+<th>Build Our Own</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python version</td>
+<td>3.11 only</td>
+<td>Any (3.11+)</td>
+</tr>
+<tr>
+<td>Code to maintain</td>
+<td>~150 lines (wrapper)</td>
+<td>~200 lines (full impl)</td>
+</tr>
+<tr>
+<td>Chart library</td>
+<td>Matplotlib (static images)</td>
+<td>Plotly (interactive)</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>No sandbox (raw exec)</td>
+<td>Restricted builtins sandbox</td>
+</tr>
+<tr>
+<td>Accuracy features</td>
+<td>Built-in retry, code validation, memory</td>
+<td>Manual retry, manual prompting</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td>+2 packages (pandasai, pandasai-litellm)</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Conversation memory</td>
+<td>Built-in follow_up()</td>
+<td>Not needed (outer agent handles it)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision</strong>: Use PandasAI. The built-in retry logic, code validation, and battle-tested prompting provide better accuracy out of the box. The matplotlib limitation is acceptable since our existing <code>create_chart</code> tool handles interactive Plotly charts for complex visualizations.</p>
+<hr />
+<h2 id="verification-plan">Verification Plan<a class="headerlink" href="#verification-plan" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Install Python 3.11 and rebuild environment</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>python<span class="w"> </span>install<span class="w"> </span><span class="m">3</span>.11
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>ui
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Run new tests</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tools_ask_data.py<span class="w"> </span>-v
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Lint new + modified files</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>optopsy/ui/tools/_ask_data.py<span class="w"> </span>tests/test_tools_ask_data.py
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>--check<span class="w"> </span>optopsy/ui/tools/_ask_data.py<span class="w"> </span>tests/test_tools_ask_data.py
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># Full test suite (verify no regressions from Python downgrade)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-v
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "toc.follow", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
