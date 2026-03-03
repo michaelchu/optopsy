@@ -12,7 +12,7 @@ A nimble backtesting and statistics library for options strategies.
 
 Optopsy is a Python backtesting engine that lets you go from *"How do 45-DTE iron condors on SPX perform with a 50% profit target and 2x stop loss vs holding to expiration?"* to detailed performance statistics in seconds, not spreadsheets.
 
-[Full Documentation](https://michaelchu.github.io/optopsy/) | [API Reference](https://michaelchu.github.io/optopsy/api-reference/) | [Examples](https://michaelchu.github.io/optopsy/examples/)
+[Full Documentation](https://goldspanlabs.github.io/optopsy/) | [API Reference](https://goldspanlabs.github.io/optopsy/api-reference/) | [Examples](https://goldspanlabs.github.io/optopsy/examples/)
 
 ## 🤖 Looking for AI/LLM integration?
 
@@ -69,7 +69,7 @@ optopsy-data cache size
 optopsy-data cache clear
 ```
 
-Data is cached locally as Parquet files at `~/.optopsy/cache/`. Re-running download only fetches new data since your last download. See the [Data Management documentation](https://michaelchu.github.io/optopsy/data/) for full details.
+Data is cached locally as Parquet files at `~/.optopsy/cache/`. Re-running download only fetches new data since your last download. See the [Data Management documentation](https://goldspanlabs.github.io/optopsy/data/) for full details.
 
 ## Core Library Quick Start
 
@@ -145,13 +145,13 @@ The simulator works with all 38 strategies. It selects one trade per entry date,
 
 ## Documentation
 
-- [Getting Started](https://michaelchu.github.io/optopsy/getting-started/) - Installation and first backtest
-- [Strategies](https://michaelchu.github.io/optopsy/strategies/) - All 38 strategies explained
-- [Parameters](https://michaelchu.github.io/optopsy/parameters/) - Configuration options reference
-- [Entry Signals](https://michaelchu.github.io/optopsy/entry-signals/) - Technical analysis signal filters
-- [Data Management](https://michaelchu.github.io/optopsy/data/) - Standalone data CLI and caching
-- [Examples](https://michaelchu.github.io/optopsy/examples/) - Common use cases and recipes
-- [API Reference](https://michaelchu.github.io/optopsy/api-reference/) - Complete function documentation
+- [Getting Started](https://goldspanlabs.github.io/optopsy/getting-started/) - Installation and first backtest
+- [Strategies](https://goldspanlabs.github.io/optopsy/strategies/) - All 38 strategies explained
+- [Parameters](https://goldspanlabs.github.io/optopsy/parameters/) - Configuration options reference
+- [Entry Signals](https://goldspanlabs.github.io/optopsy/entry-signals/) - Technical analysis signal filters
+- [Data Management](https://goldspanlabs.github.io/optopsy/data/) - Standalone data CLI and caching
+- [Examples](https://goldspanlabs.github.io/optopsy/examples/) - Common use cases and recipes
+- [API Reference](https://goldspanlabs.github.io/optopsy/api-reference/) - Complete function documentation
 
 ## Star History
 
