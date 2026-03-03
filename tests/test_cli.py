@@ -155,6 +155,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
+            patch("optopsy.ui.cli._load_env"),
             patch.dict(os.environ, controlled_env, clear=True),
         ):
             _cmd_run(args)
@@ -192,6 +193,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
+            patch("optopsy.ui.cli._load_env"),
             patch.dict(os.environ, env_copy, clear=True),
             patch("optopsy.ui.paths.AUTH_SECRET_PATH", mock_path),
         ):
@@ -230,6 +232,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
+            patch("optopsy.ui.cli._load_env"),
             patch.dict(os.environ, env_copy, clear=True),
             patch("optopsy.ui.paths.AUTH_SECRET_PATH", mock_path),
         ):
@@ -259,6 +262,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
+            patch("optopsy.ui.cli._load_env"),
             patch.dict(os.environ, {"CHAINLIT_AUTH_SECRET": "test"}, clear=False),
         ):
             _cmd_run(args)
@@ -290,6 +294,7 @@ class TestCmdRun:
                 "optopsy.ui._compat.import_optional_dependency",
                 mock_compat.import_optional_dependency,
             ),
+            patch("optopsy.ui.cli._load_env"),
             patch.dict(os.environ, {"CHAINLIT_AUTH_SECRET": "test"}, clear=False),
         ):
             _cmd_run(args)
@@ -422,11 +427,17 @@ class TestCmdDownload:
 
         args = argparse.Namespace(symbols=["SPY"], verbose=False)
 
+        mock_eodhd = MagicMock()
+
         with (
             patch(
                 "optopsy.data._compat.import_optional_dependency",
             ),
             patch("optopsy.data.cli._load_env"),
+            patch.dict(
+                sys.modules,
+                {"optopsy.data.providers.eodhd": mock_eodhd},
+            ),
             patch(
                 "optopsy.data.providers.get_provider_for_tool",
                 return_value=None,

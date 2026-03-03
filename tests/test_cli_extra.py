@@ -1,6 +1,7 @@
 """Tests for optopsy/data/cli.py — additional coverage for download and cache commands."""
 
 import argparse
+import sys
 
 import pytest
 
@@ -32,13 +33,19 @@ def test_format_bytes_gb():
 # ---------------------------------------------------------------------------
 
 
-@patch("dotenv.find_dotenv", return_value="")
-@patch("dotenv.load_dotenv")
-def test_load_env_fallback(mock_load, mock_find):
+def test_load_env_fallback():
     """When find_dotenv returns empty string, should use fallback path."""
-    _load_env()
-    mock_load.assert_called_once()
-    call_path = mock_load.call_args[0][0]
+    mock_dotenv = MagicMock()
+    mock_dotenv.find_dotenv.return_value = ""
+
+    with patch(
+        "optopsy.data._compat.import_optional_dependency",
+        return_value=mock_dotenv,
+    ):
+        _load_env()
+
+    mock_dotenv.load_dotenv.assert_called_once()
+    call_path = mock_dotenv.load_dotenv.call_args[0][0]
     assert call_path.endswith(".env")
     assert len(call_path) > 4
 
@@ -48,28 +55,45 @@ def test_load_env_fallback(mock_load, mock_find):
 # ---------------------------------------------------------------------------
 
 
-@patch("optopsy.data.cli._load_env")
-@patch("optopsy.data.providers.get_provider_for_tool", return_value=None)
-def test_cmd_download_no_provider(mock_get_provider, mock_env, capsys):
+def test_cmd_download_no_provider(capsys):
     """When no provider is configured, should print an error."""
+    mock_eodhd = MagicMock()
     args = argparse.Namespace(symbols=["SPY"], verbose=False)
-    _cmd_download(args)
+
+    with (
+        patch("optopsy.data._compat.import_optional_dependency"),
+        patch("optopsy.data.cli._load_env"),
+        patch.dict(sys.modules, {"optopsy.data.providers.eodhd": mock_eodhd}),
+        patch("optopsy.data.providers.get_provider_for_tool", return_value=None),
+    ):
+        _cmd_download(args)
+
     captured = capsys.readouterr()
     assert "No data provider" in captured.out
 
 
-@patch("optopsy.data.cli._load_env")
-@patch("optopsy.data.providers.get_provider_for_tool")
-def test_cmd_download_generic_provider(mock_get_provider, mock_env, capsys):
+def test_cmd_download_generic_provider(capsys):
     """Non-EODHD provider should use the generic download path."""
+    mock_eodhd = MagicMock()
+    # Provide a real class so isinstance() works in _cmd_download
+    mock_eodhd.EODHDProvider = type("EODHDProvider", (), {})
     mock_provider = MagicMock(
         spec=[]
     )  # empty spec so isinstance(EODHDProvider) is False
     mock_provider.execute = MagicMock(return_value=("Downloaded 100 rows", None))
-    mock_get_provider.return_value = mock_provider
 
     args = argparse.Namespace(symbols=["SPY", "AAPL"], verbose=False)
-    _cmd_download(args)
+
+    with (
+        patch("optopsy.data._compat.import_optional_dependency"),
+        patch("optopsy.data.cli._load_env"),
+        patch.dict(sys.modules, {"optopsy.data.providers.eodhd": mock_eodhd}),
+        patch(
+            "optopsy.data.providers.get_provider_for_tool",
+            return_value=mock_provider,
+        ),
+    ):
+        _cmd_download(args)
 
     assert mock_provider.execute.call_count == 2
     captured = capsys.readouterr()
