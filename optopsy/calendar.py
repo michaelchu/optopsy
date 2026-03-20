@@ -244,7 +244,7 @@ def _find_calendar_exit_prices(
 def _calculate_calendar_pnl(
     merged: pd.DataFrame,
     leg_def: List[Tuple],
-    slippage: str = "mid",
+    slippage: str = "spread",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[Dict[str, Any]] = None,

@@ -1054,7 +1054,7 @@ class StrategyResultSummary(BaseModel):
     strategy: str
     max_entry_dte: int = 90
     exit_dte: int = 0
-    slippage: str = "mid"
+    slippage: str = "spread"
     dataset: str = "default"
     display_key: str = ""
     dataset_fingerprint: str | None = None

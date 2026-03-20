@@ -96,7 +96,9 @@ _BF_PUT_DELTAS = dict(
 
 def test_long_call_butterfly_raw(multi_strike_data):
     """Test long call butterfly returns correct structure and calculated values."""
-    results = long_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
+    results = long_call_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_CALL_DELTAS
+    )
     assert list(results.columns) == triple_strike_internal_cols
     # All legs should be calls
     assert results.iloc[0]["option_type_leg1"] == "call"
@@ -135,7 +137,9 @@ def test_short_call_butterfly_raw(multi_strike_data):
 
 def test_long_put_butterfly_raw(multi_strike_data):
     """Test long put butterfly returns correct structure and calculated values."""
-    results = long_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
+    results = long_put_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_PUT_DELTAS
+    )
     assert list(results.columns) == triple_strike_internal_cols
     # All legs should be puts
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -177,7 +181,7 @@ def test_short_put_butterfly_raw(multi_strike_data):
 
 def test_iron_condor_raw(multi_strike_data):
     """Test iron condor returns correct structure and calculated values."""
-    results = iron_condor(multi_strike_data, raw=True)
+    results = iron_condor(multi_strike_data, raw=True, slippage="mid")
     assert list(results.columns) == quadruple_strike_internal_cols
     # Leg 1 and 2 should be puts, leg 3 and 4 should be calls
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -226,7 +230,7 @@ def test_reverse_iron_condor_raw(multi_strike_data):
 
 def test_iron_butterfly_raw(multi_strike_data):
     """Test iron butterfly returns correct structure and calculated values."""
-    results = iron_butterfly(multi_strike_data, raw=True)
+    results = iron_butterfly(multi_strike_data, raw=True, slippage="mid")
     assert list(results.columns) == quadruple_strike_internal_cols
     # Leg 1 and 2 should be puts, leg 3 and 4 should be calls
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -275,7 +279,7 @@ def test_reverse_iron_butterfly_raw(multi_strike_data):
 
 def test_covered_call_raw(multi_strike_data):
     """Test covered call returns correct structure and calculated values."""
-    results = covered_call(multi_strike_data, raw=True)
+    results = covered_call(multi_strike_data, raw=True, slippage="mid")
     assert list(results.columns) == double_strike_internal_cols
     assert not results.empty
     # Both legs should be calls
@@ -306,7 +310,9 @@ _PROT_PUT_DELTAS = dict(
 
 def test_protective_put_raw(multi_strike_data):
     """Test protective put returns correct structure and calculated values."""
-    results = protective_put(multi_strike_data, raw=True, **_PROT_PUT_DELTAS)
+    results = protective_put(
+        multi_strike_data, raw=True, slippage="mid", **_PROT_PUT_DELTAS
+    )
     assert list(results.columns) == double_strike_internal_cols
     assert not results.empty
     # Leg 1 should be call (synthetic stock), leg 2 should be put
@@ -335,7 +341,7 @@ def test_protective_put(multi_strike_data):
 def test_covered_call_with_stock_raw(multi_strike_data, stock_data_multi_strike):
     """Covered call using actual stock data returns correct structure and values."""
     results = covered_call(
-        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True, slippage="mid"
     )
     assert list(results.columns) == double_strike_internal_cols
     assert not results.empty
@@ -367,7 +373,7 @@ def test_covered_call_with_stock_aggregated(multi_strike_data, stock_data_multi_
 def test_protective_put_with_stock_raw(multi_strike_data, stock_data_multi_strike):
     """Protective put using actual stock data returns correct structure and values."""
     results = protective_put(
-        multi_strike_data, stock_data=stock_data_multi_strike, raw=True
+        multi_strike_data, stock_data=stock_data_multi_strike, raw=True, slippage="mid"
     )
     assert list(results.columns) == double_strike_internal_cols
     assert not results.empty
@@ -470,6 +476,7 @@ def test_covered_call_with_stock_exit_dte_tolerance():
         exit_dte=7,
         exit_dte_tolerance=3,
         raw=True,
+        slippage="mid",
     )
     assert not results.empty, (
         "Should match stock exit on actual option exit date, not computed date"
@@ -579,7 +586,7 @@ def test_covered_call_stock_data_multi_symbol_error(multi_strike_data):
 
 
 def test_single_long_calls_raw(data):
-    results = long_calls(data, raw=True)
+    results = long_calls(data, raw=True, slippage="mid")
     assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "call" in list(results["option_type"].values)
@@ -597,7 +604,7 @@ def test_single_long_puts_raw(data):
 
 
 def test_single_short_calls_raw(data):
-    results = short_calls(data, raw=True)
+    results = short_calls(data, raw=True, slippage="mid")
     assert len(results) == 1
     assert list(results.columns) == single_strike_internal_cols
     assert "call" in list(results["option_type"].values)
@@ -614,7 +621,7 @@ def test_single_short_puts_raw(data):
 
 
 def test_singles_long_calls(data):
-    results = long_calls(data)
+    results = long_calls(data, slippage="mid")
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == -0.17
@@ -630,7 +637,7 @@ def test_singles_long_puts(data):
 
 
 def test_singles_short_calls(data):
-    results = short_calls(data)
+    results = short_calls(data, slippage="mid")
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == 0.17
@@ -646,7 +653,7 @@ def test_singles_short_puts(data):
 
 
 def test_straddles_long_raw(data):
-    results = long_straddles(data, raw=True)
+    results = long_straddles(data, raw=True, slippage="mid")
     assert list(results.columns) == straddle_internal_cols
     assert len(results) == 1
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -657,7 +664,7 @@ def test_straddles_long_raw(data):
 
 
 def test_straddles_short_raw(data):
-    results = short_straddles(data, raw=True)
+    results = short_straddles(data, raw=True, slippage="mid")
     assert list(results.columns) == straddle_internal_cols
     assert len(results) == 1
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -666,7 +673,7 @@ def test_straddles_short_raw(data):
 
 
 def test_long_straddles(data):
-    results = long_straddles(data)
+    results = long_straddles(data, slippage="mid")
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == -0.43
@@ -674,7 +681,7 @@ def test_long_straddles(data):
 
 
 def test_short_straddles(data):
-    results = short_straddles(data)
+    results = short_straddles(data, slippage="mid")
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == 0.43
@@ -693,7 +700,7 @@ def test_strangles_long_raw(data):
 
 
 def test_strangles_short_raw(data):
-    results = short_strangles(data, raw=True)
+    results = short_strangles(data, raw=True, slippage="mid")
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "put"
@@ -710,7 +717,7 @@ def test_long_strangles(data):
 
 
 def test_short_strangles(data):
-    results = short_strangles(data)
+    results = short_strangles(data, slippage="mid")
     assert len(results) == 1
     assert results.iloc[0]["count"] == 1.0
     assert round(results.iloc[0]["mean"], 2) == 0.53
@@ -728,7 +735,7 @@ _PUT_SPREAD_DELTAS = dict(
 
 
 def test_long_call_spread_raw(data):
-    results = long_call_spread(data, raw=True, **_CALL_SPREAD_DELTAS)
+    results = long_call_spread(data, raw=True, slippage="mid", **_CALL_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "call"
@@ -747,7 +754,7 @@ def test_long_put_spread_raw(data):
 
 
 def test_short_call_spread_raw(data):
-    results = short_call_spread(data, raw=True, **_CALL_SPREAD_DELTAS)
+    results = short_call_spread(data, raw=True, slippage="mid", **_CALL_SPREAD_DELTAS)
     assert len(results) == 1
     assert list(results.columns) == double_strike_internal_cols
     assert results.iloc[0]["option_type_leg1"] == "call"
@@ -774,6 +781,7 @@ def test_long_call_calendar_raw(calendar_data):
     results = long_call_calendar(
         calendar_data,
         raw=True,
+        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
@@ -817,6 +825,7 @@ def test_short_call_calendar_raw(calendar_data):
     results = short_call_calendar(
         calendar_data,
         raw=True,
+        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
@@ -840,6 +849,7 @@ def test_long_put_calendar_raw(calendar_data):
     results = long_put_calendar(
         calendar_data,
         raw=True,
+        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
@@ -1091,12 +1101,12 @@ def test_calendar_adjacent_dte_ranges_rejected(calendar_data):
 # =============================================================================
 
 
-def test_slippage_mid_is_default(data):
-    """Test that default slippage mode is 'mid' (backward compatible)."""
+def test_slippage_spread_is_default(data):
+    """Test that default slippage mode is 'spread'."""
     results = long_calls(data, raw=True)
-    # Delta targeting selects 215.0 (delta 0.30). mid = (6.00 + 6.05) / 2 = 6.025
+    # Delta targeting selects 215.0 (delta 0.30). ask = 6.05
     row = results[results["strike"] == 215.0].iloc[0]
-    assert round(row["entry"], 3) == 6.025
+    assert round(row["entry"], 2) == 6.05
 
 
 def test_slippage_spread_mode(data):
@@ -1639,6 +1649,7 @@ def test_long_call_diagonal_pnl_values(calendar_data):
     results = long_call_diagonal(
         calendar_data,
         raw=True,
+        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
@@ -1692,6 +1703,7 @@ def test_long_put_diagonal_pnl_values(calendar_data):
     results = long_put_diagonal(
         calendar_data,
         raw=True,
+        slippage="mid",
         front_dte_min=20,
         front_dte_max=40,
         back_dte_min=50,
@@ -1719,8 +1731,12 @@ def test_long_put_diagonal_pnl_values(calendar_data):
 
 def test_short_call_butterfly_pnl_values(multi_strike_data):
     """Short call butterfly P&L should be opposite of long call butterfly."""
-    long_results = long_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
-    short_results = short_call_butterfly(multi_strike_data, raw=True, **_BF_CALL_DELTAS)
+    long_results = long_call_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_CALL_DELTAS
+    )
+    short_results = short_call_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_CALL_DELTAS
+    )
 
     assert not long_results.empty
     assert not short_results.empty
@@ -1740,8 +1756,12 @@ def test_short_call_butterfly_pnl_values(multi_strike_data):
 
 def test_short_put_butterfly_pnl_values(multi_strike_data):
     """Short put butterfly P&L should be opposite of long put butterfly."""
-    long_results = long_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
-    short_results = short_put_butterfly(multi_strike_data, raw=True, **_BF_PUT_DELTAS)
+    long_results = long_put_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_PUT_DELTAS
+    )
+    short_results = short_put_butterfly(
+        multi_strike_data, raw=True, slippage="mid", **_BF_PUT_DELTAS
+    )
 
     assert not long_results.empty
     assert not short_results.empty
@@ -1756,8 +1776,8 @@ def test_short_put_butterfly_pnl_values(multi_strike_data):
 
 def test_reverse_iron_condor_pnl_values(multi_strike_data):
     """Reverse iron condor P&L should be opposite of iron condor."""
-    ic_results = iron_condor(multi_strike_data, raw=True)
-    ric_results = reverse_iron_condor(multi_strike_data, raw=True)
+    ic_results = iron_condor(multi_strike_data, raw=True, slippage="mid")
+    ric_results = reverse_iron_condor(multi_strike_data, raw=True, slippage="mid")
 
     ic_row = ic_results[
         (ic_results["strike_leg1"] == 207.5)
@@ -1779,8 +1799,8 @@ def test_reverse_iron_condor_pnl_values(multi_strike_data):
 
 def test_reverse_iron_butterfly_pnl_values(multi_strike_data):
     """Reverse iron butterfly P&L should be opposite of iron butterfly."""
-    ib_results = iron_butterfly(multi_strike_data, raw=True)
-    rib_results = reverse_iron_butterfly(multi_strike_data, raw=True)
+    ib_results = iron_butterfly(multi_strike_data, raw=True, slippage="mid")
+    rib_results = reverse_iron_butterfly(multi_strike_data, raw=True, slippage="mid")
 
     ib_row = ib_results[
         (ib_results["strike_leg1"] == 207.5)
@@ -2181,8 +2201,8 @@ def test_calendar_exit_dates_filter_invalid(calendar_data):
 
 def test_short_calls_pct_change_opposite_of_long(data):
     """Short calls and long calls should have opposite pct_change signs."""
-    long_results = long_calls(data, raw=True)
-    short_results = short_calls(data, raw=True)
+    long_results = long_calls(data, raw=True, slippage="mid")
+    short_results = short_calls(data, raw=True, slippage="mid")
     assert len(long_results) == 1
     assert len(short_results) == 1
     long_pct = long_results.iloc[0]["pct_change"]

@@ -1084,7 +1084,7 @@ class TestSpotCheckPnl:
 
         realized_pnl = (5.005 - 10.575) * 1 * 100 = -557.0
         """
-        result = simulate(data, op.long_strangles, selector="first")
+        result = simulate(data, op.long_strangles, selector="first", slippage="mid")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
         assert trade["entry_cost"] == pytest.approx(10.575)
@@ -1113,6 +1113,7 @@ class TestSpotCheckPnl:
             multi_strike_data,
             op.long_put_butterfly,
             selector="first",
+            slippage="mid",
             **_BF_PUT_DELTAS,
         )
         assert result.summary["total_trades"] >= 1
@@ -1142,7 +1143,9 @@ class TestSpotCheckPnl:
 
         realized_pnl = (-0.025 - (-1.90)) * 1 * 100 = 187.5
         """
-        result = simulate(multi_strike_data, op.iron_condor, selector="first")
+        result = simulate(
+            multi_strike_data, op.iron_condor, selector="first", slippage="mid"
+        )
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
         assert trade["entry_cost"] == pytest.approx(-1.90)
@@ -1235,7 +1238,7 @@ class TestSpotCheckCoveredProtective:
 
         realized_pnl = (4.945 - 2.525) * 1 * 100 = 242.0
         """
-        result = simulate(data, op.covered_call, selector="first")
+        result = simulate(data, op.covered_call, selector="first", slippage="mid")
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
         assert trade["entry_cost"] == pytest.approx(2.525)
@@ -1258,7 +1261,13 @@ class TestSpotCheckCoveredProtective:
 
         realized_pnl = (9.95 - 15.70) * 1 * 100 = -575.0
         """
-        result = simulate(data, op.protective_put, selector="first", **_PROT_PUT_DELTAS)
+        result = simulate(
+            data,
+            op.protective_put,
+            selector="first",
+            slippage="mid",
+            **_PROT_PUT_DELTAS,
+        )
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
         assert trade["entry_cost"] == pytest.approx(15.70)
@@ -1291,7 +1300,11 @@ class TestSpotCheckCalendar:
         realized_pnl = (2.50 - 1.90) * 1 * 100 = 60.0
         """
         result = simulate(
-            calendar_data, op.long_call_calendar, selector="first", **_CALENDAR_KWARGS
+            calendar_data,
+            op.long_call_calendar,
+            selector="first",
+            slippage="mid",
+            **_CALENDAR_KWARGS,
         )
         assert result.summary["total_trades"] >= 1
         trade = result.trade_log.iloc[0]
@@ -1317,6 +1330,7 @@ class TestSpotCheckCalendar:
             calendar_put_data,
             op.long_put_calendar,
             selector="first",
+            slippage="mid",
             **_CALENDAR_KWARGS,
         )
         assert result.summary["total_trades"] >= 1

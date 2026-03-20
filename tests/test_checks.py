@@ -63,7 +63,7 @@ class TestRunChecks:
         assert result["exit_dte"] == 0
         assert result["dte_interval"] == 7
         assert result["delta_interval"] == 0.05
-        assert result["slippage"] == "mid"
+        assert result["slippage"] == "spread"
         assert result["raw"] is False
         assert result["drop_nan"] is True
 
