@@ -72,7 +72,7 @@ def _get_leg_quantity(leg: Tuple) -> int:
 def _apply_ratios(
     data: pd.DataFrame,
     leg_def: List[Tuple],
-    slippage: str = "mid",
+    slippage: str = "spread",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     per_leg_slippage: float = 0.0,
@@ -185,7 +185,7 @@ def _assign_profit(
     data: pd.DataFrame,
     leg_def: List[Tuple],
     suffixes: List[str],
-    slippage: str = "mid",
+    slippage: str = "spread",
     fill_ratio: float = 0.5,
     reference_volume: int = 1000,
     commission: Optional[Dict[str, Any]] = None,

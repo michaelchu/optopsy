@@ -154,7 +154,7 @@ class StrategyParams(BaseModel):
     exit_dates: Optional[pd.DataFrame] = None
 
     # Slippage settings
-    slippage: Literal["mid", "spread", "liquidity", "per_leg"] = "mid"
+    slippage: Literal["mid", "spread", "liquidity", "per_leg"] = "spread"
     fill_ratio: Union[int, float] = Field(0.5, ge=0, le=1)
     reference_volume: int = Field(1000, gt=0, strict=True)
     per_leg_slippage: Union[int, float] = Field(0.073, ge=0, le=1)

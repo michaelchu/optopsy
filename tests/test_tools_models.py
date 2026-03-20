@@ -619,7 +619,7 @@ class TestOutputModels:
         s = StrategyResultSummary(strategy="long_calls")
         assert s.max_entry_dte == 90
         assert s.exit_dte == 0
-        assert s.slippage == "mid"
+        assert s.slippage == "spread"
         assert s.count == 0
 
     def test_simulation_result_entry(self):

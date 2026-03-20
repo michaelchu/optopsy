@@ -554,7 +554,7 @@ def _make_display_key(strategy_name: str, arguments: dict) -> str:
     """
     dte = arguments.get("max_entry_dte", 90)
     exit_dte = arguments.get("exit_dte", 0)
-    slippage = arguments.get("slippage", "mid")
+    slippage = arguments.get("slippage", "spread")
     base = f"{strategy_name}:dte={dte},exit={exit_dte},slip={slippage}"
     if slippage == "per_leg":
         per_leg = arguments.get("per_leg_slippage")

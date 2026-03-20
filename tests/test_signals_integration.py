@@ -449,6 +449,7 @@ class TestExitDteTolerance:
             exit_dte=0,
             exit_dte_tolerance=3,
             raw=True,
+            slippage="mid",
         )
         assert len(results) > 0
         # The exit price should come from DTE=1 (underlying 219.50),

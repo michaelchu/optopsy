@@ -176,6 +176,7 @@ class TestSingleLegTakeProfit:
             leg1_delta={"target": 0.30, "min": 0.15, "max": 0.70},
             take_profit=0.25,
             raw=True,
+            slippage="mid",
         )
         assert not result.empty
         assert "exit_type" in result.columns
@@ -483,6 +484,7 @@ class TestMaxHoldDaysCombined:
             take_profit=0.25,
             max_hold_days=5,
             raw=True,
+            slippage="mid",
         )
         assert not result.empty
         assert result["exit_type"].iloc[0] == "take_profit"

@@ -112,7 +112,7 @@ def _handle_scan_strategies(arguments, dataset, signals, datasets, results, _res
     ds_fp = _pop_internal_keys(arguments)
 
     max_combos = int(arguments.get("max_combinations", 50))
-    slippage = arguments.get("slippage", "mid")
+    slippage = arguments.get("slippage", "spread")
     dte_values = arguments.get("max_entry_dte_values") or [90]
     exit_values = arguments.get("exit_dte_values") or [0]
 

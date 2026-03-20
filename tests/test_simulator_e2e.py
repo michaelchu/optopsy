@@ -224,7 +224,12 @@ class TestLongCallsE2E:
         realized_pnl = (6.05 - 4.55) * 1 * 100 = 150.00
         """
         result = op.simulate(
-            chain_data, op.long_calls, capital=100_000, quantity=1, multiplier=100
+            chain_data,
+            op.long_calls,
+            capital=100_000,
+            quantity=1,
+            multiplier=100,
+            slippage="mid",
         )
         first = result.trade_log.iloc[0]
         assert first["entry_cost"] == pytest.approx(4.55)
@@ -284,7 +289,12 @@ class TestLosingTradeE2E:
 
     def test_losing_trade_negative_pnl(self, losing_data):
         result = op.simulate(
-            losing_data, op.long_calls, capital=100_000, quantity=1, multiplier=100
+            losing_data,
+            op.long_calls,
+            capital=100_000,
+            quantity=1,
+            multiplier=100,
+            slippage="mid",
         )
         assert len(result.trade_log) == 1
         trade = result.trade_log.iloc[0]
@@ -292,14 +302,16 @@ class TestLosingTradeE2E:
         assert trade["equity"] == pytest.approx(100_000 - 590.0)
 
     def test_losing_trade_counted_as_loss(self, losing_data):
-        result = op.simulate(losing_data, op.long_calls)
+        result = op.simulate(losing_data, op.long_calls, slippage="mid")
         assert result.summary["losing_trades"] == 1
         assert result.summary["winning_trades"] == 0
         assert result.summary["win_rate"] == pytest.approx(0.0)
 
     def test_total_return_reflects_loss(self, losing_data):
         capital = 100_000.0
-        result = op.simulate(losing_data, op.long_calls, capital=capital)
+        result = op.simulate(
+            losing_data, op.long_calls, capital=capital, slippage="mid"
+        )
         assert result.summary["total_pnl"] == pytest.approx(-590.0)
         assert result.summary["total_return"] == pytest.approx(-590.0 / capital)
 
@@ -355,12 +367,16 @@ class TestSpreadE2E:
     """Full pipeline for a multi-leg strategy."""
 
     def test_long_call_spread_produces_trades(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         assert isinstance(result, SimulationResult)
         assert len(result.trade_log) > 0
 
     def test_spread_trade_log_complete(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         log = result.trade_log
         assert set(log.columns) == set(_TRADE_LOG_COLUMNS)
         assert not log["realized_pnl"].isna().any()
@@ -441,8 +457,12 @@ class TestSelectorsE2E:
     def test_selectors_produce_consistent_results(self, chain_data):
         """Different selectors produce valid results; with one candidate per
         entry date (delta targeting picks one strike), they select the same trade."""
-        r_nearest = op.simulate(chain_data, op.long_calls, selector="nearest")
-        r_lowest = op.simulate(chain_data, op.long_calls, selector="lowest_premium")
+        r_nearest = op.simulate(
+            chain_data, op.long_calls, selector="nearest", slippage="mid"
+        )
+        r_lowest = op.simulate(
+            chain_data, op.long_calls, selector="lowest_premium", slippage="mid"
+        )
         assert len(r_nearest.trade_log) > 0
         assert len(r_lowest.trade_log) > 0
         # Both select 210 call (only candidate after delta filtering)
@@ -691,18 +711,24 @@ class TestSummaryMetricsE2E:
     """Verify summary metrics with hand-calculated values from drawdown_csv."""
 
     def test_trade_count(self, drawdown_data):
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["total_trades"] == 3
 
     def test_per_trade_pnl(self, drawdown_data):
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         pnls = result.trade_log["realized_pnl"].tolist()
         assert pnls[0] == pytest.approx(150.0)
         assert pnls[1] == pytest.approx(-200.0)
         assert pnls[2] == pytest.approx(100.0)
 
     def test_win_rate(self, drawdown_data):
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["win_rate"] == pytest.approx(2.0 / 3.0)
         assert result.summary["winning_trades"] == 2
         assert result.summary["losing_trades"] == 1
@@ -711,34 +737,46 @@ class TestSummaryMetricsE2E:
         """Equity: 100150, 99950, 100050. Peak=100150 throughout.
         Max drawdown = (99950 - 100150) / 100150 = -200/100150."""
         capital = 100_000.0
-        result = op.simulate(drawdown_data, op.long_calls, capital=capital)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=capital, slippage="mid"
+        )
         expected_dd = -200.0 / (capital + 150.0)
         assert result.summary["max_drawdown"] == pytest.approx(expected_dd)
 
     def test_profit_factor(self, drawdown_data):
         """profit_factor = total_wins / |total_losses| = 250 / 200 = 1.25."""
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["profit_factor"] == pytest.approx(1.25)
 
     def test_total_pnl_and_return(self, drawdown_data):
         capital = 100_000.0
-        result = op.simulate(drawdown_data, op.long_calls, capital=capital)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=capital, slippage="mid"
+        )
         assert result.summary["total_pnl"] == pytest.approx(50.0)
         assert result.summary["total_return"] == pytest.approx(50.0 / capital)
 
     def test_avg_win_loss(self, drawdown_data):
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["avg_win"] == pytest.approx(125.0)  # (150+100)/2
         assert result.summary["avg_loss"] == pytest.approx(-200.0)
 
     def test_max_win_loss(self, drawdown_data):
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["max_win"] == pytest.approx(150.0)
         assert result.summary["max_loss"] == pytest.approx(-200.0)
 
     def test_avg_days_in_trade(self, drawdown_data):
         """Trade 1: 29 days, Trade 2: 27 days, Trade 3: 28 days. Avg=28."""
-        result = op.simulate(drawdown_data, op.long_calls, capital=100_000)
+        result = op.simulate(
+            drawdown_data, op.long_calls, capital=100_000, slippage="mid"
+        )
         assert result.summary["avg_days_in_trade"] == pytest.approx(28.0)
 
 
@@ -758,23 +796,31 @@ class TestSpreadPnlE2E:
     """Hand-calculated P&L for long call spread through full pipeline."""
 
     def test_spread_entry_cost(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         first = result.trade_log.iloc[0]
         assert first["entry_cost"] == pytest.approx(3.10)
 
     def test_spread_exit_proceeds(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         first = result.trade_log.iloc[0]
         assert first["exit_proceeds"] == pytest.approx(5.00)
 
     def test_spread_realized_pnl(self, chain_data):
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         first = result.trade_log.iloc[0]
         assert first["realized_pnl"] == pytest.approx(190.0)
 
     def test_spread_debit_entry(self, chain_data):
         """Long call spread is a debit strategy — entry_cost > 0."""
-        result = op.simulate(chain_data, op.long_call_spread, **_SPREAD_LEG_DELTAS)
+        result = op.simulate(
+            chain_data, op.long_call_spread, slippage="mid", **_SPREAD_LEG_DELTAS
+        )
         assert (result.trade_log["entry_cost"] > 0).all()
 
 
@@ -819,17 +865,23 @@ class TestMultiSymbolE2E:
     """Multi-symbol data processed correctly through full pipeline."""
 
     def test_both_symbols_in_trade_log(self, multi_symbol_data):
-        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
+        result = op.simulate(
+            multi_symbol_data, op.long_calls, max_positions=10, slippage="mid"
+        )
         symbols = set(result.trade_log["underlying_symbol"])
         assert symbols == {"SPX", "AAPL"}
 
     def test_multi_symbol_trade_count(self, multi_symbol_data):
-        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
+        result = op.simulate(
+            multi_symbol_data, op.long_calls, max_positions=10, slippage="mid"
+        )
         assert len(result.trade_log) == 2
 
     def test_per_symbol_pnl(self, multi_symbol_data):
         """SPX: pnl=150, AAPL: pnl=200."""
-        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
+        result = op.simulate(
+            multi_symbol_data, op.long_calls, max_positions=10, slippage="mid"
+        )
         log = result.trade_log
         spx = log[log["underlying_symbol"] == "SPX"]
         aapl = log[log["underlying_symbol"] == "AAPL"]
@@ -839,5 +891,7 @@ class TestMultiSymbolE2E:
         assert aapl.iloc[0]["realized_pnl"] == pytest.approx(200.0)
 
     def test_total_pnl_sums_both_symbols(self, multi_symbol_data):
-        result = op.simulate(multi_symbol_data, op.long_calls, max_positions=10)
+        result = op.simulate(
+            multi_symbol_data, op.long_calls, max_positions=10, slippage="mid"
+        )
         assert result.summary["total_pnl"] == pytest.approx(350.0)

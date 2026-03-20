@@ -18,7 +18,7 @@ class TestStrategyParamsDefaults:
         assert model.dte_interval == 7
         assert model.min_bid_ask == 0.05
         assert model.delta_interval == 0.05
-        assert model.slippage == "mid"
+        assert model.slippage == "spread"
         assert model.fill_ratio == 0.5
         assert model.reference_volume == 1000
         assert model.per_leg_slippage == 0.073
