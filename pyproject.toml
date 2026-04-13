@@ -23,7 +23,7 @@ dependencies = [
     "empyrical-reloaded>=0.5.7",
     "pytz",
     "pydantic>=2.0,<3.0",
-    "rich>=13.0.0,<15.0.0",
+    "rich>=13.0.0,<16.0.0",
 ]
 
 [project.urls]
