@@ -86,6 +86,7 @@ data = op.csv_data(
     strike=5,
     bid=6,
     ask=7,
+    delta=8,
 )
 
 # Backtest long calls and get performance statistics
