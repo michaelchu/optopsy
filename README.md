@@ -95,14 +95,14 @@ print(results)
 
 **Output:**
 ```
-   dte_range   delta_range  count   mean    std    min    25%    50%    75%    max
-0    (0, 7]   (0.2, 0.3]    505   0.64   1.03  -1.00   0.14   0.37   0.87   7.62
-1    (0, 7]   (0.3, 0.4]    269   2.34   8.65  -1.00  -1.00  -0.89   1.16  68.00
-2   (7, 14]   (0.2, 0.3]    404   1.02   0.68  -0.46   0.58   0.86   1.32   4.40
+   dte_range   delta_range  count   mean    std    min    25%    50%    75%    max  win_rate  profit_factor
+0    (0, 7]   (0.2, 0.3]    505   0.64   1.03  -1.00   0.14   0.37   0.87   7.62       ...            ...
+1    (0, 7]   (0.3, 0.4]    269   2.34   8.65  -1.00  -1.00  -0.89   1.16  68.00       ...            ...
+2   (7, 14]   (0.2, 0.3]    404   1.02   0.68  -0.46   0.58   0.86   1.32   4.40       ...            ...
 ...
 ```
 
-Results are grouped by DTE (days to expiration) and delta range, showing descriptive statistics for percentage returns.
+Results are grouped by DTE (days to expiration) and delta range, showing descriptive statistics for percentage returns. Every run also returns `win_rate` (the fraction of trades with a positive return) and `profit_factor` (gross wins over gross losses); the values above depend on your dataset and are elided here.
 
 ## Simulator
 
