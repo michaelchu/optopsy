@@ -11,7 +11,7 @@ Storage layout::
       _index.json             # hash -> metadata mapping
 """
 
-import fcntl
+import contextlib
 import hashlib
 import json
 import logging
@@ -23,9 +23,55 @@ import pandas as pd
 from optopsy.data._dataframe_utils import stringify_interval_cols
 from optopsy.data.paths import RESULTS_DIR
 
+try:
+    import fcntl
+except ImportError:  # Windows has no fcntl
+    fcntl = None
+    import msvcrt
+
 _log = logging.getLogger(__name__)
 
 _RESULTS_DIR = str(RESULTS_DIR)
+
+
+def _lock_exclusive(fd: int) -> None:
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    else:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+
+
+def _unlock(fd: int) -> None:
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    else:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+
+@contextlib.contextmanager
+def _exclusive_file_lock(path: str):
+    """Hold an exclusive lock on *path* for the duration of the block.
+
+    Uses ``fcntl.flock`` on POSIX and ``msvcrt.locking`` on Windows, which
+    has no flock equivalent.  Note that the Windows call gives up after
+    roughly ten seconds of contention and raises ``OSError``, whereas
+    ``flock`` waits indefinitely.
+    """
+    fd = os.open(path, os.O_CREAT | os.O_RDWR)
+    try:
+        _lock_exclusive(fd)
+    except BaseException:
+        os.close(fd)
+        raise
+    try:
+        yield
+    finally:
+        try:
+            _unlock(fd)
+        finally:
+            os.close(fd)
 
 
 class ResultStore:
@@ -102,15 +148,10 @@ class ResultStore:
         index itself.
         """
         os.makedirs(self._dir, exist_ok=True)
-        lock_fd = os.open(self._lock_path(), os.O_CREAT | os.O_RDWR)
-        try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        with _exclusive_file_lock(self._lock_path()):
             index = self._read_index()
             updater(index)
             self._write_index(index)
-        finally:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
-            os.close(lock_fd)
 
     def write(self, key: str, df: pd.DataFrame, metadata: dict) -> None:
         """Persist a result DataFrame and its metadata.

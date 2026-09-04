@@ -5,6 +5,26 @@ and cache management. Does not require Chainlit/LiteLLM.
 """
 
 import argparse
+import sys
+
+
+def _configure_stdio() -> None:
+    """Force UTF-8 on stdout/stderr so non-ASCII output cannot crash the CLI.
+
+    Windows resolves the standard streams to cp1252 whenever output is not a
+    console (a pipe, a file, CI logs).  The arrows, ellipses and box-drawing
+    characters used in progress output are unencodable there, so rendering a
+    summary line raised UnicodeEncodeError *after* the download had already
+    completed.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
 
 
 def _format_bytes(n: int | float) -> str:
@@ -66,7 +86,16 @@ def _cmd_cache_clear(args: argparse.Namespace) -> None:
     description = " ".join(parts)
 
     if not getattr(args, "yes", False):
-        if not Confirm.ask(f"Clear {description}?", console=console, default=False):
+        try:
+            confirmed = Confirm.ask(
+                f"Clear {description}?", console=console, default=False
+            )
+        except EOFError:
+            # No stdin (piped or non-interactive): treat as a decline rather
+            # than crashing with a traceback.
+            console.print("[dim]Aborted: no input available (use --yes).[/dim]")
+            return
+        if not confirmed:
             console.print("[dim]Aborted.[/dim]")
             return
 
@@ -242,7 +271,7 @@ def _download_stocks_with_rich(symbol: str) -> None:
     date_max = pd.to_datetime(result["date"]).dt.date.max()
     row_count = len(result)
 
-    size_bytes = store.size().get(f"{_YF_CACHE_CATEGORY}/{symbol}", 0)
+    size_bytes = store.size().get(f"{_YF_CACHE_CATEGORY}/{symbol}.parquet", 0)
     size_str = _format_bytes(size_bytes)
 
     console.print(f"  [bold]{symbol}[/bold]  {date_min} → {date_max}")
@@ -458,6 +487,7 @@ def _build_data_subparsers(
 
 def main(argv: list[str] | None = None) -> None:
     """Parse CLI arguments and dispatch to the appropriate subcommand."""
+    _configure_stdio()
     parser = argparse.ArgumentParser(
         prog="optopsy-data",
         description="Optopsy Data — download and manage market data",
