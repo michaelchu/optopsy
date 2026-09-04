@@ -183,6 +183,23 @@ def csv_data(
         if col_idx is not None:
             column_mapping.append((int(col_idx), col))
 
+    # Two labels claiming the same CSV column collide silently in the rename
+    # below: the last label wins and the earlier one is dropped, leaving a
+    # column that is missing entirely and another holding the wrong values.
+    # Fail loudly instead.
+    claimed: Dict[int, str] = {}
+    for idx, label in column_mapping:
+        if idx is None:
+            continue
+        if idx in claimed:
+            raise ValueError(
+                f"Column index {idx} is mapped to both '{claimed[idx]}' and "
+                f"'{label}'. Each column index must map to exactly one field. "
+                f"Note that bid, ask and delta default to indices 5, 6 and 7, "
+                f"so pass them explicitly if your CSV uses a different layout."
+            )
+        claimed[idx] = label
+
     try:
         # Only read the columns we need from the CSV to save memory and I/O
         col_indices = sorted(c for c, _ in column_mapping if c is not None)

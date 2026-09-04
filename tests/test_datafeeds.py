@@ -285,6 +285,7 @@ def test_file_not_found_raises():
             strike=5,
             bid=6,
             ask=7,
+            delta=8,
         )
 
 
@@ -301,6 +302,7 @@ def test_empty_csv_raises():
             strike=5,
             bid=6,
             ask=7,
+            delta=8,
         )
 
 
@@ -658,3 +660,33 @@ class TestLoadCachedStocks:
         """load_cached_stocks is accessible via op.load_cached_stocks."""
         assert hasattr(op, "load_cached_stocks")
         assert op.load_cached_stocks is load_cached_stocks
+
+
+def test_csv_data_rejects_duplicate_column_index():
+    """Two fields mapped to one CSV column must raise, not silently drop one.
+
+    ``delta`` defaults to index 7, so passing ``ask=7`` without also setting
+    ``delta`` used to leave the frame with no ``ask`` column and a ``delta``
+    column holding ask prices.
+    """
+    with pytest.raises(ValueError, match="mapped to both"):
+        op.csv_data(
+            filepath(),
+            underlying_symbol=0,
+            option_type=2,
+            expiration=3,
+            quote_date=4,
+            strike=5,
+            bid=6,
+            ask=7,
+        )
+
+
+def test_csv_data_duplicate_index_names_both_fields():
+    """The error names the index and both conflicting fields."""
+    with pytest.raises(ValueError) as exc:
+        op.csv_data(filepath(), bid=6, ask=6, delta=8)
+    message = str(exc.value)
+    assert "Column index 6" in message
+    assert "'bid'" in message
+    assert "'ask'" in message
