@@ -23,7 +23,13 @@ def fetch_calendar(currency="USD", start_date=None, end_date=None, timeout=20):
     with urlopen(f"{BASE_URL.format(currency=currency)}?{query}", timeout=timeout) as response:
         payload = json.load(response)
 
-    return payload.get("data", [])
+    events = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(events, list):
+        detail = payload.get("detail") if isinstance(payload, dict) else None
+        raise ValueError(
+            f"Unexpected FXMacroData calendar response: {detail or 'no data list'}"
+        )
+    return events
 
 
 def top_tier_event_dates(events):
