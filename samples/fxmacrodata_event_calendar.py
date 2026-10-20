@@ -6,7 +6,7 @@ events with market-tier metadata that can be joined to option quote dates.
 """
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -25,20 +25,43 @@ def fetch_calendar(currency="USD", start_date=None, end_date=None, timeout=20):
 
     events = payload.get("data") if isinstance(payload, dict) else None
     if not isinstance(events, list):
-        detail = payload.get("detail") if isinstance(payload, dict) else None
-        raise ValueError(
-            f"Unexpected FXMacroData calendar response: {detail or 'no data list'}"
-        )
+        raise ValueError("Unexpected FXMacroData calendar response: no data list")
     return events
 
 
+def _event_date_utc(event):
+    for field in (
+        "announcement_datetime_utc",
+        "announcement_datetime",
+        "announcement_datetime_local",
+    ):
+        value = event.get(field)
+        if value is None or value == "" or isinstance(value, bool):
+            continue
+        try:
+            if isinstance(value, (int, float)) or (
+                isinstance(value, str) and value.strip().lstrip("-").isdigit()
+            ):
+                timestamp = datetime.fromtimestamp(float(value), tz=timezone.utc)
+            else:
+                timestamp = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                if timestamp.tzinfo is None:
+                    continue
+            return timestamp.astimezone(timezone.utc).date().isoformat()
+        except (ValueError, TypeError, OverflowError, OSError):
+            continue
+    return None
+
+
 def top_tier_event_dates(events):
+    """Return UTC release dates; skip events without a usable event timestamp."""
     dates = set()
     for event in events:
         if event.get("top_tier_for_currency") or event.get("market_tier") == 1:
-            event_time = event.get("announcement_datetime_utc") or event.get("announcement_datetime_local")
-            dates.add((event_time or event.get("date", ""))[:10])
-    return sorted(item for item in dates if item)
+            event_date = _event_date_utc(event)
+            if event_date is not None:
+                dates.add(event_date)
+    return sorted(dates)
 
 
 def main():
